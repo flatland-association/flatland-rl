@@ -470,13 +470,13 @@ def test_speed_after_malfunction():
     while not agent.state.is_on_map_state():
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.speed_counter.speed == initial_speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
     while not agent.malfunction_handler.in_malfunction:
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     speed = agent.speed_counter.speed
 
     distance = agent.speed_counter.distance
-    assert speed == 0
+    assert speed == Fraction(0)
     while agent.state.is_malfunction_state():
         # TODO revise design: set speed to 0 during malfunction?
         assert agent.speed_counter.speed == speed
@@ -495,22 +495,22 @@ def test_speed_after_malfunction_full_acceleration_braking():
     env, _, _ = env_generator_legacy(seed=42, n_agents=1, malfunction_interval=1)
     agent = env.agents[0]
 
-    assert agent.speed_counter.max_speed == 0.5
+    assert agent.speed_counter.max_speed == Fraction(1, 2)
     initial_speed = agent.speed_counter.max_speed
-    assert initial_speed == 0.5
+    assert initial_speed == Fraction(1, 2)
     assert agent.speed_counter.speed == initial_speed
 
     while not agent.state.is_on_map_state():
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.speed_counter.speed == initial_speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
     while not agent.malfunction_handler.in_malfunction:
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     speed = agent.speed_counter.speed
 
     distance = agent.speed_counter.distance
-    assert speed == 0
-    assert distance == 0.5
+    assert speed == Fraction(0)
+    assert distance == Fraction(1, 2)
     while agent.state.is_malfunction_state():
         # TODO REVISE DESIGN: set speed to 0 during malfunction?
         assert agent.speed_counter.speed == speed
@@ -519,9 +519,9 @@ def test_speed_after_malfunction_full_acceleration_braking():
 
     # takes up old speed plus increment.
     assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
     # starts at old distance plus increment modulo 1
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_symmetric_switch_stop_action():
@@ -538,15 +538,15 @@ def test_symmetric_switch_stop_action():
     env.braking_delta = - Fraction(1, 10)
 
     agent = env.agents[0]
-    assert agent.speed_counter.speed == 0.5
-    assert agent.speed_counter.max_speed == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.max_speed == Fraction(1, 2)
     agent.initial_position = (15, 14)
     agent.initial_direction = 1
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
     while not agent.state == TrainState.READY_TO_DEPART:
         env.step({})
-        assert agent.speed_counter.distance == 0
-        assert agent.speed_counter.speed == 0.5
+        assert agent.speed_counter.distance == Fraction(0)
+        assert agent.speed_counter.speed == Fraction(1, 2)
         assert agent.position is None
 
     # enter grid
@@ -554,9 +554,9 @@ def test_symmetric_switch_stop_action():
     assert agent.position == (15, 14)
     assert agent.direction == 1
     assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
     # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
     assert agent.position == (15, 14)
@@ -598,15 +598,15 @@ def test_symmetric_switch_move_forward_action():
     )
 
     agent = env.agents[0]
-    assert agent.speed_counter.speed == 0.5
-    assert agent.speed_counter.max_speed == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.max_speed == Fraction(1, 2)
     agent.initial_position = (15, 14)
     agent.initial_direction = 1
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
     while not agent.state == TrainState.READY_TO_DEPART:
         env.step({})
-        assert agent.speed_counter.distance == 0
-        assert agent.speed_counter.speed == 0.5
+        assert agent.speed_counter.distance == Fraction(0)
+        assert agent.speed_counter.speed == Fraction(1, 2)
         assert agent.position is None
 
     # enter grid
@@ -614,39 +614,39 @@ def test_symmetric_switch_move_forward_action():
     assert agent.position == (15, 14)
     assert agent.direction == 1
     assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
     # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
     assert agent.position == (15, 14)
     assert agent.direction == 1
     assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == 0.5
-    assert agent.speed_counter.distance == 0.5
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.distance == Fraction(1, 2)
 
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
     assert agent.position == (15, 14)
     assert agent.direction == 1
     assert agent.state == TrainState.STOPPED
-    assert agent.speed_counter.speed == 0
-    assert agent.speed_counter.distance == 0.5
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 2)
 
     # TODO bug: we should have been stopped before entering 15,15!
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.position == (15, 15)
     assert agent.direction == 1
     assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == 0.5
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.position == (15, 15)
     assert agent.direction == 1
     assert agent.state == TrainState.STOPPED
-    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.speed == Fraction(0)
     # TODO re-evaluate design: speed was 0.5 when stopped - should we not have travelled to 0.5 when stopped?
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_earliest_departure_state_transitions_initial_speed_zero():
@@ -666,8 +666,8 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     while agent.state == TrainState.WAITING:
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.current_configuration is None
-        assert agent.speed_counter.speed == 0
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.speed_counter.distance == Fraction(0)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -678,8 +678,8 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == agent.initial_configuration
-    assert agent.speed_counter.speed == 0
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(0)
 
     first_configuration = agent.current_configuration
     second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
@@ -696,7 +696,7 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == second_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     # TODO revise design: currently, already new speed is applied after acceleration, the distance travelled should be with old speed
     assert agent.speed_counter.distance == Fraction(1, 2)
 
@@ -704,7 +704,7 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == third_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
 
@@ -724,8 +724,8 @@ def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
     while agent.state == TrainState.WAITING:
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.current_configuration is None
-        assert agent.speed_counter.speed == 1
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == Fraction(1)
+        assert agent.speed_counter.distance == Fraction(0)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -736,9 +736,9 @@ def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == agent.initial_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     # at offset 0 in initial configuration:
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     first_configuration = agent.current_configuration
     second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
@@ -748,15 +748,15 @@ def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == second_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     # at offset 0 in second configuration
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == third_configuration
-    assert agent.speed_counter.speed == 1
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.speed == Fraction(1)
+    assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_malfunction_off_map_state_transitions_to_moving():
@@ -771,7 +771,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
     agent = env.agents[0]
     agent.earliest_departure = 2
     agent.malfunction_handler.malfunction_down_counter = 2
-    speed = 1
+    speed = Fraction(1)
 
     # WAITING -> MALFUNCTION_OFF_MAP: malfunction takes priority over WAITING, regardless of
     # earliest departure - step through until reached.
@@ -779,7 +779,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
     assert agent.state == TrainState.MALFUNCTION_OFF_MAP
 
     # MALFUNCTION_OFF_MAP: off map, still malfunctioning - no speed/distance progress.
@@ -788,7 +788,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
         assert agent.state == TrainState.MALFUNCTION_OFF_MAP
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
 
     # MALFUNCTION_OFF_MAP -> MOVING: agent appears at its initial configuration this very step, but
     # the speed_counter is not stepped yet (N.B. no movement in the first time step after
@@ -797,7 +797,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == agent.initial_configuration
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     first_configuration = agent.current_configuration
     second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
@@ -809,13 +809,13 @@ def test_malfunction_off_map_state_transitions_to_moving():
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == second_configuration
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == third_configuration
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_malfunction_off_map_state_transitions_to_ready_to_depart():
@@ -830,7 +830,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
     agent = env.agents[0]
     agent.earliest_departure = 2
     agent.malfunction_handler.malfunction_down_counter = 2
-    speed = 1
+    speed = Fraction(1)
 
     # WAITING -> MALFUNCTION_OFF_MAP: malfunction takes priority over WAITING, regardless of
     # earliest departure - step through until reached.
@@ -838,7 +838,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
         env.step({agent.handle: RailEnvActions.DO_NOTHING})
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
     assert agent.state == TrainState.MALFUNCTION_OFF_MAP
 
     # MALFUNCTION_OFF_MAP: off map, still malfunctioning - no speed/distance progress.
@@ -847,7 +847,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
         assert agent.state == TrainState.MALFUNCTION_OFF_MAP
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
 
     # MALFUNCTION_OFF_MAP -> READY_TO_DEPART: malfunction cleared and earliest departure already
     # reached, but no movement/stop action given - the agent stays off map, ready to depart.
@@ -856,7 +856,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
         assert agent.state == TrainState.READY_TO_DEPART
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_malfunction_off_map_state_transitions_to_stopped():
@@ -871,7 +871,7 @@ def test_malfunction_off_map_state_transitions_to_stopped():
     agent = env.agents[0]
     agent.earliest_departure = 2
     agent.malfunction_handler.malfunction_down_counter = 2
-    speed = 1
+    speed = Fraction(1)
 
     # WAITING -> MALFUNCTION_OFF_MAP: malfunction takes priority over WAITING, regardless of
     # earliest departure - step through until reached.
@@ -879,7 +879,7 @@ def test_malfunction_off_map_state_transitions_to_stopped():
         env.step({agent.handle: RailEnvActions.STOP_MOVING})
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
     assert agent.state == TrainState.MALFUNCTION_OFF_MAP
 
     # MALFUNCTION_OFF_MAP: off map, still malfunctioning - no speed/distance progress.
@@ -889,7 +889,7 @@ def test_malfunction_off_map_state_transitions_to_stopped():
         assert agent.current_configuration is None
         # TODO revise design: in contrast to MALFUNCTION, speed not set to 0!
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
 
     # MALFUNCTION_OFF_MAP -> STOPPED: agent still enters the grid at its initial configuration
     # this step, but with speed reset to 0 rather than resuming its previous speed.
@@ -897,8 +897,8 @@ def test_malfunction_off_map_state_transitions_to_stopped():
         env.step({agent.handle: RailEnvActions.STOP_MOVING})
         assert agent.state == TrainState.STOPPED
         assert agent.current_configuration == agent.initial_configuration
-        assert agent.speed_counter.speed == 0
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_malfunction_state_transitions_to_moving():
@@ -913,18 +913,18 @@ def test_malfunction_state_transitions_to_moving():
 
     # Get the agent on the map and moving first: off map (WAITING/READY_TO_DEPART), no speed/distance
     # progress while waiting to depart.
-    speed = 1
+    speed = Fraction(1)
     while agent.state != TrainState.MOVING:
         assert agent.state in (TrainState.WAITING, TrainState.READY_TO_DEPART)
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
 
     # MOVING: speed/distance unchanged from off-map values (no movement in the first step after
     # READY_TO_DEPART).
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     agent.malfunction_handler.malfunction_down_counter = 2
     malfunction_configuration = agent.current_configuration
@@ -935,7 +935,7 @@ def test_malfunction_state_transitions_to_moving():
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert agent.state == TrainState.MALFUNCTION
         assert agent.current_configuration == malfunction_configuration
-        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
 
     # MALFUNCTION -> MOVING: malfunction cleared and MOVE_FORWARD given - the agent resumes moving,
@@ -953,14 +953,14 @@ def test_malfunction_state_transitions_to_moving():
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == second_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
     # At max speed, the agent advances exactly one configuration per step from here on.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == third_configuration
-    assert agent.speed_counter.speed == 1
+    assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
 
@@ -976,18 +976,18 @@ def test_malfunction_state_transitions_to_stopped():
 
     # Get the agent on the map and moving first: off map (WAITING/READY_TO_DEPART), no speed/distance
     # progress while waiting to depart.
-    speed = 1
+    speed = Fraction(1)
     while agent.state != TrainState.MOVING:
         assert agent.state in (TrainState.WAITING, TrainState.READY_TO_DEPART)
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
 
     # MOVING: speed/distance unchanged from off-map values (no movement in the first step after
     # READY_TO_DEPART).
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     agent.malfunction_handler.malfunction_down_counter = 2
     malfunction_configuration = agent.current_configuration
@@ -998,7 +998,7 @@ def test_malfunction_state_transitions_to_stopped():
         env.step({agent.handle: RailEnvActions.STOP_MOVING})
         assert agent.state == TrainState.MALFUNCTION
         assert agent.current_configuration == malfunction_configuration
-        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
 
     # MALFUNCTION -> STOPPED: malfunction cleared but no movement action given - the agent stops in
@@ -1007,7 +1007,7 @@ def test_malfunction_state_transitions_to_stopped():
         env.step({agent.handle: RailEnvActions.STOP_MOVING})
         assert agent.state == TrainState.STOPPED
         assert agent.current_configuration == malfunction_configuration
-        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
 
 
@@ -1024,18 +1024,18 @@ def test_malfunction_state_transitions_to_stopped_do_nothing():
 
     # Get the agent on the map and moving first: off map (WAITING/READY_TO_DEPART), no speed/distance
     # progress while waiting to depart.
-    speed = 1
+    speed = Fraction(1)
     while agent.state != TrainState.MOVING:
         assert agent.state in (TrainState.WAITING, TrainState.READY_TO_DEPART)
         assert agent.current_configuration is None
         assert agent.speed_counter.speed == speed
-        assert agent.speed_counter.distance == 0
+        assert agent.speed_counter.distance == Fraction(0)
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
 
     # MOVING: speed/distance unchanged from off-map values (no movement in the first step after
     # READY_TO_DEPART).
     assert agent.speed_counter.speed == speed
-    assert agent.speed_counter.distance == 0
+    assert agent.speed_counter.distance == Fraction(0)
 
     agent.malfunction_handler.malfunction_down_counter = 2
     malfunction_configuration = agent.current_configuration
@@ -1046,7 +1046,7 @@ def test_malfunction_state_transitions_to_stopped_do_nothing():
         env.step({agent.handle: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.MALFUNCTION
         assert agent.current_configuration == malfunction_configuration
-        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
 
     # MALFUNCTION -> STOPPED: malfunction cleared but DO_NOTHING is not a movement action either -
@@ -1055,5 +1055,5 @@ def test_malfunction_state_transitions_to_stopped_do_nothing():
         env.step({agent.handle: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.STOPPED
         assert agent.current_configuration == malfunction_configuration
-        assert agent.speed_counter.speed == 0
+        assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
