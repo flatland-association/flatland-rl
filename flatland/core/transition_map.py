@@ -143,6 +143,17 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
         raise NotImplementedError()
 
     def is_valid_configuration(self, configuration: UnderlyingConfigurationType) -> bool:
+        """
+        Whether the map contains the configuration (position+direction tuple for grid or edge for graphs).
+
+        Parameters
+        ----------
+        configuration: ConfigurationType
+
+        Returns
+        -------
+
+        """
         raise NotImplementedError()
 
 

@@ -104,6 +104,13 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
         """
 
+        Parameters
+        ----------
+        action : RailEnvActions
+            Action to execute
+        configuration : Tuple[Tuple[int, int], int]
+            current configuration, e.g. position and orientation or current edge
+
         Returns
         -------
         new_cell_valid: bool
@@ -137,8 +144,8 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
     def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[
         Tuple[Tuple[Tuple[int, int], int], bool]]:
         position, direction = configuration
-        _, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
-        if action_valid and self.is_valid_configuration(new_configuration):
+        new_cell_valid, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
+        if action_valid and new_cell_valid:
             new_position, new_direction = new_configuration
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: allow acceleration in turns? dis-allow in dead-ends?
             straight = new_direction % 2 == direction % 2
@@ -151,3 +158,4 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         Returns directions in which the agent can move
         """
         return self.transitions.get_entry_directions(self.get_full_transitions(row, col))
+
