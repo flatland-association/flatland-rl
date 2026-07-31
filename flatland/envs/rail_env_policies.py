@@ -48,10 +48,12 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
         if agent.handle not in self._shortest_paths:
             p = []
             for pp1, pp2 in zip(agent.waypoints, agent.waypoints[1:]):
-                p1: Waypoint = pp1[0]
+                # p1 is whichever of pp1's alternatives the previous leg's path actually arrived at (not
+                # necessarily pp1[0] - an intermediate stop, like the target, can have several rail-valid
+                # arrival alternatives, only one of which the path threading through it actually used).
+                p1: Waypoint = p[-1] if len(p) > 0 else pp1[0]
+                assert p1 in pp1, (p1, pp1)
                 p2: Waypoint = pp2[0]
-                if len(p) > 0:
-                    assert p[-1] == p1, (p[-1], p1)
                 pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, rail=env.rail)
                 if p2.direction is None:
                     p_next = pp_next[0]

@@ -425,32 +425,30 @@ def test_sparse_line_generator_with_intermediate_stops():
     }
     line = line_gen(rail, 10, agents_hints, 0, np_random)
 
-    agent_positions = [[[(11, 40)], [(38, 8)]],
-                       [[(27, 40)], [(38, 8)]],
-                       [[(20, 26)], [(9, 27)]],
-                       [[(11, 40)]], # truncated
-                       [[(38, 8)], [(31, 26)]],
-                       [[(44, 34)], [(31, 26)]],
-                       [[(17, 5)], [(41, 22)]],
-                       [[(9, 40)], [(41, 22)]],
-                       [[(38, 8)], [(41, 22)]],
-                       [[(20, 24)], [(41, 22)]]]
-    agent_directions = [[[Grid4TransitionsEnum.WEST], [Grid4TransitionsEnum.EAST]],
-                        [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.EAST]],
-                        [[Grid4TransitionsEnum.SOUTH], [Grid4TransitionsEnum.EAST]],
-                        [[Grid4TransitionsEnum.EAST]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.NORTH]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.WEST]],
-                        [[Grid4TransitionsEnum.EAST], [Grid4TransitionsEnum.EAST]],
-                        [[Grid4TransitionsEnum.NORTH], [Grid4TransitionsEnum.WEST]]]
-    agent_targets = [((27, 41), 0), ((12, 40), 1), ((10, 40), 1), ((9, 27), 1), ((45, 34), 3), ((39, 8), 3), ((12, 40), 1), ((18, 5), 1), ((20, 25), 0),
-                     ((39, 8), 3)]
-    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
-                          [[Waypoint(*target)]]
-                       for i, (pas, das, target)
-                       in enumerate(zip(agent_positions, agent_directions, agent_targets))}
+    # Each agent's full stop sequence (start, any intermediate stops, target) as (position, direction)
+    # configurations - matching the shape of `EnvAgent.targets`/`EnvAgent.waypoints`. The start is always a
+    # single, fixed configuration (the agent's actual initial position/direction), but every later stop -
+    # intermediate or target - is the full set of configurations actually reachable from the previous stop,
+    # not just the single direction originally guessed for that station. N.B. not every direction that is
+    # structurally valid at a stop's position (rail.is_valid_configuration) is actually reachable from the
+    # agent's approach - e.g. only 2 of a switch's valid directions may be reachable from a given previous
+    # stop - so each of these is a strict subset of (or equal to) the structurally-valid configurations.
+    agent_stops = [
+        [[((11, 40), 3)], [((38, 8), 1), ((38, 8), 3)], [((27, 41), 0), ((27, 41), 2)]],
+        [[((27, 40), 0)], [((38, 8), 1), ((38, 8), 3)], [((12, 40), 1), ((12, 40), 3)]],
+        [[((20, 26), 2)], [((9, 27), 1)], [((10, 40), 1)]],
+        [[((11, 40), 1)], [((9, 27), 1)]],  # truncated
+        [[((38, 8), 1)], [((31, 26), 0), ((31, 26), 2)], [((45, 34), 3)]],
+        [[((44, 34), 1)], [((31, 26), 0), ((31, 26), 2)], [((39, 8), 3)]],
+        [[((17, 5), 1)], [((41, 22), 3)], [((12, 40), 1)]],
+        [[((9, 40), 1)], [((41, 22), 3)], [((18, 5), 1)]],
+        [[((38, 8), 1)], [((41, 22), 1), ((41, 22), 3)], [((20, 25), 0), ((20, 25), 2)]],
+        [[((20, 24), 0)], [((41, 22), 3)], [((39, 8), 3)]],
+    ]
+    agent_waypoints = {
+        i: [[Waypoint(position, direction) for position, direction in group] for group in groups]
+        for i, groups in enumerate(agent_stops)
+    }
 
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     for a in EnvAgent.from_line(line):
