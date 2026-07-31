@@ -10,8 +10,6 @@ anyio==4.14.2
     # via
     #   httpx
     #   jupyter-server
-appnope==0.1.4
-    # via ipykernel
 argon2-cffi==25.1.0
     # via jupyter-server
 argon2-cffi-bindings==25.1.0
@@ -471,8 +469,9 @@ rfc3986-validator==0.1.1
     #   jupyter-events
 rfc3987-syntax==1.1.0
     # via jsonschema
-rpds-py==2026.6.3
+rpds-py==0.30.0
     # via
+    #   flatland-rl (pyproject.toml)
     #   jsonschema
     #   referencing
 s3transfer==0.19.2

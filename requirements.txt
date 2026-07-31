@@ -157,6 +157,8 @@ requests==2.34.2
     #   requests-toolbelt
 requests-toolbelt==1.0.0
     # via python-gitlab
+rpds-py==0.30.0
+    # via flatland-rl (pyproject.toml)
 s3transfer==0.19.2
     # via boto3
 six==1.17.0
