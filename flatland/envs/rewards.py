@@ -5,7 +5,6 @@ import numpy as np
 from fastenum import fastenum
 
 from flatland.core.env_observation_builder import AgentHandle
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -94,7 +93,8 @@ class Rewards(Generic[RewardType]):
         return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
     @staticmethod
-    def _intermediate_waypoints(agent_waypoints: List[List[ConfigurationType]], agent: EnvAgent) -> Iterator[Tuple[List[ConfigurationType], int, int]]:
+    def _intermediate_waypoints(agent_waypoints: List[List[ConfigurationType]],
+                                agent: EnvAgent) -> Iterator[Tuple[List[ConfigurationType], int, int]]:
         """
         Zips an agent's intermediate waypoint alternatives (i.e. excluding the initial and target stops)
         with their corresponding earliest-departure/latest-arrival time windows.
@@ -511,7 +511,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and not any(
             target_configuration in self.arrivals[agent.handle] for target_configuration in agent_targets):
             # TODO bad design smell - we haven't kept track of which one was reach, we take any of them here
-            self.arrivals[agent.handle][next(target_configuration for target_configuration in agent_targets)].append(elapsed_steps)
+            self.arrivals[agent.handle][next(iter(agent_targets))].append(elapsed_steps)
 
         if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
@@ -550,8 +550,6 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                 break
 
         target_wps = agent_waypoints[-1]
-        # TODO wrong place to explode to set of target configurations - get rid of ((r,c), None) everyhwer
-        target_wps = {(target_wp[0], d) for target_wp in target_wps for d in Grid4TransitionsEnum}
         # N.B. assuming target is only travelled once:
         # N.B. filter by membership before subscripting so probing never-visited target directions does not
         # auto-vivify spurious empty-list entries in the arrivals defaultdict.
