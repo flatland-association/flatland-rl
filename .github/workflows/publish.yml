@@ -68,6 +68,9 @@ jobs:
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
                     # https://docs.scipy.org/doc/scipy/building/index.html
                     sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
             -   uses: actions/checkout@v6
                 with:
                     ref: ${{ needs.release-please.outputs.tag_name || github.ref }}

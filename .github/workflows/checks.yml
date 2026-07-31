@@ -45,6 +45,11 @@ jobs:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
+        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
+        env:
+            CC: gcc-12
+            CXX: g++-12
         steps:
             -   name: Inspect disk
                 run: |
@@ -71,6 +76,12 @@ jobs:
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
                     # https://docs.scipy.org/doc/scipy/building/index.html
                     sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
+                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
+                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
+                    sudo apt-get -y install gcc-12 g++-12
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -104,6 +115,11 @@ jobs:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
+        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
+        env:
+            CC: gcc-12
+            CXX: g++-12
         steps:
             -   name: Inspect disk
                 run: |
@@ -131,6 +147,12 @@ jobs:
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
                     # https://docs.scipy.org/doc/scipy/building/index.html
                     sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
+                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
+                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
+                    sudo apt-get -y install gcc-12 g++-12
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -198,6 +220,9 @@ jobs:
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
                     # https://docs.scipy.org/doc/scipy/building/index.html
                     sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
 
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -259,6 +284,9 @@ jobs:
                     # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
                     # https://docs.scipy.org/doc/scipy/building/index.html
                     sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
                 uses: actions/setup-python@v6
