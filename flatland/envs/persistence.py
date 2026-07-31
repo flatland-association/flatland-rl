@@ -7,7 +7,6 @@ import msgpack_numpy
 import numpy as np
 
 from flatland.core.effects_generator import EffectsGenerator, find_effects_generator, make_multi_effects_generator
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
@@ -19,7 +18,7 @@ from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
 from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
-from flatland.envs.agent_utils import EnvAgent, load_env_agent
+from flatland.envs.agent_utils import EnvAgent, load_env_agent, _filter_valid_target_configurations
 
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
@@ -245,11 +244,7 @@ class RailEnvPersister(object):
             # N.B. legacy agents loaded without persisted waypoints (see load_env_agent's fallback) get their
             # target waypoint group exploded to all 4 directions unfiltered - clean it up now that the real
             # rail grid is available. A no-op for agents whose waypoints were already filtered at save time.
-            if None in {wp.direction for wp in agent.waypoints[-1]}:
-                agent.waypoints[-1] = [Waypoint(wp.position, d) for wp in agent.waypoints[-1] for d in Grid4TransitionsEnum
-                                       if env.rail.is_valid_configuration((wp.position, d))]
-            else:
-                agent.waypoints[-1] = [wp for wp in agent.waypoints[-1] if env.rail.is_valid_configuration((wp.position, wp.direction))]
+            agent.waypoints[-1] = _filter_valid_target_configurations(env.rail, agent.waypoints[-1])
 
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:

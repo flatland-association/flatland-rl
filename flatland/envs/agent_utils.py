@@ -1,6 +1,6 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
+from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set, Union
 
 import numpy as np
 from attr import attrs, attrib, Factory
@@ -38,7 +38,7 @@ class Agent(NamedTuple):
     waypoints_latest_arrival: List[int] = None
 
 
-def _normalize_waypoints(waypoints: List) -> List[List[Waypoint]]:
+def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> List[List[Waypoint]]:
     """
     Normalizes a persisted `waypoints` field to the current `List[List[Waypoint]]` shape. Envs persisted
     before routing-flexibility alternatives were introduced store it as a flat `List[Waypoint]` (one bare
@@ -46,6 +46,20 @@ def _normalize_waypoints(waypoints: List) -> List[List[Waypoint]]:
     single-element list. A no-op for waypoints already in the current shape.
     """
     return [wp if isinstance(wp, list) else [wp] for wp in waypoints]
+
+
+def _filter_valid_target_configurations(rail, waypoint_group: List[Waypoint]) -> List[Waypoint]:
+    """
+    Keeps only the arrival alternatives in a target waypoint group that are valid configurations on `rail`.
+    Envs persisted before routing-flexibility alternatives were introduced store a legacy `None`-direction
+    placeholder (meaning "any direction") - explode that into one `Waypoint` per valid direction instead of
+    filtering it out (since `None` itself is never a valid configuration). A no-op for waypoints already
+    filtered to concrete, rail-valid directions.
+    """
+    if None in {wp.direction for wp in waypoint_group}:
+        position = waypoint_group[0].position
+        return [Waypoint(position, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((position, d))]
+    return [wp for wp in waypoint_group if rail.is_valid_configuration((wp.position, wp.direction))]
 
 
 def load_env_agent(agent_tuple: Agent):

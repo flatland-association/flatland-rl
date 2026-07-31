@@ -1075,7 +1075,6 @@ def _make_simple_env(n_agents: int) -> RailEnv:
         agent.current_configuration = None
         agent.earliest_departure = 0
         agent.latest_arrival = 50
-        agent.target = target
         agent.targets = {(target, d) for d in Grid4TransitionsEnum}
     return env
 
@@ -1212,7 +1211,6 @@ def _make_platoon_env(n_agents: int, start_columns, lead_max_speed: float = 1.0)
         agent.current_configuration = None
         agent.earliest_departure = 0
         agent.latest_arrival = 50
-        agent.target = (3, 9)
         agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}
         agent.speed_counter = SpeedCounter(lead_max_speed if i == 0 else 1.0)
     return env
@@ -1316,7 +1314,6 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     agent.current_configuration = None
     agent.earliest_departure = 0
     agent.latest_arrival = 50
-    agent.target = (0, 1)
     agent.targets = {((0, 1), d) for d in Grid4TransitionsEnum}
 
     # sanity: at the switch, heading west, forward is not a valid transition (only north/south are)
