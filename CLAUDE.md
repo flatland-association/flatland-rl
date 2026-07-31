@@ -75,6 +75,17 @@ conflicts (head-on swaps, same-target collisions) once all agents for the step a
 state/position/rewards. `EnvAgent` (`agent_utils.py`) holds per-agent state; `observations.py`/`predictions.py`
 build the observation returned to policies, typically via the distance map's shortest paths.
 
+### Speed is always a `Fraction` internally
+
+`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `speed`/`max_speed`/`distance` as `Fraction`
+unconditionally, regardless of what type callers pass in: `_pseudo_fractional()` snaps any `int`/`float`/`Decimal`
+input to a `Fraction` on the way in (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within
+tolerance). `RailEnv.__init__`'s `acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to
+match. Passing a plain `float` for either instead (as opposed to a `Fraction`) can silently reintroduce floats
+into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
+`Fraction`-only invariant assumed by `cached_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
+doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+
 ### `flatland/ml/`
 
 A thin adapter layer over `RailEnv` for RL frameworks, not a parallel env implementation: `wrapped_rail_env.py`
