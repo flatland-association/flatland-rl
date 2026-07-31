@@ -109,6 +109,28 @@ just step 0.
 - `env_generation/` — higher-level convenience env-builder over the generators.
 - `png/`, `svg/` — static rendering image assets, not code.
 
+### CLI entry points (`pyproject.toml`'s `[project.scripts]`, implemented in `cli.py`)
+
+`flatland-demo` (smoke-test render demo) and `evaluator`/`flatland-evaluator` (→ `evaluators/service.py`'s
+`FlatlandRemoteEvaluationService`, the AIcrowd competition-side evaluation service) live in `flatland/cli.py`.
+The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata/evaluate/analysis) map to
+`trajectories/policy_runner.py`, `trajectories/policy_grid_runner.py`, and `evaluators/trajectory_evaluator.py`
+/`trajectory_analysis.py` respectively.
+
+## Releases and versioning
+
+- The package version is **not** a static field in `pyproject.toml` (`dynamic = ["version"]`) — it's derived by
+  `setuptools_scm` from git tags at build time.
+- **`release-please`** (`.github/workflows/publish.yml`'s `release-please` job) runs on every push to `main`,
+  parses [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/) messages since the last release,
+  and opens/updates a release PR that bumps the version and updates `CHANGELOG.md`. Merging that PR creates the
+  release tag, which triggers the same workflow's `test` → `publish-pypi` → `docker-publish` chain.
+- To publish a release candidate to **Test PyPI** without cutting a real release, manually trigger
+  `publish.yml` (`workflow_dispatch`) with a `version` (no leading `v` — the workflow prepends it itself for the
+  Docker tag). This runs `test` → `publish-test-pypi` → `docker-publish` instead.
+- PRs are squash-merged; adjust the squashed commit's subject/body to accurately describe the change, since that
+  message is what `release-please` parses.
+
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
 - Prefer `NamedTuple` over a plain unnamed `Tuple` or `Dict` for structured data that doesn't need methods.
