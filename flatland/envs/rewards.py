@@ -150,7 +150,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         Crash penalty factor :math:`\kappa \geq 0`. Defaults to 0.0.
     """
     # cache enumeration
-    _cached_default_penalties = set(DefaultPenalties)
+    _cached_default_penalty_values = tuple(p.value for p in DefaultPenalties)
 
     def __init__(self,
                  cancellation_factor: float = 1,
@@ -282,7 +282,11 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         return d
 
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
-        return {p.value: sum([r[p.value] for r in rewards]) for p in self._cached_default_penalties}
+        result = dict.fromkeys(self._cached_default_penalty_values, 0.0)
+        for r in rewards:
+            for k, v in r.items():
+                result[k] += v
+        return result
 
     # policy runner calls normalization: normalize sum over all keys instead of per key.
     def normalize(self, *rewards: np.ndarray, num_agents: int, max_episode_steps: int) -> float:
@@ -297,7 +301,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> Dict[str, float]:
-        return {p.value: 0 for p in self._cached_default_penalties}
+        return dict.fromkeys(self._cached_default_penalty_values, 0.0)
 
 
 class DefaultRewards(Rewards[float]):
