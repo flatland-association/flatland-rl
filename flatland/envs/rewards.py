@@ -282,7 +282,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         return d
 
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
-        result = dict.fromkeys(self._cached_default_penalty_values, 0.0)
+        result = dict.fromkeys(self._cached_default_penalty_values, 0)
         for r in rewards:
             for k, v in r.items():
                 result[k] += v
@@ -301,7 +301,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         return sum(rewards_capped) / (max_episode_steps * num_agents) + 1
 
     def empty(self) -> Dict[str, float]:
-        return dict.fromkeys(self._cached_default_penalty_values, 0.0)
+        return dict.fromkeys(self._cached_default_penalty_values, 0)
 
 
 class DefaultRewards(Rewards[float]):
