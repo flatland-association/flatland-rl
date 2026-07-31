@@ -50,6 +50,14 @@ python -m pip install flatland-rl
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
 
+🚀 Releases
+---
+
+* Release PRs are automatically opened
+  by [release-please](https://github.com/googleapis/release-please)/[release-please-action](https://github.com/marketplace/actions/release-please-action) based
+  on [Conventional Commit Messages](https://www.conventionalcommits.org/en/v1.0.0/)
+* [How do I change the version number?](https://github.com/googleapis/release-please?tab=readme-ov-file#how-do-i-change-the-version-number)
+
 👥 Credits
 ---
 
