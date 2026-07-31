@@ -82,6 +82,9 @@ jobs:
                     # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
                     # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
                     sudo apt-get -y install gcc-12 g++-12
+                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
+                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
+                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -153,6 +156,9 @@ jobs:
                     # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
                     # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
                     sudo apt-get -y install gcc-12 g++-12
+                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
+                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
+                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
