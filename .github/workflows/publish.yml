@@ -151,8 +151,24 @@ jobs:
         permissions:
             id-token: write
         outputs:
-            version_tag: v${{ inputs.version }}
+            version_tag: v${{ steps.normalize-version.outputs.version }}
         steps:
+            # `version` is meant to be entered without a leading "v" (e.g. "4.3.0"), matching the "v" this
+            # workflow itself prepends below. setuptools_scm/packaging silently normalizes away a leading "v"
+            # (PEP 440 allows it), so the PyPI publish succeeds either way - but our own `v${{ inputs.version }}`
+            # does not, so a user-supplied "v" doubles up:
+            #
+            # | you type   | SETUPTOOLS_SCM_PRETEND_VERSION | PyPI package version | version_tag -> Docker tag |
+            # |------------|---------------------------------|-----------------------|----------------------------|
+            # | 4.3.0      | 4.3.0                            | 4.3.0 (correct)       | v4.3.0 (correct)           |
+            # | v4.3.0     | v4.3.0                           | 4.3.0 (still correct) | vv4.3.0 (WRONG, doubled)   |
+            #
+            # Strip an optional leading "v" here so both inputs behave identically end-to-end.
+            -   name: Normalize version (strip optional leading "v")
+                id: normalize-version
+                run: |
+                    version="${{ inputs.version }}"
+                    echo "version=${version#v}" >> "$GITHUB_OUTPUT"
             -   name: Checkout
                 uses: actions/checkout@v6
                 with:
@@ -167,7 +183,7 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Build new package
                 env:
-                    SETUPTOOLS_SCM_PRETEND_VERSION: ${{ inputs.version }}
+                    SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.normalize-version.outputs.version }}
                 run: tox run -e build
             -   name: Publish package to Test PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
