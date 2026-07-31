@@ -34,6 +34,7 @@ jobs:
     test:
         # N.B. needs !failure() && !cancelled() because release-please is skipped (not run) on workflow_dispatch,
         # and a skipped dependency makes the implicit needs-success() check fail, which would otherwise skip this job too.
+        # Acknowledged GitHub limitation: https://github.com/orgs/community/discussions/45058
         if: >-
             ${{ !failure() && !cancelled() &&
             ((github.event_name == 'push' && needs.release-please.outputs.release_created) ||
@@ -137,7 +138,12 @@ jobs:
                     path: dist/
 
     publish-test-pypi:
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
+        # N.B. needs !failure() && !cancelled(): w/o a status-check function, GitHub implicitly ANDs the condition
+        # with success(), which looks at the whole transitive ancestor chain (publish-test-pypi -> test -> release-please),
+        # not just the direct `test` need. release-please is always skipped on workflow_dispatch, which would otherwise
+        # poison success() two hops down and skip this job even when test itself succeeded. Acknowledged GitHub limitation:
+        # https://github.com/orgs/community/discussions/45058
+        if: ${{ !failure() && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.version != '' }}
         needs: [ test ]
         runs-on: ubuntu-22.04
         environment: test-pypi
