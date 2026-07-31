@@ -32,9 +32,12 @@ jobs:
     # Runs the full test matrix before either publish flow below: for a real release (gated on
     # release-please having just created one) or a manual Test PyPI publish (gated on a version being given).
     test:
+        # N.B. needs !failure() && !cancelled() because release-please is skipped (not run) on workflow_dispatch,
+        # and a skipped dependency makes the implicit needs-success() check fail, which would otherwise skip this job too.
         if: >-
-            ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) ||
-            (github.event_name == 'workflow_dispatch' && inputs.version != '') }}
+            ${{ !failure() && !cancelled() &&
+            ((github.event_name == 'push' && needs.release-please.outputs.release_created) ||
+            (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
         needs: [ release-please ]
         runs-on: ubuntu-24.04
         strategy:
