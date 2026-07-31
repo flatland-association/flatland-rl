@@ -72,7 +72,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
@@ -84,7 +84,7 @@ jobs:
                 run: tox -e py${{ matrix.python-version }}-verify-requirements
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
@@ -131,7 +131,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
@@ -143,7 +143,7 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-ml
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
@@ -198,7 +198,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -210,7 +210,7 @@ jobs:
                 run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -245,7 +245,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -259,7 +259,7 @@ jobs:
                     tox run -e py${{ matrix.python-version }}-notebooks-no-pickle
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -286,7 +286,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -298,7 +298,7 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-examples
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -442,7 +442,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -454,7 +454,7 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-profiling-get-k-shortest-paths
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -563,7 +563,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -575,7 +575,7 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-benchmarks
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -615,7 +615,7 @@ jobs:
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
                 if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v4
+                uses: actions/cache/restore@v5
                 with:
                     path: .tox
                     key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
@@ -627,7 +627,7 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-regression
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v4
+                uses: actions/cache/save@v5
                 with:
                     path: .tox
                     key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
