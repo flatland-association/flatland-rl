@@ -17,7 +17,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, BaseECML2026Rewards
+from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, BaseECML2026Rewards, DelayRewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -44,6 +44,41 @@ def test_rewards_late_arrival():
     rewards = BasicMultiObjectiveRewards()
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-2, 0, 0)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (0, 0, 0)
+
+
+def test_delay_rewards():
+    """DelayRewards scores only TARGET_LATE_ARRIVAL; all other penalties are zeroed out."""
+    def _make_agent(latest_arrival, arrival_time):
+        return EnvAgent(initial_configuration=((0, 0), 0),
+                        targets={((3, 3), d) for d in Grid4TransitionsEnum},
+                        current_configuration=(None, 3),
+                        state_machine=TrainStateMachine(initial_state=TrainState.DONE),
+                        earliest_departure=3,
+                        latest_arrival=latest_arrival,
+                        arrival_time=arrival_time)
+
+    rewards = DelayRewards()
+    distance_map = DistanceMap(agents=[], env_height=20, env_width=20)
+    distance_map.reset(agents=[], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    # on time: no penalty
+    agent = _make_agent(latest_arrival=10, arrival_time=10)
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == 0
+
+    # early: no penalty
+    agent = _make_agent(latest_arrival=10, arrival_time=8)
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == 0
+
+    # late: penalty = arrival_time - latest_arrival (negative)
+    agent = _make_agent(latest_arrival=10, arrival_time=13)
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -3
+
+    # intermediate stop penalties are all zeroed out even when stop is late/missing
+    agent = _make_agent(latest_arrival=10, arrival_time=10)
+    agent.waypoints = [[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), None)]]
+    agent.waypoints_earliest_departure = [3, 7, None]
+    agent.waypoints_latest_arrival = [None, 5, 10]  # intermediate latest=5, never visited -> no penalty
+    assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == 0
 
 
 def test_rewards_early_arrival():
