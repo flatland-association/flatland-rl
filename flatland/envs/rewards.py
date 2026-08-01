@@ -570,3 +570,21 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
 
     def empty(self) -> Tuple[int, int]:
         return 0, 0
+
+
+class DelayRewards(DefaultRewards):
+    """
+    Delay: total delay time
+    This is counted only for the agents' target, not the intermediate stops, to avoid duplicate counting.
+    """
+
+    def __init__(self):
+        super().__init__(
+            cancellation_factor=0.0,
+            cancellation_time_buffer=0.0,
+            target_not_reached_minimum_penalty=0.0,
+            intermediate_not_served_penalty=0.0,
+            intermediate_late_arrival_penalty_factor=0.0,
+            intermediate_early_departure_penalty_factor=0.0,
+            collision_factor=0.0,
+        )
