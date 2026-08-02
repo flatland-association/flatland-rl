@@ -24,11 +24,16 @@ concurrency:
 
 jobs:
     lint:
-        if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
+        # Disabled for now, hasn't run in a while resulting in countless issues. Gated on a repo/org Actions
+        # variable (Settings > Secrets and variables > Actions > Variables) rather than a literal `if: false`:
+        # `env` isn't available in job-level `if:` conditions (only resolved once the job starts), and
+        # actionlint's if-cond rule flags a literal boolean constant as dead code to be removed outright.
+        # Unset (the default) evaluates to empty string, i.e. still disabled - set LINT_ENABLED=true to re-enable.
+        if: ${{ vars.LINT_ENABLED == 'true' }}
         runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
+            -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
                     python-version: "3.13"
@@ -38,6 +43,21 @@ jobs:
                     python -m pip install tox tox-gh-actions
             -   name: Run lint checks
                 run: tox run -e flake8
+
+    actionlint:
+        # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
+        # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
+        # into shell instead of routing it through `env:`, the exact script-injection shape fixed in publish.yml.
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Download actionlint
+                id: get_actionlint
+                run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+                shell: bash
+            -   name: Run actionlint
+                run: ${{ steps.get_actionlint.outputs.executable }} -color
+                shell: bash
 
     deptry:
         runs-on: ubuntu-24.04
@@ -447,9 +467,11 @@ jobs:
                         commit --allow-empty -m "Add profiling png for PR #${{ github.event.pull_request.number }}, $PR_SHA"
                     git -C gist_dir push
                     raw_url=$(gh api "gists/$GIST_ID" --jq ".files[\"$filename\"].raw_url")
-                    echo "url=https://gist.github.com/$GIST_ID" >> "$GITHUB_OUTPUT"
-                    echo "raw_url=$raw_url" >> "$GITHUB_OUTPUT"
-                    echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+                    {
+                        echo "url=https://gist.github.com/$GIST_ID"
+                        echo "raw_url=$raw_url"
+                        echo "short_sha=$short_sha"
+                    } >> "$GITHUB_OUTPUT"
             -   name: Create or update profiling comment
                 if: >-
                     ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
@@ -566,9 +588,11 @@ jobs:
                         commit --allow-empty -m "Add profiling png for PR #${{ github.event.pull_request.number }}, $PR_SHA"
                     git -C gist_dir push
                     raw_url=$(gh api "gists/$GIST_ID" --jq ".files[\"$filename\"].raw_url")
-                    echo "url=https://gist.github.com/$GIST_ID" >> "$GITHUB_OUTPUT"
-                    echo "raw_url=$raw_url" >> "$GITHUB_OUTPUT"
-                    echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
+                    {
+                        echo "url=https://gist.github.com/$GIST_ID"
+                        echo "raw_url=$raw_url"
+                        echo "short_sha=$short_sha"
+                    } >> "$GITHUB_OUTPUT"
             -   name: Create or update get_k_shortest_paths profiling comment
                 if: >-
                     ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&

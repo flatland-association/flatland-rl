@@ -16,6 +16,21 @@ on:
                 type: string
 
 jobs:
+    actionlint:
+        # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
+        # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
+        # into shell instead of routing it through `env:`, the exact script-injection shape fixed below.
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Download actionlint
+                id: get_actionlint
+                run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+                shell: bash
+            -   name: Run actionlint
+                run: ${{ steps.get_actionlint.outputs.executable }} -color
+                shell: bash
+
     release-please:
         if: ${{ github.event_name == 'push' }}
         runs-on: ubuntu-22.04
@@ -32,9 +47,13 @@ jobs:
     # Runs the full test matrix before either publish flow below: for a real release (gated on
     # release-please having just created one) or a manual Test PyPI publish (gated on a version being given).
     test:
+        # N.B. needs !failure() && !cancelled() because release-please is skipped (not run) on workflow_dispatch,
+        # and a skipped dependency makes the implicit needs-success() check fail, which would otherwise skip this job too.
+        # Acknowledged GitHub limitation: https://github.com/orgs/community/discussions/45058
         if: >-
-            ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) ||
-            (github.event_name == 'workflow_dispatch' && inputs.version != '') }}
+            ${{ !failure() && !cancelled() &&
+            ((github.event_name == 'push' && needs.release-please.outputs.release_created) ||
+            (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
         needs: [ release-please ]
         runs-on: ubuntu-24.04
         strategy:
@@ -134,7 +153,12 @@ jobs:
                     path: dist/
 
     publish-test-pypi:
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version != '' }}
+        # N.B. needs !failure() && !cancelled(): w/o a status-check function, GitHub implicitly ANDs the condition
+        # with success(), which looks at the whole transitive ancestor chain (publish-test-pypi -> test -> release-please),
+        # not just the direct `test` need. release-please is always skipped on workflow_dispatch, which would otherwise
+        # poison success() two hops down and skip this job even when test itself succeeded. Acknowledged GitHub limitation:
+        # https://github.com/orgs/community/discussions/45058
+        if: ${{ !failure() && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.version != '' }}
         needs: [ test ]
         runs-on: ubuntu-22.04
         environment: test-pypi
@@ -142,8 +166,36 @@ jobs:
         permissions:
             id-token: write
         outputs:
-            version_tag: v${{ inputs.version }}
+            version_tag: v${{ steps.normalize-version.outputs.version }}
         steps:
+            # `version` is meant to be entered without a leading "v" (e.g. "4.3.0"), matching the "v" this
+            # workflow itself prepends below. setuptools_scm/packaging silently normalizes away a leading "v"
+            # (PEP 440 allows it), so the PyPI publish succeeds either way - but our own `v${{ inputs.version }}`
+            # does not, so a user-supplied "v" doubles up:
+            #
+            # | you type   | SETUPTOOLS_SCM_PRETEND_VERSION | PyPI package version | version_tag -> Docker tag |
+            # |------------|---------------------------------|-----------------------|----------------------------|
+            # | 4.3.0      | 4.3.0                            | 4.3.0 (correct)       | v4.3.0 (correct)           |
+            # | v4.3.0     | v4.3.0                           | 4.3.0 (still correct) | vv4.3.0 (WRONG, doubled)   |
+            #
+            # Strip an optional leading "v"/"V" here so both inputs behave identically end-to-end.
+            -   name: Normalize version (strip optional leading "v"/"V")
+                id: normalize-version
+                env:
+                    # Route the untrusted workflow_dispatch input through env instead of interpolating
+                    # it directly into the script - the latter is a known GitHub Actions script-injection
+                    # vector (a value like `"; rm -rf /` breaks out of the shell string).
+                    VERSION_INPUT: ${{ inputs.version }}
+                run: |
+                    version="$VERSION_INPUT"
+                    while [[ "$version" == [vV]* ]]; do
+                        version="${version:1}"
+                    done
+                    if [[ -z "$version" ]]; then
+                        echo "::error::version input normalized to an empty string (got \"$VERSION_INPUT\") - provide a version number, e.g. \"4.3.0\"." >&2
+                        exit 1
+                    fi
+                    echo "version=$version" >> "$GITHUB_OUTPUT"
             -   name: Checkout
                 uses: actions/checkout@v6
                 with:
@@ -158,7 +210,7 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Build new package
                 env:
-                    SETUPTOOLS_SCM_PRETEND_VERSION: ${{ inputs.version }}
+                    SETUPTOOLS_SCM_PRETEND_VERSION: ${{ steps.normalize-version.outputs.version }}
                 run: tox run -e build
             -   name: Publish package to Test PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
