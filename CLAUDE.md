@@ -127,7 +127,8 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   release tag, which triggers the same workflow's `test` → `publish-pypi` → `docker-publish` chain.
 - To publish a release candidate to **Test PyPI** without cutting a real release, manually trigger
   `publish.yml` (`workflow_dispatch`) with a `version` (no leading `v` — the workflow prepends it itself for the
-  Docker tag). This runs `test` → `publish-test-pypi` → `docker-publish` instead.
+  Docker tag; a leading `v`/`V` is tolerated and stripped, but an empty result after stripping fails the run).
+  This runs `test` → `publish-test-pypi` → `docker-publish` instead.
 - PRs are squash-merged; adjust the squashed commit's subject/body to accurately describe the change, since that
   message is what `release-please` parses.
 

@@ -39,6 +39,21 @@ jobs:
             -   name: Run lint checks
                 run: tox run -e flake8
 
+    actionlint:
+        # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
+        # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
+        # into shell instead of routing it through `env:`, the exact script-injection shape fixed in publish.yml.
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Download actionlint
+                id: get_actionlint
+                run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+                shell: bash
+            -   name: Run actionlint
+                run: ${{ steps.get_actionlint.outputs.executable }} -color
+                shell: bash
+
     deptry:
         runs-on: ubuntu-24.04
         strategy:

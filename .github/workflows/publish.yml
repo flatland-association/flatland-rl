@@ -16,6 +16,21 @@ on:
                 type: string
 
 jobs:
+    actionlint:
+        # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
+        # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
+        # into shell instead of routing it through `env:`, the exact script-injection shape fixed below.
+        runs-on: ubuntu-22.04
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Download actionlint
+                id: get_actionlint
+                run: bash <(curl -s https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+                shell: bash
+            -   name: Run actionlint
+                run: ${{ steps.get_actionlint.outputs.executable }} -color
+                shell: bash
+
     release-please:
         if: ${{ github.event_name == 'push' }}
         runs-on: ubuntu-22.04
@@ -163,12 +178,24 @@ jobs:
             # | 4.3.0      | 4.3.0                            | 4.3.0 (correct)       | v4.3.0 (correct)           |
             # | v4.3.0     | v4.3.0                           | 4.3.0 (still correct) | vv4.3.0 (WRONG, doubled)   |
             #
-            # Strip an optional leading "v" here so both inputs behave identically end-to-end.
-            -   name: Normalize version (strip optional leading "v")
+            # Strip an optional leading "v"/"V" here so both inputs behave identically end-to-end.
+            -   name: Normalize version (strip optional leading "v"/"V")
                 id: normalize-version
+                env:
+                    # Route the untrusted workflow_dispatch input through env instead of interpolating
+                    # it directly into the script - the latter is a known GitHub Actions script-injection
+                    # vector (a value like `"; rm -rf /` breaks out of the shell string).
+                    VERSION_INPUT: ${{ inputs.version }}
                 run: |
-                    version="${{ inputs.version }}"
-                    echo "version=${version#v}" >> "$GITHUB_OUTPUT"
+                    version="$VERSION_INPUT"
+                    while [[ "$version" == [vV]* ]]; do
+                        version="${version:1}"
+                    done
+                    if [[ -z "$version" ]]; then
+                        echo "::error::version input normalized to an empty string (got \"$VERSION_INPUT\") - provide a version number, e.g. \"4.3.0\"." >&2
+                        exit 1
+                    fi
+                    echo "version=$version" >> "$GITHUB_OUTPUT"
             -   name: Checkout
                 uses: actions/checkout@v6
                 with:
