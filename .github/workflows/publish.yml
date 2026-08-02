@@ -36,11 +36,11 @@ jobs:
             ${{ (github.event_name == 'push' && needs.release-please.outputs.release_created) ||
             (github.event_name == 'workflow_dispatch' && inputs.version != '') }}
         needs: [ release-please ]
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -60,8 +60,17 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
+                    set -euxo pipefail
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
             -   uses: actions/checkout@v6
                 with:
                     ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
@@ -92,7 +101,7 @@ jobs:
     publish-pypi:
         if: ${{ github.event_name == 'push' && needs.release-please.outputs.release_created }}
         needs: [ release-please, test ]
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         environment: pypi
         # https://docs.pypi.org/trusted-publishers/using-a-publisher/
         permissions:
@@ -107,7 +116,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
-                    python-version: "3.13"
+                    python-version: "3.14"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -142,7 +151,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
-                    python-version: "3.13"
+                    python-version: "3.14"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip

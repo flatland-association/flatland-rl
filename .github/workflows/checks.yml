@@ -25,7 +25,7 @@ concurrency:
 jobs:
     lint:
         if: ${{ false }}  # disabled for now, hasn't run in a while resulting in countless issues
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -40,11 +40,16 @@ jobs:
                 run: tox run -e flake8
 
     deptry:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
+        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
+        env:
+            CC: gcc-12
+            CXX: g++-12
         steps:
             -   name: Inspect disk
                 run: |
@@ -62,6 +67,24 @@ jobs:
                 run: |
                     df -h
                     docker system df
+            -   name: Install ffmpeg
+                run: |
+                    set -euxo pipefail
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
+                    sudo apt-get update
+                    sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
+                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
+                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
+                    sudo apt-get -y install gcc-12 g++-12
+                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
+                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
+                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -90,11 +113,16 @@ jobs:
                     key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
 
     testml:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
+        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
+        env:
+            CC: gcc-12
+            CXX: g++-12
         steps:
             -   name: Inspect disk
                 run: |
@@ -114,8 +142,23 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
+                    set -euxo pipefail
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
+                    # https://docs.scipy.org/doc/scipy/building/index.html
+                    sudo apt-get -y build-dep scipy
+                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
+                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
+                    sudo apt-get -y remove pybind11-dev || true
+                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
+                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
+                    sudo apt-get -y install gcc-12 g++-12
+                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
+                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
+                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -151,11 +194,11 @@ jobs:
                 run: df . -h
 
     test:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   name: Inspect disk
                 run: |
@@ -175,8 +218,12 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
+                    set -euxo pipefail
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
+
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
@@ -218,17 +265,20 @@ jobs:
                 run: df . -h
 
     notebooks:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
                 python-version: [
                   # "3.10", # commented out as failing too often
-                    "3.11", "3.12", "3.13" ]
+                    "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Install ffmpeg
                 run: |
+                    set -euxo pipefail
+                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
+                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
@@ -265,11 +315,11 @@ jobs:
                     key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     examples:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -304,14 +354,14 @@ jobs:
                     key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     profiling:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: read
             pull-requests: write
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -418,14 +468,14 @@ jobs:
                         _Updated by [this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · [gist](${{ steps.gist.outputs.url }})._
 
     profiling-get-k-shortest-paths:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: read
             pull-requests: write
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -538,11 +588,11 @@ jobs:
 
     benchmarks:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -587,11 +637,11 @@ jobs:
 
     regression:
         if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
