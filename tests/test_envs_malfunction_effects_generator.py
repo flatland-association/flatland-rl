@@ -7,6 +7,7 @@ from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionE
     condition_stopped_intermediate_and_range, make_multi_malfunction_condition, IntermediateStopMalfunctionEffectsGenerator
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
+from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
 
@@ -200,6 +201,34 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
         effects_generator=conditional_malfunction_effects_generator,
     )
     env.reset()
+
+    # `SparseLineGen` now explodes every stop (not just the target) to all reachable direction
+    # alternatives, so intermediate waypoints for this seed legitimately gained extra alternatives
+    # compared to when this test's expectations were pinned down. That has two knock-on effects computed
+    # during `env.reset()`, before the override below runs: (1) `IntermediateStopMalfunctionEffectsGenerator`'s
+    # condition matches against the full set of (position, direction) alternatives across all waypoints, so a
+    # larger alternative set shifts malfunction timing; (2) the timetable generator computes each agent's
+    # departure/arrival window from the (larger) alternative sets too, shifting schedules independent of (1)
+    # (e.g. agent 1's earliest departure moves from step 108 to 458). Pin both the waypoints/targets and the
+    # schedule back to their pre-generalization values so this test keeps exercising the malfunction-effects
+    # logic it's actually about, independent of that unrelated behavior change.
+    agent_waypoints = {
+        0: [[((15, 29), 1)], [((37, 39), 2)], [((14, 9), 0)]],
+        1: [[((14, 8), 2)], [((37, 33), 2)], [((12, 29), 1)]],
+        2: [[((14, 6), 0)], [((37, 39), 2)], [((12, 29), 1)]],
+    }
+    agent_earliest_departure = {0: [491, 526, None], 1: [108, 177, None], 2: [63, 134, None]}
+    agent_latest_arrival = {0: [None, 940, 1012], 1: [None, 789, 895], 2: [None, 981, 1087]}
+    for agent in env.agents:
+        agent.waypoints = [[Waypoint(position, direction) for position, direction in group] for group in agent_waypoints[agent.handle]]
+        agent.targets = set(agent_waypoints[agent.handle][-1])
+        agent.waypoints_earliest_departure = agent_earliest_departure[agent.handle]
+        agent.waypoints_latest_arrival = agent_latest_arrival[agent.handle]
+        # the scalar `earliest_departure`/`latest_arrival` (not just the per-leg lists above) gate the
+        # WAITING -> READY_TO_DEPART transition (see `rail_env.py`'s `_elapsed_steps >= agent.earliest_departure`)
+        # and must be pinned too.
+        agent.earliest_departure = agent_earliest_departure[agent.handle][0]
+        agent.latest_arrival = agent_latest_arrival[agent.handle][-1]
 
     num_steps_run = 1200
     _run_with_sthortest_path(env, rendering, num_steps_run, stop_at_first_intermediate=False)

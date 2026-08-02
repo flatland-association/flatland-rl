@@ -6,6 +6,7 @@ import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import TransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
@@ -48,7 +49,7 @@ def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> Li
     return [wp if isinstance(wp, list) else [wp] for wp in waypoints]
 
 
-def _filter_valid_target_configurations(rail, waypoint_group: List[Waypoint]) -> List[Waypoint]:
+def _filter_valid_target_configurations(rail: TransitionMap, waypoint_group: List[Waypoint]) -> List[Waypoint]:
     """
     Keeps only the arrival alternatives in a target waypoint group that are valid configurations on `rail`.
     Envs persisted before routing-flexibility alternatives were introduced store a legacy `None`-direction

@@ -195,8 +195,8 @@ class SparseLineGen(BaseLineGen):
                 reachable = []
                 for wp2 in candidates:
                     for wp1 in wpp1:
-                        if len(get_k_shortest_paths(None, wp1.position, wp1.direction, wp2.position,
-                                                     target_direction=wp2.direction, rail=rail)) > 0:
+                        k_sh = get_k_shortest_paths(None, wp1.position, wp1.direction, wp2.position, target_direction=wp2.direction, rail=rail)
+                        if len(k_sh) > 0:
                             reachable.append(wp2)
                             break
                 # N.B. depending on how the cities are placed in the rail, there may be no path forward, truncate for now

@@ -1,5 +1,5 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import Agent, EnvAgent, load_env_agent
+from flatland.envs.agent_utils import Agent, EnvAgent, _filter_valid_target_configurations, load_env_agent
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -166,3 +166,17 @@ def test_load_env_agent_fallback_waypoints():
 
     # must not raise - Rewards._sanitize_waypoints() assumes every entry is iterable.
     Rewards._sanitize_waypoints(env_agent.waypoints)
+
+
+def test_filter_valid_target_configurations():
+    """`_filter_valid_target_configurations` must keep only rail-valid directions at a group's position, and
+    must explode a legacy `None`-direction placeholder into concrete valid directions instead of dropping it."""
+    rail, _, _ = make_oval_rail()
+    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+
+    assert _filter_valid_target_configurations(rail, [
+        Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3)), Waypoint(position, Grid4TransitionsEnum(2))
+    ]) == [Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
+
+    assert _filter_valid_target_configurations(rail, [Waypoint(position, None)]) == [
+        Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
