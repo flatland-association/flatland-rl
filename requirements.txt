@@ -13,9 +13,9 @@ attrs==26.1.0
     #   entrypoint
     #   flatland-rl (pyproject.toml)
     #   versions
-boto3==1.43.61
+boto3==1.43.62
     # via flatland-rl (pyproject.toml)
-botocore==1.43.61
+botocore==1.43.62
     # via
     #   boto3
     #   s3transfer
@@ -125,7 +125,7 @@ pydantic==2.13.4
     # via flatland-rl (pyproject.toml)
 pydantic-core==2.46.4
     # via pydantic
-pyglet==2.1.15
+pyglet==2.1.16
     # via flatland-rl (pyproject.toml)
 pygments==2.20.0
     # via ipython
@@ -175,7 +175,7 @@ timeout-decorator==0.5.0
     # via flatland-rl (pyproject.toml)
 tqdm==4.70.0
     # via flatland-rl (pyproject.toml)
-traitlets==5.15.1
+traitlets==5.16.0
     # via
     #   ipython
     #   ipywidgets
