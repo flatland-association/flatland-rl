@@ -69,7 +69,7 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
-                    set -euxo
+                    set -euxo pipefail
                     sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
@@ -142,7 +142,7 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
-                    set -euxo
+                    set -euxo pipefail
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
                     sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
@@ -218,17 +218,11 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
-                    set -euxo
+                    set -euxo pipefail
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
                     sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
 
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -282,17 +276,11 @@ jobs:
             -   uses: actions/checkout@v6
             -   name: Install ffmpeg
                 run: |
-                    set -euxo
+                    set -euxo pipefail
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
                     sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
             -   name: Set up Python ${{ matrix.python-version }}
                 id: setup_python
                 uses: actions/setup-python@v6
@@ -480,14 +468,14 @@ jobs:
                         _Updated by [this workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) · [gist](${{ steps.gist.outputs.url }})._
 
     profiling-get-k-shortest-paths:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: read
             pull-requests: write
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13" ]
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}

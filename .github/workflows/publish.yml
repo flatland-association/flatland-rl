@@ -60,7 +60,7 @@ jobs:
                     docker system df
             -   name: Install ffmpeg
                 run: |
-                    set -euxo
+                    set -euxo pipefail
                     # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
                     sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
                     sudo apt-get update
@@ -116,7 +116,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
-                    python-version: "3.13"
+                    python-version: "3.14"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
