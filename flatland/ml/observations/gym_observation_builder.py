@@ -35,6 +35,7 @@ class GymObservationBuilderWrapper(GymObservationBuilder[EnvType, ObservationTyp
         self.observation_space = observation_space
 
     def reset(self, env: EnvType):
+        super().reset(env)
         self.wrap.reset(env)
 
     def get(self, handle: AgentHandle = 0) -> MultiAgentDict:

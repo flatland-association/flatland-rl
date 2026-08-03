@@ -1,8 +1,8 @@
 import tempfile
 from fractions import Fraction
 from pathlib import Path
+from typing import Tuple
 
-import pytest
 import numpy as np
 import pytest
 
@@ -829,13 +829,13 @@ def test_ecml2026_rewards_normalization():
 
 INTERMEDIATE_NOT_SERVED_PENALTY = 33
 LATE_ARRIVAL_FACTOR = 0.2
- 
+
 # a two-cell station: the train may halt at either cell
 STATION_CELL_A = Waypoint((2, 2), 2)
 STATION_CELL_B = Waypoint((2, 3), 2)
- 
- 
-def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11, earliest_departure_intermediate=7):
+
+
+def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int = 11, earliest_departure_intermediate: int = 7) -> Tuple[BaseDefaultRewards, EnvAgent, DistanceMap]:
     rewards = BaseDefaultRewards(intermediate_not_served_penalty=INTERMEDIATE_NOT_SERVED_PENALTY,
                                  intermediate_late_arrival_penalty_factor=LATE_ARRIVAL_FACTOR)
     agent = EnvAgent(initial_configuration=((0, 0), 0),
@@ -851,19 +851,19 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11, ea
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     return rewards, agent, distance_map
- 
- 
+
+
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
     agent.old_configuration = (old.position, old.direction)
     agent.current_configuration = (waypoint.position, waypoint.direction)
-    agent.state = state    
+    agent.state = state
     transition_data = AgentTransitionData(
         speed=Fraction(0), new_configuration=(waypoint.position, waypoint.direction),
         new_speed=Fraction(0), current_resource=waypoint.position,
         state_transition_signal=StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True))
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
- 
- 
+
+
 @pytest.mark.parametrize("pass_through_cell,halting_cell", [
     (STATION_CELL_A, STATION_CELL_B),
     (STATION_CELL_B, STATION_CELL_A),
@@ -872,56 +872,56 @@ def test_multicell_station_served_regardless_of_halting_cell(pass_through_cell, 
     """Rolling through one station cell and stopping (on time) at the other serves the stop,
     no matter which of the two cells the train halts at."""
     rewards, agent, distance_map = _agent_with_two_cell_intermediate_station()
- 
+
     approach = Waypoint((1, 2), 2)
     _visit(rewards, agent, distance_map, pass_through_cell, TrainState.MOVING, 8, approach)   # roll into station
     _visit(rewards, agent, distance_map, halting_cell, TrainState.STOPPED, 9, pass_through_cell)  # halt, on time
     _visit(rewards, agent, distance_map, halting_cell, TrainState.MOVING, 10, halting_cell)   # depart after ed
- 
+
     agent.state = TrainState.DONE
     d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
     assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0, \
         "Halting at any cell of a multi-cell station serves the stop"
     assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0
     assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
- 
- 
+
+
 def test_multicell_station_late_arrival_scored_on_halting_cell():
     """An on-time roll-through of one station cell must not mask a late halt at another cell."""
     rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11)
- 
+
     approach = Waypoint((1, 2), 2)
     _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.MOVING, 8, approach)          # on time, no halt
     off_station = Waypoint((1, 3), 0)
     _visit(rewards, agent, distance_map, off_station, TrainState.MOVING, 9, STATION_CELL_A)       # leave station
     _visit(rewards, agent, distance_map, STATION_CELL_B, TrainState.STOPPED, 20, approach)        # actual halt, LATE
     _visit(rewards, agent, distance_map, STATION_CELL_B, TrainState.MOVING, 21, STATION_CELL_B)
- 
+
     agent.state = TrainState.DONE
     d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
     assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0
     assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == LATE_ARRIVAL_FACTOR * (11 - 20), \
         "Late arrival must be scored on the halting cell, not diluted by an on-time pass-through"
     assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
- 
- 
+
+
 def test_multicell_station_not_served_when_only_rolled_through():
     """Rolling through both station cells without ever halting -> only the not-served penalty,
     no late/early penalties (even if the roll-through itself was late)."""
     rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11)
- 
+
     approach = Waypoint((1, 2), 2)
     _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.MOVING, 20, approach)  # late, but no halt
     _visit(rewards, agent, distance_map, STATION_CELL_B, TrainState.MOVING, 21, STATION_CELL_A)
- 
+
     agent.state = TrainState.DONE
     d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
     assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == -INTERMEDIATE_NOT_SERVED_PENALTY
     assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0, \
         "A stop that was not served must not additionally incur late/early penalties"
     assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
- 
- 
+
+
 @pytest.mark.parametrize("revisit_cell,revisit_halts", [
     (STATION_CELL_A, False),  # later roll through the same cell without halting
     (STATION_CELL_B, False),  # later roll through the other cell without halting
@@ -935,14 +935,14 @@ def test_multicell_station_on_time_halt_forgives_later_revisit(revisit_cell, rev
     feature); stations are assumed to appear at most once in `agent.waypoints` (domain knowledge)."""
     rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(
         latest_arrival_intermediate=11, earliest_departure_intermediate=7)
- 
+
     approach = Waypoint((1, 2), 2)
     off_station = Waypoint((1, 3), 0)
     # first visit: halt at cell A within the time window (arrive 8 <= 11, depart 10 >= 7)
     _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.STOPPED, 8, approach)
     _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.MOVING, 9, STATION_CELL_A)
     _visit(rewards, agent, distance_map, off_station, TrainState.MOVING, 10, STATION_CELL_A)
- 
+
     # second visit: way past latest_arrival
     if revisit_halts:
         _visit(rewards, agent, distance_map, revisit_cell, TrainState.STOPPED, 30, approach)
@@ -951,7 +951,7 @@ def test_multicell_station_on_time_halt_forgives_later_revisit(revisit_cell, rev
     else:
         _visit(rewards, agent, distance_map, revisit_cell, TrainState.MOVING, 30, approach)
         _visit(rewards, agent, distance_map, off_station, TrainState.MOVING, 31, revisit_cell)
- 
+
     agent.state = TrainState.DONE
     d = rewards.step_reward(agent, None, distance_map, elapsed_steps=50)
     assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0, \
@@ -1052,6 +1052,22 @@ def test_collision_penalty_on_invalid_action_stop():
     transition_data = AgentTransitionData(Fraction(1), None, Fraction(0), None, signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR
+
+
+def test_collision_penalty_on_invalid_stop_action():
+    """STOP_MOVING itself evaluates as invalid (e.g. facing a symmetric switch, which has no straight-through
+    transition -- see RailGridTransitionMap._check_action_new) -> env intervenes -> penalized, not "voluntary",
+    even though stop_action_given and new_speed_zero are both true, same as a genuinely voluntary stop."""
+    rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
+    agent, distance_map = _moving_agent()
+
+    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=False)
+    _stop_moving_agent(agent, signals)
+
+    transition_data = AgentTransitionData(Fraction(1), None, Fraction(0), None, signals)
+    d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
+    assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR, \
+        "An env-forced stop must be penalized even if it happens to coincide with a STOP_MOVING action"
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1275,7 +1291,7 @@ def test_platoon_slow_leader_periodic_collision_penalty():
 def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     """A train arriving at a symmetric switch must choose left or right; MOVE_FORWARD (going straight)
     is invalid. The env cannot perform the action and force-stops the train, which -- like any
-    env-imposed stop -- incurs the collision penalty proportional to speed. 
+    env-imposed stop -- incurs the collision penalty proportional to speed.
 
     Layout (train departs at (2,3) heading WEST, rolls to the symmetric switch at (2,1) whose only
     valid exits are north and south -- continuing west is invalid):

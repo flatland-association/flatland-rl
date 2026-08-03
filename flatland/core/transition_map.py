@@ -148,11 +148,13 @@ class TransitionMap(Generic[UnderlyingConfigurationType, UnderlyingTransitionsTy
 
         Parameters
         ----------
-        configuration: ConfigurationType
+        configuration : UnderlyingConfigurationType
+            the configuration to check
 
         Returns
         -------
-
+        bool
+            whether the configuration is valid
         """
         raise NotImplementedError()
 
