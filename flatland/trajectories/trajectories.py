@@ -113,7 +113,10 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, DISCRETE_ACTION_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'action'])
+            # explicit dtypes (not just `columns=`) - an all-`object`-dtype empty frame upcasts a same-named
+            # numeric column back to `object` when later `pd.concat`-ed with real (typed) rows in `persist()`.
+            return pd.DataFrame({'episode_id': pd.Series(dtype='object'), 'env_time': pd.Series(dtype='int64'),
+                                 'agent_id': pd.Series(dtype='int64'), 'action': pd.Series(dtype='object')})
         df = pd.read_csv(f, sep='\t')
         if episode_only:
             df = df[df['episode_id'] == self.ep_id]
@@ -130,7 +133,9 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, TRAINS_ARRIVED_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'success_rate', 'normalized_reward'])
+            # see `_read_actions` for why explicit dtypes (not just `columns=`) matter here.
+            return pd.DataFrame({'episode_id': pd.Series(dtype='object'), 'env_time': pd.Series(dtype='int64'),
+                                 'success_rate': pd.Series(dtype='float64'), 'normalized_reward': pd.Series(dtype='float64')})
         df = pd.read_csv(f, sep='\t')
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
@@ -146,7 +151,9 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, TRAINS_POSITIONS_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'position'])
+            # see `_read_actions` for why explicit dtypes (not just `columns=`) matter here.
+            return pd.DataFrame({'episode_id': pd.Series(dtype='object'), 'env_time': pd.Series(dtype='int64'),
+                                 'agent_id': pd.Series(dtype='int64'), 'position': pd.Series(dtype='object')})
         df = pd.read_csv(f, sep='\t')
         df["position"] = df["position"].map(normalize_position_read)
         if episode_only:
@@ -163,7 +170,10 @@ class Trajectory:
         """
         f = os.path.join(self.data_dir, TRAINS_REWARDS_DONES_INFOS_FNAME)
         if not os.path.exists(f):
-            return pd.DataFrame(columns=['episode_id', 'env_time', 'agent_id', 'reward', 'info', 'done'])
+            # see `_read_actions` for why explicit dtypes (not just `columns=`) matter here.
+            return pd.DataFrame({'episode_id': pd.Series(dtype='object'), 'env_time': pd.Series(dtype='int64'),
+                                 'agent_id': pd.Series(dtype='int64'), 'reward': pd.Series(dtype='float64'),
+                                 'info': pd.Series(dtype='object'), 'done': pd.Series(dtype='bool')})
         df = pd.read_csv(f, sep='\t')
         if episode_only:
             df = df[df['episode_id'] == self.ep_id]
