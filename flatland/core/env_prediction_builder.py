@@ -33,7 +33,8 @@ class PredictionBuilder(Generic[EnvType, PredictionType]):
 
         Parameters
         ----------
-        env: EnvType
+        env : EnvType
+            the (possibly newly generated) environment instance
         """
         self.env = env
 

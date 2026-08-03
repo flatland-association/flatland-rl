@@ -198,10 +198,15 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
             self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
-            # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step.
+            # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step,
+            # and the env did not itself deny movement (invalid action or motion check conflict, see
+            # TrainStateMachine._handle_moving: MOVING -> STOPPED on `(stop_action_given and new_speed_zero) or not
+            # movement_allowed`). Without the movement_allowed check, an env-forced stop that happens to coincide
+            # with a STOP_MOVING action (e.g. STOP_MOVING evaluated as invalid upon facing a symmetric switch) would
+            # be misclassified as voluntary and skip the penalty.
             # Only penalize stops imposed by the env (motion check conflict or invalid action), not controlled stops.
             sts = agent_transition_data.state_transition_signal
-            voluntary_stop = sts.stop_action_given and sts.new_speed_zero
+            voluntary_stop = sts.stop_action_given and sts.new_speed_zero and sts.movement_allowed
             if not voluntary_stop:
                 # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
                 # - if braking, reduced speed
@@ -254,9 +259,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
             wps_intersection: Set[ConfigurationType] = intermediate_alternatives.intersection(agent_arrivals)
             # a station may consist of several halting cells (alternative waypoints);
             # the stop is served iff the train stopped at any of them
-            stopped_wps: Set[Waypoint] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
+            stopped_wps: Set[ConfigurationType] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
             if len(stopped_wps) == 0:
-
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
@@ -285,7 +289,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[ConfigurationType]):
         result = dict.fromkeys(self._cached_default_penalty_values, 0)
         for r in rewards:
             for k, v in r.items():
-                result[k] += v
+                result[k] = result.get(k, 0) + v
         return result
 
     # policy runner calls normalization: normalize sum over all keys instead of per key.

@@ -41,7 +41,8 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
 
         Parameters
         ----------
-        env: EnvType
+        env : EnvType
+            the (possibly newly generated) environment instance
         """
         self.env: EnvType = env
 
