@@ -46,31 +46,18 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             return
 
         if agent.handle not in self._shortest_paths:
-            p = []
-            for pp1, pp2 in zip(agent.waypoints, agent.waypoints[1:]):
-                # p1 is whichever of pp1's alternatives the previous leg's path actually arrived at (not
-                # necessarily pp1[0] - an intermediate stop, like the target, can have several rail-valid
-                # arrival alternatives, only one of which the path threading through it is actually used).
-                p1: Waypoint = p[-1] if len(p) > 0 else pp1[0]
-                assert p1 in pp1, (p1, pp1)
-                p2: Waypoint = pp2[0]
-                pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, rail=env.rail)
-                if p2.direction is None:
-                    p_next = pp_next[0]
-                else:
-                    # accept a landing direction matching any of pp2's alternatives (e.g. a target explodes to all
-                    # valid directions, since any of them is acceptable), not just p2's own direction.
-                    p2_directions = {wp.direction for wp in pp2}
-                    p_next = None
-                    for _p_next in pp_next:
-                        if _p_next[-1].direction in p2_directions:
-                            p_next = _p_next
-                            break
-                assert p_next is not None, f"Not found next path from {p1} to {p2}"
-                if len(p) > 0:
-                    p += p_next[1:]
-                else:
-                    p += p_next
+            p = [agent.waypoints[0][0]]
+            p_next = None
+            for pp2 in agent.waypoints[1:]:
+                p1: Waypoint = p[-1]
+                for p2 in pp2:
+                    pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, target_direction=p2.direction,rail=env.rail)
+                    if len(pp_next) > 0:
+                        assert pp_next[0][-1] == p2, (p2, pp_next)
+                        p_next = pp_next[0][1:]
+                        break
+            assert p_next is not None, f"Not found next path from {p1} to {pp_next}, agent.waypoints={agent.waypoints}"
+            p += p_next
             self._shortest_paths[agent.handle] = p
 
         if agent.position is None:

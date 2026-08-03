@@ -32,4 +32,4 @@ def test_shortest_path_policy_with_intermediate_targets(gen_movies=False):
             env=env_generator_legacy(n_cities=5, line_length=3, obs_builder_object=FullEnvObservation(), seed=42, )[0],
             callbacks=GenerateMovieCallbacks() if gen_movies else None,
         )
-        assert np.isclose(trajectory.trains_arrived_lookup()["success_rate"], 1 / 7)
+        assert np.isclose(trajectory.trains_arrived_lookup()["success_rate"], 2 / 7)
