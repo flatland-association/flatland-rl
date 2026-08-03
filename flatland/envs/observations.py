@@ -57,7 +57,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         super().reset(env)
         if self.predictor:
             self.predictor.reset(env)
-        self.location_has_target = {tuple(agent.target): 1 for agent in self.env.agents}
+        self.location_has_target = {tuple(t[0]): 1 for agent in self.env.agents for t in agent.targets}
 
     def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Node]:
         """
@@ -277,6 +277,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         visited = OrderedSet()
 
         agent = self.env.agents[handle]
+        agent_target = next(iter(agent.targets))[0]
         distance_map_handle = self.env.distance_map.get()[handle]
 
         # assume constant max_speed
@@ -369,11 +370,11 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                             if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
-            if position in self.location_has_target and position != agent.target:
+            if position in self.location_has_target and position != agent_target:
                 if tot_dist < other_target_encountered:
                     other_target_encountered = tot_dist
 
-            if position == agent.target and tot_dist < own_target_encountered:
+            if position == agent_target and tot_dist < own_target_encountered:
                 own_target_encountered = tot_dist
 
             # #############################
@@ -384,7 +385,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             visited.add((position[0], position[1], direction))
 
             # If the target node is encountered, pick that as node. Also, no further branching is possible.
-            if fast_position_equal(position, self.env.agents[handle].target):
+            if fast_position_equal(position, agent_target):
                 last_is_target = True
                 break
 
@@ -563,6 +564,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
     def get(self, handle: AgentHandle = 0) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
 
         agent = self.env.agents[handle]
+        agent_target = next(iter(agent.targets))[0]
         if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_position
             agent_virtual_direction = agent.initial_direction
@@ -570,7 +572,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             agent_virtual_position = agent.position
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
-            agent_virtual_position = agent.target
+            agent_virtual_position = agent_target
             agent_virtual_direction = agent.direction
         else:
             return None
@@ -581,7 +583,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
         obs_agents_state[:, :, 4] = 0
 
         obs_agents_state[agent_virtual_position][0] = agent_virtual_direction if agent_virtual_direction is not None else -1
-        obs_targets[agent.target][0] = 1
+        obs_targets[agent_target][0] = 1
 
         for i in range(len(self.env.agents)):
             other_agent: EnvAgent = self.env.agents[i]
@@ -590,7 +592,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             if other_agent.state == TrainState.DONE:
                 continue
 
-            obs_targets[other_agent.target][1] = 1
+            obs_targets[next(iter(other_agent.targets))[0]][1] = 1
 
             # second to fourth channel only if in the grid
             if other_agent.position is not None:
@@ -660,6 +662,7 @@ class LocalObsForRailEnv(ObservationBuilder):
     def get(self, handle: int = 0) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
         agents = self.env.agents
         agent = agents[handle]
+        agent_target = next(iter(agent.targets))[0]
 
         # Correct agents position for padding
         # agent_rel_pos[0] = agent.position[0] + self.max_padding
@@ -680,11 +683,11 @@ class LocalObsForRailEnv(ObservationBuilder):
         for pos in visited:
             curr_rel_coord = rel_coords[_idx]
             local_rail_obs[curr_rel_coord[0], curr_rel_coord[1], :] = self.rail_obs[pos[0], pos[1], :]
-            if pos == agent.target:
+            if pos == agent_target:
                 obs_map_state[curr_rel_coord[0], curr_rel_coord[1], 0] = 1
             else:
                 for tmp_agent in agents:
-                    if pos == tmp_agent.target:
+                    if pos == next(iter(tmp_agent.targets))[0]:
                         obs_map_state[curr_rel_coord[0], curr_rel_coord[1], 1] = 1
             if pos != agent.position:
                 for tmp_agent in agents:

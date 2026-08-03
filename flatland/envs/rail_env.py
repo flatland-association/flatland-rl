@@ -23,7 +23,7 @@ from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_effects_generators as mfg
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, _filter_valid_target_configurations
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -787,4 +787,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         agents = EnvAgent.from_line(line)
         for agent in agents:
             agent.targets = {t for t in agent.targets if rail.is_valid_configuration(t)}
+            # N.B. only the target's direction alternatives (last waypoint group) can be invalid - the
+            # line generator's own routing already guarantees valid configurations everywhere else.
+            agent.waypoints[-1] = _filter_valid_target_configurations(rail, agent.waypoints[-1])
         return agents

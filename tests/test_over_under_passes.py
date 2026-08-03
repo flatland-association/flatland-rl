@@ -1,5 +1,6 @@
 import time
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -34,7 +35,7 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_0.initial_direction = 3  # east
     agent_0.position = (3, 0)  # one cell ahead of diamond crossing facing east
     agent_0.direction = 3  # east
-    agent_0.target = (3, 9)  # east dead-end
+    agent_0.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
@@ -44,7 +45,7 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_1.initial_direction = 2  # south
     agent_1.position = (1, 2)  # one cell ahead of diamond crossing facing south
     agent_1.direction = 2  # south
-    agent_1.target = (6, 2)  # south dead-end
+    agent_1.targets = {((6, 2), d) for d in Grid4TransitionsEnum}  # south dead-end
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
@@ -109,7 +110,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_0.position = (3, 0)  # one cell ahead of diamond crossing facing east
     agent_0.direction = 3  # east
     agent_0.initial_direction = 3  # east
-    agent_0.target = (3, 9)  # east dead-end
+    agent_0.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
@@ -119,7 +120,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_1.position = (1, 2)  # one cell ahead of diamond crossing facing south
     agent_1.direction = 2  # south
     agent_1.initial_direction = 2  # south
-    agent_1.target = (6, 2)  # south dead-end
+    agent_1.targets = {((6, 2), d) for d in Grid4TransitionsEnum}  # south dead-end
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
@@ -185,7 +186,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_0.position = (3, 0)  # one cell ahead of diamond crossing facing east
     agent_0.direction = 3  # east
     agent_0.initial_direction = 3  # east
-    agent_0.target = (3, 9)  # east dead-end
+    agent_0.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
@@ -195,7 +196,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_1.position = (3, 4)  # one cell ahead of diamond crossing facing west
     agent_1.direction = 3  # west
     agent_1.initial_direction = 3  # west
-    agent_1.target = (3, 0)  # west dead-end
+    agent_1.targets = {((3, 0), d) for d in Grid4TransitionsEnum}  # west dead-end
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)

@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.line_generators import sparse_line_generator
@@ -60,7 +61,7 @@ def test_walker():
     # set initial position and direction for testing...
     env.agents[0].position = (0, 1)
     env.agents[0].direction = 1
-    env.agents[0].target = (0, 0)
+    env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
     # reset to set agents from agents_static
     # env.reset(False, False)
     env.distance_map._compute(env.agents, env.rail)

@@ -39,10 +39,10 @@ def test_save_load():
 
     agent_1_pos = env.agents[0].position
     agent_1_dir = env.agents[0].direction
-    agent_1_tar = env.agents[0].target
+    agent_1_tar = next(iter(env.agents[0].targets))[0]
     agent_2_pos = env.agents[1].position
     agent_2_dir = env.agents[1].direction
-    agent_2_tar = env.agents[1].target
+    agent_2_tar = next(iter(env.agents[1].targets))[0]
 
     os.makedirs("tmp", exist_ok=True)
 
@@ -55,10 +55,10 @@ def test_save_load():
     assert (len(env.agents) == 2)
     assert (agent_1_pos == env.agents[0].position)
     assert (agent_1_dir == env.agents[0].direction)
-    assert (agent_1_tar == env.agents[0].target)
+    assert (agent_1_tar == next(iter(env.agents[0].targets))[0])
     assert (agent_2_pos == env.agents[1].position)
     assert (agent_2_dir == env.agents[1].direction)
-    assert (agent_2_tar == env.agents[1].target)
+    assert (agent_2_tar == next(iter(env.agents[1].targets))[0])
 
 
 @pytest.mark.skip("Msgpack serializing not supported")
@@ -81,7 +81,7 @@ def test_save_load_mpk():
     for agent1, agent2 in zip(env.agents, env2.agents):
         assert (agent1.position == agent2.position)
         assert (agent1.direction == agent2.direction)
-        assert (agent1.target == agent2.target)
+        assert (next(iter(agent1.targets))[0] == next(iter(agent2.targets))[0])
 
 
 @pytest.mark.skip(reason="Old file used to create env, not sure how to regenerate")
@@ -138,7 +138,7 @@ def test_rail_environment_single_agent(show=False):
 
         # We do not care about target for the moment
         agent = rail_env.agents[0]
-        agent.target = [-1, -1]
+        agent.targets = {([-1, -1], d) for d in Grid4TransitionsEnum}
 
         # Check that trains are always initialized at a consistent position
         # or direction.

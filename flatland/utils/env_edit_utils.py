@@ -3,6 +3,7 @@ from numpy.random import RandomState
 import flatland.envs.observations as obs
 import flatland.envs.rail_generators as rg
 import flatland.envs.timetable_generators as ttg
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import BaseLineGen
 from flatland.envs.rail_env import RailEnv
@@ -20,7 +21,9 @@ class SchedGen2(BaseLineGen):
 
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
-        return Line(agent_waypoints={i: [[Waypoint(self.rcStart, self.iDir)], [Waypoint(self.rcEnd, None)]] for i in range(num_agents)},
+        return Line(agent_waypoints={i: [[Waypoint(self.rcStart, self.iDir)],
+                                         [Waypoint(self.rcEnd, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((self.rcEnd, d))]] for i in
+                                     range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
 
@@ -34,7 +37,8 @@ class SchedGen3(BaseLineGen):
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
         return Line(agent_waypoints={i: [[Waypoint(self.lrcStarts[i % len(self.lrcStarts)], self.liDirs[i % len(self.liDirs)])],
-                                         [Waypoint(self.lrcTargs[i % len(self.lrcTargs)], None)]] for i in range(num_agents)},
+                                         [Waypoint(self.lrcTargs[i % len(self.lrcTargs)], d) for d in Grid4TransitionsEnum
+                                          if rail.is_valid_configuration((self.lrcTargs[i % len(self.lrcTargs)], d))]] for i in range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
 

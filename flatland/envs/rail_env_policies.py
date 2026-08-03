@@ -46,26 +46,18 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             return
 
         if agent.handle not in self._shortest_paths:
-            p = []
-            for pp1, pp2 in zip(agent.waypoints, agent.waypoints[1:]):
-                p1: Waypoint = pp1[0]
-                p2: Waypoint = pp2[0]
-                if len(p) > 0:
-                    assert p[-1] == p1, (p[-1], p1)
-                pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, rail=env.rail)
-                p_next = None
-                if p2.direction is None:
-                    p_next = pp_next[0]
-                else:
-                    for _p_next in pp_next:
-                        if _p_next[-1].direction == p2.direction:
-                            p_next = _p_next
-                            break
-                assert p_next is not None, f"Not found next path from {p1} to {p2}"
-                if len(p) > 0:
-                    p += p_next[1:]
-                else:
-                    p += p_next
+            p = [agent.waypoints[0][0]]
+            p_next = None
+            for pp2 in agent.waypoints[1:]:
+                p1: Waypoint = p[-1]
+                for p2 in pp2:
+                    pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, target_direction=p2.direction,rail=env.rail)
+                    if len(pp_next) > 0:
+                        assert pp_next[0][-1] == p2, (p2, pp_next)
+                        p_next = pp_next[0][1:]
+                        break
+            assert p_next is not None, f"Not found next path from {p1} to {pp_next}, agent.waypoints={agent.waypoints}"
+            p += p_next
             self._shortest_paths[agent.handle] = p
 
         if agent.position is None:

@@ -3,6 +3,7 @@ import tempfile
 import numpy as np
 import pytest
 
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -23,7 +24,7 @@ def ndom_seeding():
                       line_generator=sparse_line_generator(seed=12), number_of_agents=10)
         env.reset(True, True, random_seed=1)
 
-        env.agents[0].target = (0, 0)
+        env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
         for step in range(10):
             actions = {}
             actions[0] = 2

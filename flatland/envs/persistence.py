@@ -217,13 +217,20 @@ class RailEnvPersister(object):
         if "level_free_positions" in env_dict:
             env.resource_map = GridResourceMap(env_dict["level_free_positions"])
 
-        # Replace the agents tuple with EnvAgent objects
+        env.height, env.width = grid.shape
+        # use new rail object instance for lru cache scoping and garbage collection to work properly
+        env.rail = RailGridTransitionMap(height=env.height, width=env.width)
+        env.rail.grid = grid
+
+        # Replace the agents tuple with EnvAgent objects. Target configurations are not serialised with rail
+        # validity, so `load_env_agent`/`load_legacy_static_agent` filter them against the (now available) rail
+        # grid at load time. Otherwise, done in env._agents_from_line() during reset().
         if "agents_static" in env_dict:
-            env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"])
+            env_dict["agents"] = EnvAgent.load_legacy_static_agent(env_dict["agents_static"], env.rail)
             # remove the legacy key
             del env_dict["agents_static"]
         elif "agents" in env_dict:
-            env_dict["agents"] = [load_env_agent(d) for d in env_dict["agents"]]
+            env_dict["agents"] = [load_env_agent(d, env.rail) for d in env_dict["agents"]]
 
         # Initialise the env with the frozen agents in the file
         env.agents = env_dict.get("agents", [])
@@ -231,16 +238,7 @@ class RailEnvPersister(object):
         # For consistency, set number_of_agents, which is the number which will be generated on reset
         env.number_of_agents = env.get_num_agents()
 
-        env.height, env.width = grid.shape
-
-        # use new rail object instance for lru cache scoping and garbage collection to work properly
-        env.rail = RailGridTransitionMap(height=env.height, width=env.width)
-        env.rail.grid = grid
         env.dones = dict.fromkeys(list(range(env.get_num_agents())) + ["__all__"], False)
-
-        # N.B. targets not serialised, so do post-cleaning. Otherwise, done in env._agents_from_line() during reset().
-        for agent in env.agents:
-            agent.targets = {t for t in agent.targets if env.rail.is_valid_configuration(t)}
 
         max_episode_steps = env_dict.get('max_episode_steps', None)
         if max_episode_steps is not None:

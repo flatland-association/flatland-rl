@@ -109,7 +109,7 @@ def test_reward_function_conflict(rendering=False):
     agent.initial_position = (5, 6)  # south dead-end
     agent.direction = 0  # north
     agent.initial_direction = 0  # north
-    agent.target = (3, 9)  # east dead-end
+    agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
@@ -118,7 +118,7 @@ def test_reward_function_conflict(rendering=False):
     agent.initial_position = (3, 8)  # east dead-end
     agent.direction = 3  # west
     agent.initial_direction = 3  # west
-    agent.target = (6, 6)  # south dead-end
+    agent.targets = {((6, 6), d) for d in Grid4TransitionsEnum}  # south dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
@@ -202,7 +202,7 @@ def test_reward_function_waiting(rendering=False):
     agent.position = (3, 8)  # east dead-end
     agent.direction = 3  # west
 
-    agent.target = (3, 1)  # west dead-end
+    agent.targets = {((3, 1), d) for d in Grid4TransitionsEnum}  # west dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
@@ -211,7 +211,7 @@ def test_reward_function_waiting(rendering=False):
     agent.initial_direction = 0  # north
     agent.position = (5, 6)  # south dead-end
     agent.direction = 0  # north
-    agent.target = (3, 8)  # east dead-end
+    agent.targets = {((3, 8), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
@@ -310,8 +310,8 @@ def test_reward_function_waiting(rendering=False):
 
         print(env.dones["__all__"])
         for agent in env.agents:
-            print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.target))
-        print(np.all([np.array_equal(agent2.position, agent2.target) for agent2 in env.agents]))
+            print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.targets))
+        print(np.all([np.array_equal(agent2.position, next(iter(agent2.targets))[0]) for agent2 in env.agents]))
         for agent in env.agents:
             expected_position = expectations[iteration + 1]['positions'][agent.handle]
             assert agent.position == expected_position, \

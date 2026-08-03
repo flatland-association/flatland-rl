@@ -33,7 +33,7 @@ def test_get_global_observation():
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]
         print("[{}] state={}, position={}, target={}, initial_position={}".format(i, agent.state, agent.position,
-                                                                                  agent.target,
+                                                                                  agent.targets,
                                                                                   agent.initial_position))
 
     for i, agent in enumerate(env.agents):
@@ -49,7 +49,7 @@ def test_get_global_observation():
             for c in range(env.width):
                 _other_agent_target = 0
                 for other_i, other_agent in enumerate(env.agents):
-                    if other_agent.target == (r, c):
+                    if next(iter(other_agent.targets))[0] == (r, c):
                         _other_agent_target = 1
                         break
                 assert obs_targets[(r, c)][

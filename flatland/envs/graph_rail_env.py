@@ -4,6 +4,7 @@ from typing import List, Optional
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
 from flatland.core.graph.graph_resource_map import GraphResourceMap
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
@@ -96,10 +97,15 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     def _apply_timetable_to_agents(self, agents: List[EnvAgent[str]], timetable: "Timetable") -> List[EnvAgent[str]]:
         EnvAgent.apply_timetable(self.agents, timetable)
         for agent in self.agents:
-            assert len(agent.waypoints[-1]) == 1
-            agent.waypoints = [[GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.position, wp.direction) for wp in flex_intermediate_stop] for
-                               flex_intermediate_stop in agent.waypoints[:1]] + [
-                                  GraphTransitionMap.grid_configuration_to_graph_configuration(*(agent.waypoints[-1][0].position), d) for d in range(4)]
+            # N.B. only the position is used below (all of the target's direction alternatives share it).
+            target_position = agent.waypoints[-1][0].position
+            target_configurations = [
+                GraphTransitionMap.grid_configuration_to_graph_configuration(*target_position, d) for d in Grid4TransitionsEnum
+            ]
+            agent.waypoints = [
+                                  [GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.position, wp.direction) for wp in flex_intermediate_stop]
+                                  for flex_intermediate_stop in agent.waypoints[:1]
+                              ] + [[c for c in target_configurations if c in self.rail.g.nodes]]
         return agents
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:

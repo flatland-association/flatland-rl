@@ -168,7 +168,10 @@ class SparseLineGen(BaseLineGen):
         # N.B. Line generator currently has no routing flexibility!
         agent_positions = [[[p] for p in pa] for pa in agent_positions]
         agent_directions = [[[d] for d in da] for da in agent_directions]
-        agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(target, None)]] for
+
+        agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
+                              [[Waypoint(target, d) for d in Grid4TransitionsEnum
+                                if rail.is_valid_configuration((target, d))]] for
                            i, (pas, das, target)
                            in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 
@@ -179,22 +182,29 @@ class SparseLineGen(BaseLineGen):
         new_agent_waypoints = {}
         for agent_id, agent_waypoints_ in agent_waypoints.items():
             new_agent_waypoints[agent_id] = [agent_waypoints_[0]]
-            previous_direction = None
-            for wpp1, wpp2 in zip(agent_waypoints_, agent_waypoints_[1:]):
-                wp1 = wpp1[0]
-                wp2 = wpp2[0]
-
-                k_sh = get_k_shortest_paths(None, wp1.position, previous_direction if previous_direction is not None else wp1.direction, wp2.position,
-                                            rail=rail)
+            for wpp2 in agent_waypoints_[1:]:
+                wpp1 = new_agent_waypoints[agent_id][-1]
+                # Every stop's candidates are every direction that is structurally valid at its position -
+                # not just the single direction originally guessed for an intermediate stop, or the one used
+                # to look up the station - since neither guess necessarily corresponds to a real path.
+                stop_position = wpp2[0].position
+                candidates = [Waypoint(stop_position, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((stop_position, d))]
+                # Keep only the candidate directions reachable from any of this leg's source alternatives -
+                # looping over all (source, candidate) combinations rather than assuming a single
+                # representative pair on either side.
+                reachable = []
+                for wp2 in candidates:
+                    for wp1 in wpp1:
+                        k_sh = get_k_shortest_paths(None, wp1.position, wp1.direction, wp2.position, target_direction=wp2.direction, rail=rail)
+                        if len(k_sh) > 0:
+                            reachable.append(wp2)
+                            break
                 # N.B. depending on how the cities are placed in the rail, there may be no path forward, truncate for now
-                if len(k_sh) == 0:
+                if len(reachable) == 0:
                     warnings.warn(
-                        f"Could not find path connecting all {self.line_length} cities for agent {agent_id}. Truncating after {len(new_agent_waypoints)}.")
+                        f"Could not find path connecting all {self.line_length} cities for agent {agent_id}. Truncating after {len(new_agent_waypoints[agent_id])}.")
                     break
-                shortest_path = k_sh[0]
-                previous_direction = shortest_path[-1].direction
-                new_agent_waypoints[agent_id].append([shortest_path[-1]])
-            new_agent_waypoints[agent_id][-1] = [Waypoint(new_agent_waypoints[agent_id][-1][0].position, None)]
+                new_agent_waypoints[agent_id].append(reachable)
         return Line(agent_waypoints=new_agent_waypoints, agent_speeds=agent_speeds)
 
 

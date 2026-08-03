@@ -1,11 +1,12 @@
 import sys
 import warnings
-from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set
+from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set, Union
 
 import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import TransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
@@ -20,7 +21,11 @@ class Agent(NamedTuple):
     initial_position: Tuple[int, int]
     initial_direction: Grid4TransitionsEnum
     direction: Grid4TransitionsEnum
-    target: Tuple[int, int]
+    # set of (position, direction) arrival alternatives, mirroring `EnvAgent.targets` - replaces the legacy
+    # single `target` position (which implied "any direction"). Kept at the same tuple index as the old
+    # `target` field so envs pickled before the switch still land their value in this slot (see
+    # `_agent_tuple_targets`).
+    targets: Set[Tuple[Tuple[int, int], Grid4TransitionsEnum]]
     moving: bool
     earliest_departure: int
     latest_arrival: int
@@ -38,13 +43,65 @@ class Agent(NamedTuple):
     waypoints_latest_arrival: List[int] = None
 
 
-def load_env_agent(agent_tuple: Agent):
+def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> List[List[Waypoint]]:
+    """
+    Normalizes a persisted `waypoints` field to the current `List[List[Waypoint]]` shape. Envs persisted
+    before routing-flexibility alternatives were introduced store it as a flat `List[Waypoint]` (one bare
+    `Waypoint` per stop) rather than one alternatives-group per stop - wrap any such bare entry in a
+    single-element list. A no-op for waypoints already in the current shape.
+    """
+    return [wp if isinstance(wp, list) else [wp] for wp in waypoints]
+
+
+def _filter_valid_target_configurations(rail: TransitionMap, waypoint_group: List[Waypoint]) -> List[Waypoint]:
+    """
+    Keeps only the arrival alternatives in a target waypoint group that are valid configurations on `rail`.
+    Envs persisted before routing-flexibility alternatives were introduced store a legacy `None`-direction
+    placeholder (meaning "any direction") - explode that into one `Waypoint` per valid direction instead of
+    filtering it out (since `None` itself is never a valid configuration). A no-op for waypoints already
+    filtered to concrete, rail-valid directions.
+    """
+    if None in {wp.direction for wp in waypoint_group}:
+        position = waypoint_group[0].position
+        return [Waypoint(position, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((position, d))]
+    return [wp for wp in waypoint_group if rail.is_valid_configuration((wp.position, wp.direction))]
+
+
+def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4TransitionsEnum]]:
+    """
+    Reads the target-configuration set off a persisted `Agent`. `Agent.targets` replaced the legacy single
+    `target` position (which implied "any direction"); envs pickled before that switch reconstruct positionally,
+    landing a bare `(row, col)` position in the `targets` slot instead of a set - explode such a position to one
+    configuration per direction. Concrete arrival directions are re-filtered against the rail on load anyway
+    (see `set_full_state`), so exploding to all four here is safe.
+    """
+    targets = agent_tuple.targets
+    if isinstance(targets, (set, frozenset)):
+        return set(targets)
+    # legacy: bare (row, col) position from a pre-`targets` pickle
+    return {(targets, d) for d in Grid4TransitionsEnum}
+
+
+def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
+    # Target configurations are serialised without rail validity (rail is not stored per-agent), so filter
+    # them against `rail` here - previously a post-load step in `RailEnvPersister.set_full_state`. The target
+    # waypoint group is filtered via `_filter_valid_target_configurations` (which also explodes a legacy
+    # `None`-direction placeholder), and `targets` is kept exactly in sync with it, per the invariant that
+    # `EnvAgent.targets` is the last waypoint group.
+    if agent_tuple.waypoints is not None:
+        waypoints = _normalize_waypoints(agent_tuple.waypoints)
+    else:
+        waypoints = [
+            [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction)],
+            [Waypoint(position, direction) for position, direction in sorted(_agent_tuple_targets(agent_tuple))]]
+    waypoints[-1] = _filter_valid_target_configurations(rail, waypoints[-1])
+    targets = {(wp.position, wp.direction) for wp in waypoints[-1]}
     return EnvAgent(
         initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
         current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
         old_configuration=(
             agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
-        targets={(agent_tuple.target, d) for d in Grid4TransitionsEnum},
+        targets=targets,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
         latest_arrival=agent_tuple.latest_arrival,
@@ -54,8 +111,7 @@ def load_env_agent(agent_tuple: Agent):
         action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
         malfunction_handler=agent_tuple.malfunction_handler,
-        waypoints=agent_tuple.waypoints if agent_tuple.waypoints is not None else [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction),
-                                                                                   Waypoint(agent_tuple.target, None)],
+        waypoints=waypoints,
         waypoints_earliest_departure=agent_tuple.waypoints_earliest_departure if agent_tuple.waypoints_earliest_departure is not None else [
             agent_tuple.earliest_departure, None],
         waypoints_latest_arrival=agent_tuple.waypoints_latest_arrival if agent_tuple.waypoints_latest_arrival is not None else [None,
@@ -127,16 +183,6 @@ class EnvAgent(Generic[ConfigurationType]):
     def old_direction(self, value):
         self.old_configuration = (self.old_position, value)
 
-    @property
-    def target(self):
-        # assuming same cell for all
-        return list(self.targets)[0][0]
-
-    @target.setter
-    def target(self, value):
-        # backwards compatibility to mean any direction into the cell. Will valid directions be post-cleaned in _agents_from_line.
-        self.targets = {(value, d) for d in Grid4TransitionsEnum}
-
     # INIT FROM HERE IN _from_line()
     initial_configuration = attrib(type=ConfigurationType)
 
@@ -190,8 +236,9 @@ class EnvAgent(Generic[ConfigurationType]):
         return Agent(initial_position=self.initial_position,
                      initial_direction=self.initial_direction,
                      direction=self.direction,
-                     # N.B. not serialized, valid targets post-processed.
-                     target=self.target,
+                     # N.B. the full arrival-configuration set is serialized, but re-filtered against the rail
+                     # on load (see `set_full_state`), since rail validity is not stored with the agent.
+                     targets=set(self.targets),
                      moving=self.moving,
                      earliest_departure=self.earliest_departure,
                      latest_arrival=self.latest_arrival,
@@ -268,7 +315,7 @@ class EnvAgent(Generic[ConfigurationType]):
         )
 
     @classmethod
-    def load_legacy_static_agent(cls, static_agents_data: Tuple):
+    def load_legacy_static_agent(cls, static_agents_data: Tuple, rail: TransitionMap = None):
         agents = []
         for i, static_agent in enumerate(static_agents_data):
             initial_configuration = (static_agent[0], static_agent[1])
@@ -307,6 +354,12 @@ class EnvAgent(Generic[ConfigurationType]):
                     latest_arrival=sys.maxsize,
                     waypoints_latest_arrival=[None, sys.maxsize],
                 )
+            # Targets are exploded to all four directions above; filter to the rail-valid ones (when a rail
+            # is available), keeping `targets` and the target waypoint group in sync. Callers without a rail
+            # (deprecated msgpack loaders) leave this to a later step.
+            if rail is not None:
+                agent.waypoints[-1] = _filter_valid_target_configurations(rail, agent.waypoints[-1])
+                agent.targets = {(wp.position, wp.direction) for wp in agent.waypoints[-1]}
             agents.append(agent)
         return agents
 
@@ -318,7 +371,7 @@ class EnvAgent(Generic[ConfigurationType]):
             f"\tinitial_direction={self.initial_direction},\n"
             f"\tposition={self.position},\n"
             f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
-            f"\ttarget={self.target},\n"
+            f"\ttarget={next(iter(self.targets))[0]},\n"
             f"\ttargets={self.targets},\n"
             f"\told_position={self.old_position},\n"
             f"\told_direction={self.old_direction},\n"

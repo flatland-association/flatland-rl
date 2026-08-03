@@ -1,9 +1,16 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_configurations,
+                                       load_env_agent)
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
+from flatland.envs.rewards import Rewards
+from flatland.envs.step_utils.action_saver import ActionSaver
+from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
+from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.step_utils.state_machine import TrainStateMachine
+from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line
 from flatland.utils.simple_rail import make_oval_rail
 
@@ -92,38 +99,111 @@ def test_from_line():
                         [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]], [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(0)]],
                         [[Grid4TransitionsEnum(1)]], [[Grid4TransitionsEnum(3)]]]
     agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
-    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] + [[Waypoint(t, None)]] for i, (pas, das, t) in
+    agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
+                          [[Waypoint(t, d) for d in Grid4TransitionsEnum]] for i, (pas, das, t) in
                        enumerate(zip(agent_positions, agent_directions, agent_targets))}
     line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     env_agents = EnvAgent.from_line(line)
     assert env_agents[0].initial_position == (11, 40)
     assert env_agents[0].initial_direction == 3
-    assert env_agents[0].target == (39, 8)
+    assert next(iter(env_agents[0].targets))[0] == (39, 8)
     assert env_agents[1].initial_position == (38, 8)
     assert env_agents[1].initial_direction == 1
-    assert env_agents[1].target == (10, 40)
+    assert next(iter(env_agents[1].targets))[0] == (10, 40)
     assert env_agents[2].initial_position == (17, 5)
     assert env_agents[2].initial_direction == 3
-    assert env_agents[2].target == (42, 22)
+    assert next(iter(env_agents[2].targets))[0] == (42, 22)
     assert env_agents[3].initial_position == (41, 22)
     assert env_agents[3].initial_direction == 3
-    assert env_agents[3].target == (18, 5)
+    assert next(iter(env_agents[3].targets))[0] == (18, 5)
     assert env_agents[4].initial_position == (11, 40)
     assert env_agents[4].initial_direction == 1
-    assert env_agents[4].target == (39, 8)
+    assert next(iter(env_agents[4].targets))[0] == (39, 8)
     assert env_agents[5].initial_position == (38, 8)
     assert env_agents[5].initial_direction == 3
-    assert env_agents[5].target == (12, 40)
+    assert next(iter(env_agents[5].targets))[0] == (12, 40)
     assert env_agents[6].initial_position == (38, 8)
     assert env_agents[6].initial_direction == 1
-    assert env_agents[6].target == (31, 27)
+    assert next(iter(env_agents[6].targets))[0] == (31, 27)
     assert env_agents[7].initial_position == (31, 26)
     assert env_agents[7].initial_direction == 0
-    assert env_agents[7].target == (39, 8)
+    assert next(iter(env_agents[7].targets))[0] == (39, 8)
     assert env_agents[8].initial_position == (41, 22)
     assert env_agents[8].initial_direction == 1
-    assert env_agents[8].target == (8, 27)
+    assert next(iter(env_agents[8].targets))[0] == (8, 27)
     assert env_agents[9].initial_position == (9, 27)
     assert env_agents[9].initial_direction == 3
-    assert env_agents[9].target == (44, 22)
+    assert next(iter(env_agents[9].targets))[0] == (44, 22)
+
+
+def test_load_env_agent_fallback_waypoints():
+    """Regression test: `load_env_agent`'s fallback `waypoints` construction (used when the legacy `Agent`
+    NamedTuple carries no `waypoints`) must produce a well-formed `List[List[Waypoint]]`, i.e. every entry -
+    including the initial stop - must itself be a list, not a bare `Waypoint`; and the target group must be
+    filtered to the arrival directions valid on `rail`."""
+    rail, _, _ = make_oval_rail()
+    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+    agent_tuple = Agent(
+        initial_position=(0, 0),
+        initial_direction=Grid4TransitionsEnum(0),
+        direction=Grid4TransitionsEnum(0),
+        targets={(target, d) for d in Grid4TransitionsEnum},
+        moving=False,
+        earliest_departure=0,
+        latest_arrival=100,
+        handle=0,
+        position=None,
+        arrival_time=None,
+        old_direction=None,
+        old_position=None,
+        speed_counter=SpeedCounter(1.0),
+        action_saver=ActionSaver(),
+        state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+        malfunction_handler=MalfunctionHandler(),
+    )
+    env_agent = load_env_agent(agent_tuple, rail)
+
+    assert isinstance(env_agent.waypoints[0], list)
+    assert env_agent.waypoints[0] == [Waypoint((0, 0), Grid4TransitionsEnum(0))]
+    # the four exploded target directions are filtered down to the two rail-valid ones, and `targets` stays in sync
+    assert env_agent.waypoints[1] == [Waypoint(target, Grid4TransitionsEnum(1)), Waypoint(target, Grid4TransitionsEnum(3))]
+    assert env_agent.targets == {(target, Grid4TransitionsEnum(1)), (target, Grid4TransitionsEnum(3))}
+
+    # must not raise - Rewards._sanitize_waypoints() assumes every entry is iterable.
+    Rewards._sanitize_waypoints(env_agent.waypoints)
+
+
+def test_filter_valid_target_configurations():
+    """`_filter_valid_target_configurations` must keep only rail-valid directions at a group's position, and
+    must explode a legacy `None`-direction placeholder into concrete valid directions instead of dropping it."""
+    rail, _, _ = make_oval_rail()
+    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+
+    assert _filter_valid_target_configurations(rail, [
+        Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3)), Waypoint(position, Grid4TransitionsEnum(2))
+    ]) == [Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
+
+    assert _filter_valid_target_configurations(rail, [Waypoint(position, None)]) == [
+        Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
+
+
+def test_agent_tuple_targets():
+    """`_agent_tuple_targets` must pass a concrete `(position, direction)` set through unchanged, and must
+    explode a legacy bare `(row, col)` position (from an env pickled before `Agent.target` became
+    `Agent.targets`) into one configuration per direction."""
+
+    def _agent(targets):
+        return Agent(
+            initial_position=(0, 0), initial_direction=Grid4TransitionsEnum(0), direction=Grid4TransitionsEnum(0),
+            targets=targets, moving=False, earliest_departure=0, latest_arrival=100, handle=0, position=None,
+            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(1.0),
+            action_saver=ActionSaver(), state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+            malfunction_handler=MalfunctionHandler(),
+        )
+
+    concrete = {((3, 3), Grid4TransitionsEnum(1)), ((3, 3), Grid4TransitionsEnum(3))}
+    assert _agent_tuple_targets(_agent(concrete)) == concrete
+
+    # legacy positional pickle: the `targets` slot holds a bare (row, col) position, not a set
+    assert _agent_tuple_targets(_agent((3, 3))) == {((3, 3), d) for d in Grid4TransitionsEnum}
