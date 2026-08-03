@@ -57,17 +57,34 @@ A few hot-path modules can optionally be compiled with [Cython](https://cython.o
 source, since the package published on PyPI is the plain-Python build described above:
 
 ```shell
-python -m pip install "cython>=3.3.0a1"
+python -m pip install "cython>=3.2.9"
 python -m pip install --no-build-isolation --no-binary flatland-rl flatland-rl
 ```
 
 (or `python -m pip install --no-build-isolation -e .` from a checkout of this repository).
 
+**Why `--no-binary` and `--no-build-isolation`?**
+
+- `--no-binary flatland-rl` forces pip to build from the source distribution (sdist) instead of installing the
+  prebuilt wheel (bdist) already published on PyPI. This matters because that published wheel is a *universal*
+  one - e.g. `flatland_rl-4.2.6-py2.py3-none-any.whl` (`none-any`: no Python-version/ABI/platform constraint) -
+  which pip considers compatible with any environment, so by default pip always prefers installing it over
+  building from the `flatland_rl-4.2.6.tar.gz` sdist. Without `--no-binary`, pip just installs that existing
+  plain-Python wheel and never runs a build at all, so there's nothing to cythonize, regardless of whether
+  Cython or a C compiler is available locally.
+- `--no-build-isolation` is needed because Cython is *not* listed in `pyproject.toml`'s `[build-system]
+  requires` (only `setuptools`/`setuptools_scm` are - deliberately, so a normal `pip install flatland-rl` isn't
+  forced to pull in Cython just to install an already-published wheel). By default pip builds every package
+  inside a fresh, throwaway virtualenv containing only those `[build-system] requires` packages, so even a
+  Cython you'd `pip install`ed into your own environment would be invisible to that isolated build. This flag
+  tells pip to skip the throwaway environment and build using your current environment's packages instead, so
+  the Cython you installed a line above actually gets picked up.
+
 **Requirements:**
 
-- [Cython](https://cython.org/) `>=3.3.0a1` installed in the environment you are installing into (`pip install
-  cython` above) - it must be present *before* pip starts the build, hence `--no-build-isolation`, which tells
-  pip to use your environment's packages instead of provisioning a fresh, empty build environment.
+- [Cython](https://cython.org/) `>=3.2.9` installed in the environment you are installing into (`pip install
+  cython` above) - it must be present *before* pip starts the build, since `--no-build-isolation` (see above)
+  is what makes it visible to the build in the first place.
 - A working C compiler (e.g. `gcc`/`clang` on Linux/macOS, or the Microsoft C++ Build Tools on Windows).
 
 Cython compilation is optional and best-effort: if either requirement is missing, the build falls back to the

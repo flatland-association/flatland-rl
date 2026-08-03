@@ -37,6 +37,16 @@ are installed, and are run from the repo root. `tox` wraps most of these into re
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
 - **Full tox matrix**: `tox` (runs everything across Python 3.10–3.13 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
+- **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
+  `tox -e py3.12-verify-cython-build`. To manually build in place and check: `python -m pip install
+  "cython>=3.2.9" "setuptools_scm>=8" && python -c "from setuptools import setup; setup()" build_ext --inplace`,
+  then confirm e.g. `python -c "import flatland.envs.step_utils.state_machine as m; assert
+  m.__file__.endswith('.so')"`. Clean up compiled artifacts afterward with `rm -rf build flatland/envs/*.c
+  flatland/envs/*.so flatland/envs/step_utils/*.c flatland/envs/step_utils/*.so`.
+- **Profiling notebooks** (`benchmarks/flatland_performance_profiling.ipynb`,
+  `benchmarks/benchmark_k_shortest_paths_profiling.ipynb`): `tox -e py3.13-profiling` /
+  `tox -e py3.13-profiling-get-k-shortest-paths` — use Python 3.13, not 3.12 (see the Cython section below for
+  why the LOCAL_Cython results are otherwise silently missing from the generated plots).
 
 ## Architecture
 
@@ -85,6 +95,35 @@ match. Passing a plain `float` for either instead (as opposed to a `Fraction`) c
 into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
 `Fraction`-only invariant assumed by `cached_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
 doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+
+### Cython-accelerated hot paths (`ext-modules`)
+
+A handful of hot-path modules are optionally compiled with Cython, declared in `pyproject.toml`'s
+`[tool.setuptools] ext-modules` (currently `flatland/envs/step_utils/state_machine.py`,
+`flatland/envs/step_utils/states.py`, `flatland/envs/rail_env_shortest_paths.py`) with `optional = true` — if
+Cython or a C compiler is unavailable at build time, the build falls back to the plain-Python sources instead
+of failing. Each accelerated module stays an ordinary, fully-interpretable `.py` file (Cython's ["pure Python
+mode"](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd)); C-level types are added
+via a same-named companion `.pxd` file next to it (e.g. `rail_env_shortest_paths.pxd`), which Cython picks up
+automatically at compile time and which the plain-Python interpreter ignores entirely — so a `.pxd` can declare
+things (`cdef`/`cpdef` function signatures, typed memoryviews, `cdef class`) that would break plain-Python
+execution if they lived in the `.py` file itself; only *local variable* typing (`var: cython.int = ...`, matching
+`state_machine.py`'s style) can go directly in the `.py` body, since `.pxd` files can't declare function-body
+locals. `cython` itself is a normal runtime dependency (not a `[build-system] requires` entry — see the README's
+"Cython-accelerated build" section for why this matters for `pip install`), since e.g. `state_machine.py`
+unconditionally does `import cython` and uses `cython.int`-annotated locals regardless of whether the module
+ends up compiled. CI cross-checks all three build outcomes: `verify-build-no-cython`/`verify-build-no-gcc` assert
+the pure-Python fallback via `scripts/verify_cython_extension_build.py --expect pure-python`, and
+`py{3.10,3.11,3.12,3.13}-verify-cython-build` asserts real compilation via `--expect compiled`.
+
+**Known gap: `cProfile` can't see calls into compiled Cython functions on Python 3.12.** Python 3.12's `cProfile`
+registers itself via PEP 669's `sys.monitoring` instead of the legacy `PyEval_SetProfile` hook, and Cython's own
+`sys.monitoring` bridge (`CYTHON_USE_SYS_MONITORING`) is gated to Python ≥3.13 — confirmed independent of the
+Cython version (reproduced identically with `cython==3.2.9` and the previously-pinned `3.3.0a1`; upgrading
+Cython alone does not fix it). `@cython.profile(True)` is set on `get_k_shortest_paths` for when this gets
+fixed upstream, but on 3.12 it's a no-op — this is exactly why `checks.yml`'s `profiling`/
+`profiling-get-k-shortest-paths` jobs publish their gist/PR-comment results from the Python **3.13** matrix leg,
+not 3.12 (see `cython/cython#5470`).
 
 ### `flatland/ml/`
 
@@ -139,3 +178,5 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 - Use `abc.ABCMeta`/`abc.abstractmethod` for extension-point base classes.
 - Docstrings follow numpydoc format; type hints are expected throughout (PEP 484).
 - Avoid currying/closures to encapsulate state — prefer a class when the object needs multiple methods.
+- Cython speed-ups go through `.pxd`-augmented pure-Python `.py` files, never `.pyx` — see "Cython-accelerated
+  hot paths" above.
