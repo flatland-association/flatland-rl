@@ -359,7 +359,7 @@ def test_set_full_state_legacy_flat_waypoints():
     env_dict = RailEnvPersister.get_full_state(env_initial)
 
     legacy_agent = env_dict["agents"][0]
-    target = legacy_agent.target
+    target = next(iter(legacy_agent.targets))[0]
     legacy_agent = legacy_agent._replace(
         waypoints=[Waypoint(legacy_agent.initial_position, legacy_agent.initial_direction), Waypoint(target, None)],
         waypoints_earliest_departure=[legacy_agent.earliest_departure, None],

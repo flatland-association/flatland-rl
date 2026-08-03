@@ -1,5 +1,6 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import Agent, EnvAgent, _filter_valid_target_configurations, load_env_agent
+from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_configurations,
+                                       load_env_agent)
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -139,12 +140,15 @@ def test_from_line():
 def test_load_env_agent_fallback_waypoints():
     """Regression test: `load_env_agent`'s fallback `waypoints` construction (used when the legacy `Agent`
     NamedTuple carries no `waypoints`) must produce a well-formed `List[List[Waypoint]]`, i.e. every entry -
-    including the initial stop - must itself be a list, not a bare `Waypoint`."""
+    including the initial stop - must itself be a list, not a bare `Waypoint`; and the target group must be
+    filtered to the arrival directions valid on `rail`."""
+    rail, _, _ = make_oval_rail()
+    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
     agent_tuple = Agent(
         initial_position=(0, 0),
         initial_direction=Grid4TransitionsEnum(0),
         direction=Grid4TransitionsEnum(0),
-        target=(3, 3),
+        targets={(target, d) for d in Grid4TransitionsEnum},
         moving=False,
         earliest_departure=0,
         latest_arrival=100,
@@ -158,11 +162,13 @@ def test_load_env_agent_fallback_waypoints():
         state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
         malfunction_handler=MalfunctionHandler(),
     )
-    env_agent = load_env_agent(agent_tuple)
+    env_agent = load_env_agent(agent_tuple, rail)
 
     assert isinstance(env_agent.waypoints[0], list)
     assert env_agent.waypoints[0] == [Waypoint((0, 0), Grid4TransitionsEnum(0))]
-    assert len(env_agent.waypoints[1]) == 4
+    # the four exploded target directions are filtered down to the two rail-valid ones, and `targets` stays in sync
+    assert env_agent.waypoints[1] == [Waypoint(target, Grid4TransitionsEnum(1)), Waypoint(target, Grid4TransitionsEnum(3))]
+    assert env_agent.targets == {(target, Grid4TransitionsEnum(1)), (target, Grid4TransitionsEnum(3))}
 
     # must not raise - Rewards._sanitize_waypoints() assumes every entry is iterable.
     Rewards._sanitize_waypoints(env_agent.waypoints)
@@ -180,3 +186,24 @@ def test_filter_valid_target_configurations():
 
     assert _filter_valid_target_configurations(rail, [Waypoint(position, None)]) == [
         Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
+
+
+def test_agent_tuple_targets():
+    """`_agent_tuple_targets` must pass a concrete `(position, direction)` set through unchanged, and must
+    explode a legacy bare `(row, col)` position (from an env pickled before `Agent.target` became
+    `Agent.targets`) into one configuration per direction."""
+
+    def _agent(targets):
+        return Agent(
+            initial_position=(0, 0), initial_direction=Grid4TransitionsEnum(0), direction=Grid4TransitionsEnum(0),
+            targets=targets, moving=False, earliest_departure=0, latest_arrival=100, handle=0, position=None,
+            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(1.0),
+            action_saver=ActionSaver(), state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+            malfunction_handler=MalfunctionHandler(),
+        )
+
+    concrete = {((3, 3), Grid4TransitionsEnum(1)), ((3, 3), Grid4TransitionsEnum(3))}
+    assert _agent_tuple_targets(_agent(concrete)) == concrete
+
+    # legacy positional pickle: the `targets` slot holds a bare (row, col) position, not a set
+    assert _agent_tuple_targets(_agent((3, 3))) == {((3, 3), d) for d in Grid4TransitionsEnum}
