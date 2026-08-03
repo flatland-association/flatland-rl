@@ -459,12 +459,21 @@ jobs:
                         benchmarks/*.prof
                         benchmarks/*.png
                     if-no-files-found: error
-            # Only python 3.12 publishes to a gist and comments on the PR - no need to repeat the same
+            # Only python 3.13 publishes to a gist and comments on the PR - no need to repeat the same
             # picture for every matrix entry. Restricted to same-repo PRs since forks don't receive secrets
             # (GIST_TOKEN below), so the gist/comment steps would just fail auth on a fork PR.
+            #
+            # NOT 3.12: cProfile can't see calls into compiled Cython functions on Python 3.12 at all (not
+            # zero-time, just absent from the stats) - confirmed against cython/cython#5470: Python 3.12
+            # moved cProfile onto PEP 669's sys.monitoring, and Cython's own sys.monitoring bridge
+            # (CYTHON_USE_SYS_MONITORING) is gated to PY_VERSION_HEX >= 0x030d00b1, i.e. Python 3.13+ only -
+            # verified empirically that this is unaffected by the Cython version (reproduced identically with
+            # both the pinned cython==3.2.9 and the previously-pinned 3.3.0a1; only the Python version
+            # matters). Python 3.13 is the first version where get_k_shortest_paths (and any other
+            # @cython.profile(True) function) actually shows up in the .prof output.
             -   name: Find existing profiling comment
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: find-comment
                 uses: peter-evans/find-comment@v3
@@ -474,7 +483,7 @@ jobs:
                     body-includes: <!-- flatland-ci-profiling-overall -->
             -   name: Create or update gist with overall profiling result
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: gist
                 env:
@@ -519,7 +528,7 @@ jobs:
                     } >> "$GITHUB_OUTPUT"
             -   name: Create or update profiling comment
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 uses: peter-evans/create-or-update-comment@v4
                 with:
@@ -528,7 +537,7 @@ jobs:
                     edit-mode: replace
                     body: |
                         <!-- flatland-ci-profiling-overall -->
-                        ### 📈 Performance profiling (Python 3.12) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
+                        ### 📈 Performance profiling (Python 3.13) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
 
                         ![performance overall](${{ steps.gist.outputs.raw_url }})
 
@@ -582,10 +591,11 @@ jobs:
                         benchmarks/*.prof
                         benchmarks/*.png
                     if-no-files-found: error
-            # See the `profiling` job above for why this is gated to python 3.12 and same-repo PRs only.
+            # See the `profiling` job above for why this is gated to python 3.13 (not 3.12) and same-repo
+            # PRs only - cProfile can't see compiled Cython calls on 3.12 (cython/cython#5470).
             -   name: Find existing get_k_shortest_paths profiling comment
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: find-comment
                 uses: peter-evans/find-comment@v3
@@ -595,7 +605,7 @@ jobs:
                     body-includes: <!-- flatland-ci-profiling-get-k-shortest-paths -->
             -   name: Create or update gist with get_k_shortest_paths profiling result
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 id: gist
                 env:
@@ -640,7 +650,7 @@ jobs:
                     } >> "$GITHUB_OUTPUT"
             -   name: Create or update get_k_shortest_paths profiling comment
                 if: >-
-                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.12' &&
+                    ${{ github.event_name == 'pull_request' && matrix.python-version == '3.13' &&
                     github.event.pull_request.head.repo.full_name == github.repository }}
                 uses: peter-evans/create-or-update-comment@v4
                 with:
@@ -649,7 +659,7 @@ jobs:
                     edit-mode: replace
                     body: |
                         <!-- flatland-ci-profiling-get-k-shortest-paths -->
-                        ### 📈 `get_k_shortest_paths` profiling (Python 3.12) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
+                        ### 📈 `get_k_shortest_paths` profiling (Python 3.13) — commit [`${{ steps.gist.outputs.short_sha }}`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.event.pull_request.head.sha }})
 
                         ![get_k_shortest_paths profiling](${{ steps.gist.outputs.raw_url }})
 

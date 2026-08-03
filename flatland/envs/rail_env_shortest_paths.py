@@ -103,6 +103,7 @@ def _k_shortest_paths_search(rail_grid, height, width, k, debug,
                     heap[len(pv)].append(pv)
 
 
+@cython.profile(True)
 def get_k_shortest_paths(env: "RailEnv",
                          source_position: Tuple[int, int],
                          source_direction: int,
