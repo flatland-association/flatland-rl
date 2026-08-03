@@ -111,6 +111,7 @@ flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
 ext-modules = [
     { name = "flatland.envs.step_utils.state_machine", sources = ["flatland/envs/step_utils/state_machine.py"], optional = true },
     { name = "flatland.envs.step_utils.states", sources = ["flatland/envs/step_utils/states.py"], optional = true },
+    { name = "flatland.envs.rail_env_shortest_paths", sources = ["flatland/envs/rail_env_shortest_paths.py"], optional = true },
 ]
 
 [tool.setuptools.packages]
