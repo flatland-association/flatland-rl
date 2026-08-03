@@ -34,7 +34,7 @@ jobs:
             -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
-                    python-version: "3.13"
+                    python-version: "3.14"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -46,7 +46,7 @@ jobs:
         # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
         # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
         # into shell instead of routing it through `env:`, the exact script-injection shape fixed in publish.yml.
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Download actionlint
@@ -366,7 +366,7 @@ jobs:
                     key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     verify-cython-build:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
@@ -385,13 +385,13 @@ jobs:
                 run: tox run -e py${{ matrix.python-version }}-verify-cython-build
 
     verify-build-fallback:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python
                 uses: actions/setup-python@v6
                 with:
-                    python-version: "3.13"
+                    python-version: "3.14"
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -402,7 +402,7 @@ jobs:
                 run: tox run -e verify-build-no-gcc
 
     build:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python
