@@ -17,7 +17,8 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, BaseECML2026Rewards, DelayRewards
+from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, \
+    BaseECML2026Rewards, DelayRewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -385,9 +386,9 @@ def test_rewards_departed_but_never_arrived_minimum_penalty():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_position = (0, 0)
+    agent.old_configuration = ((0, 0), agent.old_direction)
     agent.old_direction = 0
-    agent.position = (2, 2)
+    agent.current_configuration = ((2, 2), agent.direction)
     agent.direction = 2
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, StateTransitionSignals()),
@@ -700,9 +701,9 @@ def test_arrival_recorded_once_per_waypoint():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
     # Move agent to position (5, 5) facing North (direction 0)
-    agent.position = (5, 5)
+    agent.current_configuration = ((5, 5), agent.direction)
     agent.direction = 0
-    agent.old_position = (5, 4)
+    agent.old_configuration = ((5, 4), agent.old_direction)
     agent.old_direction = 0
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
@@ -713,8 +714,7 @@ def test_arrival_recorded_once_per_waypoint():
     assert rewards._proxy.arrivals[agent.handle][wp] == [10]
 
     # Agent dwells at same position for several steps
-    agent.old_position = agent.position
-    agent.old_direction = agent.direction
+    agent.old_configuration = agent.current_configuration
 
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=11)
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=12)
@@ -801,9 +801,9 @@ def test_waypoint_comparison_uses_waypoint_objects():
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
-    agent.position = (7, 8)
+    agent.current_configuration = ((7, 8), agent.direction)
     agent.direction = 1
-    agent.old_position = (7, 7)
+    agent.old_configuration = ((7, 7), agent.old_direction)
     agent.old_direction = 1
 
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
@@ -1151,7 +1151,7 @@ def test_env_collision_penalty_on_head_on_conflict():
 
     # deadlock persists: no positions change, no further collision penalties accrue
     _, rewards, _, _ = env.step(forward)
-    assert (agent_0.position, agent_1.position) == ((3, 3), (3, 4))
+    assert (agent_0.current_configuration[0], agent_1.current_configuration[0]) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
@@ -1344,7 +1344,7 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
         if agent.state == TrainState.STOPPED:
             break
 
-    assert agent.position == (2, 1), "train should be stopped on the switch cell"
+    assert agent.current_configuration[0] == (2, 1), "train should be stopped on the switch cell"
     assert agent.state_machine.previous_state == TrainState.MOVING
     assert agent.state == TrainState.STOPPED
     assert penalties[-1] == -1 * 1 * COLLISION_FACTOR, \

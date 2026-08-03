@@ -15,17 +15,18 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
         self._shortest_paths = {}
 
     def _act(self, env: RailEnv, agent: EnvAgent):
-        if agent.position is None:
+        if agent.current_configuration is None:
             return RailEnvActions.MOVE_FORWARD
 
         if len(self._shortest_paths[agent.handle]) == 0:
             return RailEnvActions.DO_NOTHING
 
         for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), (agent.position, agent.direction))
+            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), agent.current_configuration)
             if result is not None:
                 (new_position, new_direction), _ = result
-                if new_position == self._shortest_paths[agent.handle][1].position and new_direction == self._shortest_paths[agent.handle][1].direction:
+                next_waypoint = self._shortest_paths[agent.handle][1]
+                if new_position == next_waypoint.position and new_direction == next_waypoint.direction:
                     return a
         raise Exception("Invalid state")
 
@@ -60,9 +61,10 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             p += p_next
             self._shortest_paths[agent.handle] = p
 
-        if agent.position is None:
+        if agent.current_configuration is None:
             return
 
-        while self._shortest_paths[agent.handle][0].position != agent.position:
+        position = agent.current_configuration[0]
+        while self._shortest_paths[agent.handle][0].position != position:
             self._shortest_paths[agent.handle] = self._shortest_paths[agent.handle][1:]
-        assert self._shortest_paths[agent.handle][0].position == agent.position
+        assert self._shortest_paths[agent.handle][0].position == position

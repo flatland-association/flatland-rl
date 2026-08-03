@@ -161,19 +161,19 @@ class FlatlandInteractiveAICallbacks(FlatlandCallbacks):
 
         # TODO use non-blocking calls or queue?
         for agent in env.agents:
-            if agent.position is not None and agent.position not in self.coordinate_map:
-                warnings.warn(f"Missing mapping for {agent.position}")
+            if agent.current_configuration is not None and agent.current_configuration[0] not in self.coordinate_map:
+                warnings.warn(f"Missing mapping for {agent.current_configuration[0]}")
         context = {
             "use_case": "Railway",
             "data": {
                 "trains": [
                     {
                         'id_train': f'Train {agent.handle}',
-                        'latitude': f"{self.coordinate_map[agent.position][0]}",
-                        'longitude': f'{self.coordinate_map[agent.position][1]}',
-                    } for agent in env.agents if agent.position is not None
+                        'latitude': f"{self.coordinate_map[agent.current_configuration[0]][0]}",
+                        'longitude': f'{self.coordinate_map[agent.current_configuration[0]][1]}',
+                    } for agent in env.agents if agent.current_configuration is not None
                                                  # TODO
-                                                 and agent.position in self.coordinate_map]
+                                                 and agent.current_configuration[0] in self.coordinate_map]
             }
         }
         self.contexts.append(context)

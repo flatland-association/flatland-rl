@@ -34,9 +34,9 @@ class CustomObservationBuilder(ObservationBuilder):
 
 
         status = agent.status
-        position = agent.position
+        position = agent.current_configuration[0] if agent.current_configuration is not None else None
         direction = agent.direction
-        initial_position = agent.initial_position
+        initial_position = agent.initial_configuration[0]
         target = next(iter(agent.targets))[0]
 
 

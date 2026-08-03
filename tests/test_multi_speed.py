@@ -67,21 +67,23 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
-    assert len(set([a.initial_position for a in env.agents])) == 3
+    assert len(set([a.initial_configuration[0] for a in env.agents])) == 3
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].position = env.agents[a_idx].initial_position
-        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
+        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
         env.agents[a_idx]._set_state(TrainState.MOVING)
+
+    def _position(agent):
+        return agent.current_configuration[0] if agent.current_configuration is not None else None
 
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
     old_pos = []
     for i_agent in range(env.get_num_agents()):
         env.agents[i_agent].speed_counter = SpeedCounter(speed=_pseudo_fractional(1.) / (i_agent + 1))
-        old_pos.append(env.agents[i_agent].position)
-        print(env.agents[i_agent].position)
+        old_pos.append(_position(env.agents[i_agent]))
+        print(_position(env.agents[i_agent]))
     # Run episode
     for step in range(100):
 
@@ -91,7 +93,7 @@ def test_multi_speed_init():
             action_dict.update({a: action})
 
             # Check that agent did not move in between its speed updates
-            assert old_pos[a] == env.agents[a].position
+            assert old_pos[a] == _position(env.agents[a])
 
         # Environment step which returns the observations for all agents, their corresponding
         # reward and whether they are done
@@ -100,8 +102,8 @@ def test_multi_speed_init():
         # Update old position whenever an agent was allowed to move
         for i_agent in range(env.get_num_agents()):
             if (step + 1) % (i_agent + 1) == 0:
-                print(step, i_agent, env.agents[i_agent].position)
-                old_pos[i_agent] = env.agents[i_agent].position
+                print(step, i_agent, _position(env.agents[i_agent]))
+                old_pos[i_agent] = _position(env.agents[i_agent])
 
 
 def test_multispeed_actions_no_malfunction_no_blocking():

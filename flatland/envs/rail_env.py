@@ -490,8 +490,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if new_configuration is not None:
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
+                    infra = self._infrastructure_representation(agent.current_configuration)
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with action {action} and action valid {action_valid}. {self._infrastructure_representation(agent)}")
+                                  f" Coming from {current_or_initial_configuration} with action {action}"
+                                  f" and action valid {action_valid}. {infra}")
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
@@ -759,11 +761,13 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _update_agent_positions_map(self, ignore_old_positions=True):
         """ Update the agent_positions array for agents that changed positions """
         for agent in self.agents:
-            if not ignore_old_positions or agent.old_position != agent.position:
-                if agent.position is not None:
-                    self.agent_positions[agent.position] = agent.handle
-                if agent.old_position is not None:
-                    self.agent_positions[agent.old_position] = -1
+            position = agent.current_configuration[0] if agent.current_configuration is not None else None
+            old_position = agent.old_configuration[0] if agent.old_configuration is not None else None
+            if not ignore_old_positions or old_position != position:
+                if position is not None:
+                    self.agent_positions[position] = agent.handle
+                if old_position is not None:
+                    self.agent_positions[old_position] = -1
 
     def clone_from(self, env: 'RailEnv', obs_builder: Optional[ObservationBuilder["RailEnv", Any]] = None):
         from flatland.envs.persistence import RailEnvPersister
@@ -778,7 +782,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
-        return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration.position)).name
+        return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration[0])).name
 
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         return EnvAgent.apply_timetable(self.agents, timetable)

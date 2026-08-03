@@ -154,7 +154,7 @@ print("\n Agents in the environment have to solve the following tasks: \n")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "The agent with index {} has the task to go from its initial position {}, facing in the direction {} to its target at {}.".format(
-            agent_idx, agent.initial_position, agent.direction, agent.targets))
+            agent_idx, agent.initial_configuration[0], agent.direction, agent.targets))
 
 # The agent will always have a status indicating if it is currently present in the environment or done or active
 # For example we see that agent with index 0 is currently not active
@@ -162,8 +162,9 @@ print("\n Their current statuses are:")
 print("============================")
 
 for agent_idx, agent in enumerate(env.agents):
-    print("Agent {} status is: {} with its current position being {}".format(agent_idx, str(agent.state),
-                                                                             str(agent.position)))
+    position = agent.current_configuration[0] if agent.current_configuration is not None else None
+    print("Agent {} status is: {} with its current position being {}".format(
+        agent_idx, str(agent.state), str(position)))
 
 # The agent needs to take any action [1,2,3] except do_nothing or stop to enter the level
 # If the starting cell is free they will enter the level
@@ -175,7 +176,7 @@ print("\n The following agents have the same initial position:")
 print("=====================================================")
 for agent_idx, agent in enumerate(env.agents):
     for agent_2_idx, agent2 in enumerate(env.agents):
-        if agent_idx != agent_2_idx and agent.initial_position == agent2.initial_position:
+        if agent_idx != agent_2_idx and agent.initial_configuration[0] == agent2.initial_configuration[0]:
             print("Agent {} as the same initial position as agent {}".format(agent_idx, agent_2_idx))
             agents_with_same_start.add(agent_idx)
 
@@ -192,10 +193,11 @@ env.step(action_dict)
 print("\n This happened when all tried to enter at the same time:")
 print("========================================================")
 for agent_id in agents_with_same_start:
+    agent = env.agents[agent_id]
+    position = agent.current_configuration[0] if agent.current_configuration is not None else None
     print(
         "Agent {} status is: {} with the current position being {}.".format(
-            agent_id, str(env.agents[agent_id].state),
-            str(env.agents[agent_id].position)))
+            agent_id, str(agent.state), str(position)))
 
 # As you see only the agents with lower indexes moved. As soon as the cell is free again the agents can attempt
 # to start again.

@@ -111,8 +111,9 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         agents = EnvAgent.from_line(line)
         for agent in agents:
-            agent.initial_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.initial_position, agent.initial_direction)
-            agent.current_configuration = GraphTransitionMap.grid_configuration_to_graph_configuration(*agent.position, agent.direction)
+            gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+            agent.initial_configuration = gctgc(*agent.initial_configuration[0], agent.initial_direction)
+            agent.current_configuration = gctgc(*agent.current_configuration[0], agent.direction)
             agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets if
                              GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) in rail.g.nodes}
         return agents

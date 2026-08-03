@@ -105,34 +105,34 @@ def test_from_line():
     line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     env_agents = EnvAgent.from_line(line)
-    assert env_agents[0].initial_position == (11, 40)
+    assert env_agents[0].initial_configuration[0] == (11, 40)
     assert env_agents[0].initial_direction == 3
     assert next(iter(env_agents[0].targets))[0] == (39, 8)
-    assert env_agents[1].initial_position == (38, 8)
+    assert env_agents[1].initial_configuration[0] == (38, 8)
     assert env_agents[1].initial_direction == 1
     assert next(iter(env_agents[1].targets))[0] == (10, 40)
-    assert env_agents[2].initial_position == (17, 5)
+    assert env_agents[2].initial_configuration[0] == (17, 5)
     assert env_agents[2].initial_direction == 3
     assert next(iter(env_agents[2].targets))[0] == (42, 22)
-    assert env_agents[3].initial_position == (41, 22)
+    assert env_agents[3].initial_configuration[0] == (41, 22)
     assert env_agents[3].initial_direction == 3
     assert next(iter(env_agents[3].targets))[0] == (18, 5)
-    assert env_agents[4].initial_position == (11, 40)
+    assert env_agents[4].initial_configuration[0] == (11, 40)
     assert env_agents[4].initial_direction == 1
     assert next(iter(env_agents[4].targets))[0] == (39, 8)
-    assert env_agents[5].initial_position == (38, 8)
+    assert env_agents[5].initial_configuration[0] == (38, 8)
     assert env_agents[5].initial_direction == 3
     assert next(iter(env_agents[5].targets))[0] == (12, 40)
-    assert env_agents[6].initial_position == (38, 8)
+    assert env_agents[6].initial_configuration[0] == (38, 8)
     assert env_agents[6].initial_direction == 1
     assert next(iter(env_agents[6].targets))[0] == (31, 27)
-    assert env_agents[7].initial_position == (31, 26)
+    assert env_agents[7].initial_configuration[0] == (31, 26)
     assert env_agents[7].initial_direction == 0
     assert next(iter(env_agents[7].targets))[0] == (39, 8)
-    assert env_agents[8].initial_position == (41, 22)
+    assert env_agents[8].initial_configuration[0] == (41, 22)
     assert env_agents[8].initial_direction == 1
     assert next(iter(env_agents[8].targets))[0] == (8, 27)
-    assert env_agents[9].initial_position == (9, 27)
+    assert env_agents[9].initial_configuration[0] == (9, 27)
     assert env_agents[9].initial_direction == 3
     assert next(iter(env_agents[9].targets))[0] == (44, 22)
 

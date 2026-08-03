@@ -155,30 +155,12 @@ class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
     # TODO https://github.com/flatland-association/flatland-rl/issues/366 split grid special cases from general implementation
     @property
-    def initial_position(self):
-        return self.initial_configuration[0]
-
-    @initial_position.setter
-    def initial_position(self, value):
-        self.initial_configuration = _sanitize_configuration((value, self.initial_direction))
-
-    @property
     def initial_direction(self):
         return self.initial_configuration[1]
 
     @initial_direction.setter
     def initial_direction(self, value):
-        self.initial_configuration = _sanitize_configuration((self.initial_position, value))
-
-    @property
-    def position(self):
-        if self.current_configuration is None:
-            return None
-        return self.current_configuration[0]
-
-    @position.setter
-    def position(self, value):
-        self.current_configuration = _sanitize_configuration((value, self.direction))
+        self.initial_configuration = (self.initial_configuration[0], value)
 
     @property
     def direction(self):
@@ -188,18 +170,8 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @direction.setter
     def direction(self, value):
-        self.current_configuration = _sanitize_configuration((self.position, value))
-
-    # used in rendering
-    @property
-    def old_position(self):
-        if self.old_configuration is None:
-            return None
-        return self.old_configuration[0]
-
-    @old_position.setter
-    def old_position(self, value):
-        self.old_configuration = (value, self.old_direction)
+        position = self.current_configuration[0] if self.current_configuration is not None else None
+        self.current_configuration = (position, value)
 
     @property
     def old_direction(self):
@@ -209,7 +181,7 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @old_direction.setter
     def old_direction(self, value):
-        self.old_configuration = (self.old_position, value)
+        self.old_configuration = (self.old_configuration[0] if self.old_configuration is not None else None, value)
 
     # INIT FROM HERE IN _from_line()
     # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
@@ -265,7 +237,7 @@ class EnvAgent(Generic[ConfigurationType]):
         self.state_machine.reset()
 
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_position,
+        return Agent(initial_position=self.initial_configuration[0],
                      initial_direction=self.initial_direction,
                      direction=self.direction,
                      # N.B. the full arrival-configuration set is serialized, but re-filtered against the rail
@@ -275,9 +247,9 @@ class EnvAgent(Generic[ConfigurationType]):
                      earliest_departure=self.earliest_departure,
                      latest_arrival=self.latest_arrival,
                      handle=self.handle,
-                     position=self.position,
+                     position=self.current_configuration[0] if self.current_configuration is not None else None,
                      old_direction=self.old_direction,
-                     old_position=self.old_position,
+                     old_position=self.old_configuration[0] if self.old_configuration is not None else None,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
                      arrival_time=self.arrival_time,
@@ -399,13 +371,13 @@ class EnvAgent(Generic[ConfigurationType]):
         return (
             f"EnvAgent(\n"
             f"\thandle={self.handle},\n"
-            f"\tinitial_position={self.initial_position},\n"
+            f"\tinitial_position={self.initial_configuration[0]},\n"
             f"\tinitial_direction={self.initial_direction},\n"
-            f"\tposition={self.position},\n"
+            f"\tposition={self.current_configuration[0] if self.current_configuration is not None else None},\n"
             f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
             f"\ttarget={next(iter(self.targets))[0]},\n"
             f"\ttargets={self.targets},\n"
-            f"\told_position={self.old_position},\n"
+            f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
             f"\told_direction={self.old_direction},\n"
             f"\tearliest_departure={self.earliest_departure},\n"
             f"\tlatest_arrival={self.latest_arrival},\n"

@@ -104,4 +104,7 @@ def test_restore_episode():
             env_restored = t.load_env()
 
             # TODO poor man's state comparison for now
-            assert [a.position for a in env_regen.agents] == [a.position for a in env_restored.agents]
+            def _position(a):
+                return a.current_configuration[0] if a.current_configuration is not None else None
+
+            assert [_position(a) for a in env_regen.agents] == [_position(a) for a in env_restored.agents]

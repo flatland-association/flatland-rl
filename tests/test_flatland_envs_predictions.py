@@ -32,8 +32,7 @@ def test_dummy_predictor(rendering=False):
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents[0].initial_position = (5, 6)
-    env.agents[0].initial_direction = 0
+    env.agents[0].initial_configuration = ((5, 6), 0)
     env.agents[0].direction = 0
     env.agents[0].targets = {((3, 0), d) for d in Grid4TransitionsEnum}
 
@@ -128,10 +127,8 @@ def test_shortest_path_predictor(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.initial_position = (5, 6)  # south dead-end
-    agent.position = (5, 6)  # south dead-end
-    agent.direction = 0  # north
-    agent.initial_direction = 0  # north
+    agent.initial_configuration = ((5, 6), 0)  # south dead-end, facing north
+    agent.current_configuration = ((5, 6), 0)  # south dead-end, facing north
     agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
@@ -150,7 +147,8 @@ def test_shortest_path_predictor(rendering=False):
 
     # compute the observations and predictions
     distance_map = env.distance_map.get()
-    distance_on_map = distance_map[0, agent.initial_position[0], agent.initial_position[1], agent.initial_direction]
+    initial_position = agent.initial_configuration[0]
+    distance_on_map = distance_map[0, initial_position[0], initial_position[1], agent.initial_direction]
     assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
     paths = env.distance_map.get_shortest_paths()[0]
@@ -262,30 +260,24 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.reset()
 
     # set the initial position
-    env.agents[0].initial_position = (5, 6)  # south dead-end
-    env.agents[0].position = (5, 6)  # south dead-end
-    env.agents[0].direction = 0  # north
-    env.agents[0].initial_direction = 0  # north
+    env.agents[0].initial_configuration = ((5, 6), 0)  # south dead-end, facing north
+    env.agents[0].current_configuration = ((5, 6), 0)  # south dead-end, facing north
     env.agents[0].targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     env.agents[0].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
 
-    env.agents[1].initial_position = (3, 8)  # east dead-end
-    env.agents[1].position = (3, 8)  # east dead-end
-    env.agents[1].direction = 3  # west
-    env.agents[1].initial_direction = 3  # west
+    env.agents[1].initial_configuration = ((3, 8), 3)  # east dead-end, facing west
+    env.agents[1].current_configuration = ((3, 8), 3)  # east dead-end, facing west
     env.agents[1].targets = {((6, 6), d) for d in Grid4TransitionsEnum}  # south dead-end
     env.agents[1].moving = True
     env.agents[1]._set_state(TrainState.MOVING)
 
     observations, info = env.reset(False, False)
 
-    env.agents[0].position = env.agents[0].initial_position
-    env.agents[0].direction = env.agents[0].initial_direction
-    env.agents[1].position = env.agents[1].initial_position
-    env.agents[1].direction = env.agents[1].initial_direction
-    env.agent_positions[env.agents[0].position] = 0
-    env.agent_positions[env.agents[1].position] = 1
+    env.agents[0].current_configuration = env.agents[0].initial_configuration
+    env.agents[1].current_configuration = env.agents[1].initial_configuration
+    env.agent_positions[env.agents[0].current_configuration[0]] = 0
+    env.agent_positions[env.agents[1].current_configuration[0]] = 1
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
 

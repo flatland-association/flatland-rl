@@ -53,16 +53,16 @@ def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
     agent = env.agents[0]
     assert agent.state == TrainState.READY_TO_DEPART
     min_distance_off_map = env.distance_map.get()[
-        agent.handle, agent.initial_position[0], agent.initial_position[1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
     ]
-    off_map_position = agent.initial_position
+    off_map_position = agent.initial_configuration[0]
 
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     min_distance_on_map = env.distance_map.get()[
-        agent.handle, agent.initial_position[0], agent.initial_position[1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
     ]
-    on_map_position = agent.position
+    on_map_position = agent.current_configuration[0]
     assert np.all(on_map_position == off_map_position)
     assert min_distance_off_map == min_distance_on_map
 
@@ -85,16 +85,16 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
     agent = rail_env.agents[0]
     assert agent.state == TrainState.READY_TO_DEPART
     min_distance_off_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_position[0], agent.initial_position[1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
     ]
-    off_map_position = agent.initial_position
+    off_map_position = agent.initial_configuration[0]
 
     rail_env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     min_distance_on_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_position[0], agent.initial_position[1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
     ]
-    on_map_position = agent.position
+    on_map_position = agent.current_configuration[0]
     assert np.all(on_map_position == off_map_position)
     assert min_distance_off_map == min_distance_on_map
 
@@ -130,8 +130,8 @@ def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     agent_0, agent_1 = env.agents[0], env.agents[1]
     assert agent_0.state == TrainState.READY_TO_DEPART
     assert agent_1.state == TrainState.READY_TO_DEPART
-    assert agent_0.position is None
-    assert agent_1.position is None
+    assert agent_0.current_configuration is None
+    assert agent_1.current_configuration is None
 
     # If we now try to dispatch both trains they will be dispatched.
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
@@ -139,8 +139,8 @@ def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     assert agent_0.state == TrainState.MOVING
     assert agent_1.state == TrainState.MOVING
 
-    assert np.all(agent_0.position == agent_0.initial_position)
-    assert np.all(agent_1.position == agent_1.initial_position)
+    assert np.all(agent_0.current_configuration[0] == agent_0.initial_configuration[0])
+    assert np.all(agent_1.current_configuration[0] == agent_1.initial_configuration[0])
 
     # Thus we showed that train 0 could be dispatched at it's earliest departure and train 1 could not
 
@@ -185,7 +185,7 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_BYDESIGN():
     # Even though the train is in a malfunction state we can dispatch it.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
-    assert agent.position is not None
+    assert agent.current_configuration is not None
 
 
 def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
@@ -216,7 +216,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MALFUNCTION
     assert agent.malfunction_handler.malfunction_down_counter == 5
-    org_pos = agent.position
+    org_pos = agent.current_configuration[0]
 
     for _ in range(5):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
@@ -229,7 +229,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
     # Even though the train is in a malfunction state we can dispatch it.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
-    assert agent.position == (org_pos[0] + 1, org_pos[1])
+    assert agent.current_configuration[0] == (org_pos[0] + 1, org_pos[1])
 
 
 def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
@@ -247,7 +247,7 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
     _ = rail_env.reset(random_seed=321)
 
     for agent in rail_env.agents:
-        print(f'{agent.handle} - {agent.earliest_departure}, {agent.initial_position}')
+        print(f'{agent.handle} - {agent.earliest_departure}, {agent.initial_configuration[0]}')
 
     for ii in range(20):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
@@ -1010,4 +1010,6 @@ def test_two_trains_on_same_cell_bug_FIXED():
 
     assert agent_4.state.is_off_map_state()
     assert agent_13.state.is_on_map_state()
-    assert agent_4.position != agent_13.position
+    agent_4_position = agent_4.current_configuration[0] if agent_4.current_configuration is not None else None
+    agent_13_position = agent_13.current_configuration[0] if agent_13.current_configuration is not None else None
+    assert agent_4_position != agent_13_position

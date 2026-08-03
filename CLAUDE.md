@@ -23,14 +23,17 @@ extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently
 `tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
 flags it as unused.
 
-- **Run the core test suite** (matches CI's `test` job): `benchmarks/benchmark_episodes.py`'s regression tests need
-  a `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
+- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
+  and `benchmarks/benchmark_episodes.py`'s fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a
+  `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
   `flatland-benchmarks-episodes-url` in `checks.yml`):
   ```
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
   Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
-  `python -m pytest tests/envs/test_foo.py`.
+  `python -m pytest tests/envs/test_foo.py`. If the `flatland-baselines` checkout lives inside this repo's own
+  tree (as CI's `test` job does it, and as needed to put it on `PYTHONPATH` without an absolute path), add
+  `--ignore=flatland-baselines` — otherwise pytest's default recursive collection picks up its test suite too.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`
   since training runs are inherently non-deterministic:
@@ -44,7 +47,7 @@ flags it as unused.
 - **Check for dependency drift** (unused/missing/misdeclared deps across the `flatland`/`flatland/ml`/`tests`
   boundary): `tox -e py3.13-verify-requirements` (uses `deptry`).
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
-- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.13 — slow; prefer targeted `pytest`/`flake8`
+- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.14 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
 - **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
   `tox -e py3.12-verify-cython-build`. To manually build in place and check (Cython auto-provisions via
@@ -189,6 +192,11 @@ just step 0.
 - `utils/` — rendering (`rendertools.py`, `editor.py`), grid helpers, seeding.
 - `env_generation/` — higher-level convenience env-builder over the generators.
 - `png/`, `svg/` — static rendering image assets, not code.
+- `benchmarks/` — performance profiling/regression scripts and notebooks (exercised by the `tox -e
+  *-profiling*`/`*-benchmarks` envs); `benchmark_episodes.py` is itself a pytest module, so it's swept into a
+  bare `pytest` invocation from the repo root, not just the dedicated benchmark envs.
+- `scripts/make_coverage.py` — runs the suite under `coverage`, generates an HTML report, opens it in a browser
+  (same as `tox -e coverage`).
 
 ### CLI entry points (`pyproject.toml`'s `[project.scripts]`, implemented in `cli.py`)
 

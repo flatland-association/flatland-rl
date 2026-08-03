@@ -53,7 +53,7 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
                 # TODO make this generic
                 continue
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]
-            agent_virtual_position = agent.position
+            agent_virtual_position = agent.current_configuration[0]
             agent_virtual_direction = agent.direction
             agent_target = next(iter(agent.targets))[0]
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
@@ -61,25 +61,23 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
             for index in range(1, self.max_depth + 1):
                 action_done = False
                 # if we're at the target, stop moving...
-                if agent.position == agent_target:
+                if agent.current_configuration[0] == agent_target:
                     prediction[index] = [index, *agent_target, agent.direction, RailEnvActions.STOP_MOVING.value]
                     continue
                 for action in action_priorities:
-                    result = self.env.rail.apply_action_independent(action, (agent.position, agent.direction))
+                    result = self.env.rail.apply_action_independent(action, agent.current_configuration)
                     if result is not None:
                         (new_position, new_direction), _ = result
                         # move and change direction to face the new_direction that was
                         # performed
-                        agent.position = new_position
-                        agent.direction = new_direction
+                        agent.current_configuration = (new_position, new_direction)
                         prediction[index] = [index, *new_position, new_direction, action.value]
                         action_done = True
                         break
                 if not action_done:
                     raise Exception("Cannot move further. Something is wrong")
             prediction_dict[agent.handle] = prediction
-            agent.position = agent_virtual_position
-            agent.direction = agent_virtual_direction
+            agent.current_configuration = (agent_virtual_position, agent_virtual_direction)
         return prediction_dict
 
 
@@ -129,10 +127,10 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
         for agent in agents:
             agent_target = next(iter(agent.targets))[0]
             if agent.state.is_off_map_state():
-                agent_virtual_position = agent.initial_position
+                agent_virtual_position = agent.initial_configuration[0]
                 agent_virtual_direction = agent.initial_direction
             elif agent.state.is_on_map_state():
-                agent_virtual_position = agent.position
+                agent_virtual_position = agent.current_configuration[0]
                 agent_virtual_direction = agent.direction
             elif agent.state == TrainState.DONE:
                 agent_virtual_position = agent_target

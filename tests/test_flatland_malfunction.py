@@ -28,10 +28,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
         agent = self.env.agents[handle]
 
         if agent.state.is_off_map_state():
-            agent_virtual_position = agent.initial_position
+            agent_virtual_position = agent.initial_configuration[0]
             agent_virtual_direction = agent.initial_direction
         elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.position
+            agent_virtual_position = agent.current_configuration[0]
             agent_virtual_direction = agent.direction
         elif agent.state == TrainState.DONE:
             agent_virtual_position = next(iter(agent.targets))[0]
@@ -82,13 +82,12 @@ def test_malfunction_process():
                   )
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].position = env.agents[a_idx].initial_position
-        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
+        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
         env.agents[a_idx].state = TrainState.MOVING
 
     agent_halts = 0
     total_down_time = 0
-    agent_old_position = env.agents[0].position
+    agent_old_position = env.agents[0].current_configuration[0]
 
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
@@ -112,9 +111,9 @@ def test_malfunction_process():
 
         if agent_malfunctioning:
             # Check that agent is not moving while malfunctioning
-            assert agent_old_position == env.agents[0].position
+            assert agent_old_position == env.agents[0].current_configuration[0]
 
-        agent_old_position = env.agents[0].position
+        agent_old_position = env.agents[0].current_configuration[0]
         total_down_time += env.agents[0].malfunction_handler.malfunction_down_counter
     # Check that the appropriate number of malfunctions is achieved
     # Dipam: The number of malfunctions varies by seed
@@ -336,7 +335,8 @@ def test_initial_malfunction_stop_moving():
 
     env._max_episode_steps = 1000
 
-    print(env.agents[0].initial_position, env.agents[0].direction, env.agents[0].position, env.agents[0].state)
+    position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+    print(env.agents[0].initial_configuration[0], env.agents[0].direction, position, env.agents[0].state)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -562,9 +562,10 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         # Append the rewards of the first trial
-        env_data.append((reward[0], env.agents[0].position))
+        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        env_data.append((reward[0], position))
         assert reward[0] == env_data[step][0]
-        assert env.agents[0].position == env_data[step][1]
+        assert position == env_data[step][1]
         if dones['__all__']:
             break
     # Run the same test as above but with an external random generator running
@@ -592,7 +593,8 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         assert reward[0] == env_data[step][0]
-        assert env.agents[0].position == env_data[step][1]
+        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        assert position == env_data[step][1]
         if dones['__all__']:
             break
 
@@ -611,17 +613,16 @@ def test_last_malfunction_step():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
-    env.agents[0].initial_position = (6, 6)
+    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
     env.agents[0].initial_direction = 2
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
     env._max_episode_steps = 1000
 
     env.reset(False, False, random_seed=10)
-    assert len(set([a.initial_position for a in env.agents])) == 1
+    assert len(set([a.initial_configuration[0] for a in env.agents])) == 1
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].position = env.agents[a_idx].initial_position
-        env.agents[a_idx].direction = env.agents[a_idx].initial_direction
+        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
         env.agents[a_idx].state = TrainState.MOVING
     env.agents[0].malfunction_handler.malfunction_down_counter = 0
 
