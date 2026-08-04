@@ -108,7 +108,6 @@ jobs:
                     sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -122,7 +121,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -130,7 +129,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: tox-deptry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -142,13 +141,13 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: tox-deptry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
 
     testml:
         runs-on: ubuntu-24.04
@@ -199,7 +198,6 @@ jobs:
                     sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -213,7 +211,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -241,7 +239,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: tox-testml-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -253,13 +251,13 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: tox-testml-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Check disk space
                 run: df . -h
 
@@ -296,7 +294,6 @@ jobs:
 
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -311,7 +308,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -339,7 +336,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -351,13 +348,13 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Check disk space
                 run: df . -h
 
@@ -379,7 +376,6 @@ jobs:
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -395,7 +391,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-notebooks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -409,7 +405,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-notebooks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     examples:
         runs-on: ubuntu-24.04
@@ -420,7 +416,6 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -436,7 +431,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -448,7 +443,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     verify-cython-build:
         runs-on: ubuntu-24.04
@@ -581,7 +576,6 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -597,7 +591,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -609,7 +603,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-profiling-get-k-shortest-paths-results-${{ matrix.python-version }}
@@ -642,7 +636,6 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -677,7 +670,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-benchmarks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -689,7 +682,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-benchmarks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-benchmarks-results-${{ matrix.python-version }}
