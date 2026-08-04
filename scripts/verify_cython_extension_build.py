@@ -9,7 +9,7 @@ specifically to avoid the wheel-tag problem: a wheel's platform/ABI tag depends 
 attempted to cythonize a module, not on whether the final compile succeeded, so a wheel built with a merely
 *missing compiler* still ends up platform-tagged rather than universal).
 
-Used by tox.ini's verify-build-no-cython/verify-build-no-gcc/verify-cython-build[-no-isolation]/build envs.
+Used by tox.ini's verify-build-no-gcc/verify-cython-build[-no-isolation]/build envs.
 """
 import argparse
 import glob

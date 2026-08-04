@@ -106,12 +106,15 @@ flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
 
 [tool.setuptools]
 # declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html).
-# cython is a [build-system] requires entry above, so it's available in every default (isolated) build - these
-# modules now compile automatically whenever a C compiler is also available, with no extra flags needed.
-# optional = true: if Cython and/or a C compiler are unavailable, the build falls back to the plain-Python
-# sources instead of failing (see tox.ini's verify-build-no-cython/verify-build-no-gcc envs). This is also the
-# mechanism tox.ini's [testenv:build] deliberately exploits (by faking a missing compiler) to guarantee the
-# published PyPI wheel stays the universal, plain-Python one despite Cython now being auto-available by default.
+# cython is a [build-system] requires entry above, so it's available in every build - these modules now compile
+# automatically whenever a C compiler is also available, with no extra flags needed. optional = true covers a
+# missing/broken *C compiler* gracefully (falls back to the plain-Python sources with a warning instead of
+# failing - see tox.ini's verify-build-no-gcc env); it does NOT cover Cython itself being absent, since
+# `python -m build` (isolated or not, per PEP 517/518) always mandates every [build-system] requires entry be
+# satisfiable, and fails outright rather than falling back if one is missing. Only an sdist is published to
+# PyPI (tox.ini's [testenv:build]) - deliberately no wheel - since a wheel's platform/ABI tag is decided by
+# whether Cython ever attempted to cythonize a module, not by whether the compile succeeded, so any wheel built
+# here would end up platform-tagged rather than universal.
 ext-modules = [
     { name = "flatland.envs.step_utils.state_machine", sources = ["flatland/envs/step_utils/state_machine.py"], optional = true },
     { name = "flatland.envs.step_utils.states", sources = ["flatland/envs/step_utils/states.py"], optional = true },

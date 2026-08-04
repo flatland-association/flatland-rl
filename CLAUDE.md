@@ -135,9 +135,13 @@ locals. `state_machine.py` unconditionally does `import cython` and uses `cython
 regardless of whether the module ends up compiled — this works fine uncompiled too, since `cython`'s
 pure-Python shadow package provides working fallback stubs for these. CI cross-checks all build outcomes via
 `scripts/verify_cython_extension_build.py`, which inspects either a built wheel (`--artifact wheel`, the
-default) or the published sdist (`--artifact sdist`): `verify-build-no-cython` (Cython genuinely absent —
-`--no-isolation` with a deps list that omits it) and `verify-build-no-gcc` (Cython present, compiler faked
-missing) both assert a wheel's pure-Python fallback via `--expect pure-python`;
+default) or the published sdist (`--artifact sdist`): `verify-build-no-gcc` (Cython present, compiler faked
+missing) asserts a wheel's pure-Python fallback via `--expect pure-python` — there's deliberately no
+`verify-build-no-cython` equivalent, since `python -m build` (isolated or not) always mandates every
+`[build-system] requires` entry be satisfiable and fails outright rather than falling back if Cython itself is
+missing (`optional = true` only ever covers a missing *compiler*, confirmed the hard way — an earlier version
+of this env tried `--no-isolation` with cython omitted from `deps` and just got `ERROR Missing dependencies:
+cython>=3.2.9`).
 `py{3.10,3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
 sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's real compilation via `--expect
 compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
