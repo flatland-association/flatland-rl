@@ -5,6 +5,7 @@ import pprint
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.agent_utils import with_direction
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
@@ -33,8 +34,7 @@ def test_dummy_predictor(rendering=False):
 
     # set initial position and direction for testing...
     env.agents[0].initial_configuration = ((5, 6), 0)
-    cur = env.agents[0].current_configuration
-    env.agents[0].current_configuration = (cur[0] if cur is not None else None, 0)
+    env.agents[0].current_configuration = with_direction(env.agents[0].current_configuration, 0)
     env.agents[0].targets = {((3, 0), d) for d in Grid4TransitionsEnum}
 
     env.reset(False, False)

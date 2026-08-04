@@ -13,7 +13,7 @@ import pytest
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, with_direction
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -165,9 +165,8 @@ def test_rail_environment_single_agent(show=False):
 
         # HACK - force the direction to one we know is good.
         # agent.initial_position = agent.position = (2,3)
-        agent.initial_configuration = (agent.initial_configuration[0], 0)
-        cur = agent.current_configuration
-        agent.current_configuration = (cur[0] if cur is not None else None, 0)
+        agent.initial_configuration = with_direction(agent.initial_configuration, 0)
+        agent.current_configuration = with_direction(agent.current_configuration, 0)
 
         if show:
             print("handle:", agent.handle)
@@ -211,8 +210,7 @@ def test_rail_environment_single_agent(show=False):
         for _ in range(10):
             _ = rail_env.reset()
 
-            cur = rail_env.agents[0].current_configuration
-            rail_env.agents[0].current_configuration = (cur[0] if cur is not None else None, 0)
+            rail_env.agents[0].current_configuration = with_direction(rail_env.agents[0].current_configuration, 0)
 
             # JW - to avoid problem with sparse_line_generator.
             # rail_env.agents[0].position = (1,2)

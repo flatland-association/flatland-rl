@@ -82,6 +82,15 @@ def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4
     return {(targets, d) for d in Grid4TransitionsEnum}
 
 
+def with_direction(configuration: Optional[Tuple[Tuple[int, int], int]], direction: int) -> Tuple[Tuple[int, int], int]:
+    """
+    Returns a grid `(position, direction)` configuration with `direction` replaced, preserving
+    `configuration`'s position - or `(None, direction)` if `configuration` is `None` (e.g. the agent is
+    currently off map).
+    """
+    return (configuration[0] if configuration is not None else None, direction)
+
+
 def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # Target configurations are serialised without rail validity (rail is not stored per-agent), so filter
     # them against `rail` here - previously a post-load step in `RailEnvPersister.set_full_state`. The target

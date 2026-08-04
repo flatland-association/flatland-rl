@@ -4,6 +4,7 @@ from collections import deque
 # import jpy_canvas
 import ipyevents as ipe
 
+from flatland.envs.agent_utils import with_direction
 from flatland.utils.editor_interfaces import AbstractController, AbstractModel, AbstractView
 
 
@@ -197,11 +198,9 @@ class Controller(AbstractController):
                     continue
                 if agent_idx == self.model.selected_agent:
                     new_direction = (agent.initial_configuration[1] + 1) % 4
-                    agent.initial_configuration = (agent.initial_configuration[0], new_direction)
-                    cur = agent.current_configuration
-                    agent.current_configuration = (cur[0] if cur is not None else None, new_direction)
-                    old = agent.old_configuration
-                    agent.old_configuration = (old[0] if old is not None else None, new_direction)
+                    agent.initial_configuration = with_direction(agent.initial_configuration, new_direction)
+                    agent.current_configuration = with_direction(agent.current_configuration, new_direction)
+                    agent.old_configuration = with_direction(agent.old_configuration, new_direction)
         self.model.redraw()
 
     def reset_agents(self, event):
