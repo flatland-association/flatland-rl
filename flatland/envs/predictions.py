@@ -6,10 +6,10 @@ from typing import Dict
 import numpy as np
 
 from flatland.core.env_prediction_builder import PredictionBuilder
+from flatland.envs.agent_utils import virtual_configuration
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
 
 
@@ -127,16 +127,9 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
         prediction_dict = {}
         for agent in agents:
             agent_target = next(iter(agent.targets))[0]
-            if agent.state.is_off_map_state():
-                agent_virtual_position = agent.initial_configuration[0]
-                agent_virtual_direction = agent.initial_configuration[1]
-            elif agent.state.is_on_map_state():
-                agent_virtual_position = agent.current_configuration[0]
-                agent_virtual_direction = agent.current_configuration[1]
-            elif agent.state == TrainState.DONE:
-                agent_virtual_position = agent_target
-                agent_virtual_direction = agent.current_configuration[1] \
-                    if agent.current_configuration is not None else None
+            configuration = virtual_configuration(agent)
+            if configuration is not None:
+                agent_virtual_position, agent_virtual_direction = configuration
             else:
 
                 prediction = np.zeros(shape=(self.max_depth + 1, 5))

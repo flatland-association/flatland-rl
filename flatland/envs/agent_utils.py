@@ -91,6 +91,27 @@ def with_direction(configuration: Optional[Tuple[Tuple[int, int], int]], directi
     return (configuration[0] if configuration is not None else None, direction)
 
 
+def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], int]]:
+    """
+    Returns the effective grid `(position, direction)` for `agent`, regardless of whether it is
+    currently on the map - used by observations/predictions that need a configuration to compute
+    against even for off-map or arrived agents:
+    - off map: `initial_configuration`.
+    - on map: `current_configuration`.
+    - done (arrived, possibly already removed from the map): one of `agent`'s valid `targets`
+      configurations, so a real, rail-valid direction is returned instead of the `None` `direction`
+      that `current_configuration` would give once the agent is removed from the map.
+    - any other state (e.g. malfunctioning while still off map): `None`.
+    """
+    if agent.state.is_off_map_state():
+        return agent.initial_configuration
+    elif agent.state.is_on_map_state():
+        return agent.current_configuration
+    elif agent.state == TrainState.DONE:
+        return next(iter(agent.targets))
+    return None
+
+
 def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # Target configurations are serialised without rail validity (rail is not stored per-agent), so filter
     # them against `rail` here - previously a post-load step in `RailEnvPersister.set_full_state`. The target

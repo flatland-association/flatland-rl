@@ -6,6 +6,7 @@ import numpy as np
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.envs.agent_utils import virtual_configuration
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -27,18 +28,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        if agent.state.is_off_map_state():
-            agent_virtual_position = agent.initial_configuration[0]
-            agent_virtual_direction = agent.initial_configuration[1]
-        elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.current_configuration[0]
-            agent_virtual_direction = agent.current_configuration[1]
-        elif agent.state == TrainState.DONE:
-            agent_virtual_position = next(iter(agent.targets))[0]
-            agent_virtual_direction = agent.current_configuration[1] \
-                if agent.current_configuration is not None else None
-        else:
+        configuration = virtual_configuration(agent)
+        if configuration is None:
             return None
+        agent_virtual_position, agent_virtual_direction = configuration
 
         possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = np.count_nonzero(possible_transitions)

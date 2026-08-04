@@ -11,7 +11,7 @@ from flatland.core.env_observation_builder import ObservationBuilder, AgentHandl
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, virtual_configuration
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero, fast_position_equal, fast_delete, fast_where
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
@@ -200,16 +200,10 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
 
-        if agent.state.is_off_map_state():
-            agent_virtual_position = agent.initial_configuration[0]
-            agent_virtual_direction = agent.initial_configuration[1]
-        elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.current_configuration[0]
-            agent_virtual_direction = agent.current_configuration[1]
-        elif agent.state == TrainState.DONE:
-            agent_virtual_position, agent_virtual_direction = list(agent.targets)[0]
-        else:
+        configuration = virtual_configuration(agent)
+        if configuration is None:
             return None
+        agent_virtual_position, agent_virtual_direction = configuration
 
         possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
@@ -566,18 +560,10 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
 
         agent = self.env.agents[handle]
         agent_target = next(iter(agent.targets))[0]
-        if agent.state.is_off_map_state():
-            agent_virtual_position = agent.initial_configuration[0]
-            agent_virtual_direction = agent.initial_configuration[1]
-        elif agent.state.is_on_map_state():
-            agent_virtual_position = agent.current_configuration[0]
-            agent_virtual_direction = agent.current_configuration[1]
-        elif agent.state == TrainState.DONE:
-            agent_virtual_position = agent_target
-            agent_virtual_direction = agent.current_configuration[1] \
-                if agent.current_configuration is not None else None
-        else:
+        configuration = virtual_configuration(agent)
+        if configuration is None:
             return None
+        agent_virtual_position, agent_virtual_direction = configuration
 
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
