@@ -134,8 +134,8 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Build new package
                 run: tox run -e build
-            -   name: Verify dist is pure Python
-                run: python scripts/verify_cython_extension_build.py --dist-dir dist --expect pure-python
+            -   name: Verify dist is a pure-Python sdist (no wheel)
+                run: python scripts/verify_cython_extension_build.py --dist-dir dist --artifact sdist --expect pure-python
             -   name: Publish package to PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:

@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=74.1.0", "setuptools_scm>=8"]
+requires = ["setuptools>=74.1.0", "setuptools_scm>=8", "cython>=3.2.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -105,9 +105,13 @@ flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluat
 flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
 
 [tool.setuptools]
-# declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html),
+# declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html).
+# cython is a [build-system] requires entry above, so it's available in every default (isolated) build - these
+# modules now compile automatically whenever a C compiler is also available, with no extra flags needed.
 # optional = true: if Cython and/or a C compiler are unavailable, the build falls back to the plain-Python
-# sources instead of failing (see tox.ini's verify-build-no-cython/verify-build-no-gcc envs).
+# sources instead of failing (see tox.ini's verify-build-no-cython/verify-build-no-gcc envs). This is also the
+# mechanism tox.ini's [testenv:build] deliberately exploits (by faking a missing compiler) to guarantee the
+# published PyPI wheel stays the universal, plain-Python one despite Cython now being auto-available by default.
 ext-modules = [
     { name = "flatland.envs.step_utils.state_machine", sources = ["flatland/envs/step_utils/state_machine.py"], optional = true },
     { name = "flatland.envs.step_utils.states", sources = ["flatland/envs/step_utils/states.py"], optional = true },

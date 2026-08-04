@@ -48,51 +48,41 @@ Install Flatland using pip:
 python -m pip install flatland-rl
 ```
 
-This is the preferred method to install Flatland, as it will always install the most recent stable release. The
-published package is pure Python, so this always works regardless of your platform or toolchain.
+This is the preferred method to install Flatland, as it will always install the most recent stable release.
 
 ### Cython-accelerated build
 
-A few hot-path modules can optionally be compiled with [Cython](https://cython.org/) for extra performance. This requires building from
-source, since the package published on PyPI is the plain-Python build described above:
+A few hot-path modules are compiled with [Cython](https://cython.org/) for extra performance **automatically**,
+as part of the normal install above, whenever a working C compiler is available - no extra flags needed.
+Cython itself doesn't need to be installed manually either: it's a `[build-system] requires` entry in
+`pyproject.toml`, so pip provisions it automatically as part of the build.
+
+**Requirement:** a working C compiler (e.g. `gcc`/`clang` on Linux/macOS, or the Microsoft C++ Build Tools on
+Windows). Compilation is optional and best-effort: if a compiler is missing, the build falls back to the
+plain-Python sources instead of failing, printing a warning for each module it could not compile. Pass `-v` to
+pip (`python -m pip install -v flatland-rl`) to see it - by default pip hides the underlying build output on
+success. The install still succeeds either way - you get the plain-Python modules, just without the Cython
+speed-up.
+
+**Forcing a plain-Python build:** there's no dedicated flag for this - make the build think no C compiler is
+available instead, the same mechanism this repo's own CI relies on to test the fallback path:
 
 ```shell
-python -m pip install "cython>=3.2.9"
-python -m pip install --no-build-isolation --no-binary flatland-rl flatland-rl
+CC=/nonexistent-cc CXX=/nonexistent-cxx python -m pip install flatland-rl
 ```
 
-(or `python -m pip install --no-build-isolation -e .` from a checkout of this repository).
+(or `CC=/nonexistent-cc CXX=/nonexistent-cxx pip install -e .` from a checkout). This produces the same
+per-module warning output as a genuinely missing compiler - expected and harmless, the install still succeeds
+as pure-Python.
 
-**Why `--no-binary` and `--no-build-isolation`?**
+Only a source distribution (sdist) is published to PyPI - there's no prebuilt wheel - so this always builds
+from source on your own machine. That's deliberate: a wheel with a
+Cython extension gets tagged to one specific Python version/platform/ABI the moment Cython even *attempts* to
+compile it, regardless of whether the compile actually succeeds - publishing one would mean every other Python
+version or OS gets no matching wheel at all. Building from source sidesteps that, at the cost of needing
+Python's standard packaging tools, and failing outright in environments that categorically refuse to build from
+source (e.g. `pip install --only-binary=:all:`, some locked-down/air-gapped setups).
 
-- `--no-binary flatland-rl` forces pip to build from the source distribution (sdist) instead of installing the
-  prebuilt wheel (bdist) already published on PyPI. This matters because that published wheel is a *universal*
-  one - e.g. `flatland_rl-4.2.6-py2.py3-none-any.whl` (`none-any`: no Python-version/ABI/platform constraint) -
-  which pip considers compatible with any environment, so by default pip always prefers installing it over
-  building from the `flatland_rl-4.2.6.tar.gz` sdist. Without `--no-binary`, pip just installs that existing
-  plain-Python wheel and never runs a build at all, so there's nothing to cythonize, regardless of whether
-  Cython or a C compiler is available locally.
-- `--no-build-isolation` is needed because Cython is *not* listed in `pyproject.toml`'s `[build-system]
-  requires` (only `setuptools`/`setuptools_scm` are - deliberately, so a normal `pip install flatland-rl` isn't
-  forced to pull in Cython just to install an already-published wheel). By default pip builds every package
-  inside a fresh, throwaway virtualenv containing only those `[build-system] requires` packages, so even a
-  Cython you'd `pip install`ed into your own environment would be invisible to that isolated build. This flag
-  tells pip to skip the throwaway environment and build using your current environment's packages instead, so
-  the Cython you installed a line above actually gets picked up.
-
-**Requirements:**
-
-- [Cython](https://cython.org/) `>=3.2.9` installed in the environment you are installing into (`pip install
-  cython` above) - it must be present *before* pip starts the build, since `--no-build-isolation` (see above)
-  is what makes it visible to the build in the first place.
-- A working C compiler (e.g. `gcc`/`clang` on Linux/macOS, or the Microsoft C++ Build Tools on Windows).
-
-Cython compilation is optional and best-effort: if either requirement is missing, the build falls back to the
-plain-Python sources instead of failing, printing a warning for each module it could not compile. Pass `-v` to
-pip (`python -m pip install -v --no-build-isolation ...`) to see it - by default pip hides the underlying build
-output on success.
-
-In both cases the install still succeeds - you get the plain-Python modules, just without the Cython speed-up.
 
 🚀 Releases
 ---
