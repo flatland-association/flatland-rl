@@ -29,13 +29,14 @@ class SingleAgentNavigationObs(ObservationBuilder):
 
         if agent.state.is_off_map_state():
             agent_virtual_position = agent.initial_configuration[0]
-            agent_virtual_direction = agent.initial_direction
+            agent_virtual_direction = agent.initial_configuration[1]
         elif agent.state.is_on_map_state():
             agent_virtual_position = agent.current_configuration[0]
-            agent_virtual_direction = agent.direction
+            agent_virtual_direction = agent.current_configuration[1]
         elif agent.state == TrainState.DONE:
             agent_virtual_position = next(iter(agent.targets))[0]
-            agent_virtual_direction = agent.direction
+            agent_virtual_direction = agent.current_configuration[1] \
+                if agent.current_configuration is not None else None
         else:
             return None
 
@@ -336,7 +337,8 @@ def test_initial_malfunction_stop_moving():
     env._max_episode_steps = 1000
 
     position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
-    print(env.agents[0].initial_configuration[0], env.agents[0].direction, position, env.agents[0].state)
+    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
+    print(env.agents[0].initial_configuration[0], direction, position, env.agents[0].state)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -613,8 +615,7 @@ def test_last_malfunction_step():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = 2
+    env.agents[0].initial_configuration = ((6, 6), 2)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
     env._max_episode_steps = 1000

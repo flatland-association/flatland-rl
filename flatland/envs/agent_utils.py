@@ -152,37 +152,6 @@ def _sanitize_configuration(configuration):
 
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
-    # backwards compatibility
-    # TODO https://github.com/flatland-association/flatland-rl/issues/366 split grid special cases from general implementation
-    @property
-    def initial_direction(self):
-        return self.initial_configuration[1]
-
-    @initial_direction.setter
-    def initial_direction(self, value):
-        self.initial_configuration = (self.initial_configuration[0], value)
-
-    @property
-    def direction(self):
-        if self.current_configuration is None:
-            return None
-        return self.current_configuration[1]
-
-    @direction.setter
-    def direction(self, value):
-        position = self.current_configuration[0] if self.current_configuration is not None else None
-        self.current_configuration = (position, value)
-
-    @property
-    def old_direction(self):
-        if self.old_configuration is None:
-            return None
-        return self.old_configuration[1]
-
-    @old_direction.setter
-    def old_direction(self, value):
-        self.old_configuration = (self.old_configuration[0] if self.old_configuration is not None else None, value)
-
     # INIT FROM HERE IN _from_line()
     # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
     # exactly where the numpy-dtype taint described on _sanitize_configuration has been observed entering) -
@@ -238,8 +207,8 @@ class EnvAgent(Generic[ConfigurationType]):
 
     def to_agent(self) -> Agent:
         return Agent(initial_position=self.initial_configuration[0],
-                     initial_direction=self.initial_direction,
-                     direction=self.direction,
+                     initial_direction=self.initial_configuration[1],
+                     direction=self.current_configuration[1] if self.current_configuration is not None else None,
                      # N.B. the full arrival-configuration set is serialized, but re-filtered against the rail
                      # on load (see `set_full_state`), since rail validity is not stored with the agent.
                      targets=set(self.targets),
@@ -248,7 +217,7 @@ class EnvAgent(Generic[ConfigurationType]):
                      latest_arrival=self.latest_arrival,
                      handle=self.handle,
                      position=self.current_configuration[0] if self.current_configuration is not None else None,
-                     old_direction=self.old_direction,
+                     old_direction=self.old_configuration[1] if self.old_configuration is not None else None,
                      old_position=self.old_configuration[0] if self.old_configuration is not None else None,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
@@ -368,17 +337,18 @@ class EnvAgent(Generic[ConfigurationType]):
         return agents
 
     def __str__(self):
+        direction = self.current_configuration[1] if self.current_configuration is not None else None
         return (
             f"EnvAgent(\n"
             f"\thandle={self.handle},\n"
             f"\tinitial_position={self.initial_configuration[0]},\n"
-            f"\tinitial_direction={self.initial_direction},\n"
+            f"\tinitial_direction={self.initial_configuration[1]},\n"
             f"\tposition={self.current_configuration[0] if self.current_configuration is not None else None},\n"
-            f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
+            f"\tdirection={direction if direction is None else Grid4TransitionsEnum(direction).value},\n"
             f"\ttarget={next(iter(self.targets))[0]},\n"
             f"\ttargets={self.targets},\n"
             f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
-            f"\told_direction={self.old_direction},\n"
+            f"\told_direction={self.old_configuration[1] if self.old_configuration is not None else None},\n"
             f"\tearliest_departure={self.earliest_departure},\n"
             f"\tlatest_arrival={self.latest_arrival},\n"
             f"\tstate_machine={str(self.state_machine)},\n"

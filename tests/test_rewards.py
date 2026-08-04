@@ -386,10 +386,8 @@ def test_rewards_departed_but_never_arrived_minimum_penalty():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), agent.old_direction)
-    agent.old_direction = 0
-    agent.current_configuration = ((2, 2), agent.direction)
-    agent.direction = 2
+    agent.old_configuration = ((0, 0), 0)
+    agent.current_configuration = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
@@ -701,10 +699,8 @@ def test_arrival_recorded_once_per_waypoint():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
     # Move agent to position (5, 5) facing North (direction 0)
-    agent.current_configuration = ((5, 5), agent.direction)
-    agent.direction = 0
-    agent.old_configuration = ((5, 4), agent.old_direction)
-    agent.old_direction = 0
+    agent.current_configuration = ((5, 5), 0)
+    agent.old_configuration = ((5, 4), 0)
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
@@ -801,10 +797,8 @@ def test_waypoint_comparison_uses_waypoint_objects():
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
-    agent.current_configuration = ((7, 8), agent.direction)
-    agent.direction = 1
-    agent.old_configuration = ((7, 7), agent.old_direction)
-    agent.old_direction = 1
+    agent.current_configuration = ((7, 8), 1)
+    agent.old_configuration = ((7, 7), 1)
 
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
 

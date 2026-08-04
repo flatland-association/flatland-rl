@@ -75,7 +75,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
                             (agent.handle, *agent.current_configuration[0], exit_direction)]
                         print("agent {} at {} facing {} taking {} distance {}".format(agent.handle,
                                                                                       agent.current_configuration[0],
-                                                                                      agent.direction,
+                                                                                      agent.current_configuration[1],
                                                                                       exit_direction,
                                                                                       distance_to_target))
 
@@ -89,7 +89,9 @@ def _step_along_shortest_path(env, obs_builder, rail):
                             }
                             print("   improved (direction) -> {}".format(exit_direction))
 
-                            actions[agent.handle] = actions_to_be_taken[(exit_direction - agent.direction) % len(rail.transitions.get_direction_enum())]
+                            num_directions = len(rail.transitions.get_direction_enum())
+                            agent_dir_idx = (exit_direction - agent.current_configuration[1]) % num_directions
+                            actions[agent.handle] = actions_to_be_taken[agent_dir_idx]
                             expected_next_position[agent.handle] = neighbour
                             print("   improved (action) -> {}".format(actions[agent.handle]))
     _, rewards, dones, _ = env.step(actions)

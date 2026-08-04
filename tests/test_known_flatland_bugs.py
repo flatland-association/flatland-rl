@@ -53,14 +53,16 @@ def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
     agent = env.agents[0]
     assert agent.state == TrainState.READY_TO_DEPART
     min_distance_off_map = env.distance_map.get()[
-        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1],
+        agent.initial_configuration[1]
     ]
     off_map_position = agent.initial_configuration[0]
 
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     min_distance_on_map = env.distance_map.get()[
-        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1],
+        agent.initial_configuration[1]
     ]
     on_map_position = agent.current_configuration[0]
     assert np.all(on_map_position == off_map_position)
@@ -85,14 +87,16 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
     agent = rail_env.agents[0]
     assert agent.state == TrainState.READY_TO_DEPART
     min_distance_off_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1],
+        agent.initial_configuration[1]
     ]
     off_map_position = agent.initial_configuration[0]
 
     rail_env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     min_distance_on_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1], agent.initial_direction
+        agent.handle, agent.initial_configuration[0][0], agent.initial_configuration[0][1],
+        agent.initial_configuration[1]
     ]
     on_map_position = agent.current_configuration[0]
     assert np.all(on_map_position == off_map_position)

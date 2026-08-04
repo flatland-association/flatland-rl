@@ -59,16 +59,18 @@ def test_get_global_observation():
 
         # test first channel of obs_agents_state: direction at own position
         agent_position = agent.current_configuration[0] if agent.current_configuration is not None else None
+        agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
         for r in range(env.height):
             for c in range(env.width):
                 if (agent.state.is_on_map_state() or agent.state == TrainState.DONE) and (r, c) == agent_position:
-                    assert np.isclose(obs_agents_state[(r, c)][0], agent.direction), \
+                    assert np.isclose(obs_agents_state[(r, c)][0], agent_direction), \
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
+                            .format(i, agent.state, (r, c), agent_direction, obs_agents_state[(r, c)][0])
                 elif (agent.state == TrainState.READY_TO_DEPART) and (r, c) == agent.initial_configuration[0]:
-                    assert (obs_agents_state[(r, c)][0] and agent.direction is None) or np.isclose(obs_agents_state[(r, c)][0], agent.initial_direction), \
+                    assert (obs_agents_state[(r, c)][0] and agent_direction is None) \
+                           or np.isclose(obs_agents_state[(r, c)][0], agent.initial_configuration[1]), \
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
+                            .format(i, agent.state, (r, c), agent_direction, obs_agents_state[(r, c)][0])
                 else:
                     assert np.isclose(obs_agents_state[(r, c)][0], -1), \
                         "agent {} in state {} at {} expected contain -1 found {}" \
@@ -87,9 +89,10 @@ def test_get_global_observation():
                         other_agent_position = None
                     if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED, TrainState.DONE] and (
                             r, c) == other_agent_position:
-                        assert np.isclose(obs_agents_state[(r, c)][1], other_agent.direction), \
+                        other_direction = other_agent.current_configuration[1]
+                        assert np.isclose(obs_agents_state[(r, c)][1], other_direction), \
                             "agent {} in state {} at {} should see other agent with direction {}, found = {}" \
-                                .format(i, agent.state, (r, c), other_agent.direction, obs_agents_state[(r, c)][1])
+                                .format(i, agent.state, (r, c), other_direction, obs_agents_state[(r, c)][1])
                     has_agent = True
                 if not has_agent:
                     assert np.isclose(obs_agents_state[(r, c)][1], -1), \

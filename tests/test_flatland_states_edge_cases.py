@@ -139,13 +139,11 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
 
-    env.agents[1].initial_configuration = ((6, 6), env.agents[1].initial_direction)
-    env.agents[1].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 0
     env.agents[1].malfunction_handler._set_malfunction_down_counter(2)
@@ -204,14 +202,12 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 55
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
 
-    env.agents[1].initial_configuration = ((6, 6), env.agents[1].initial_direction)
-    env.agents[1].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 2
 
@@ -269,14 +265,12 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 3
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
 
-    env.agents[1].initial_configuration = ((6, 6), env.agents[1].initial_direction)
-    env.agents[1].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 2
 
@@ -334,8 +328,7 @@ def test_malfunction_to_moving_instead_of_stopped():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
     env.agents[0].speed_counter._speed = Fraction(1, 5)
@@ -398,8 +391,7 @@ def test_stop_and_go():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), env.agents[0].initial_direction)
-    env.agents[0].initial_direction = Grid4TransitionsEnum.SOUTH
+    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
     env.agents[0].speed_counter._speed = Fraction(1, 5)

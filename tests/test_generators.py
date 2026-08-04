@@ -36,7 +36,8 @@ def test_rail_from_grid_transition_map():
 
     for a_idx in range(len(env.agents)):
         agent = env.agents[a_idx]
-        agent.current_configuration = (agent.initial_configuration[0], agent.direction)
+        prev_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
+        agent.current_configuration = (agent.initial_configuration[0], prev_direction)
         agent._set_state(TrainState.MOVING)
 
     nr_rail_elements = np.count_nonzero(env.rail.grid)

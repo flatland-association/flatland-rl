@@ -162,7 +162,8 @@ class View(AbstractView):
             self.model.env.reset_agents()
             for a in self.model.env.agents:
                 position = a.current_configuration[0] if a.current_configuration is not None else None
-                a.old_configuration = (position, a.direction)
+                direction = a.current_configuration[1] if a.current_configuration is not None else None
+                a.old_configuration = (position, direction)
 
             self.oRT.render_env(show_agents=True,
                                 show_inactive_agents=True,

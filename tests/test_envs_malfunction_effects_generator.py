@@ -108,13 +108,15 @@ def test_make_multi_malfunction_condition():
          condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_configuration[0]])])
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], env.agents[0].direction)
+    prev_direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
+    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], prev_direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, env.agents[0].direction)
+    prev_direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
+    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, prev_direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
@@ -177,7 +179,8 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
                         agents_at[agent.handle] += 1
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
-                p = get_k_shortest_paths(env, agent.current_configuration[0], agent.direction, next_waypoint_position)
+                p = get_k_shortest_paths(env, agent.current_configuration[0], agent.current_configuration[1],
+                                         next_waypoint_position)
                 shortest_path = p[0]
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail._check_action_on_agent(

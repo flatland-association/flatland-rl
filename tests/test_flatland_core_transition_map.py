@@ -62,7 +62,7 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
         renderer.render_env(show=True, show_observations=False)
         input("Continue?")
     for t in agent.targets:
-        assert rail.check_path_exists(agent.current_configuration[0], agent.direction, t[0]) == expected
+        assert rail.check_path_exists(agent.current_configuration[0], agent.current_configuration[1], t[0]) == expected
 
 
 def test_path_exists(rendering=False):

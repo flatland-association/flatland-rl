@@ -33,7 +33,8 @@ def test_dummy_predictor(rendering=False):
 
     # set initial position and direction for testing...
     env.agents[0].initial_configuration = ((5, 6), 0)
-    env.agents[0].direction = 0
+    cur = env.agents[0].current_configuration
+    env.agents[0].current_configuration = (cur[0] if cur is not None else None, 0)
     env.agents[0].targets = {((3, 0), d) for d in Grid4TransitionsEnum}
 
     env.reset(False, False)
@@ -148,7 +149,7 @@ def test_shortest_path_predictor(rendering=False):
     # compute the observations and predictions
     distance_map = env.distance_map.get()
     initial_position = agent.initial_configuration[0]
-    distance_on_map = distance_map[0, initial_position[0], initial_position[1], agent.initial_direction]
+    distance_on_map = distance_map[0, initial_position[0], initial_position[1], agent.initial_configuration[1]]
     assert distance_on_map == 5.0, "found {} instead of {}".format(distance_on_map, 5.0)
 
     paths = env.distance_map.get_shortest_paths()[0]

@@ -28,7 +28,7 @@ class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
                 dir = None
             else:
                 pos = (int(position[0]), int(position[1]))
-                dir = int(agent.direction)
+                dir = int(agent.current_configuration[1])
             list_agents_state.append([
                 *pos, dir,
                 agent.malfunction_handler.malfunction_down_counter,

@@ -97,8 +97,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             for a, test_config in enumerate(test_configs):
                 agent: EnvAgent = env.agents[a]
                 # set the initial position
-                agent.initial_configuration = (test_config.initial_position, agent.initial_direction)
-                agent.initial_direction = test_config.initial_direction
+                agent.initial_configuration = (test_config.initial_position, test_config.initial_direction)
                 agent.targets = {(test_config.target, d) for d in Grid4TransitionsEnum}
                 agent.speed_counter = SpeedCounter(speed=test_config.speed,
                                                    max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed)
@@ -129,8 +128,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             # if not agent.current_configuration[0] == replay.position:
             # import pdb; pdb.set_trace()
             position = agent.current_configuration[0] if agent.current_configuration is not None else None
+            direction = agent.current_configuration[1] if agent.current_configuration is not None else None
             _assert(a, position, replay.position, 'position')
-            _assert(a, agent.direction, replay.direction, 'direction')
+            _assert(a, direction, replay.direction, 'direction')
             if replay.state is not None:
                 _assert(a, TrainState(agent.state).name, TrainState(replay.state).name, 'state', close=False)
 

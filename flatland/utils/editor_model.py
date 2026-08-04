@@ -378,9 +378,10 @@ class EditorModel(AbstractModel):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                agent.initial_configuration = (tuple(cell_row_col), agent.initial_direction)
-                agent.current_configuration = (tuple(cell_row_col), agent.direction)
-                agent.old_configuration = (tuple(cell_row_col), agent.old_direction)
+                cur, old = agent.current_configuration, agent.old_configuration
+                agent.initial_configuration = (tuple(cell_row_col), agent.initial_configuration[1])
+                agent.current_configuration = (tuple(cell_row_col), cur[1] if cur is not None else None)
+                agent.old_configuration = (tuple(cell_row_col), old[1] if old is not None else None)
         else:
             # Yes
             # Have they clicked on the agent already selected?

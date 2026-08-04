@@ -154,7 +154,9 @@ print("\n Agents in the environment have to solve the following tasks: \n")
 for agent_idx, agent in enumerate(env.agents):
     print(
         "The agent with index {} has the task to go from its initial position {}, facing in the direction {} to its target at {}.".format(
-            agent_idx, agent.initial_configuration[0], agent.direction, agent.targets))
+            agent_idx, agent.initial_configuration[0],
+            agent.current_configuration[1] if agent.current_configuration is not None else None,
+            agent.targets))
 
 # The agent will always have a status indicating if it is currently present in the environment or done or active
 # For example we see that agent with index 0 is currently not active
