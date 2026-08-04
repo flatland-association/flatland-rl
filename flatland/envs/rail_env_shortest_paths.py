@@ -177,8 +177,13 @@ def get_k_shortest_paths(env: "RailEnv",
     heap[1].append((Waypoint(source_position, source_direction),))
 
     target_row, target_col = target_position
+    # rail.grid can carry a non-canonical dtype for envs loaded via persistence.py (np.array(...) there infers
+    # int64, not uint16) - the compiled Cython path's typed memoryview requires an exact dtype match, whereas
+    # the pure-Python fallback tolerates any integer dtype; normalize once here so behavior doesn't depend on
+    # whether the Cython extension happens to be compiled.
+    rail_grid = np.ascontiguousarray(rail.grid, dtype=np.uint16)
     _k_shortest_paths_search(
-        rail.grid, height, width, k, debug,
+        rail_grid, height, width, k, debug,
         target_row, target_col,
         -1 if target_direction is None else target_direction,
         -1 if cutoff is None else cutoff,

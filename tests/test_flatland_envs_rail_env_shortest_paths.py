@@ -1,6 +1,8 @@
 import sys
 from typing import List
 
+import numpy as np
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -264,6 +266,94 @@ def test_get_k_shortest_paths(rendering=False):
         renderer = RenderTool(env, gl="PILSVG")
         renderer.render_env(show=True, show_observations=False)
         input()
+
+    actual = set(get_k_shortest_paths(
+        env=env,
+        source_position=initial_position,  # west dead-end
+        source_direction=int(initial_direction),  # east
+        target_position=target_position,
+        k=10
+    ))
+
+    expected = set([
+        (
+            Waypoint(position=(3, 1), direction=3),
+            Waypoint(position=(3, 0), direction=3),
+            Waypoint(position=(3, 1), direction=1),
+            Waypoint(position=(3, 2), direction=1),
+            Waypoint(position=(3, 3), direction=1),
+            Waypoint(position=(2, 3), direction=0),
+            Waypoint(position=(1, 3), direction=0),
+            Waypoint(position=(0, 3), direction=0),
+            Waypoint(position=(0, 4), direction=1),
+            Waypoint(position=(0, 5), direction=1),
+            Waypoint(position=(0, 6), direction=1),
+            Waypoint(position=(0, 7), direction=1),
+            Waypoint(position=(0, 8), direction=1),
+            Waypoint(position=(0, 9), direction=1),
+            Waypoint(position=(1, 9), direction=2),
+            Waypoint(position=(2, 9), direction=2),
+            Waypoint(position=(3, 9), direction=2)),
+        (
+            Waypoint(position=(3, 1), direction=3),
+            Waypoint(position=(3, 0), direction=3),
+            Waypoint(position=(3, 1), direction=1),
+            Waypoint(position=(3, 2), direction=1),
+            Waypoint(position=(3, 3), direction=1),
+            Waypoint(position=(3, 4), direction=1),
+            Waypoint(position=(3, 5), direction=1),
+            Waypoint(position=(3, 6), direction=1),
+            Waypoint(position=(4, 6), direction=2),
+            Waypoint(position=(5, 6), direction=2),
+            Waypoint(position=(6, 6), direction=2),
+            Waypoint(position=(5, 6), direction=0),
+            Waypoint(position=(4, 6), direction=0),
+            Waypoint(position=(4, 7), direction=1),
+            Waypoint(position=(4, 8), direction=1),
+            Waypoint(position=(4, 9), direction=1),
+            Waypoint(position=(3, 9), direction=0))
+    ])
+
+    assert actual == expected, "Sets are different:\nactual={},\nexpected={}".format(actual, expected)
+
+
+def test_get_k_shortest_paths_with_non_canonical_grid_dtype():
+    """
+    RailEnvPersister.load_new/set_full_state/set_msg_data (persistence.py) all set `rail.grid` via a bare
+    `np.array(...)` with no `dtype=`, which infers a platform int (int64), not the canonical `uint16`
+    `GridTransitionMap`/`RailGridTransitionMap` otherwise always use - GridTransitionMap.__init__ only warns
+    on this mismatch, it doesn't coerce it. get_k_shortest_paths must therefore tolerate a non-uint16 grid,
+    since it's reachable from ShortestPathPolicy._update_agent (rail_env_policies.py) and line_generators.py
+    on any `env.rail` that went through a persistence round-trip.
+    """
+    rail, rail_map, optionals = make_simple_rail_with_alternatives()
+
+    env = RailEnv(width=rail_map.shape[1],
+                  height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(),
+                  number_of_agents=1,
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  )
+    env.reset()
+
+    initial_position = (3, 1)  # west dead-end
+    initial_direction = Grid4TransitionsEnum.WEST  # west
+    target_position = (3, 9)  # east
+
+    agent = env.agents[0]
+    agent.position = initial_position
+    agent.initial_position = initial_position
+    agent.direction = initial_direction
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
+    agent.moving = True
+
+    env.reset(False, False)
+
+    # mirrors persistence.py's RailEnvPersister.load_new/set_full_state/set_msg_data: `np.array(grid_data)`
+    # with no dtype, where grid_data came from `env.rail.grid.tolist()` - infers int64, not uint16.
+    env.rail.grid = np.array(env.rail.grid.tolist())
+    assert env.rail.grid.dtype != np.uint16, "test setup no longer reproduces the persistence dtype mismatch"
 
     actual = set(get_k_shortest_paths(
         env=env,
