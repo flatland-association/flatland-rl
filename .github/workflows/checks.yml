@@ -200,11 +200,26 @@ jobs:
                     cache-dependency-path: |
                         requirements-dev.txt
                         requirements-ml.txt
+            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # no invalidation is needed until the workflow itself is updated to a new URL.
+            -   name: Restore cached episodes
+                id: cache-episodes
+                uses: actions/cache/restore@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download episodes
+                if: steps.cache-episodes.outputs.cache-hit != 'true'
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Save cached episodes
+                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
+                uses: actions/cache/save@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -272,11 +287,26 @@ jobs:
                     cache-dependency-path: |
                         requirements-dev.txt
                         requirements-ml.txt
+            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # no invalidation is needed until the workflow itself is updated to a new URL.
+            -   name: Restore cached episodes
+                id: cache-episodes
+                uses: actions/cache/restore@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download episodes
+                if: steps.cache-episodes.outputs.cache-hit != 'true'
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+            -   name: Save cached episodes
+                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
+                uses: actions/cache/save@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -585,12 +615,27 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # no invalidation is needed until the workflow itself is updated to a new URL.
+            -   name: Restore cached episodes
+                id: cache-episodes
+                uses: actions/cache/restore@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download episodes
+                if: steps.cache-episodes.outputs.cache-hit != 'true'
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
+            -   name: Save cached episodes
+                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
+                uses: actions/cache/save@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download ecml2026 scenario
                 run: wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
                 working-directory: ${{ github.workspace }}
