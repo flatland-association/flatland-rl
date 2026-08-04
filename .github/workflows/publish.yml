@@ -1,8 +1,6 @@
 name: Publish package
 
 env:
-    # DEPENDENCY SWITCH:
-    flatland-baselines-ref: main
     flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
 
 on:
@@ -102,12 +100,6 @@ jobs:
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Clone flatland-baselines
-                uses: actions/checkout@v6
-                with:
-                    repository: flatland-association/flatland-baselines
-                    ref: ${{ env.flatland-baselines-ref }}
-                    path: flatland-baselines
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip

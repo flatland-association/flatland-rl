@@ -14,13 +14,13 @@ All commands assume dependencies from `requirements-dev.txt` (+ `requirements-ml
 are installed, and are run from the repo root. `tox` wraps most of these into reproducible environments (see
 `tox.ini`) — CI (`.github/workflows/checks.yml`) invokes tox directly, e.g. `tox -e py3.12,py3.12-verify-install`.
 
-- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
-  fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a `BENCHMARK_EPISODES_FOLDER` populated from the
-  `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see `flatland-benchmarks-episodes-url` in `checks.yml`):
+- **Run the core test suite** (matches CI's `test` job): `benchmarks/benchmark_episodes.py`'s regression tests need
+  a `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
+  `flatland-benchmarks-episodes-url` in `checks.yml`):
   ```
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
-  Without those fixtures set up, drop the regression test or just run a narrower path, e.g.
+  Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
   `python -m pytest tests/envs/test_foo.py`.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`

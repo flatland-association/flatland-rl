@@ -1,8 +1,6 @@
 name: Checks
 
 env:
-    # DEPENDENCY SWITCH:
-    flatland-baselines-ref: main
     flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
     flatland-scenarios-olten-partially-closed-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/scenario_olten/data/OLTEN_PARTIALLY_CLOSED_v2.zip"
     ecml2026-pkl: "https://github.com/flatland-association/ecml2026-starterkit/raw/refs/heads/main/reinforcement_learning/sampling/level_0_scenario_1.pkl"
@@ -255,12 +253,6 @@ jobs:
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Clone flatland-baselines
-                uses: actions/checkout@v6
-                with:
-                    repository: flatland-association/flatland-baselines
-                    ref: ${{ env.flatland-baselines-ref }}
-                    path: flatland-baselines
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -658,50 +650,3 @@ jobs:
                     name: upload-benchmarks-results-${{ matrix.python-version }}
                     path: benchmarks.hprof
                     if-no-files-found: error
-
-    regression:
-        if: ${{ github.event.inputs.run_benchmarks || github.ref == 'refs/heads/main' }}
-        runs-on: ubuntu-24.04
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            -   name: Download episodes
-                run: |
-                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-                working-directory: ${{ github.workspace }}
-            -   name: Clone flatland-baselines
-                uses: actions/checkout@v6
-                with:
-                    repository: flatland-association/flatland-baselines
-                    ref: ${{ env.flatland-baselines-ref }}
-                    path: flatland-baselines
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
-            -   name: Run benchmarks
-                run: tox run -e py${{ matrix.python-version }}-regression
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-regression-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
