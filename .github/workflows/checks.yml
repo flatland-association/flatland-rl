@@ -112,13 +112,17 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
-                    # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built
-                    # wheels so only a requirements bump triggers a recompile. Same file list as the
-                    # test/testml jobs below so the cache is shared across all three.
-                    cache: pip
-                    cache-dependency-path: |
-                        requirements-dev.txt
-                        requirements-ml.txt
+            # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built wheels
+            # so only a requirements bump triggers a recompile. Same key as the test/testml jobs below so
+            # the cache is shared across all three. Skipped (read-only) on scheduled runs, like the .tox
+            # cache below, so the nightly cron always exercises a from-scratch build - but nightly's
+            # freshly-built wheels are still saved (see the Save step below), so PR/push runs benefit.
+            -   name: Restore cached pip wheels
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -133,6 +137,12 @@ jobs:
                     python -m pip install -U tox tox-gh-actions
             -   name: Run deptry
                 run: tox -e py${{ matrix.python-version }}-verify-requirements
+            -   name: Save cached pip wheels
+                if: always()
+                uses: actions/cache/save@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
@@ -193,13 +203,17 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
-                    # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built
-                    # wheels so only a requirements bump triggers a recompile. Same file list as the
-                    # deptry/test jobs so the cache is shared across all three.
-                    cache: pip
-                    cache-dependency-path: |
-                        requirements-dev.txt
-                        requirements-ml.txt
+            # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built wheels
+            # so only a requirements bump triggers a recompile. Same key as the deptry/test jobs so the
+            # cache is shared across all three. Skipped (read-only) on scheduled runs, like the .tox cache
+            # below, so the nightly cron always exercises a from-scratch build - but nightly's freshly-built
+            # wheels are still saved (see the Save step below), so PR/push runs benefit.
+            -   name: Restore cached pip wheels
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -234,6 +248,12 @@ jobs:
                     python -m pip install -U tox tox-gh-actions
             -   name: Run tests
                 run: tox run -e py${{ matrix.python-version }}-ml
+            -   name: Save cached pip wheels
+                if: always()
+                uses: actions/cache/save@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
@@ -280,13 +300,18 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
-                    # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels
-                    # so only a requirements bump triggers a recompile. Same file list as the deptry/testml
-                    # jobs (even though this job doesn't install requirements-ml.txt) so the cache is shared.
-                    cache: pip
-                    cache-dependency-path: |
-                        requirements-dev.txt
-                        requirements-ml.txt
+            # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels so only
+            # a requirements bump triggers a recompile. Same key as the deptry/testml jobs (even though
+            # this job doesn't install requirements-ml.txt) so the cache is shared across all three.
+            # Skipped (read-only) on scheduled runs, like the .tox cache below, so the nightly cron always
+            # exercises a from-scratch build - but nightly's freshly-built wheels are still saved (see the
+            # Save step below), so PR/push runs benefit.
+            -   name: Restore cached pip wheels
+                if: ${{ github.event_name != 'schedule' }}
+                uses: actions/cache/restore@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -321,6 +346,12 @@ jobs:
                     python -m pip install -U tox tox-gh-actions
             -   name: Run tests
                 run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
+            -   name: Save cached pip wheels
+                if: always()
+                uses: actions/cache/save@v5
+                with:
+                    path: ~/.cache/pip
+                    key: pip-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
