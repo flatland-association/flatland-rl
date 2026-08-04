@@ -67,10 +67,13 @@ class StateTransitionSignals:
     def __setstate__(self, state):
         # tolerate missing/renamed/extra keys: old pickled fixtures predate several field renames in this
         # class (e.g. valid_movement_action_given -> movement_action_given, movement_conflict ->
-        # movement_allowed, and the now-removed malfunction_counter_complete) - a plain Python object's
-        # default __dict__.update(state) silently absorbed this drift (unknown keys just became inert extra
-        # __dict__ entries, missing keys left as whatever the pre-existing instance already had); mirror that
-        # tolerance here rather than requiring every key to be present and known.
+        # movement_allowed, and the now-removed malfunction_counter_complete). A plain Python object's default
+        # unpickling (`cls.__new__(cls)` then `obj.__dict__.update(state)`) tolerated unknown keys fine (they
+        # just became inert extra __dict__ entries), but NOT missing ones - a field absent from `state` would
+        # be absent from the restored object's __dict__ entirely, raising AttributeError on first access
+        # rather than falling back to any prior value (there is no pre-existing instance to fall back to;
+        # __new__ bypasses __init__). Defaulting to False here is strictly more lenient than that, not a
+        # mirror of it.
         self.in_malfunction = state.get("in_malfunction", False)
         self.earliest_departure_reached = state.get("earliest_departure_reached", False)
         self.stop_action_given = state.get("stop_action_given", False)
