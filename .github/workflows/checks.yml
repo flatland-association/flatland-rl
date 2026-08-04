@@ -112,6 +112,13 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+                    # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built
+                    # wheels so only a requirements bump triggers a recompile. Same file list as the
+                    # test/testml jobs below so the cache is shared across all three.
+                    cache: pip
+                    cache-dependency-path: |
+                        requirements-dev.txt
+                        requirements-ml.txt
             # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
             # scheduled runs so the nightly cron always exercises a from-scratch install.
             -   name: Restore cached tox environments
@@ -186,6 +193,13 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+                    # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built
+                    # wheels so only a requirements bump triggers a recompile. Same file list as the
+                    # deptry/test jobs so the cache is shared across all three.
+                    cache: pip
+                    cache-dependency-path: |
+                        requirements-dev.txt
+                        requirements-ml.txt
             -   name: Download episodes
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
@@ -251,6 +265,13 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+                    # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels
+                    # so only a requirements bump triggers a recompile. Same file list as the deptry/testml
+                    # jobs (even though this job doesn't install requirements-ml.txt) so the cache is shared.
+                    cache: pip
+                    cache-dependency-path: |
+                        requirements-dev.txt
+                        requirements-ml.txt
             -   name: Download episodes
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
