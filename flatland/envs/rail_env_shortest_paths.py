@@ -21,6 +21,25 @@ def _k_shortest_paths_search(rail_grid, height, width, k, debug,
     """
     Modified-Dijkstra search loop extracted from `get_k_shortest_paths` so it can be cythonized in isolation
     (see the accompanying rail_env_shortest_paths.pxd) - mutates `shortest_paths`, `count` and `heap` in place.
+
+    Deliberately no PEP 484 parameter annotations on this signature (unlike the rest of this module): the
+    accompanying .pxd fully declares this function's C-level signature, and Cython's pxd-augmentation rejects
+    a .py signature that also carries its own annotations ("Function signature does not match previous
+    declaration" - confirmed the hard way). Types are documented here instead, matching the .pxd exactly:
+
+    Parameters
+    ----------
+    rail_grid : unsigned short[:, :]
+    height, width, k, target_row, target_col, target_direction, cutoff : int
+        target_direction/cutoff use a -1 sentinel for "unconstrained" (see the .pxd)
+    debug : bool
+    forbidden_mask : unsigned char[:, :]
+    shortest_paths : list
+        mutated in place
+    count : int[:]
+        mutated in place
+    heap : dict
+        mutated in place
     """
     cost: cython.int
     row: cython.int
@@ -158,11 +177,14 @@ def get_k_shortest_paths(env: "RailEnv",
     # (row, col, direction) instead of a dict keyed by tuple
     count = np.zeros(height * width * 4, dtype=np.intc)
 
-    # forbidden_cells as a fixed (height, width) mask, built once - never Optional inside the hot loop
+    # forbidden_cells as a fixed (height, width) mask, built once - never Optional inside the hot loop.
+    # Cells outside the grid are skipped rather than indexed (mirrors the old `v.position in forbidden_cells`
+    # set-membership check, which silently never matched an out-of-bounds cell instead of raising).
     forbidden_mask = np.zeros((height, width), dtype=np.uint8)
     if forbidden_cells is not None:
         for (fr, fc) in forbidden_cells:
-            forbidden_mask[fr, fc] = 1
+            if 0 <= fr < height and 0 <= fc < width:
+                forbidden_mask[fr, fc] = 1
 
     # B is a heap data structure containing paths, bucketed by path length: Dict[int, deque[Tuple[Waypoint]]]
     # N.B. use deque per bucket to make result deterministic (insertion order == retrieval order); OrderedSet's
