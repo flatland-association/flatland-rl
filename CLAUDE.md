@@ -42,8 +42,10 @@ are installed, and are run from the repo root. `tox` wraps most of these into re
   `[build-system] requires` - no need to `pip install cython` yourself first): `python -c "from setuptools
   import setup; setup()" build_ext --inplace`, then confirm e.g. `python -c "import
   flatland.envs.step_utils.state_machine as m; assert m.__file__.endswith('.so')"`. Clean up compiled artifacts
-  afterward with `rm -rf build flatland/envs/*.c flatland/envs/*.so flatland/envs/step_utils/*.c
-  flatland/envs/step_utils/*.so`. To force the plain-Python fallback instead (e.g. to reproduce
+  afterward with `rm -rf build && find flatland \( -name '*.c' -o -name '*.so' \) -print0 | xargs -0 rm -f`
+  (find-based rather than a hardcoded per-module glob, so it still catches every compiled artifact if an
+  `ext-modules` entry moves out of `step_utils` or a new one is added elsewhere under `flatland/`). To force the
+  plain-Python fallback instead (e.g. to reproduce
   `verify-build-no-gcc`'s behavior), fake a missing compiler: `CC=/nonexistent-cc CXX=/nonexistent-cxx python -c
   "from setuptools import setup; setup()" build_ext --inplace`.
 - **Profiling notebooks** (`benchmarks/flatland_performance_profiling.ipynb`,
