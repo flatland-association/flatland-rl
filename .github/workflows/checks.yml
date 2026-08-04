@@ -298,11 +298,14 @@ jobs:
                 with:
                     python-version: ${{ matrix.python-version }}
             # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels so only
-            # a requirements bump triggers a recompile. Same key as the deptry/testml jobs (even though
-            # this job doesn't install requirements-ml.txt) so the cache is shared across all three.
-            # Skipped (read-only) on scheduled runs, like the .tox cache below, so the nightly cron always
-            # exercises a from-scratch build - but nightly's freshly-built wheels are still saved (see the
-            # Save step below), so PR/push runs benefit.
+            # a requirements bump triggers a recompile. Same key as the deptry/testml jobs so the cache is
+            # shared - restore-only here, deliberately: this job only installs requirements-dev.txt, a
+            # strict subset of what deptry/testml install, so it's always the fastest of the three and
+            # would tend to win the cache-save race on a cold key. actions/cache keys are immutable
+            # (a save to an existing key is silently skipped), so whichever job's save "wins" locks in its
+            # content until the key changes - if that were this job, the shared cache would end up missing
+            # the dm-tree/torch/ray wheels deptry/testml need. Leaving the save to deptry/testml (which
+            # both install the full superset) avoids that.
             -   name: Restore cached pip wheels
                 if: ${{ github.event_name != 'schedule' }}
                 uses: actions/cache/restore@v5
@@ -343,12 +346,8 @@ jobs:
                     python -m pip install -U tox tox-gh-actions
             -   name: Run tests
                 run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
-            -   name: Save cached pip wheels
-                if: always()
-                uses: actions/cache/save@v5
-                with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+            # No "Save cached pip wheels" step here - see the comment on "Restore cached pip wheels" above:
+            # this job never writes to the shared pip-wheel cache, only reads from it.
             -   name: Save cached tox environments
                 if: ${{ always() && github.event_name != 'schedule' }}
                 uses: actions/cache/save@v5
