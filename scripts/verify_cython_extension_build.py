@@ -30,6 +30,16 @@ def _sdist_names(path):
         return [n.split("/", 1)[1] for n in tf.getnames() if "/" in n]
 
 
+def _module_stem(name):
+    # a compiled artifact's name looks like "<module_path>.<abi-tag>.so" (e.g.
+    # "flatland/envs/foo.cpython-312-x86_64-linux-gnu.so") - strip everything from the first "." in the
+    # basename, so this can be compared against a MODULES entry for an exact match rather than a startswith
+    # prefix check (which would also match a hypothetical future module whose name is a prefix of another).
+    dirpath, _, basename = name.rpartition("/")
+    stem = basename.split(".", 1)[0]
+    return f"{dirpath}/{stem}" if dirpath else stem
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--dist-dir", required=True, help="directory containing the built *.whl or *.tar.gz")
@@ -49,7 +59,7 @@ def main():
 
     for module in MODULES:
         py_present = f"{module}.py" in names
-        compiled_present = any(n.startswith(f"{module}.") and n.endswith((".so", ".pyd")) for n in names)
+        compiled_present = any(_module_stem(n) == module and n.endswith((".so", ".pyd")) for n in names)
         assert py_present, f"{module}.py missing from {paths[0]}"
         if args.expect == "compiled":
             assert compiled_present, f"{module} was not compiled into {paths[0]} (found: {names})"
