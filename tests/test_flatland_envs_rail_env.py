@@ -5,6 +5,7 @@ import tempfile
 import time
 from fractions import Fraction
 from pathlib import Path
+from typing import Optional, Tuple
 
 import numpy as np
 import pytest
@@ -37,10 +38,10 @@ def test_save_load():
                   line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
 
-    def _position(agent):
+    def _position(agent: EnvAgent) -> Optional[Tuple[int, int]]:
         return agent.current_configuration[0] if agent.current_configuration is not None else None
 
-    def _direction(agent):
+    def _direction(agent: EnvAgent) -> Optional[int]:
         return agent.current_configuration[1] if agent.current_configuration is not None else None
 
     agent_1_pos = _position(env.agents[0])

@@ -108,15 +108,15 @@ def test_make_multi_malfunction_condition():
          condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_configuration[0]])])
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    prev_direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], prev_direction)
+    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
+    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    prev_direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, prev_direction)
+    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
+    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
