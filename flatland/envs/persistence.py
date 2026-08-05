@@ -18,7 +18,7 @@ from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
 from flatland.utils.seeding import random_state_to_hashablestate
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder
-from flatland.envs.agent_utils import EnvAgent, load_env_agent
+from flatland.envs.agent_utils import Agent, EnvAgent, load_env_agent
 
 # cannot import objects / classes directly because of circular import
 from flatland.envs import malfunction_generators as mal_gen
@@ -26,6 +26,32 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
 from flatland.envs import malfunction_effects_generators as mal_eff_gen
+
+
+def _serialize_agent(agent: EnvAgent) -> Agent:
+    """
+    `EnvAgent.to_agent()` puts a raw `set` in `targets`, which is unhashable to any `flatland-rl` older than
+    the `Agent.target` -> `Agent.targets` rename (that old code still expects a bare `(row, col)` position in
+    that slot and does `{(agent_tuple.target, d) for d in Grid4TransitionsEnum}` on it unconditionally). A
+    tuple is equally lossless but hashable everywhere.
+    """
+    agent_tuple = agent.to_agent()
+    return agent_tuple._replace(targets=tuple(sorted(agent_tuple.targets)))
+
+
+def _deserialize_agent_tuple(agent_tuple: Agent) -> Agent:
+    """
+    Undo `_serialize_agent`'s tuple encoding before handing off to `load_env_agent`, which otherwise only
+    recognizes a `set`/`frozenset` of configurations (or, for legacy pre-`targets` pickles, a bare
+    `(row, col)` position - left untouched here). Discriminate structurally rather than by scalar type, since
+    legacy pickles hold `numpy.int32` row/col values, not plain `int`s: a bare position's first element is a
+    scalar, whereas a tuple of `(position, direction)` pairs has a `tuple` as its first element.
+    """
+    targets = agent_tuple.targets
+    is_legacy_bare_position = isinstance(targets, tuple) and len(targets) == 2 and not isinstance(targets[0], tuple)
+    if isinstance(targets, (tuple, list)) and not is_legacy_bare_position:
+        agent_tuple = agent_tuple._replace(targets=set(targets))
+    return agent_tuple
 
 
 class RailEnvPersister(object):
@@ -230,7 +256,7 @@ class RailEnvPersister(object):
             # remove the legacy key
             del env_dict["agents_static"]
         elif "agents" in env_dict:
-            env_dict["agents"] = [load_env_agent(d, env.rail) for d in env_dict["agents"]]
+            env_dict["agents"] = [load_env_agent(_deserialize_agent_tuple(d), env.rail) for d in env_dict["agents"]]
 
         # Initialise the env with the frozen agents in the file
         env.agents = env_dict.get("agents", [])
@@ -346,7 +372,7 @@ class RailEnvPersister(object):
         grid_data = env.rail.grid.tolist()
 
         # msgpack cannot persist EnvAgent so use the Agent namedtuple.
-        agent_data = [agent.to_agent() for agent in env.agents]
+        agent_data = [_serialize_agent(agent) for agent in env.agents]
         malfunction_data: mal_gen.MalfunctionProcessData = env.malfunction_process_data
 
         effects_generator = env.effects_generator.__getstate__()

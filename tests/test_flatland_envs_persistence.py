@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 
 from flatland.core.effects_generator import EffectsGenerator, find_all_effects_generators, find_effects_generator
+from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.line_generators import sparse_line_generator
@@ -380,3 +381,48 @@ def test_set_full_state_legacy_flat_waypoints():
 
     # must not raise - Rewards._sanitize_waypoints() assumes every waypoints entry is a list.
     Rewards._sanitize_waypoints(agent.waypoints)
+
+
+def test_get_full_state_targets_hashable_for_legacy_readers():
+    """
+    Regression test for the `TypeError: unhashable type: 'set'` crash seen when a `flatland-rl` older than the
+    `Agent.target` -> `Agent.targets` rename (PR #479) loads a trajectory persisted by a newer one: old code's
+    `load_env_agent` unconditionally does `{(agent_tuple.target, d) for d in Grid4TransitionsEnum}`, assuming
+    that slot is always a bare, hashable `(row, col)` position. `_serialize_agent` must keep it hashable (a
+    tuple, not a `set`) so that exact expression - the old reader's code, verbatim - does not raise, even
+    though the slot's meaning has changed to a full configuration set.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    env.reset(False, False)
+
+    env_dict = RailEnvPersister.get_full_state(env)
+
+    for agent_tuple in env_dict["agents"]:
+        assert isinstance(agent_tuple.targets, tuple)
+        # the exact expression from the pre-#479 `load_env_agent` - must not raise TypeError: unhashable type: 'set'
+        legacy_exploded = {(agent_tuple.targets, d) for d in Grid4TransitionsEnum}
+        assert len(legacy_exploded) == len(Grid4TransitionsEnum)
+
+
+def test_persistence_roundtrip_multi_direction_targets():
+    """
+    Regression test: an env round-tripped through `RailEnvPersister.save`/`load_new` (`.pkl`) must preserve a
+    target cell's full set of valid arrival directions, not just one - `_serialize_agent`/`_deserialize_agent_tuple`
+    must not lose information while making the on-disk `targets` representation hashable.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env_initial = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                          line_generator=sparse_line_generator(), number_of_agents=2)
+    env_initial.reset(False, False)
+
+    targets_initial = [set(agent.targets) for agent in env_initial.agents]
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        filename = os.path.join(tmpdir, "test_roundtrip_multi_direction_targets.pkl")
+        RailEnvPersister.save(env_initial, filename)
+        env_loaded, _ = RailEnvPersister.load_new(filename)
+
+    targets_loaded = [set(agent.targets) for agent in env_loaded.agents]
+    assert targets_loaded == targets_initial
