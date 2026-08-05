@@ -439,42 +439,46 @@ jobs:
                     key: tox-notebooks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     examples:
+        needs: [ build-ci-env-default ]
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # requirements-dev.txt (incl. scipy, already built from source) is baked into this image by
+        # build-ci-env-default above - nothing left to install here. Same image as test (no Redis/other
+        # service dependency here, so no networking wrinkle - see notebooks, which does have one and isn't
+        # containerized yet for that reason).
+        container:
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-default-${{ needs.build-ci-env-default.outputs.reqs-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
         steps:
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
+            # Runs the script directly rather than `tox run -e py{version}-examples`: tox would create its
+            # own venv and reinstall requirements-dev.txt into it regardless of what the image's system
+            # Python already has, rebuilding scipy from source again and defeating the point of this image.
+            # Mirrors tox.ini's [testenv:py{...}-examples] set_env/commands exactly; that env remains the
+            # source of truth for local/non-container runs. Doesn't install flatland-rl itself even though
+            # tox's env technically does (default skip_install=false) - PYTHONPATH alone is enough (same
+            # reasoning as testml/test's main pytest run - see those jobs).
             -   name: Run examples
-                run: tox run -e py${{ matrix.python-version }}-examples
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                env:
+                    PYTHONPATH: ${{ github.workspace }}
+                    SCENARIOS_FOLDER: ${{ github.workspace }}/scenarios
+                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+                run: |
+                    python --version
+                    python benchmarks/run_all_examples.py
 
     verify-cython-build:
         runs-on: ubuntu-24.04
