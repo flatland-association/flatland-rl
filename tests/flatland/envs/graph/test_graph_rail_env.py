@@ -9,16 +9,21 @@ from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rewards import BaseDefaultRewards, DefaultRewards, PunctualityRewards
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.seeding import random_state_to_hashablestate
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
+@pytest.mark.parametrize("rewards_cls", [DefaultRewards, BaseDefaultRewards, PunctualityRewards])
 @pytest.mark.parametrize("malfunction_interval", [540, 20])
 @pytest.mark.parametrize("seed", range(42, 58))
-def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval):
-    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=malfunction_interval)
-    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
+def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval, rewards_cls):
+    # N.B. a fresh instance per test invocation - Rewards accumulates mutable state
+    # (arrivals/departures/states) over an episode, so instances must never be shared/reused
+    # across parametrize cases or between the grid and graph env (see GraphRailEnv.from_rail_env).
+    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=malfunction_interval, rewards=rewards_cls())
+    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed, rewards=rewards_cls())
     assert random_state_to_hashablestate(grid_env.np_random) == random_state_to_hashablestate(graph_env.np_random)
 
     for r in range(grid_env.height):
@@ -83,7 +88,7 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
             GraphTransitionMap.graph_configuration_to_grid_configuration)
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
-        assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory)) == 0
+        assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory, ignoring_action_required=False)) == 0
 
 
 @pytest.mark.parametrize("seed", range(42, 58))

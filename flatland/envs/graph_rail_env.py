@@ -19,7 +19,18 @@ from flatland.utils.seeding import random_state_to_hashablestate, random_state_f
 
 class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     @staticmethod
-    def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder, seed: Optional[int] = None) -> "GraphRailEnv":
+    def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder, seed: Optional[int] = None,
+                      rewards: Rewards = None) -> "GraphRailEnv":
+        """
+        Parameters
+        ----------
+        rewards: Rewards, optional
+            the `Rewards` instance for `graph_env` to accumulate its own reward state into - must be a
+            separate instance from `rail_env.rewards` (never the same object: `Rewards` accumulates
+            mutable per-episode state, e.g. `arrivals`/`departures`/`states`, which `rail_env` and
+            `graph_env` must not share/corrupt). Defaults to `GraphRailEnv`'s own default (`None`) if
+            not given - pass a fresh instance matching `rail_env.rewards`'s type/config for parity.
+        """
         gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
         resource_map = {}
@@ -47,6 +58,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             malfunction_generator=ParamMalfunctionGen(rail_env.malfunction_generator.MFP),
             timetable_generator=lambda *args, **kwargs: timetable,
             seed=seed,
+            rewards=rewards,
         )
         # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
         s = random_state_to_hashablestate(rail_env.np_random)
@@ -63,6 +75,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         malfunction_generator: "MalfunctionGenerator" = None,
         timetable_generator=None,
         seed: Optional[int] = None,
+        rewards: Rewards = None,
     ) -> "GraphRailEnv":
         """
         Factory method to create a `GraphRailEnv` directly from a string-node graph and string-based
@@ -107,6 +120,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             timetable_generator=timetable_generator,
             observation_builder=observation_builder,
             malfunction_generator=malfunction_generator,
+            rewards=rewards,
         )
         graph_env.reset(random_seed=seed)
         return graph_env
