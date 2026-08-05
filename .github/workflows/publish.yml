@@ -1,8 +1,5 @@
 name: Publish package
 
-env:
-    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
-
 on:
     push:
         branches: [ "main" ]
@@ -42,8 +39,29 @@ jobs:
             -   uses: googleapis/release-please-action@v4
                 id: release
 
+    # Builds the same CI-env image checks.yml uses (see build-ci-env.yml) rather than reinstalling
+    # requirements-dev.txt from scratch on a bare runner every release - shares GHCR's warm cache with
+    # checks.yml's own runs instead of redoing that work here.
+    build-ci-env-default:
+        # See test's identical condition below for why !failure() && !cancelled() is needed here too.
+        if: >-
+            ${{ !failure() && !cancelled() &&
+            ((github.event_name == 'push' && needs.release-please.outputs.release_created) ||
+            (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
+        needs: [ release-please ]
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        uses: ./.github/workflows/build-ci-env.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            with-ml: false
+            ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
+
     # Runs the full test matrix before either publish flow below: for a real release (gated on
-    # release-please having just created one) or a manual Test PyPI publish (gated on a version being given).
+    # release-please having just created one) or a manual Test PyPI publish (gated on a version being
+    # given). See run-ci-env-test.yml (shared with checks.yml's own test job) for the actual test invocation.
     test:
         # N.B. needs !failure() && !cancelled() because release-please is skipped (not run) on workflow_dispatch,
         # and a skipped dependency makes the implicit needs-success() check fail, which would otherwise skip this job too.
@@ -52,62 +70,16 @@ jobs:
             ${{ !failure() && !cancelled() &&
             ((github.event_name == 'push' && needs.release-please.outputs.release_created) ||
             (github.event_name == 'workflow_dispatch' && inputs.version != '')) }}
-        needs: [ release-please ]
-        runs-on: ubuntu-24.04
+        needs: [ release-please, build-ci-env-default ]
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
-            -   uses: actions/checkout@v6
-                with:
-                    ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            -   name: Download episodes
-                run: |
-                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install tox tox-gh-actions
-            -   name: Run tests
-                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
-            -   name: Check disk space
-                run: df . -h
+        uses: ./.github/workflows/run-ci-env-test.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            image-hash: ${{ needs.build-ci-env-default.outputs.image-hash }}
+            ref: ${{ needs.release-please.outputs.tag_name || github.ref }}
 
     publish-pypi:
         if: ${{ github.event_name == 'push' && needs.release-please.outputs.release_created }}
