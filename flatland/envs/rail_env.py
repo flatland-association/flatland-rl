@@ -663,7 +663,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[ConfigurationType]]:
-        raise NotImplementedError()
+        return EnvAgent.apply_timetable(agents, timetable)
 
     def _agents_from_line(self, line: "Line") -> List[EnvAgent[ConfigurationType]]:
         raise NotImplementedError()
@@ -783,9 +783,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
         return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration[0])).name
-
-    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
-        return EnvAgent.apply_timetable(self.agents, timetable)
 
     def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         agents = EnvAgent.from_line(line)

@@ -1,7 +1,8 @@
 import ast
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 import networkx as nx
+from numpy.random.mtrand import RandomState
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
@@ -15,6 +16,9 @@ from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.timetable_utils import Line, TimetableUtils
 from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
+
+
+TimetableGenerator = Callable[[List[EnvAgent], GraphDistanceMap, dict, RandomState], "Timetable"]
 
 
 class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
@@ -73,7 +77,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         agent_speeds: Optional[Dict[int, float]] = None,
         observation_builder: ObservationBuilder = None,
         malfunction_generator: "MalfunctionGenerator" = None,
-        timetable_generator=None,
+        timetable_generator: Optional[TimetableGenerator] = None,
         seed: Optional[int] = None,
         rewards: Rewards = None,
     ) -> "GraphRailEnv":
@@ -172,9 +176,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
 
     def _infrastructure_representation(self, configuration: str) -> str:
         return configuration
-
-    def _apply_timetable_to_agents(self, agents: List[EnvAgent[str]], timetable: "Timetable") -> List[EnvAgent[str]]:
-        return EnvAgent.apply_timetable(self.agents, timetable)
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         """
