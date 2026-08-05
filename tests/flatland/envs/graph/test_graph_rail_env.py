@@ -8,10 +8,14 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
+from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import BaseDefaultRewards, DefaultRewards, PunctualityRewards
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.seeding import random_state_to_hashablestate
+from flatland.utils.simple_rail import make_simple_rail
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
@@ -107,3 +111,43 @@ def test_apply_timetable_to_agents_waypoints_well_formed(seed):
                 assert configuration in graph_env.rail.g.nodes
                 assert isinstance(configuration, str)
         assert set(agent.waypoints[-1]) == agent.targets
+
+
+def test_from_graph_defaults():
+    """
+    Regression test: `GraphRailEnv.from_graph`'s default `timetable_generator`/`agent_speeds`
+    branches - never exercised via `from_rail_env`, which always supplies both explicitly - must
+    produce a working env: `ttgen_flatland2`'s fixed departure/arrival window and a uniform speed
+    of `1.0` for every agent.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    env.reset(False, False)
+
+    g = GraphTransitionMap.grid_to_digraph(env.rail)
+    gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+    agent_waypoints = {
+        agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
+        for agent in env.agents
+    }
+    resource_map = {n: n for n in g.nodes}
+
+    # N.B. agent_speeds and timetable_generator deliberately omitted to exercise from_graph's defaults.
+    graph_env: GraphRailEnv = GraphRailEnv.from_graph(
+        g=g,
+        resource_map=resource_map,
+        agent_waypoints=agent_waypoints,
+        observation_builder=DummyObservationBuilder(),
+    )
+
+    assert graph_env._max_episode_steps == 1000
+    for agent in graph_env.agents:
+        assert agent.speed_counter.max_speed == 1.0
+        assert agent.earliest_departure == 0
+        assert agent.latest_arrival == 1000
+
+    # smoke test: the resulting env must actually be steppable.
+    for _ in range(5):
+        graph_env.step({i: RailEnvActions.MOVE_FORWARD for i in range(graph_env.get_num_agents())})
