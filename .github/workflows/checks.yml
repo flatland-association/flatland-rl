@@ -62,10 +62,18 @@ jobs:
 
     # Builds/pushes the CI-only dependency image consumed by the deptry/testml jobs below (see
     # Dockerfile.ci-env, a separate, non-user-facing image from the ones docker.yml/publish.yml build and
-    # publish to end users). BuildKit's registry cache (cache-from/cache-to) makes this a near-instant
-    # no-op once requirements-dev.txt/requirements-ml.txt stop changing, since every RUN layer stays
-    # cache-hit - unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp each
-    # other.
+    # publish to end users). GHCR (not actions/cache) specifically because actions/cache caps out at 10GB
+    # per repository, shared across every cache this repo uses (not per-job), evicting oldest-accessed first
+    # once exceeded:
+    # https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows
+    # A single ml tox env (torch/dm-tree/scipy etc.) already runs ~3GB - with 5 Python versions x 2 variants,
+    # naively caching each venv/build would blow past 10GB on its own, causing exactly the kind of premature
+    # eviction/thrashing (a cache saved this run gets evicted before the next run that could reuse it) this
+    # whole approach exists to avoid. GHCR has no such cap (see ci-env-cleanup.yml instead, for the different
+    # problem of it also having no automatic eviction). BuildKit's registry cache
+    # (cache-from/cache-to) makes this a near-instant no-op once requirements-dev.txt/requirements-ml.txt
+    # stop changing, since every RUN layer stays cache-hit - unlike actions/cache, multiple concurrent pushes
+    # to the same cache ref don't stomp each other either.
     build-ci-env-ml:
         runs-on: ubuntu-24.04
         permissions:
