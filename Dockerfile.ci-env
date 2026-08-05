@@ -1,25 +1,23 @@
-# CI-only dependency cache for flatland-rl's test matrix (checks.yml's testml job) - NOT a runtime image,
-# see the sibling Dockerfile for that (installs flatland-rl itself from a released ref, multi-arch, published
-# to end users). This image only bakes in requirements-dev.txt/requirements-ml.txt so CI's `pip install` can
-# hit BuildKit's registry layer cache instead of recompiling scipy/dm-tree from source on every run.
+# CI-only dependency cache for flatland-rl's test matrix (checks.yml's deptry/testml/test jobs) - NOT a
+# runtime image, see the sibling Dockerfile for that (installs flatland-rl itself from a released ref,
+# multi-arch, published to end users). This image only bakes in requirements-dev.txt (and, for the "ml"
+# variant, requirements-ml.txt too) so CI's `pip install` can hit BuildKit's registry layer cache instead
+# of recompiling scipy/dm-tree from source on every run.
 ARG PYTHON_VERSION=3.12
+ARG WITH_ML=true
 
 # Pinned to a known Debian codename (not the floating "slim" alias) so the default gcc version is
 # predictable - bookworm ships gcc-12 by default, avoiding the GCC13+/dm-tree incompatibility that
 # checks.yml's "Install ffmpeg" step otherwise has to work around explicitly on the Ubuntu 24.04 runner.
-FROM python:${PYTHON_VERSION}-slim-bookworm
+FROM python:${PYTHON_VERSION}-slim-bookworm AS base
 
 # ffmpeg: used by rendering tests. build-essential/gfortran/libopenblas-dev/pkg-config: scipy<1.16 has no
 # wheels for newer Pythons and builds from source (see pyproject.toml's scipy pin comment) - gfortran +
 # libopenblas-dev + pkg-config are scipy's meson build requirements (Fortran + BLAS/LAPACK backend + config
 # lookup); meson/ninja/pybind11 themselves come from scipy's own PEP 517 build-requires via pip's build
-# isolation, so they don't need to be installed here. cmake: dm-tree's setup.py does its own `cmake
-# --version` prerequisite check before building (unlike scipy, it doesn't rely on pip's build-isolation
-# cmake package for this). git: dm-tree's CMakeLists.txt fetches pybind11 via `FetchContent_Populate`/
-# `ExternalProject_Add`, which shells out to `git clone` at build time. wget/unzip: checks.yml's testml
-# job downloads and extracts the benchmark episodes archive, now running inside this image's steps rather
-# than directly on the CI runner. The Ubuntu CI runner has all of these preinstalled by default, masking
-# these requirements; this Debian slim base has none of them.
+# isolation, so they don't need to be installed here. wget/unzip: the episodes-download step (test/testml)
+# runs inside this image's steps rather than directly on the CI runner. The Ubuntu CI runner has all of
+# these preinstalled by default, masking these requirements; this Debian slim base has none of them.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -27,20 +25,33 @@ RUN apt-get update && \
         gfortran \
         libopenblas-dev \
         pkg-config \
-        cmake \
-        git \
         wget \
         unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# dm-tree's vendored abseil-cpp (20210324.2) bundles very old CMakeLists.txt files that recent cmake (>=4.0,
-# pulled in via pip's build isolation) hard-errors on unless told to allow them - same setting tox.ini passes
-# for the equivalent (non-containerized) CI job.
-ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
-
 WORKDIR /deps
 
+FROM base AS ml-true
+# cmake: dm-tree's setup.py does its own `cmake --version` prerequisite check before building (unlike
+# scipy, it doesn't rely on pip's build-isolation cmake package for this). git: dm-tree's CMakeLists.txt
+# fetches pybind11 via `FetchContent_Populate`/`ExternalProject_Add`, which shells out to `git clone` at
+# build time. Same "Ubuntu runner has it preinstalled, this Debian slim base doesn't" story as above.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends cmake git && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+# dm-tree's vendored abseil-cpp (20210324.2) bundles very old CMakeLists.txt files that recent cmake
+# (>=4.0, pulled in via pip's build isolation) hard-errors on unless told to allow them - same setting
+# tox.ini passes for the equivalent (non-containerized) CI job.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
 COPY requirements-dev.txt requirements-ml.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements-dev.txt -r requirements-ml.txt
+
+FROM base AS ml-false
+COPY requirements-dev.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+FROM ml-${WITH_ML} AS final

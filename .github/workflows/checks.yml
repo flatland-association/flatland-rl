@@ -60,103 +60,13 @@ jobs:
                 run: ${{ steps.get_actionlint.outputs.executable }} -color
                 shell: bash
 
-    deptry:
-        runs-on: ubuntu-24.04
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
-        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
-        env:
-            CC: gcc-12
-            CXX: g++-12
-        steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
-                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
-                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
-                    sudo apt-get -y install gcc-12 g++-12
-                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
-                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
-                    sudo apt-get -y install libopenblas-dev
-            -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built wheels
-            # so only a requirements bump triggers a recompile. Same key as the test job below so the
-            # cache is shared between the two (testml gets its dependencies from a prebuilt Docker image
-            # instead - see build-ci-env-testml/testml above). Skipped (read-only) on scheduled runs, like
-            # the .tox cache below, so the nightly cron always exercises a from-scratch build - but
-            # nightly's freshly-built wheels are still saved (see the Save step below), so PR/push runs
-            # benefit.
-            -   name: Restore cached pip wheels
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
-            -   name: Run deptry
-                run: tox -e py${{ matrix.python-version }}-verify-requirements
-            -   name: Save cached pip wheels
-                if: always()
-                uses: actions/cache/save@v5
-                with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-
-    # Builds/pushes the CI-only dependency image consumed by the testml job below (see Dockerfile.ci-env,
-    # a separate, non-user-facing image from the ones docker.yml/publish.yml build and publish to end
-    # users). BuildKit's registry cache (cache-from/cache-to) makes this a near-instant no-op once
-    # requirements-dev.txt/requirements-ml.txt stop changing, since every RUN layer stays cache-hit -
-    # unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp each other.
-    build-ci-env-testml:
+    # Builds/pushes the CI-only dependency image consumed by the deptry/testml jobs below (see
+    # Dockerfile.ci-env, a separate, non-user-facing image from the ones docker.yml/publish.yml build and
+    # publish to end users). BuildKit's registry cache (cache-from/cache-to) makes this a near-instant
+    # no-op once requirements-dev.txt/requirements-ml.txt stop changing, since every RUN layer stays
+    # cache-hit - unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp each
+    # other.
+    build-ci-env-ml:
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -182,7 +92,7 @@ jobs:
                 id: image-name
                 run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
             # hashFiles() needs the checkout above to have already populated the workspace - it can't be
-            # computed directly in testml's own container: (see the tag comment below for why that matters).
+            # computed directly in deptry's/testml's own container: (see the tag comment below).
             -   name: Compute requirements hash
                 id: reqs-hash
                 run: echo "hash=${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}" >> "$GITHUB_OUTPUT"
@@ -212,7 +122,7 @@ jobs:
                 if: steps.image-exists.outputs.exists != 'true'
                 run: |
                     curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Build and push testml CI-env image
+            -   name: Build and push CI-env image (ml variant)
                 if: steps.image-exists.outputs.exists != 'true'
                 uses: docker/build-push-action@v7
                 with:
@@ -221,6 +131,7 @@ jobs:
                     platforms: linux/amd64
                     build-args: |
                         PYTHON_VERSION=${{ matrix.python-version }}
+                        WITH_ML=true
                     cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml
                     cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml,mode=max
                     push: true
@@ -236,8 +147,76 @@ jobs:
             -   name: Check disk space
                 run: df . -h
 
-    testml:
-        needs: [ build-ci-env-testml ]
+    # Leaner counterpart to build-ci-env-ml, consumed by the test job below: no requirements-ml.txt, no
+    # dm-tree/cmake/git, since test only ever installs requirements-dev.txt.
+    build-ci-env-default:
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: write
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # Same value on every matrix leg (it only depends on requirements-dev.txt, not
+        # matrix.python-version), so which leg "wins" the usual matrix-job-output ambiguity doesn't matter.
+        outputs:
+            reqs-hash: ${{ steps.reqs-hash.outputs.hash }}
+        steps:
+            -   uses: actions/checkout@v6
+            -   name: Log in to GHCR
+                uses: docker/login-action@v4
+                with:
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+            -   uses: docker/setup-buildx-action@v4
+            -   name: Build image name
+                id: image-name
+                run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            -   name: Compute requirements hash
+                id: reqs-hash
+                run: echo "hash=${{ hashFiles('requirements-dev.txt') }}" >> "$GITHUB_OUTPUT"
+            -   name: Check if CI-env image already exists
+                id: image-exists
+                run: |
+                    if docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-default-${{ steps.reqs-hash.outputs.hash }}" > /dev/null 2>&1; then
+                        echo "exists=true" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "exists=false" >> "$GITHUB_OUTPUT"
+                    fi
+            -   name: Inspect disk
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    df -h
+                    docker system df
+            -   name: Prune docker system
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    docker system prune --all --force
+            -   name: Free disk space
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Build and push CI-env image (default variant)
+                if: steps.image-exists.outputs.exists != 'true'
+                uses: docker/build-push-action@v7
+                with:
+                    context: .
+                    file: Dockerfile.ci-env
+                    platforms: linux/amd64
+                    build-args: |
+                        PYTHON_VERSION=${{ matrix.python-version }}
+                        WITH_ML=false
+                    cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-default
+                    cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-default,mode=max
+                    push: true
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-default-${{ steps.reqs-hash.outputs.hash }}
+            -   name: Check disk space
+                run: df . -h
+
+    deptry:
+        needs: [ build-ci-env-ml ]
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -247,14 +226,57 @@ jobs:
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
         # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
-        # are baked into this image by build-ci-env-testml above - nothing left to install here.
+        # are baked into this image by build-ci-env-ml above - nothing left to install here.
         container:
-            # Matches build-ci-env-testml's tag exactly (see the comment there for why it's keyed on a
+            # Matches build-ci-env-ml's tag exactly (see the comment there for why it's keyed on a
             # requirements hash, not just Python-version). Read via needs.*.outputs rather than computing
             # hashFiles() here directly: container: is resolved before this job's own checkout runs, so
             # hashFiles() would see no files yet - needs.*.outputs works because it's just a stored value
-            # from the already-completed build-ci-env-testml job, not a live filesystem read.
-            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-testml.outputs.reqs-hash }}
+            # from the already-completed build-ci-env-ml job, not a live filesystem read.
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-ml.outputs.reqs-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            -   uses: actions/checkout@v6
+            # Runs the deptry commands directly rather than `tox run -e py{version}-verify-requirements`:
+            # tox would create its own venv and reinstall requirements-dev.txt/requirements-ml.txt into it
+            # regardless of what the image's system Python already has. Mirrors tox.ini's
+            # [testenv:py{...}-verify-requirements] set_env/commands exactly; that env remains the source
+            # of truth for local/non-container runs.
+            -   name: Run deptry
+                env:
+                    PINNED_AND_DYNAMICALLY_LOADED_MODULES: "cachetools|dm-tree|wandb|contourpy|scipy|rpds-py"
+                    DEV_MODULES: "coverage|deptry|flake8|flake8-eradicate|jupyter|jupyter-core|nbmake|notebook|pip-tools|pytest|pytest-retry|tox|testcontainers|pytest-xdist|cython"
+                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+                run: |
+                    python --version
+                    python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python benchmarks/*.ipynb
+                    python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python notebooks/*.ipynb
+                    deptry . --verbose --ignore DEP003 --pep621-dev-dependency-groups dev,ml -ee flatland/ml -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
+                    deptry . --ignore DEP003 --pep621-dev-dependency-groups dev -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
+                    deptry . --ignore DEP003 --pep621-dev-dependency-groups ml -ee flatland/ml -ee tests/ml -ee "notebooks/rllib_demo.*" --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
+                    deptry . --ignore DEP003 --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
+
+    testml:
+        needs: [ build-ci-env-ml ]
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
+        # are baked into this image by build-ci-env-ml above - nothing left to install here.
+        container:
+            # Matches build-ci-env-ml's tag exactly (see the comment there for why it's keyed on a
+            # requirements hash, not just Python-version). Read via needs.*.outputs rather than computing
+            # hashFiles() here directly: container: is resolved before this job's own checkout runs, so
+            # hashFiles() would see no files yet - needs.*.outputs works because it's just a stored value
+            # from the already-completed build-ci-env-ml job, not a live filesystem read.
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-ml.outputs.reqs-hash }}
             credentials:
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
@@ -294,57 +316,27 @@ jobs:
                 run: python -m pytest -n auto --retries 2 --retry-delay 5 tests/ml
 
     test:
+        needs: [ build-ci-env-default ]
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # requirements-dev.txt (incl. scipy, already built from source) is baked into this image by
+        # build-ci-env-default above - nothing left to install here except flatland-rl itself, for the
+        # "Install flatland-rl and verify entry points" step below (its whole point is to test that install
+        # path, so unlike the pytest step it can't be skipped the way testml/deptry skip installing the
+        # package).
+        container:
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-default-${{ needs.build-ci-env-default.outputs.reqs-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels so only
-            # a requirements bump triggers a recompile. Same key as the deptry job so the cache is shared -
-            # restore-only here, deliberately: this job only installs requirements-dev.txt, a strict subset
-            # of what deptry installs (requirements-dev.txt + requirements-ml.txt), so it's the faster of
-            # the two and would tend to win the cache-save race on a cold key. actions/cache keys are
-            # immutable (a save to an existing key is silently skipped), so whichever job's save "wins"
-            # locks in its content until the key changes - if that were this job, the shared cache would
-            # end up missing the dm-tree/torch/ray wheels deptry needs. Leaving the save to deptry (which
-            # installs the full superset) avoids that. (testml gets its dependencies from a prebuilt Docker
-            # image instead - see build-ci-env-testml/testml above - so it no longer participates here.)
-            -   name: Restore cached pip wheels
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -365,30 +357,37 @@ jobs:
                 with:
                     path: episodes
                     key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
+            # Runs pytest directly rather than `tox run -e py{version}`: tox would create its own venv and
+            # reinstall requirements-dev.txt into it regardless of what the image's system Python already
+            # has, rebuilding scipy from source again and defeating the point of this image. Mirrors
+            # tox.ini's [testenv:py{...}] set_env/commands exactly; that env remains the source of truth
+            # for local/non-container runs. Doesn't install flatland-rl itself even though tox's env
+            # technically does (default skip_install=false) - PYTHONPATH alone is enough for tests to
+            # import it (confirmed empirically: testml's equivalent tox env has the identical default, and
+            # its container-based run already passes without installing the package).
             -   name: Run tests
-                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
-            # No "Save cached pip wheels" step here - see the comment on "Restore cached pip wheels" above:
-            # this job never writes to the shared pip-wheel cache, only reads from it.
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-test-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Check disk space
-                run: df . -h
+                env:
+                    PYTHONPATH: ${{ github.workspace }}
+                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
+                    PYTHONDONTWRITEBYTECODE: "1"
+                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+                run: python -m pytest -n auto --ignore=tests/ml -m "not slow"
+            # Mirrors tox.ini's [testenv:py{...}-verify-install] - unlike the step above, this one's whole
+            # point is to test the installed-package/entry-points path, so it genuinely needs `pip install
+            # .` rather than relying on PYTHONPATH.
+            -   name: Install flatland-rl and verify entry points
+                run: |
+                    python --version
+                    pip install --no-cache-dir .
+                    python -c 'from flatland.evaluators.service import FlatlandRemoteEvaluationService'
+                    python -c 'import flatland.integrations.interactiveai.interactiveai'
+                    evaluator --help
+                    flatland-demo --help
+                    flatland-evaluator --help
+                    flatland-trajectory-evaluate --help
+                    flatland-trajectory-generate-from-policy --help
+                    flatland-trajectory-generate-from-metadata --help
+                    flatland-trajectory-analysis --help
 
     notebooks:
         runs-on: ubuntu-24.04
