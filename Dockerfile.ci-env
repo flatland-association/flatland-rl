@@ -13,14 +13,18 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 # wheels for newer Pythons and builds from source (see pyproject.toml's scipy pin comment) - gfortran +
 # libopenblas-dev + pkg-config are scipy's meson build requirements (Fortran + BLAS/LAPACK backend + config
 # lookup); meson/ninja/pybind11 themselves come from scipy's own PEP 517 build-requires via pip's build
-# isolation, so they don't need to be installed here.
+# isolation, so they don't need to be installed here. cmake: dm-tree's setup.py does its own `cmake
+# --version` prerequisite check before building (unlike scipy, it doesn't rely on pip's build-isolation
+# cmake package for this) - the Ubuntu CI runner has cmake preinstalled by default, but this Debian slim
+# base doesn't, so it has to be installed explicitly here.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
         build-essential \
         gfortran \
         libopenblas-dev \
-        pkg-config && \
+        pkg-config \
+        cmake && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
