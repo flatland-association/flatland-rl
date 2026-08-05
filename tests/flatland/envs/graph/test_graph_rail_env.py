@@ -87,4 +87,5 @@ def test_apply_timetable_to_agents_waypoints_well_formed(seed):
         for wps in agent.waypoints:
             for configuration in wps:
                 assert configuration in graph_env.rail.g.nodes
+                assert isinstance(configuration, str)
         assert set(agent.waypoints[-1]) == agent.targets

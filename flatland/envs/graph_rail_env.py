@@ -1,49 +1,114 @@
 import ast
-from typing import List, Optional
+from typing import Dict, List, Optional
+
+import networkx as nx
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
 from flatland.core.graph.graph_resource_map import GraphResourceMap
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
 from flatland.envs.rewards import Rewards
-from flatland.envs.timetable_utils import TimetableUtils
+from flatland.envs.step_utils.speed_counter import SpeedCounter
+from flatland.envs.timetable_utils import Line, TimetableUtils
 from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
 
 class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     @staticmethod
     def from_rail_env(rail_env: RailEnv, observation_builder: ObservationBuilder, seed: Optional[int] = None) -> "GraphRailEnv":
-        line = EnvAgent.to_line(rail_env.agents)
-        timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
-
-        gtm = GraphTransitionMap.from_rail_env(rail_env)
-        _resource_map = {}
-        for n in gtm.g.nodes:
+        gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+        g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
+        resource_map = {}
+        for n in g.nodes:
             r, c, d = ast.literal_eval(n)
             if (r, c) in rail_env.resource_map.level_free_positions:
-                _resource_map[GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)] = str((r, c, d % 2))
+                resource_map[n] = str((r, c, d % 2))
             else:
-                _resource_map[GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)] = str((r, c))
+                resource_map[n] = str((r, c))
+        agent_waypoints = {
+            agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
+            for agent in rail_env.agents
+        }
+        agent_speeds = {agent.handle: agent.speed_counter.max_speed for agent in rail_env.agents}
+        timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
 
-        graph_env = GraphRailEnv(
-            number_of_agents=rail_env.get_num_agents(),
-            rail_generator=lambda *args, **kwargs: ({"resource_map": _resource_map}, gtm),
-            line_generator=lambda *args, **kwargs: line,
-            timetable_generator=lambda *arg, **kwargs: timetable,
+        graph_env = GraphRailEnv.from_graph(
+            g=g,
+            resource_map=resource_map,
+            agent_waypoints=agent_waypoints,
+            agent_speeds=agent_speeds,
             observation_builder=observation_builder,
             # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize malfunction generator injection
             # N.B. ParamMalfunctionGen is not stateless due to cached random nums, see https://github.com/flatland-association/flatland-rl/issues/364.
             malfunction_generator=ParamMalfunctionGen(rail_env.malfunction_generator.MFP),
+            timetable_generator=lambda *args, **kwargs: timetable,
+            seed=seed,
         )
         # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
-        graph_env.reset(random_seed=seed)
         s = random_state_to_hashablestate(rail_env.np_random)
         graph_env.np_random = random_state_from_hashablestate(s)
+        return graph_env
+
+    @staticmethod
+    def from_graph(
+        g: nx.DiGraph,
+        resource_map: Dict[str, str],
+        agent_waypoints: Dict[int, List[List[str]]],
+        agent_speeds: Optional[Dict[int, float]] = None,
+        observation_builder: ObservationBuilder = None,
+        malfunction_generator: "MalfunctionGenerator" = None,
+        timetable_generator=None,
+        seed: Optional[int] = None,
+    ) -> "GraphRailEnv":
+        """
+        Factory method to create a `GraphRailEnv` directly from a string-node graph and string-based
+        agent waypoints - counterpart to `from_rail_env`, but graph-native from the start: `g`'s nodes
+        and `agent_waypoints`' leaves are plain configuration strings, never `((row, col), direction)`
+        grid tuples or `Waypoint` objects.
+
+        Parameters
+        ----------
+        g: nx.DiGraph
+            the rail topology, with `actions`/`straight` edge attributes and an optional
+            `prohibited_actions` node attribute - see `GraphTransitionMap.grid_to_digraph` for the
+            shape expected by `RailEnv.step()`.
+        resource_map: Dict[str, str]
+            maps each node in `g` to the resource (occupancy unit) used for conflict detection.
+        agent_waypoints: Dict[int, List[List[str]]]
+            per agent handle, the list of waypoint alternative-groups (initial, any intermediate
+            stops, target) - mirrors `Line.agent_waypoints`, but with plain node-id strings instead of
+            `Waypoint` objects.
+        agent_speeds: Dict[int, float], optional
+            per agent handle, the agent's speed - defaults to `1.0` for every agent.
+        timetable_generator: optional
+            `(agents, distance_map, agents_hints, np_random) -> Timetable` - defaults to
+            `ttg.ttgen_flatland2` (`earliest_departure=0`/`latest_arrival=1000` for every agent). Pass
+            e.g. `lambda *a, **k: TimetableUtils.from_agents(source_agents, max_episode_steps)` to
+            reuse an existing timetable instead (mirrors how `from_rail_env` reuses its source env's).
+        """
+        import flatland.envs.timetable_generators as ttg
+
+        if timetable_generator is None:
+            timetable_generator = ttg.ttgen_flatland2
+        number_of_agents = len(agent_waypoints)
+        if agent_speeds is None:
+            agent_speeds = {handle: 1.0 for handle in agent_waypoints}
+        gtm = GraphTransitionMap(g)
+        line = Line(agent_waypoints=agent_waypoints, agent_speeds=agent_speeds)
+
+        graph_env = GraphRailEnv(
+            number_of_agents=number_of_agents,
+            rail_generator=lambda *args, **kwargs: ({"resource_map": resource_map}, gtm),
+            line_generator=lambda *args, **kwargs: line,
+            timetable_generator=timetable_generator,
+            observation_builder=observation_builder,
+            malfunction_generator=malfunction_generator,
+        )
+        graph_env.reset(random_seed=seed)
         return graph_env
 
     def __init__(
@@ -95,25 +160,33 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         return configuration
 
     def _apply_timetable_to_agents(self, agents: List[EnvAgent[str]], timetable: "Timetable") -> List[EnvAgent[str]]:
-        EnvAgent.apply_timetable(self.agents, timetable)
-        for agent in self.agents:
-            # N.B. only the position is used below (all of the target's direction alternatives share it).
-            target_position = agent.waypoints[-1][0].position
-            target_configurations = [
-                GraphTransitionMap.grid_configuration_to_graph_configuration(*target_position, d) for d in Grid4TransitionsEnum
-            ]
-            agent.waypoints = [
-                                  [GraphTransitionMap.grid_configuration_to_graph_configuration(*wp.position, wp.direction) for wp in flex_intermediate_stop]
-                                  for flex_intermediate_stop in agent.waypoints[:1]
-                              ] + [[c for c in target_configurations if c in self.rail.g.nodes]]
-        return agents
+        return EnvAgent.apply_timetable(self.agents, timetable)
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
-        agents = EnvAgent.from_line(line)
-        for agent in agents:
-            gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
-            agent.initial_configuration = gctgc(*agent.initial_configuration[0], agent.initial_configuration[1])
-            agent.current_configuration = gctgc(*agent.current_configuration[0], agent.current_configuration[1])
-            agent.targets = {GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) for t in agent.targets if
-                             GraphTransitionMap.grid_configuration_to_graph_configuration(*t[0], t[1]) in rail.g.nodes}
+        """
+        Builds `EnvAgent`s directly from a `Line` whose `agent_waypoints` are plain graph node-id
+        strings - counterpart to `EnvAgent.from_line` for a graph-native `Line` (no `Waypoint` objects
+        or grid `((row, col), direction)` tuples involved at all).
+        """
+        agents = []
+        for handle, waypoints in line.agent_waypoints.items():
+            speed = line.agent_speeds[handle] if line.agent_speeds is not None else 1.0
+            waypoints = list(waypoints)
+            # N.B. only the target's alternatives (last waypoint group) can be invalid - the caller's
+            # own routing already guarantees valid configurations everywhere else.
+            waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_configuration(t)]
+            initial_configuration = waypoints[0][0]
+            agents.append(EnvAgent(
+                initial_configuration=initial_configuration,
+                current_configuration=initial_configuration,
+                old_configuration=None,
+                targets=set(waypoints[-1]),
+                waypoints=waypoints,
+                moving=False,
+                earliest_departure=None,
+                latest_arrival=None,
+                waypoints_earliest_departure=None,
+                waypoints_latest_arrival=None,
+                handle=handle,
+                speed_counter=SpeedCounter(speed=speed)))
         return agents
