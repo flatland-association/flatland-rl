@@ -213,3 +213,5 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 - Avoid currying/closures to encapsulate state — prefer a class when the object needs multiple methods.
 - Cython speed-ups go through `.pxd`-augmented pure-Python `.py` files, never `.pyx` — see "Cython-accelerated
   hot paths" above.
+- Read packaged resource files (e.g. rail data shipped inside a subpackage) via `importlib_resources`
+  (`path`/`read_binary`), not a raw path relative to the module.
