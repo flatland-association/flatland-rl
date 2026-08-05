@@ -15,8 +15,9 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 # lookup); meson/ninja/pybind11 themselves come from scipy's own PEP 517 build-requires via pip's build
 # isolation, so they don't need to be installed here. cmake: dm-tree's setup.py does its own `cmake
 # --version` prerequisite check before building (unlike scipy, it doesn't rely on pip's build-isolation
-# cmake package for this) - the Ubuntu CI runner has cmake preinstalled by default, but this Debian slim
-# base doesn't, so it has to be installed explicitly here.
+# cmake package for this). git: dm-tree's CMakeLists.txt fetches pybind11 via `FetchContent_Populate`/
+# `ExternalProject_Add`, which shells out to `git clone` at build time. The Ubuntu CI runner has both
+# cmake and git preinstalled by default, masking these requirements; this Debian slim base has neither.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -24,7 +25,8 @@ RUN apt-get update && \
         gfortran \
         libopenblas-dev \
         pkg-config \
-        cmake && \
+        cmake \
+        git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
