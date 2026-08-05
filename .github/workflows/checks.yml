@@ -407,6 +407,29 @@ jobs:
                     flatland-trajectory-generate-from-metadata --help
                     flatland-trajectory-analysis --help
 
+    # Not containerized (unlike deptry/testml/test/examples above) despite using the same requirements-dev.txt
+    # - blocked on this job's "Start Redis" services: container below, for two compounding reasons:
+    #
+    # 1. The simple fix - add `container: {image: ...}` and keep everything else as-is - doesn't work,
+    #    because a containerized job's `container:` can't be given `--network host` to make it share the
+    #    runner's own network namespace: GH's docs for `container:`/`services:` `options:` state plainly
+    #    "The --network and --entrypoint options are not supported."
+    #    https://docs.github.com/en/actions/using-jobs/running-jobs-in-a-container
+    #
+    # 2. Without --network host, GH Actions' actual supported mechanism for a containerized job to reach a
+    #    services: container is different, not absent: it auto-joins the job's container and the service
+    #    container to a shared Docker bridge network, reachable via the service's label as a hostname (e.g.
+    #    `redis`), not via localhost/127.0.0.1 - see "About service containers":
+    #    https://docs.github.com/en/actions/using-containerized-services/about-service-containers
+    #    That's exactly the opposite of how it works today: this job runs directly on the runner (no
+    #    container:), so Redis's port is published straight onto the runner's own localhost, which is
+    #    exactly what notebooks/test_service.ipynb and notebooks/test-service-timeouts.ipynb hardcode
+    #    (localhost/127.0.0.1). Containerizing without also editing those notebook cells to use the `redis`
+    #    hostname would just trade one failure (no --network host) for another (wrong hostname).
+    #
+    # So this needs an actual code change (parameterize the Redis host in the two notebooks, then add
+    # `container:` + keep `services:` here), not just a workflow tweak - see S6 in the ongoing CI cache/
+    # containerization cleanup plan.
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
