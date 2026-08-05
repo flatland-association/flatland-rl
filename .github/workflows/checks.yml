@@ -336,14 +336,15 @@ jobs:
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            # fetch-depth: 0 (full history, incl. tags) - the "Install flatland-rl and verify entry points"
-            # step below does `pip install .`, which needs setuptools_scm to run `git describe --tags` to
-            # infer a version; the default shallow (depth-1, no tags) checkout doesn't give it enough
-            # history for that and fails with "setuptools-scm was unable to detect version". Same reasoning
-            # as publish.yml's build-related checkout steps.
+            # The "Install flatland-rl and verify entry points" step below does `pip install .`, which needs
+            # setuptools_scm to run `git describe --tags` to infer a version. fetch-depth: 0 alone isn't
+            # enough for that - it gives full commit history but actions/checkout still doesn't fetch tags
+            # unless fetch-tags is explicitly set (confirmed: fetch-depth: 0 by itself still hit
+            # "setuptools-scm was unable to detect version" here), so both are needed together.
             -   uses: actions/checkout@v6
                 with:
                     fetch-depth: 0
+                    fetch-tags: true
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
