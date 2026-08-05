@@ -1,4 +1,5 @@
 import ast
+import warnings
 from typing import Callable, Dict, List, Optional
 
 import networkx as nx
@@ -33,7 +34,10 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             separate instance from `rail_env.rewards` (never the same object: `Rewards` accumulates
             mutable per-episode state, e.g. `arrivals`/`departures`/`states`, which `rail_env` and
             `graph_env` must not share/corrupt). Defaults to `GraphRailEnv`'s own default (`None`) if
-            not given - pass a fresh instance matching `rail_env.rewards`'s type/config for parity.
+            not given - pass a fresh instance matching `rail_env.rewards`'s type/config for parity. If
+            the resulting `graph_env.rewards` type ends up different from `rail_env.rewards`'s, a
+            `UserWarning` is raised (e.g. if `rewards` is left `None` while `rail_env.rewards` is not
+            `GraphRailEnv`'s own default).
         """
         gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
@@ -64,6 +68,12 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             seed=seed,
             rewards=rewards,
         )
+        if type(rail_env.rewards) is not type(graph_env.rewards):
+            warnings.warn(
+                f"rail_env.rewards is {type(rail_env.rewards).__name__}, but graph_env.rewards is "
+                f"{type(graph_env.rewards).__name__} (no matching `rewards` was passed to from_rail_env) - "
+                f"rewards will not be directly comparable between the two envs."
+            )
         # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
         s = random_state_to_hashablestate(rail_env.np_random)
         graph_env.np_random = random_state_from_hashablestate(s)
