@@ -791,4 +791,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             # N.B. only the target's direction alternatives (last waypoint group) can be invalid - the
             # line generator's own routing already guarantees valid configurations everywhere else.
             agent.waypoints[-1] = _filter_valid_target_configurations(rail, agent.waypoints[-1])
+            assert len(agent.targets) > 0, (
+                f"agent {agent.handle}: none of the target's direction alternatives are valid "
+                f"configurations on the rail - the agent would end up with an empty `targets`."
+            )
         return agents

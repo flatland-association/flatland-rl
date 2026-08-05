@@ -233,6 +233,10 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             # N.B. only the target's alternatives (last waypoint group) can be invalid - the caller's
             # own routing already guarantees valid configurations everywhere else.
             waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_configuration(t)]
+            assert len(waypoints[-1]) > 0, (
+                f"agent {handle}: none of the target alternatives {list(line.agent_waypoints[handle][-1])} "
+                f"are valid configurations in the graph - the agent would end up with an empty `targets`."
+            )
             initial_configuration = waypoints[0][0]
             agents.append(EnvAgent(
                 initial_configuration=initial_configuration,
