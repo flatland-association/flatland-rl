@@ -428,8 +428,7 @@ jobs:
     #    hostname would just trade one failure (no --network host) for another (wrong hostname).
     #
     # So this needs an actual code change (parameterize the Redis host in the two notebooks, then add
-    # `container:` + keep `services:` here), not just a workflow tweak - see S6 in the ongoing CI cache/
-    # containerization cleanup plan.
+    # `container:` + keep `services:` here), not just a workflow tweak.
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
