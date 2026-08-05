@@ -112,10 +112,12 @@ jobs:
                 with:
                     python-version: ${{ matrix.python-version }}
             # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built wheels
-            # so only a requirements bump triggers a recompile. Same key as the test/testml jobs below so
-            # the cache is shared across all three. Skipped (read-only) on scheduled runs, like the .tox
-            # cache below, so the nightly cron always exercises a from-scratch build - but nightly's
-            # freshly-built wheels are still saved (see the Save step below), so PR/push runs benefit.
+            # so only a requirements bump triggers a recompile. Same key as the test job below so the
+            # cache is shared between the two (testml gets its dependencies from a prebuilt Docker image
+            # instead - see build-ci-env-testml/testml above). Skipped (read-only) on scheduled runs, like
+            # the .tox cache below, so the nightly cron always exercises a from-scratch build - but
+            # nightly's freshly-built wheels are still saved (see the Save step below), so PR/push runs
+            # benefit.
             -   name: Restore cached pip wheels
                 if: ${{ github.event_name != 'schedule' }}
                 uses: actions/cache/restore@v5
@@ -149,17 +151,20 @@ jobs:
                     path: .tox
                     key: tox-deptry-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
 
-    testml:
+    # Builds/pushes the CI-only dependency image consumed by the testml job below (see Dockerfile.ci-env,
+    # a separate, non-user-facing image from the ones docker.yml/publish.yml build and publish to end
+    # users). BuildKit's registry cache (cache-from/cache-to) makes this a near-instant no-op once
+    # requirements-dev.txt/requirements-ml.txt stop changing, since every RUN layer stays cache-hit -
+    # unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp each other.
+    build-ci-env-testml:
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: write
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
-        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
-        env:
-            CC: gcc-12
-            CXX: g++-12
         steps:
             -   name: Inspect disk
                 run: |
@@ -173,45 +178,51 @@ jobs:
             -   name: Free disk space
                 run: |
                     curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
-                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
-                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
-                    sudo apt-get -y install gcc-12 g++-12
-                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
-                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
-                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                uses: actions/setup-python@v6
+            -   name: Log in to GHCR
+                uses: docker/login-action@v3
                 with:
-                    python-version: ${{ matrix.python-version }}
-            # scipy/dm-tree build from source (see "Install ffmpeg" step above); cache pip's built wheels
-            # so only a requirements bump triggers a recompile. Same key as the deptry/test jobs so the
-            # cache is shared across all three. Skipped (read-only) on scheduled runs, like the .tox cache
-            # below, so the nightly cron always exercises a from-scratch build - but nightly's freshly-built
-            # wheels are still saved (see the Save step below), so PR/push runs benefit.
-            -   name: Restore cached pip wheels
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+            -   uses: docker/setup-buildx-action@v3
+            -   name: Build image name
+                id: image-name
+                run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            -   name: Build and push testml CI-env image
+                uses: docker/build-push-action@v6
                 with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
+                    context: .
+                    file: Dockerfile.ci-env
+                    platforms: linux/amd64
+                    build-args: |
+                        PYTHON_VERSION=${{ matrix.python-version }}
+                    cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml
+                    cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml,mode=max
+                    push: true
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml
+            -   name: Check disk space
+                run: df . -h
+
+    testml:
+        needs: [ build-ci-env-testml ]
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
+        # are baked into this image by build-ci-env-testml above - nothing left to install here.
+        container:
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
+        steps:
+            -   uses: actions/checkout@v6
             # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
@@ -232,34 +243,18 @@ jobs:
                 with:
                     path: episodes
                     key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
+            # Runs pytest directly rather than `tox run -e py{version}-ml`: tox would create its own venv
+            # and reinstall requirements-dev.txt/requirements-ml.txt into it regardless of what the image's
+            # system Python already has, rebuilding scipy/dm-tree from source again and defeating the point
+            # of this image. Mirrors tox.ini's [testenv:py{...}-ml] set_env/commands exactly; that env
+            # remains the source of truth for local/non-container runs.
             -   name: Run tests
-                run: tox run -e py${{ matrix.python-version }}-ml
-            -   name: Save cached pip wheels
-                if: always()
-                uses: actions/cache/save@v5
-                with:
-                    path: ~/.cache/pip
-                    key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Check disk space
-                run: df . -h
+                env:
+                    PYTHONPATH: ${{ github.workspace }}
+                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
+                    PYTHONDONTWRITEBYTECODE: "1"
+                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+                run: python -m pytest -n auto --retries 2 --retry-delay 5 tests/ml
 
     test:
         runs-on: ubuntu-24.04
@@ -298,14 +293,15 @@ jobs:
                 with:
                     python-version: ${{ matrix.python-version }}
             # scipy builds from source (see "Install ffmpeg" step above); cache pip's built wheels so only
-            # a requirements bump triggers a recompile. Same key as the deptry/testml jobs so the cache is
-            # shared - restore-only here, deliberately: this job only installs requirements-dev.txt, a
-            # strict subset of what deptry/testml install, so it's always the fastest of the three and
-            # would tend to win the cache-save race on a cold key. actions/cache keys are immutable
-            # (a save to an existing key is silently skipped), so whichever job's save "wins" locks in its
-            # content until the key changes - if that were this job, the shared cache would end up missing
-            # the dm-tree/torch/ray wheels deptry/testml need. Leaving the save to deptry/testml (which
-            # both install the full superset) avoids that.
+            # a requirements bump triggers a recompile. Same key as the deptry job so the cache is shared -
+            # restore-only here, deliberately: this job only installs requirements-dev.txt, a strict subset
+            # of what deptry installs (requirements-dev.txt + requirements-ml.txt), so it's the faster of
+            # the two and would tend to win the cache-save race on a cold key. actions/cache keys are
+            # immutable (a save to an existing key is silently skipped), so whichever job's save "wins"
+            # locks in its content until the key changes - if that were this job, the shared cache would
+            # end up missing the dm-tree/torch/ray wheels deptry needs. Leaving the save to deptry (which
+            # installs the full superset) avoids that. (testml gets its dependencies from a prebuilt Docker
+            # image instead - see build-ci-env-testml/testml above - so it no longer participates here.)
             -   name: Restore cached pip wheels
                 if: ${{ github.event_name != 'schedule' }}
                 uses: actions/cache/restore@v5

@@ -1,0 +1,36 @@
+# CI-only dependency cache for flatland-rl's test matrix (checks.yml's testml job) - NOT a runtime image,
+# see the sibling Dockerfile for that (installs flatland-rl itself from a released ref, multi-arch, published
+# to end users). This image only bakes in requirements-dev.txt/requirements-ml.txt so CI's `pip install` can
+# hit BuildKit's registry layer cache instead of recompiling scipy/dm-tree from source on every run.
+ARG PYTHON_VERSION=3.12
+
+# Pinned to a known Debian codename (not the floating "slim" alias) so the default gcc version is
+# predictable - bookworm ships gcc-12 by default, avoiding the GCC13+/dm-tree incompatibility that
+# checks.yml's "Install ffmpeg" step otherwise has to work around explicitly on the Ubuntu 24.04 runner.
+FROM python:${PYTHON_VERSION}-slim-bookworm
+
+# ffmpeg: used by rendering tests. build-essential/gfortran/libopenblas-dev/pkg-config: scipy<1.16 has no
+# wheels for newer Pythons and builds from source (see pyproject.toml's scipy pin comment) - gfortran +
+# libopenblas-dev + pkg-config are scipy's meson build requirements (Fortran + BLAS/LAPACK backend + config
+# lookup); meson/ninja/pybind11 themselves come from scipy's own PEP 517 build-requires via pip's build
+# isolation, so they don't need to be installed here.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        build-essential \
+        gfortran \
+        libopenblas-dev \
+        pkg-config && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# dm-tree's vendored abseil-cpp (20210324.2) bundles very old CMakeLists.txt files that recent cmake (>=4.0,
+# pulled in via pip's build isolation) hard-errors on unless told to allow them - same setting tox.ini passes
+# for the equivalent (non-containerized) CI job.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
+WORKDIR /deps
+
+COPY requirements-dev.txt requirements-ml.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-dev.txt -r requirements-ml.txt
