@@ -16,8 +16,10 @@ FROM python:${PYTHON_VERSION}-slim-bookworm
 # isolation, so they don't need to be installed here. cmake: dm-tree's setup.py does its own `cmake
 # --version` prerequisite check before building (unlike scipy, it doesn't rely on pip's build-isolation
 # cmake package for this). git: dm-tree's CMakeLists.txt fetches pybind11 via `FetchContent_Populate`/
-# `ExternalProject_Add`, which shells out to `git clone` at build time. The Ubuntu CI runner has both
-# cmake and git preinstalled by default, masking these requirements; this Debian slim base has neither.
+# `ExternalProject_Add`, which shells out to `git clone` at build time. wget/unzip: checks.yml's testml
+# job downloads and extracts the benchmark episodes archive, now running inside this image's steps rather
+# than directly on the CI runner. The Ubuntu CI runner has all of these preinstalled by default, masking
+# these requirements; this Debian slim base has none of them.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -26,7 +28,9 @@ RUN apt-get update && \
         libopenblas-dev \
         pkg-config \
         cmake \
-        git && \
+        git \
+        wget \
+        unzip && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
