@@ -75,9 +75,9 @@ jobs:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # Same value on every matrix leg (it only depends on the two requirements files and
-        # Dockerfile.ci-env, not matrix.python-version), so which leg "wins" the usual matrix-job-output
-        # ambiguity doesn't matter.
+        # Same value on every matrix leg (it only depends on the two requirements files, Dockerfile.ci-env,
+        # and docker/install-build-toolchain.sh, not matrix.python-version), so which leg "wins" the usual
+        # matrix-job-output ambiguity doesn't matter.
         outputs:
             image-hash: ${{ steps.image-hash.outputs.hash }}
         steps:
@@ -94,12 +94,13 @@ jobs:
                 run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
             # hashFiles() needs the checkout above to have already populated the workspace - it can't be
             # computed directly in deptry's/testml's own container: (see the tag comment below). Includes
-            # Dockerfile.ci-env itself, not just the requirements files: otherwise a Dockerfile-only change
-            # (e.g. adding a missing apt package) would keep the same tag, and the "already exists" check
-            # below would keep serving the stale pre-fix image forever.
+            # Dockerfile.ci-env and docker/install-build-toolchain.sh (COPY'd into it) too, not just the
+            # requirements files: otherwise a Dockerfile/toolchain-script-only change (e.g. adding a missing
+            # apt package) would keep the same tag, and the "already exists" check below would keep serving
+            # the stale pre-fix image forever.
             -   name: Compute image hash
                 id: image-hash
-                run: echo "hash=${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt', 'Dockerfile.ci-env') }}" >> "$GITHUB_OUTPUT"
+                run: echo "hash=${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt', 'Dockerfile.ci-env', 'docker/install-build-toolchain.sh') }}" >> "$GITHUB_OUTPUT"
             # Lets everything below skip the disk-space dance (and the build itself) when this exact
             # (python-version, requirements-hash) combination was already built and pushed - most runs, once
             # the cache is warm, since requirements change far less often than commits.
@@ -139,7 +140,8 @@ jobs:
                     cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml
                     cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml,mode=max
                     push: true
-                    # Tagged by a hash of requirements-dev.txt/requirements-ml.txt/Dockerfile.ci-env, not by
+                    # Tagged by a hash of requirements-dev.txt/requirements-ml.txt/Dockerfile.ci-env/
+                    # docker/install-build-toolchain.sh, not by
                     # commit SHA: the runnable tag is a mutable pointer any workflow run can overwrite, and
                     # checks.yml's concurrency group is scoped per-branch, so two different PRs' runs (or a
                     # PR vs. main) genuinely execute in parallel. Keying on content (not the commit) means
@@ -163,8 +165,9 @@ jobs:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # Same value on every matrix leg (it only depends on requirements-dev.txt and Dockerfile.ci-env, not
-        # matrix.python-version), so which leg "wins" the usual matrix-job-output ambiguity doesn't matter.
+        # Same value on every matrix leg (it only depends on requirements-dev.txt, Dockerfile.ci-env, and
+        # docker/install-build-toolchain.sh, not matrix.python-version), so which leg "wins" the usual
+        # matrix-job-output ambiguity doesn't matter.
         outputs:
             image-hash: ${{ steps.image-hash.outputs.hash }}
         steps:
@@ -179,11 +182,11 @@ jobs:
             -   name: Build image name
                 id: image-name
                 run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-            # Includes Dockerfile.ci-env itself, not just requirements-dev.txt - see build-ci-env-ml's
-            # equivalent step for why.
+            # Includes Dockerfile.ci-env and docker/install-build-toolchain.sh, not just requirements-dev.txt
+            # - see build-ci-env-ml's equivalent step for why.
             -   name: Compute image hash
                 id: image-hash
-                run: echo "hash=${{ hashFiles('requirements-dev.txt', 'Dockerfile.ci-env') }}" >> "$GITHUB_OUTPUT"
+                run: echo "hash=${{ hashFiles('requirements-dev.txt', 'Dockerfile.ci-env', 'docker/install-build-toolchain.sh') }}" >> "$GITHUB_OUTPUT"
             -   name: Check if CI-env image already exists
                 id: image-exists
                 run: |

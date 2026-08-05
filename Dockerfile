@@ -8,11 +8,13 @@ ARG FLATLAND_RL_REF
 
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl gcc build-essential wget zip ffmpeg git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/* && \
-    ffmpeg --help
+# See docker/install-build-toolchain.sh for what's installed and why - shared with Dockerfile.ci-env so a
+# toolchain fix needed by one doesn't silently stay missing from the other. Notably this is what supplies
+# gfortran/libopenblas-dev/pkg-config for numpy==1.26.4's from-source build on Pythons without a wheel -
+# previously missing here entirely (masked so far by docker.yml only building python-version 3.12, which
+# does have a numpy wheel).
+COPY docker/install-build-toolchain.sh /tmp/install-build-toolchain.sh
+RUN bash /tmp/install-build-toolchain.sh && rm /tmp/install-build-toolchain.sh && ffmpeg --help
 
 RUN curl -fsSL "https://raw.githubusercontent.com/flatland-association/flatland-rl/${FLATLAND_RL_REF}/requirements.txt" -o requirements.txt \
     && pip install --no-cache-dir -r requirements.txt

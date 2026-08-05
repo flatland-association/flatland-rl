@@ -11,32 +11,11 @@ ARG WITH_ML=true
 # checks.yml's "Install ffmpeg" step otherwise has to work around explicitly on the Ubuntu 24.04 runner.
 FROM python:${PYTHON_VERSION}-slim-bookworm AS base
 
-# ffmpeg: used by rendering tests. build-essential/gfortran/libopenblas-dev/pkg-config: numpy==1.26.4 (see
-# pyproject.toml's "numpy<2" pin - requirements-dev.txt/requirements-ml.txt both lock it to 1.26.4) has no
-# wheels for newer Pythons and builds from source - gfortran + libopenblas-dev + pkg-config are its meson
-# build requirements (Fortran + BLAS/LAPACK backend + config lookup); meson/ninja/pybind11 themselves come
-# from numpy's own PEP 517 build-requires via pip's build isolation, so they don't need to be installed
-# here. This applies to both variants since numpy is a requirements-dev.txt dependency, not just an ml one
-# (scipy, requirements-ml.txt-only, has the same "no wheel, builds from source" story and reuses these same
-# tools in the ml-true stage below). wget/unzip: the episodes-download step (test/testml)
-# runs inside this image's steps rather than directly on the CI runner. git: needed in both variants -
-# setuptools_scm shells out to `git describe --tags` during `pip install .` (checks.yml's test job does
-# this even on the non-ml image) to infer the package version; without it, the subprocess failure is
-# swallowed and surfaces as the misleading "setuptools-scm was unable to detect version" instead of a
-# "git: command not found". The Ubuntu CI runner has all of these preinstalled by default, masking these
-# requirements; this Debian slim base has none of them.
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        ffmpeg \
-        build-essential \
-        gfortran \
-        libopenblas-dev \
-        pkg-config \
-        wget \
-        unzip \
-        git && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# See docker/install-build-toolchain.sh for what's installed and why - shared with the sibling Dockerfile
+# so a toolchain fix needed by one doesn't silently stay missing from the other (this is literally how the
+# numpy build-toolchain packages in that script got added here first).
+COPY docker/install-build-toolchain.sh /tmp/install-build-toolchain.sh
+RUN bash /tmp/install-build-toolchain.sh && rm /tmp/install-build-toolchain.sh
 
 WORKDIR /deps
 
