@@ -200,7 +200,14 @@ jobs:
                     cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml
                     cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml,mode=max
                     push: true
-                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml
+                    # Tagged by commit SHA, not just Python version: this tag is a mutable pointer any
+                    # workflow run can overwrite, and checks.yml's concurrency group is scoped per-branch,
+                    # so two different PRs' runs (or a PR vs. main) genuinely execute in parallel - without
+                    # the SHA, one run's push could overwrite another's tag mid-flight, and testml below
+                    # could pull a different commit's requirements than the one it's actually testing. Can't
+                    # key on hashFiles(requirements-*.txt) instead: testml's `container:` (like `runs-on:`)
+                    # is resolved before that job's own checkout runs, so hashFiles() would see no files yet.
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml-${{ github.sha }}
             -   name: Check disk space
                 run: df . -h
 
@@ -217,7 +224,9 @@ jobs:
         # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
         # are baked into this image by build-ci-env-testml above - nothing left to install here.
         container:
-            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml
+            # Matches build-ci-env-testml's tag exactly (see the comment there for why it's SHA-qualified,
+            # not just Python-version).
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ github.sha }}
             credentials:
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
