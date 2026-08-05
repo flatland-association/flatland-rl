@@ -14,9 +14,10 @@ from flatland.utils.seeding import random_state_to_hashablestate
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
+@pytest.mark.parametrize("malfunction_interval", [540, 20])
 @pytest.mark.parametrize("seed", range(42, 58))
-def test_graph_transition_map_from_with_random_policy(seed):
-    grid_env, _, _ = env_generator(seed=seed)
+def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval):
+    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=malfunction_interval)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
     assert random_state_to_hashablestate(grid_env.np_random) == random_state_to_hashablestate(graph_env.np_random)
 
@@ -63,6 +64,18 @@ def test_graph_transition_map_from_with_random_policy(seed):
         data_dir = Path(tmpdirname)
         grid_trajectory = PolicyRunner.create_from_policy(env=grid_env, policy=RandomPolicy(), data_dir=data_dir / "one")
         graph_trajectory = PolicyRunner.create_from_policy(env=graph_env, policy=RandomPolicy(), data_dir=data_dir / "two", snapshot_interval=0, no_save=True)
+
+        def _any_malfunction(trajectory):
+            return trajectory.trains_rewards_dones_infos["info"].map(lambda info: info["malfunction"] > 0).any()
+
+        if malfunction_interval <= 20:
+            # only guaranteed frequent enough to reliably hit at least once across all seeds at this rate -
+            # the default (rarer) malfunction_interval may legitimately produce zero malfunctions for some seeds.
+            # N.B. exact malfunction/info equality between grid and graph is already covered below by
+            # compare_rewards_dones_infos (which diffs the full info dict, incl. malfunction) - this only
+            # additionally guarantees malfunctions weren't trivially absent on both sides.
+            assert _any_malfunction(grid_trajectory), "expected at least one malfunction in the grid env's run"
+            assert _any_malfunction(graph_trajectory), "expected at least one malfunction in the graph env's run"
 
         assert len(grid_trajectory.compare_arrived(graph_trajectory)) == 0
         assert len(grid_trajectory.compare_actions(graph_trajectory)) == 0
