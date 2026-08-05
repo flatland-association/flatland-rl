@@ -16,6 +16,13 @@ name: Build CI-env image
 # this a near-instant no-op once requirements-dev.txt/requirements-ml.txt stop changing, since every RUN
 # layer stays cache-hit - unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp
 # each other either.
+#
+# Known risk, deliberately not mitigated: if GHCR itself is unavailable, every job that depends on this
+# workflow fails outright - there's no fallback path (e.g. building the image locally and skipping the
+# registry). Considered and rejected as not worth the added complexity: GHCR shares GitHub's own
+# infrastructure/auth with Actions itself, so a GHCR outage severe enough to break this is likely to come
+# with broader GitHub Actions disruption anyway, making a bespoke fallback path low-value relative to its
+# upkeep cost (a second, rarely-exercised way to build/run everything that has to be kept working too).
 on:
     workflow_call:
         inputs:
