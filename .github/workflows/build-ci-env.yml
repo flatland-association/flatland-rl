@@ -1,0 +1,127 @@
+name: Build CI-env image
+
+# Reusable workflow: builds/pushes the CI-only dependency image (see Dockerfile.ci-env, a separate,
+# non-user-facing image from the ones docker.yml/publish.yml build and publish to end users). Used by
+# checks.yml's deptry/testml/test/examples jobs and publish.yml's pre-release test job alike, so the
+# build/cache-check/push logic - and any fix to it - only has to exist in one place.
+#
+# GHCR (not actions/cache) specifically because actions/cache caps out at 10GB per repository, shared across
+# every cache this repo uses (not per-job), evicting oldest-accessed first once exceeded:
+# https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows
+# A single ml tox env (torch/dm-tree/scipy etc.) already runs ~3GB - with 5 Python versions x 2 variants,
+# naively caching each venv/build would blow past 10GB on its own, causing exactly the kind of premature
+# eviction/thrashing (a cache saved this run gets evicted before the next run that could reuse it) this
+# whole approach exists to avoid. GHCR has no such cap (see ci-env-cleanup.yml instead, for the different
+# problem of it also having no automatic eviction). BuildKit's registry cache (cache-from/cache-to) makes
+# this a near-instant no-op once requirements-dev.txt/requirements-ml.txt stop changing, since every RUN
+# layer stays cache-hit - unlike actions/cache, multiple concurrent pushes to the same cache ref don't stomp
+# each other either.
+on:
+    workflow_call:
+        inputs:
+            python-version:
+                required: true
+                type: string
+            with-ml:
+                required: true
+                type: boolean
+            ref:
+                description: "Git ref to build the image's requirements/Dockerfile from - defaults to whatever ref triggered the calling workflow."
+                required: false
+                type: string
+                default: ""
+        outputs:
+            image-hash:
+                description: "Content hash of requirements-dev.txt(/-ml.txt)/Dockerfile.ci-env/docker/install-build-toolchain.sh baked into the built image's tag."
+                value: ${{ jobs.build.outputs.image-hash }}
+
+jobs:
+    build:
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: write
+        outputs:
+            image-hash: ${{ steps.image-hash.outputs.hash }}
+        steps:
+            -   uses: actions/checkout@v6
+                with:
+                    ref: ${{ inputs.ref || github.ref }}
+            -   name: Log in to GHCR
+                uses: docker/login-action@v4
+                with:
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+            -   uses: docker/setup-buildx-action@v4
+            -   name: Build image name
+                id: image-name
+                run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            -   name: Compute variant name
+                id: variant
+                run: echo "name=${{ inputs.with-ml && 'ml' || 'default' }}" >> "$GITHUB_OUTPUT"
+            # hashFiles() needs the checkout above to have already populated the workspace - it can't be
+            # computed directly in a consumer job's own container: (see the tag comment below). Includes
+            # Dockerfile.ci-env and docker/install-build-toolchain.sh (COPY'd into it), not just the
+            # requirements file(s): otherwise a Dockerfile/toolchain-script-only change (e.g. adding a
+            # missing apt package) would keep the same tag, and the "already exists" check below would keep
+            # serving the stale pre-fix image forever.
+            -   name: Compute image hash
+                id: image-hash
+                run: |
+                    if [ "${{ inputs.with-ml }}" = "true" ]; then
+                        echo "hash=${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt', 'Dockerfile.ci-env', 'docker/install-build-toolchain.sh') }}" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "hash=${{ hashFiles('requirements-dev.txt', 'Dockerfile.ci-env', 'docker/install-build-toolchain.sh') }}" >> "$GITHUB_OUTPUT"
+                    fi
+            # Lets everything below skip the disk-space dance (and the build itself) when this exact
+            # (python-version, variant, hash) combination was already built and pushed - most runs, once the
+            # cache is warm, since requirements change far less often than commits.
+            -   name: Check if CI-env image already exists
+                id: image-exists
+                run: |
+                    if docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}-${{ steps.image-hash.outputs.hash }}" > /dev/null 2>&1; then
+                        echo "exists=true" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "exists=false" >> "$GITHUB_OUTPUT"
+                    fi
+            -   name: Inspect disk
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    df -h
+                    docker system df
+            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
+            -   name: Prune docker system
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    docker system prune --all --force
+            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
+            -   name: Free disk space
+                if: steps.image-exists.outputs.exists != 'true'
+                run: |
+                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
+            -   name: Build and push CI-env image
+                if: steps.image-exists.outputs.exists != 'true'
+                uses: docker/build-push-action@v7
+                with:
+                    context: .
+                    file: Dockerfile.ci-env
+                    platforms: linux/amd64
+                    build-args: |
+                        PYTHON_VERSION=${{ inputs.python-version }}
+                        WITH_ML=${{ inputs.with-ml }}
+                    cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}
+                    cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ inputs.python-version }}-${{ steps.variant.outputs.name }},mode=max
+                    push: true
+                    # Tagged by a hash of requirements-dev.txt/requirements-ml.txt/Dockerfile.ci-env/
+                    # docker/install-build-toolchain.sh, not by commit SHA: the runnable tag is a mutable
+                    # pointer any workflow run can overwrite, and each calling workflow's own concurrency
+                    # group already allows genuinely-parallel runs across branches/PRs. Keying on content
+                    # (not the commit) means two runs with identical inputs safely share one tag/image, and
+                    # two with different inputs never collide, since they get different tags. A per-commit
+                    # tag would "solve" the race too, but at the cost of a fresh image (and GHCR tag) on
+                    # every commit even when nothing dependency-related changed, defeating the point of
+                    # caching.
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}-${{ steps.image-hash.outputs.hash }}
+            -   name: Check disk space
+                run: df . -h
