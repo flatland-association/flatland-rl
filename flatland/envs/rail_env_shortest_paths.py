@@ -1,16 +1,128 @@
-from collections import defaultdict
-from typing import List, Set, Tuple, Dict
+from collections import defaultdict, deque
+from typing import List, Set, Tuple
 
+import cython
 import matplotlib.pyplot as plt
 import numpy as np
 
-from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.utils.ordered_set import OrderedSet
+
+# mirrors flatland.core.grid.grid4_utils.MOVEMENT_ARRAY ([(-1,0),(0,1),(1,0),(0,-1)] for N/E/S/W), split into two
+# flat int tuples so _k_shortest_paths_search can index row/col deltas directly instead of unpacking a tuple-of-tuples
+MOVEMENT_ROW = (-1, 0, 1, 0)
+MOVEMENT_COL = (0, 1, 0, -1)
 
 
+def _k_shortest_paths_search(rail_grid, height, width, k, debug,
+                              target_row, target_col, target_direction, cutoff,
+                              forbidden_mask, shortest_paths, count, heap):
+    """
+    Modified-Dijkstra search loop extracted from `get_k_shortest_paths` so it can be cythonized in isolation
+    (see the accompanying rail_env_shortest_paths.pxd) - mutates `shortest_paths`, `count` and `heap` in place.
+
+    Deliberately no PEP 484 parameter annotations on this signature (unlike the rest of this module): the
+    accompanying .pxd fully declares this function's C-level signature, and Cython's pxd-augmentation rejects
+    a .py signature that also carries its own annotations ("Function signature does not match previous
+    declaration" - confirmed the hard way). Types are documented here instead, matching the .pxd exactly:
+
+    Parameters
+    ----------
+    rail_grid : unsigned short[:, :]
+    height, width, k, target_row, target_col, target_direction, cutoff : int
+        target_direction/cutoff use a -1 sentinel for "unconstrained" (see the .pxd)
+    debug : bool
+    forbidden_mask : unsigned char[:, :]
+    shortest_paths : list
+        mutated in place
+    count : int[:]
+        mutated in place
+    heap : dict
+        mutated in place
+    """
+    cost: cython.int
+    row: cython.int
+    col: cython.int
+    direction: cython.int
+    idx: cython.int
+    cell_transition: cython.int
+    nesw: cython.int
+    new_direction: cython.int
+    new_row: cython.int
+    new_col: cython.int
+
+    # while B is not empty and countt < K:
+    while heap and len(shortest_paths) < k:
+        if debug:
+            print("iteration heap={}, shortest_paths={}".format(heap, shortest_paths))
+        # – let Pu be the shortest cost path in B with cost C
+        cost = min(heap)
+        pu = heap[cost].popleft()
+        if not heap[cost]:
+            del heap[cost]
+        u: Waypoint = pu[-1]
+        if debug:
+            print("  looking at pu={}".format(pu))
+
+        row, col = u.position
+        direction = u.direction
+        #     – countu = countu + 1
+        idx = ((row * width) + col) * 4 + direction
+        count[idx] += 1
+
+        # – if u = t then P = P U {Pu}
+        if row == target_row and col == target_col:
+            if target_direction == -1 or target_direction == direction:
+                if debug:
+                    print(" found of length {} {}".format(len(pu), pu))
+                shortest_paths.append(pu)
+
+        # – if countu ≤ K then
+        # CAVEAT: do not allow for loopy paths
+        elif count[idx] <= k:
+            cell_transition = rail_grid[row, col]
+            nesw = (cell_transition >> ((3 - direction) * 4)) & 0xF
+            if debug:
+                print("  looking at neighbors of u={}, nesw={:04b}".format(u, nesw))
+            #     for each vertex v adjacent to u:
+            for new_direction in range(4):
+                if debug:
+                    print("        looking at new_direction={}".format(new_direction))
+                if (nesw >> (3 - new_direction)) & 1:
+                    new_row = row + MOVEMENT_ROW[new_direction]
+                    new_col = col + MOVEMENT_COL[new_direction]
+                    if debug:
+                        print("        looking at neighbor v={}".format((new_row, new_col, new_direction)))
+
+                    v = Waypoint(position=(new_row, new_col), direction=new_direction)
+                    # CAVEAT: do not allow for loopy paths
+                    if v in pu:
+                        continue
+
+                    # – let Pv be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path Pu
+                    pv = pu + (v,)
+
+                    # ignore if cutoff reached
+                    if cutoff != -1 and len(pv) > cutoff:
+                        if debug:
+                            print(f"        ignoring v={v} as out cutoff {cutoff} reached.")
+                        continue
+                    # ignore if out of bounds
+                    if new_row >= height or new_row < 0 or new_col >= width or new_col < 0:
+                        if debug:
+                            print(f"        ignoring v={v} as out out bounds ({height, width}).")
+                        continue
+                    # ignore if in forbidden_cells
+                    if forbidden_mask[new_row, new_col]:
+                        if debug:
+                            print(f"        ignoring v={v} as in forbidden_cells.")
+                        continue
+                    #     – insert Pv into B
+                    heap[len(pv)].append(pv)
+
+
+@cython.profile(True)
 def get_k_shortest_paths(env: "RailEnv",
                          source_position: Tuple[int, int],
                          source_direction: int,
@@ -61,85 +173,44 @@ def get_k_shortest_paths(env: "RailEnv",
     # P =empty,
     shortest_paths: List[Tuple[Waypoint]] = []
 
-    # countu: number of shortest paths found to node u
-    # countu = 0, for all u in V
-    count: Dict[Tuple[int, int, int], int] = defaultdict(int)
+    # countu: number of shortest paths found to node u, for all u in V - as a flat C-int array indexed by
+    # (row, col, direction) instead of a dict keyed by tuple
+    count = np.zeros(height * width * 4, dtype=np.intc)
 
-    # B is a heap data structure containing paths
-    # N.B. use OrderedSet to make result deterministic!
-    heap: Dict[int, OrderedSet[Tuple[Waypoint]]] = defaultdict(OrderedSet)
+    # forbidden_cells as a fixed (height, width) mask, built once - never Optional inside the hot loop.
+    # Cells outside the grid are skipped rather than indexed (mirrors the old `v.position in forbidden_cells`
+    # set-membership check, which silently never matched an out-of-bounds cell instead of raising).
+    forbidden_mask = np.zeros((height, width), dtype=np.uint8)
+    if forbidden_cells is not None:
+        for (fr, fc) in forbidden_cells:
+            if 0 <= fr < height and 0 <= fc < width:
+                forbidden_mask[fr, fc] = 1
+
+    # B is a heap data structure containing paths, bucketed by path length: Dict[int, deque[Tuple[Waypoint]]]
+    # N.B. use deque per bucket to make result deterministic (insertion order == retrieval order); OrderedSet's
+    # de-dup isn't needed here since a given path can never be enqueued into the same bucket twice (each pu is
+    # removed from its bucket before being expanded, and a single expansion's 4 new_directions always produce
+    # distinct Waypoints since direction alone differs)
+    # NOT annotated `: Dict[...]` - in compiled mode Cython enforces that as an exact-`dict` type check, which
+    # rejects `defaultdict` (a dict subclass) at assignment ("Expected dict, got collections.defaultdict")
+    heap = defaultdict(deque)
 
     # insert path Ps = {s} into B with cost 0
-    heap[1].add((Waypoint(source_position, source_direction),))
+    heap[1].append((Waypoint(source_position, source_direction),))
 
-    # while B is not empty and countt < K:
-    while heap and len(shortest_paths) < k:
-        if debug:
-            print("iteration heap={}, shortest_paths={}".format(heap, shortest_paths))
-        # – let Pu be the shortest cost path in B with cost C
-        cost = min(heap)
-        pu = next(iter(heap[cost]))
-        u: Waypoint = pu[-1]
-        if debug:
-            print("  looking at pu={}".format(pu))
-
-        #     – B = B − {Pu }
-        heap[cost].remove(pu)
-        if not heap[cost]:
-            del heap[cost]
-        #     – countu = countu + 1
-
-        urcd = (*u.position, u.direction)
-        count[urcd] += 1
-
-        # – if u = t then P = P U {Pu}
-        if u.position == target_position:
-            if target_direction is None or (target_direction == u.direction):
-                if debug:
-                    print(" found of length {} {}".format(len(pu), pu))
-                shortest_paths.append(pu)
-
-        # – if countu ≤ K then
-        # CAVEAT: do not allow for loopy paths
-        elif count[urcd] <= k:
-            possible_transitions = rail.get_transitions((urcd[:2], urcd[2]))
-            if debug:
-                print("  looking at neighbors of u={}, transitions are {}".format(u, possible_transitions))
-            #     for each vertex v adjacent to u:
-            for new_direction in range(4):
-                if debug:
-                    print("        looking at new_direction={}".format(new_direction))
-                if possible_transitions[new_direction]:
-                    new_position = get_new_position(u.position, new_direction)
-                    if debug:
-                        print("        looking at neighbor v={}".format((*new_position, new_direction)))
-
-                    v = Waypoint(position=new_position, direction=new_direction)
-                    # CAVEAT: do not allow for loopy paths
-                    if v in pu:
-                        continue
-
-                    # – let Pv be a new path with cost C + w(u, v) formed by concatenating edge (u, v) to path Pu
-                    pv = pu + (v,)
-
-                    # ignore if cutoff reached
-                    if cutoff is not None and len(pv) > cutoff:
-                        if debug:
-                            print(f"        ignoring v={v} as out cutoff {cutoff} reached.")
-                        continue
-                    # ignore if out of bounds
-                    r, c = v.position
-                    if r >= height or r < 0 or c >= width or c < 0:
-                        if debug:
-                            print(f"        ignoring v={v} as out out bounds ({height, width}).")
-                        continue
-                    # ignore if in forbidden_cells
-                    if forbidden_cells is not None and v.position in forbidden_cells:
-                        if debug:
-                            print(f"        ignoring v={v} as in forbidden_cells.")
-                        continue
-                    #     – insert Pv into B
-                    heap[len(pv)].add(pv)
+    target_row, target_col = target_position
+    # rail.grid can carry a non-canonical dtype for envs loaded via persistence.py (np.array(...) there infers
+    # int64, not uint16) - the compiled Cython path's typed memoryview requires an exact dtype match, whereas
+    # the pure-Python fallback tolerates any integer dtype; normalize once here so behavior doesn't depend on
+    # whether the Cython extension happens to be compiled.
+    rail_grid = np.ascontiguousarray(rail.grid, dtype=np.uint16)
+    _k_shortest_paths_search(
+        rail_grid, height, width, k, debug,
+        target_row, target_col,
+        -1 if target_direction is None else target_direction,
+        -1 if cutoff is None else cutoff,
+        forbidden_mask, shortest_paths, count, heap,
+    )
 
     # return P
     return shortest_paths

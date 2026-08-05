@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "setuptools_scm>=8"]
+requires = ["setuptools>=74.1.0", "setuptools_scm>=8", "cython>=3.2.9"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -25,6 +25,7 @@ dependencies = [
     "boto3",
     "click",
     "crowdai_api",
+    "cython>=3.2.9", # needed at runtime too: flatland/envs/step_utils/state_machine.py uses `cython.int` locals for a hot-path optimization, whether or not the module is actually compiled.
     "fastenum",
     "importlib_resources",
     "ipycanvas",
@@ -102,6 +103,23 @@ flatland-trajectory-generate-from-policy = "flatland.trajectories.policy_runner:
 flatland-trajectory-generate-from-metadata = "flatland.trajectories.policy_grid_runner:generate_trajectories_from_metadata"
 flatland-trajectory-evaluate = "flatland.evaluators.trajectory_evaluator:evaluate_trajectory"
 flatland-trajectory-analysis = "flatland.evaluators.trajectory_analysis:cli"
+
+[tool.setuptools]
+# declarative Cython extension build (https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html).
+# cython is a [build-system] requires entry above, so it's available in every build - these modules now compile
+# automatically whenever a C compiler is also available, with no extra flags needed. optional = true covers a
+# missing/broken *C compiler* gracefully (falls back to the plain-Python sources with a warning instead of
+# failing - see tox.ini's verify-build-no-gcc env); it does NOT cover Cython itself being absent, since
+# `python -m build` (isolated or not, per PEP 517/518) always mandates every [build-system] requires entry be
+# satisfiable, and fails outright rather than falling back if one is missing. Only an sdist is published to
+# PyPI (tox.ini's [testenv:build]) - deliberately no wheel - since a wheel's platform/ABI tag is decided by
+# whether Cython ever attempted to cythonize a module, not by whether the compile succeeded, so any wheel built
+# here would end up platform-tagged rather than universal.
+ext-modules = [
+    { name = "flatland.envs.step_utils.state_machine", sources = ["flatland/envs/step_utils/state_machine.py"], optional = true },
+    { name = "flatland.envs.step_utils.states", sources = ["flatland/envs/step_utils/states.py"], optional = true },
+    { name = "flatland.envs.rail_env_shortest_paths", sources = ["flatland/envs/rail_env_shortest_paths.py"], optional = true },
+]
 
 [tool.setuptools.packages]
 find = { }

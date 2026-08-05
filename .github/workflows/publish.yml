@@ -18,7 +18,7 @@ jobs:
         # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
         # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
         # into shell instead of routing it through `env:`, the exact script-injection shape fixed below.
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Download actionlint
@@ -31,7 +31,7 @@ jobs:
 
     release-please:
         if: ${{ github.event_name == 'push' }}
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: write
             pull-requests: write
@@ -134,6 +134,8 @@ jobs:
                     pip install tox tox-gh-actions
             -   name: Build new package
                 run: tox run -e build
+            -   name: Verify dist is a pure-Python sdist (no wheel)
+                run: python scripts/verify_cython_extension_build.py --dist-dir dist --artifact sdist --expect pure-python
             -   name: Publish package to PyPI
                 uses: pypa/gh-action-pypi-publish@release/v1
                 with:
@@ -152,7 +154,7 @@ jobs:
         # https://github.com/orgs/community/discussions/45058
         if: ${{ !failure() && !cancelled() && github.event_name == 'workflow_dispatch' && inputs.version != '' }}
         needs: [ test ]
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         environment: test-pypi
         # https://docs.pypi.org/trusted-publishers/using-a-publisher/
         permissions:
@@ -220,7 +222,7 @@ jobs:
         # needs-implies-success() condition would otherwise block this job.
         if: ${{ !cancelled() && (needs.publish-pypi.result == 'success' || needs.publish-test-pypi.result == 'success') }}
         needs: [ publish-pypi, publish-test-pypi ]
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: read
             packages: write

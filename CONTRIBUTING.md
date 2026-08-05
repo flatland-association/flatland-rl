@@ -171,6 +171,27 @@ Renders the scene into a image (screenshot):
 renderer.gl.save_image("filename.bmp")
 ```
 
+### Cython
+
+A few hot-path modules are compiled with [Cython](https://cython.org/) for extra performance whenever Cython
+and a C compiler are available - which is automatic for any build from source, since `cython` is a
+`[build-system] requires` entry in `pyproject.toml`. Two Cython approaches are relevant here:
+
+- We declare and build the extension modules via `pyproject.toml`'s `[tool.setuptools] ext-modules`
+  (see [Compiling with setuptools](https://docs.cython.org/en/latest/src/userguide/compilation_setuptools.html)),
+  which lets the modules be compiled without a `setup.py`. Each entry is `optional = true`, so a missing C
+  compiler doesn't fail the build - it just falls back to the plain-Python sources with a warning per module.
+- Only an sdist is published to PyPI, deliberately no wheel: a wheel's platform/ABI tag is decided by whether
+  Cython ever *attempted* to cythonize a module, not by whether the compile actually succeeded, so any wheel
+  built here (Cython being unconditionally available now) would end up platform-tagged rather than universal -
+  publishing that would mean other Python versions/OSes get no matching wheel at all. `tox.ini`'s
+  `[testenv:build]` (used for the real PyPI publish and by `checks.yml`'s own `build` check) builds `--sdist`
+  only for exactly this reason - see `CLAUDE.md`'s "Cython-accelerated hot paths" section for the full story.
+- The accelerated modules stay plain, fully-interpretable `.py` files - Cython's
+  [pure Python mode](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd) - so if you
+  need to add type declarations for further speed-ups, do so via a companion `.pxd` file rather than converting
+  the module to `.pyx`, keeping it importable as ordinary Python when Cython isn't used.
+
 ### Type Hints
 
 We use type hints ([PEP 484](https://www.python.org/dev/peps/pep-0484/)) for better readability and better IDE support:

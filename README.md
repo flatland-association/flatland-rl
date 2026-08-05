@@ -50,6 +50,40 @@ python -m pip install flatland-rl
 
 This is the preferred method to install Flatland, as it will always install the most recent stable release.
 
+### Cython-accelerated build
+
+A few hot-path modules are compiled with [Cython](https://cython.org/) for extra performance **automatically**,
+as part of the normal install above, whenever a working C compiler is available - no extra flags needed.
+Cython itself doesn't need to be installed manually either: it's a `[build-system] requires` entry in
+`pyproject.toml`, so pip provisions it automatically as part of the build.
+
+**Requirement:** a working C compiler (e.g. `gcc`/`clang` on Linux/macOS, or the Microsoft C++ Build Tools on
+Windows). Compilation is optional and best-effort: if a compiler is missing, the build falls back to the
+plain-Python sources instead of failing, printing a warning for each module it could not compile. Pass `-v` to
+pip (`python -m pip install -v flatland-rl`) to see it - by default pip hides the underlying build output on
+success. The install still succeeds either way - you get the plain-Python modules, just without the Cython
+speed-up.
+
+**Forcing a plain-Python build:** there's no dedicated flag for this - make the build think no C compiler is
+available instead, the same mechanism this repo's own CI relies on to test the fallback path:
+
+```shell
+CC=/nonexistent-cc CXX=/nonexistent-cxx python -m pip install flatland-rl
+```
+
+(or `CC=/nonexistent-cc CXX=/nonexistent-cxx pip install -e .` from a checkout). This produces the same
+per-module warning output as a genuinely missing compiler - expected and harmless, the install still succeeds
+as pure-Python.
+
+Only a source distribution (sdist) is published to PyPI - there's no prebuilt wheel - so this always builds
+from source on your own machine. That's deliberate: a wheel with a
+Cython extension gets tagged to one specific Python version/platform/ABI the moment Cython even *attempts* to
+compile it, regardless of whether the compile actually succeeds - publishing one would mean every other Python
+version or OS gets no matching wheel at all. Building from source sidesteps that, at the cost of needing
+Python's standard packaging tools, and failing outright in environments that categorically refuse to build from
+source (e.g. `pip install --only-binary=:all:`, some locked-down/air-gapped setups).
+
+
 🚀 Releases
 ---
 

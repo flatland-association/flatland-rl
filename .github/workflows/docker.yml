@@ -16,7 +16,7 @@ jobs:
         # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
         # (via its shellcheck integration) `run:` steps that interpolate untrusted `${{ }}` input directly
         # into shell instead of routing it through `env:`.
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         steps:
             -   uses: actions/checkout@v6
             -   name: Download actionlint
@@ -28,7 +28,7 @@ jobs:
                 shell: bash
 
     docker-publish:
-        runs-on: ubuntu-22.04
+        runs-on: ubuntu-24.04
         permissions:
             contents: read
             packages: write

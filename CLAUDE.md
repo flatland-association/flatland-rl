@@ -37,6 +37,21 @@ are installed, and are run from the repo root. `tox` wraps most of these into re
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
 - **Full tox matrix**: `tox` (runs everything across Python 3.10–3.13 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
+- **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
+  `tox -e py3.12-verify-cython-build`. To manually build in place and check (Cython auto-provisions via
+  `[build-system] requires` - no need to `pip install cython` yourself first): `python -c "from setuptools
+  import setup; setup()" build_ext --inplace`, then confirm e.g. `python -c "import
+  flatland.envs.step_utils.state_machine as m; assert m.__file__.endswith('.so')"`. Clean up compiled artifacts
+  afterward with `rm -rf build && find flatland \( -name '*.c' -o -name '*.so' \) -print0 | xargs -0 rm -f`
+  (find-based rather than a hardcoded per-module glob, so it still catches every compiled artifact if an
+  `ext-modules` entry moves out of `step_utils` or a new one is added elsewhere under `flatland/`). To force the
+  plain-Python fallback instead (e.g. to reproduce
+  `verify-build-no-gcc`'s behavior), fake a missing compiler: `CC=/nonexistent-cc CXX=/nonexistent-cxx python -c
+  "from setuptools import setup; setup()" build_ext --inplace`.
+- **Profiling notebooks** (`benchmarks/flatland_performance_profiling.ipynb`,
+  `benchmarks/benchmark_k_shortest_paths_profiling.ipynb`): `tox -e py3.13-profiling` /
+  `tox -e py3.13-profiling-get-k-shortest-paths` — use Python 3.13, not 3.12 (see the Cython section below for
+  why the LOCAL_Cython results are otherwise silently missing from the generated plots).
 
 ## Architecture
 
@@ -85,6 +100,63 @@ match. Passing a plain `float` for either instead (as opposed to a `Fraction`) c
 into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
 `Fraction`-only invariant assumed by `cached_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
 doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+
+### Cython-accelerated hot paths (`ext-modules`)
+
+A handful of hot-path modules are compiled with Cython **by default**, declared in `pyproject.toml`'s
+`[tool.setuptools] ext-modules` (currently `flatland/envs/step_utils/state_machine.py`,
+`flatland/envs/step_utils/states.py`, `flatland/envs/rail_env_shortest_paths.py`) with `optional = true`.
+`cython` is itself a `[build-system] requires` entry, so pip/build isolation provisions it automatically into
+every build — combined with `optional = true`, this means the ext-modules compile automatically whenever a C
+compiler happens to be available, with zero extra flags, and gracefully fall back to the plain-Python sources
+(with a warning per module) when one isn't — see the README's "Cython-accelerated build" section for the
+end-user-facing version of this, including how to force the fallback deliberately (fake a missing compiler via
+`CC`/`CXX` — there's no dedicated opt-out flag).
+
+**Only an sdist is published to PyPI — no wheel — and this is deliberate, not an oversight.** A wheel's
+platform/ABI tag is decided by whether Cython ever *attempted* to cythonize a module, not by whether the final
+C-compile succeeded: a wheel built with Cython present but the compiler faked missing (verified empirically
+this session) still comes out tagged e.g. `cp313-cp313-linux_aarch64`, never the universal `py2.py3-none-any`
+one flatland-rl has always shipped. Since `cython` is now unconditionally in `[build-system] requires`, there is
+no build invocation — isolated or not — that can produce a wheel without Cython attempting to process it, so
+there's no way left to get a universal-tagged wheel short of a real per-platform build matrix (`cibuildwheel`,
+Windows/macOS CI from scratch — not currently done; every CI job runs on `ubuntu-24.04` only). Publishing
+sdist-only sidesteps the whole problem: an sdist has no platform tag at all, so every install builds — and
+compiles or falls back — on the *user's own* machine. `tox.ini`'s `[testenv:build]` (used by
+`publish-pypi`/`publish-test-pypi` in `publish.yml` and `checks.yml`'s own `build` job) builds `--sdist` only
+for exactly this reason.
+
+Each accelerated module stays an ordinary, fully-interpretable `.py` file (Cython's ["pure Python
+mode"](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd)); C-level types are added
+via a same-named companion `.pxd` file next to it (e.g. `rail_env_shortest_paths.pxd`), which Cython picks up
+automatically at compile time and which the plain-Python interpreter ignores entirely — so a `.pxd` can declare
+things (`cdef`/`cpdef` function signatures, typed memoryviews, `cdef class`) that would break plain-Python
+execution if they lived in the `.py` file itself; only *local variable* typing (`var: cython.int = ...`, matching
+`state_machine.py`'s style) can go directly in the `.py` body, since `.pxd` files can't declare function-body
+locals. `state_machine.py` unconditionally does `import cython` and uses `cython.int`-annotated locals
+regardless of whether the module ends up compiled — this works fine uncompiled too, since `cython`'s
+pure-Python shadow package provides working fallback stubs for these. CI cross-checks all build outcomes via
+`scripts/verify_cython_extension_build.py`, which inspects either a built wheel (`--artifact wheel`, the
+default) or the published sdist (`--artifact sdist`): `verify-build-no-gcc` (Cython present, compiler faked
+missing) asserts a wheel's pure-Python fallback via `--expect pure-python` — there's deliberately no
+`verify-build-no-cython` equivalent, since `python -m build` (isolated or not) always mandates every
+`[build-system] requires` entry be satisfiable and fails outright rather than falling back if Cython itself is
+missing (`optional = true` only ever covers a missing *compiler*, confirmed the hard way — an earlier version
+of this env tried `--no-isolation` with cython omitted from `deps` and just got `ERROR Missing dependencies:
+cython>=3.2.9`).
+`py{3.10,3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
+sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's real compilation via `--expect
+compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
+by construction, but guards against e.g. stray `.c`/`.so` files accidentally being packaged).
+
+**Known gap: `cProfile` can't see calls into compiled Cython functions on Python 3.12.** Python 3.12's `cProfile`
+registers itself via PEP 669's `sys.monitoring` instead of the legacy `PyEval_SetProfile` hook, and Cython's own
+`sys.monitoring` bridge (`CYTHON_USE_SYS_MONITORING`) is gated to Python ≥3.13 — confirmed independent of the
+Cython version (reproduced identically with `cython==3.2.9` and the previously-pinned `3.3.0a1`; upgrading
+Cython alone does not fix it). `@cython.profile(True)` is set on `get_k_shortest_paths` for when this gets
+fixed upstream, but on 3.12 it's a no-op — this is exactly why `checks.yml`'s `profiling`/
+`profiling-get-k-shortest-paths` jobs publish their gist/PR-comment results from the Python **3.13** matrix leg,
+not 3.12 (see `cython/cython#5470`).
 
 ### `flatland/ml/`
 
@@ -139,3 +211,7 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 - Use `abc.ABCMeta`/`abc.abstractmethod` for extension-point base classes.
 - Docstrings follow numpydoc format; type hints are expected throughout (PEP 484).
 - Avoid currying/closures to encapsulate state — prefer a class when the object needs multiple methods.
+- Cython speed-ups go through `.pxd`-augmented pure-Python `.py` files, never `.pyx` — see "Cython-accelerated
+  hot paths" above.
+- Read packaged resource files (e.g. rail data shipped inside a subpackage) via `importlib_resources`
+  (`path`/`read_binary`), not a raw path relative to the module.
