@@ -80,18 +80,9 @@ jobs:
         # ambiguity doesn't matter.
         outputs:
             image-hash: ${{ steps.image-hash.outputs.hash }}
-            # True if the image is confirmed available in GHCR right now, whether because it already existed
-            # or because we just pushed it successfully. False for any GHCR-availability problem (login,
-            # push, or the final verify step below all tolerate failure via continue-on-error) - deptry/
-            # testml below key off this to decide container: (fast, shared image) vs *-fallback (this job's
-            # -fallback sibling: local build, no registry involved at all). A genuine Dockerfile.ci-env bug
-            # isn't masked by this: the *-fallback jobs build the same Dockerfile themselves and fail loudly
-            # if it's actually broken, just via a different job than usual.
-            push-succeeded: ${{ steps.image-exists.outputs.exists == 'true' || steps.verify-push.outcome == 'success' }}
         steps:
             -   uses: actions/checkout@v6
             -   name: Log in to GHCR
-                continue-on-error: true
                 uses: docker/login-action@v4
                 with:
                     registry: ghcr.io
@@ -137,7 +128,6 @@ jobs:
                     curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
             -   name: Build and push CI-env image (ml variant)
                 if: steps.image-exists.outputs.exists != 'true'
-                continue-on-error: true
                 uses: docker/build-push-action@v7
                 with:
                     context: .
@@ -158,14 +148,6 @@ jobs:
                     # would "solve" the race too, but at the cost of a fresh image (and GHCR tag) on every
                     # commit even when nothing dependency-related changed, defeating the point of caching.
                     tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml-${{ steps.image-hash.outputs.hash }}
-            # Re-checks existence rather than trusting the build/push step's own outcome: build-push-action
-            # can fail for reasons unrelated to GHCR (a genuine Dockerfile bug), and outcome alone can't tell
-            # the two apart - actually confirming the tag is pullable is the real signal deptry/testml need.
-            -   name: Verify image is available in GHCR
-                if: steps.image-exists.outputs.exists != 'true'
-                id: verify-push
-                continue-on-error: true
-                run: docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml-${{ steps.image-hash.outputs.hash }}" > /dev/null 2>&1
             -   name: Check disk space
                 run: df . -h
 
@@ -185,12 +167,9 @@ jobs:
         # matrix.python-version), so which leg "wins" the usual matrix-job-output ambiguity doesn't matter.
         outputs:
             image-hash: ${{ steps.image-hash.outputs.hash }}
-            # See build-ci-env-ml's equivalent output for the full rationale.
-            push-succeeded: ${{ steps.image-exists.outputs.exists == 'true' || steps.verify-push.outcome == 'success' }}
         steps:
             -   uses: actions/checkout@v6
             -   name: Log in to GHCR
-                continue-on-error: true
                 uses: docker/login-action@v4
                 with:
                     registry: ghcr.io
@@ -228,7 +207,6 @@ jobs:
                     curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
             -   name: Build and push CI-env image (default variant)
                 if: steps.image-exists.outputs.exists != 'true'
-                continue-on-error: true
                 uses: docker/build-push-action@v7
                 with:
                     context: .
@@ -241,19 +219,11 @@ jobs:
                     cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-default,mode=max
                     push: true
                     tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-default-${{ steps.image-hash.outputs.hash }}
-            # See build-ci-env-ml's equivalent step for why this re-checks rather than trusting outcome.
-            -   name: Verify image is available in GHCR
-                if: steps.image-exists.outputs.exists != 'true'
-                id: verify-push
-                continue-on-error: true
-                run: docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-default-${{ steps.image-hash.outputs.hash }}" > /dev/null 2>&1
             -   name: Check disk space
                 run: df . -h
 
     deptry:
         needs: [ build-ci-env-ml ]
-        # See deptry-fallback below for the GHCR-unavailable path.
-        if: needs.build-ci-env-ml.outputs.push-succeeded == 'true'
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -295,56 +265,8 @@ jobs:
                     deptry . --ignore DEP003 --pep621-dev-dependency-groups ml -ee flatland/ml -ee tests/ml -ee "notebooks/rllib_demo.*" --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
                     deptry . --ignore DEP003 --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
 
-    # GHCR-unavailable fallback for deptry above: instead of pulling a pre-built shared image, builds
-    # Dockerfile.ci-env locally in this same job (no push, no registry cache, no `container:` - `container:`
-    # would need a pull from the very registry we already know is unreachable) and runs the identical
-    # commands via `docker run`. Slower (rebuilds from scratch every time, no cross-run caching at all) but
-    # doesn't depend on GHCR in any way. Keep the "Run deptry" script in sync with deptry's own copy above.
-    deptry-fallback:
-        needs: [ build-ci-env-ml ]
-        if: needs.build-ci-env-ml.outputs.push-succeeded != 'true'
-        runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   uses: actions/checkout@v6
-            -   name: Build CI-env image locally (ml variant, no push)
-                run: |
-                    docker build \
-                        -f Dockerfile.ci-env \
-                        --build-arg PYTHON_VERSION=${{ matrix.python-version }} \
-                        --build-arg WITH_ML=true \
-                        -t ci-env-local:py${{ matrix.python-version }}-ml \
-                        .
-            -   name: Run deptry
-                env:
-                    PINNED_AND_DYNAMICALLY_LOADED_MODULES: "cachetools|dm-tree|wandb|contourpy|scipy|rpds-py"
-                    DEV_MODULES: "coverage|deptry|flake8|flake8-eradicate|jupyter|jupyter-core|nbmake|notebook|pip-tools|pytest|pytest-retry|tox|testcontainers|pytest-xdist|cython"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    docker run --rm \
-                        -v "${{ github.workspace }}:${{ github.workspace }}" -w "${{ github.workspace }}" \
-                        -e PINNED_AND_DYNAMICALLY_LOADED_MODULES -e DEV_MODULES -e CMAKE_POLICY_VERSION_MINIMUM \
-                        ci-env-local:py${{ matrix.python-version }}-ml \
-                        bash -c '
-                            set -euo pipefail
-                            python --version
-                            python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python benchmarks/*.ipynb
-                            python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python notebooks/*.ipynb
-                            deptry . --verbose --ignore DEP003 --pep621-dev-dependency-groups dev,ml -ee flatland/ml -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                            deptry . --ignore DEP003 --pep621-dev-dependency-groups dev -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                            deptry . --ignore DEP003 --pep621-dev-dependency-groups ml -ee flatland/ml -ee tests/ml -ee "notebooks/rllib_demo.*" --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                            deptry . --ignore DEP003 --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                        '
-
     testml:
         needs: [ build-ci-env-ml ]
-        # See testml-fallback below for the GHCR-unavailable path.
-        if: needs.build-ci-env-ml.outputs.push-succeeded == 'true'
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -400,63 +322,8 @@ jobs:
                     CMAKE_POLICY_VERSION_MINIMUM: "3.5"
                 run: python -m pytest -n auto --retries 2 --retry-delay 5 tests/ml
 
-    # GHCR-unavailable fallback for testml above - see deptry-fallback's comment for the general rationale.
-    # Keep the "Run tests" script in sync with testml's own copy above.
-    testml-fallback:
-        needs: [ build-ci-env-ml ]
-        if: needs.build-ci-env-ml.outputs.push-succeeded != 'true'
-        runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   uses: actions/checkout@v6
-            -   name: Restore cached episodes
-                id: cache-episodes
-                uses: actions/cache/restore@v5
-                with:
-                    path: episodes
-                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            -   name: Download episodes
-                if: steps.cache-episodes.outputs.cache-hit != 'true'
-                run: |
-                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Save cached episodes
-                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: episodes
-                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            -   name: Build CI-env image locally (ml variant, no push)
-                run: |
-                    docker build \
-                        -f Dockerfile.ci-env \
-                        --build-arg PYTHON_VERSION=${{ matrix.python-version }} \
-                        --build-arg WITH_ML=true \
-                        -t ci-env-local:py${{ matrix.python-version }}-ml \
-                        .
-            -   name: Run tests
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
-                    PYTHONDONTWRITEBYTECODE: "1"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    docker run --rm \
-                        -v "${{ github.workspace }}:${{ github.workspace }}" -w "${{ github.workspace }}" \
-                        -e PYTHONPATH -e BENCHMARK_EPISODES_FOLDER -e PYTHONDONTWRITEBYTECODE -e CMAKE_POLICY_VERSION_MINIMUM \
-                        ci-env-local:py${{ matrix.python-version }}-ml \
-                        python -m pytest -n auto --retries 2 --retry-delay 5 tests/ml
-
     test:
         needs: [ build-ci-env-default ]
-        # See test-fallback below for the GHCR-unavailable path.
-        if: needs.build-ci-env-default.outputs.push-succeeded == 'true'
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -537,85 +404,6 @@ jobs:
                     flatland-trajectory-generate-from-metadata --help
                     flatland-trajectory-analysis --help
 
-    # GHCR-unavailable fallback for test above - see deptry-fallback's comment for the general rationale.
-    # Keep the "Run tests"/"Install flatland-rl and verify entry points" scripts in sync with test's own
-    # copies above.
-    test-fallback:
-        needs: [ build-ci-env-default ]
-        if: needs.build-ci-env-default.outputs.push-succeeded != 'true'
-        runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            # Same fetch-depth/fetch-tags reasoning as test's checkout above: setuptools_scm needs it
-            # regardless of whether `pip install .` runs via container: or via docker run below - either way
-            # it's the same mounted .git from this checkout.
-            -   uses: actions/checkout@v6
-                with:
-                    fetch-depth: 0
-                    fetch-tags: true
-            -   name: Restore cached episodes
-                id: cache-episodes
-                uses: actions/cache/restore@v5
-                with:
-                    path: episodes
-                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            -   name: Download episodes
-                if: steps.cache-episodes.outputs.cache-hit != 'true'
-                run: |
-                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            -   name: Save cached episodes
-                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: episodes
-                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            -   name: Build CI-env image locally (default variant, no push)
-                run: |
-                    docker build \
-                        -f Dockerfile.ci-env \
-                        --build-arg PYTHON_VERSION=${{ matrix.python-version }} \
-                        --build-arg WITH_ML=false \
-                        -t ci-env-local:py${{ matrix.python-version }}-default \
-                        .
-            -   name: Run tests
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
-                    PYTHONDONTWRITEBYTECODE: "1"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    docker run --rm \
-                        -v "${{ github.workspace }}:${{ github.workspace }}" -w "${{ github.workspace }}" \
-                        -e PYTHONPATH -e BENCHMARK_EPISODES_FOLDER -e PYTHONDONTWRITEBYTECODE -e CMAKE_POLICY_VERSION_MINIMUM \
-                        ci-env-local:py${{ matrix.python-version }}-default \
-                        python -m pytest -n auto --ignore=tests/ml -m "not slow"
-            -   name: Install flatland-rl and verify entry points
-                run: |
-                    docker run --rm \
-                        -v "${{ github.workspace }}:${{ github.workspace }}" -w "${{ github.workspace }}" \
-                        ci-env-local:py${{ matrix.python-version }}-default \
-                        bash -c '
-                            set -euo pipefail
-                            python --version
-                            pip install --no-cache-dir .
-                            python -c "from flatland.evaluators.service import FlatlandRemoteEvaluationService"
-                            python -c "import flatland.integrations.interactiveai.interactiveai"
-                            evaluator --help
-                            flatland-demo --help
-                            flatland-evaluator --help
-                            flatland-trajectory-evaluate --help
-                            flatland-trajectory-generate-from-policy --help
-                            flatland-trajectory-generate-from-metadata --help
-                            flatland-trajectory-analysis --help
-                        '
-
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
@@ -667,8 +455,6 @@ jobs:
 
     examples:
         needs: [ build-ci-env-default ]
-        # See examples-fallback below for the GHCR-unavailable path.
-        if: needs.build-ci-env-default.outputs.push-succeeded == 'true'
         runs-on: ubuntu-24.04
         permissions:
             contents: read
@@ -708,45 +494,6 @@ jobs:
                 run: |
                     python --version
                     python benchmarks/run_all_examples.py
-
-    # GHCR-unavailable fallback for examples above - see deptry-fallback's comment for the general
-    # rationale. Keep the "Run examples" script in sync with examples' own copy above.
-    examples-fallback:
-        needs: [ build-ci-env-default ]
-        if: needs.build-ci-env-default.outputs.push-succeeded != 'true'
-        runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   uses: actions/checkout@v6
-            -   name: Download Olten scenario
-                run: |
-                    wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
-                    mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
-            -   name: Build CI-env image locally (default variant, no push)
-                run: |
-                    docker build \
-                        -f Dockerfile.ci-env \
-                        --build-arg PYTHON_VERSION=${{ matrix.python-version }} \
-                        --build-arg WITH_ML=false \
-                        -t ci-env-local:py${{ matrix.python-version }}-default \
-                        .
-            -   name: Run examples
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    SCENARIOS_FOLDER: ${{ github.workspace }}/scenarios
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    docker run --rm \
-                        -v "${{ github.workspace }}:${{ github.workspace }}" -w "${{ github.workspace }}" \
-                        -e PYTHONPATH -e SCENARIOS_FOLDER -e CMAKE_POLICY_VERSION_MINIMUM \
-                        ci-env-local:py${{ matrix.python-version }}-default \
-                        bash -c 'python --version && python benchmarks/run_all_examples.py'
 
     verify-cython-build:
         runs-on: ubuntu-24.04
