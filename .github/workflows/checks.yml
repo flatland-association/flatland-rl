@@ -165,6 +165,10 @@ jobs:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # Same value on every matrix leg (it only depends on the two requirements files, not
+        # matrix.python-version), so which leg "wins" the usual matrix-job-output ambiguity doesn't matter.
+        outputs:
+            reqs-hash: ${{ steps.reqs-hash.outputs.hash }}
         steps:
             -   name: Inspect disk
                 run: |
@@ -189,6 +193,11 @@ jobs:
             -   name: Build image name
                 id: image-name
                 run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}-ci-env' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            # hashFiles() needs the checkout above to have already populated the workspace - it can't be
+            # computed directly in testml's own container: (see the tag comment below for why that matters).
+            -   name: Compute requirements hash
+                id: reqs-hash
+                run: echo "hash=${{ hashFiles('requirements-dev.txt', 'requirements-ml.txt') }}" >> "$GITHUB_OUTPUT"
             -   name: Build and push testml CI-env image
                 uses: docker/build-push-action@v6
                 with:
@@ -200,14 +209,15 @@ jobs:
                     cache-from: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml
                     cache-to: type=registry,ref=${{ steps.image-name.outputs.IMAGE_NAME }}:cache-py${{ matrix.python-version }}-ml,mode=max
                     push: true
-                    # Tagged by commit SHA, not just Python version: this tag is a mutable pointer any
-                    # workflow run can overwrite, and checks.yml's concurrency group is scoped per-branch,
-                    # so two different PRs' runs (or a PR vs. main) genuinely execute in parallel - without
-                    # the SHA, one run's push could overwrite another's tag mid-flight, and testml below
-                    # could pull a different commit's requirements than the one it's actually testing. Can't
-                    # key on hashFiles(requirements-*.txt) instead: testml's `container:` (like `runs-on:`)
-                    # is resolved before that job's own checkout runs, so hashFiles() would see no files yet.
-                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml-${{ github.sha }}
+                    # Tagged by a hash of requirements-dev.txt/requirements-ml.txt, not by commit SHA: the
+                    # runnable tag is a mutable pointer any workflow run can overwrite, and checks.yml's
+                    # concurrency group is scoped per-branch, so two different PRs' runs (or a PR vs. main)
+                    # genuinely execute in parallel. Keying on content (not the commit) means two commits
+                    # with identical requirements safely share one tag/image - and two commits with
+                    # different requirements never collide, since they get different tags. A per-commit tag
+                    # would "solve" the race too, but at the cost of a fresh image (and GHCR tag) on every
+                    # commit even when nothing dependency-related changed, defeating the point of caching.
+                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ matrix.python-version }}-ml-${{ steps.reqs-hash.outputs.hash }}
             -   name: Check disk space
                 run: df . -h
 
@@ -224,9 +234,12 @@ jobs:
         # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
         # are baked into this image by build-ci-env-testml above - nothing left to install here.
         container:
-            # Matches build-ci-env-testml's tag exactly (see the comment there for why it's SHA-qualified,
-            # not just Python-version).
-            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ github.sha }}
+            # Matches build-ci-env-testml's tag exactly (see the comment there for why it's keyed on a
+            # requirements hash, not just Python-version). Read via needs.*.outputs rather than computing
+            # hashFiles() here directly: container: is resolved before this job's own checkout runs, so
+            # hashFiles() would see no files yet - needs.*.outputs works because it's just a stored value
+            # from the already-completed build-ci-env-testml job, not a live filesystem read.
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-testml.outputs.reqs-hash }}
             credentials:
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
