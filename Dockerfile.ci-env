@@ -16,8 +16,12 @@ FROM python:${PYTHON_VERSION}-slim-bookworm AS base
 # libopenblas-dev + pkg-config are scipy's meson build requirements (Fortran + BLAS/LAPACK backend + config
 # lookup); meson/ninja/pybind11 themselves come from scipy's own PEP 517 build-requires via pip's build
 # isolation, so they don't need to be installed here. wget/unzip: the episodes-download step (test/testml)
-# runs inside this image's steps rather than directly on the CI runner. The Ubuntu CI runner has all of
-# these preinstalled by default, masking these requirements; this Debian slim base has none of them.
+# runs inside this image's steps rather than directly on the CI runner. git: needed in both variants -
+# setuptools_scm shells out to `git describe --tags` during `pip install .` (checks.yml's test job does
+# this even on the non-ml image) to infer the package version; without it, the subprocess failure is
+# swallowed and surfaces as the misleading "setuptools-scm was unable to detect version" instead of a
+# "git: command not found". The Ubuntu CI runner has all of these preinstalled by default, masking these
+# requirements; this Debian slim base has none of them.
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         ffmpeg \
@@ -26,7 +30,8 @@ RUN apt-get update && \
         libopenblas-dev \
         pkg-config \
         wget \
-        unzip && \
+        unzip \
+        git && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
@@ -34,11 +39,11 @@ WORKDIR /deps
 
 FROM base AS ml-true
 # cmake: dm-tree's setup.py does its own `cmake --version` prerequisite check before building (unlike
-# scipy, it doesn't rely on pip's build-isolation cmake package for this). git: dm-tree's CMakeLists.txt
-# fetches pybind11 via `FetchContent_Populate`/`ExternalProject_Add`, which shells out to `git clone` at
-# build time. Same "Ubuntu runner has it preinstalled, this Debian slim base doesn't" story as above.
+# scipy, it doesn't rely on pip's build-isolation cmake package for this). git is already installed in the
+# base stage above (also needed there for setuptools_scm); dm-tree's CMakeLists.txt additionally shells out
+# to it via `FetchContent_Populate`/`ExternalProject_Add` to fetch pybind11 at build time.
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends cmake git && \
+    apt-get install -y --no-install-recommends cmake && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 # dm-tree's vendored abseil-cpp (20210324.2) bundles very old CMakeLists.txt files that recent cmake
