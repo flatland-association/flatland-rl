@@ -1,6 +1,6 @@
 import ast
 import warnings
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 import networkx as nx
 from numpy.random.mtrand import RandomState
@@ -39,20 +39,9 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `UserWarning` is raised (e.g. if `rewards` is left `None` while `rail_env.rewards` is not
             `GraphRailEnv`'s own default).
         """
-        gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
-        resource_map = {}
-        for n in g.nodes:
-            r, c, d = ast.literal_eval(n)
-            if (r, c) in rail_env.resource_map.level_free_positions:
-                resource_map[n] = str((r, c, d % 2))
-            else:
-                resource_map[n] = str((r, c))
-        agent_waypoints = {
-            agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
-            for agent in rail_env.agents
-        }
-        agent_speeds = {agent.handle: agent.speed_counter.max_speed for agent in rail_env.agents}
+        resource_map = GraphRailEnv._grid_resource_map(rail_env, g)
+        agent_waypoints, agent_speeds = GraphRailEnv._grid_agent_waypoints_and_speeds(rail_env)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
 
         graph_env = GraphRailEnv.from_graph(
@@ -68,16 +57,48 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             seed=seed,
             rewards=rewards,
         )
+        GraphRailEnv._warn_if_rewards_mismatch(rail_env, graph_env)
+        # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
+        s = random_state_to_hashablestate(rail_env.np_random)
+        graph_env.np_random = random_state_from_hashablestate(s)
+        return graph_env
+
+    @staticmethod
+    def _grid_resource_map(rail_env: RailEnv, g: nx.DiGraph) -> Dict[str, str]:
+        """
+        Maps each grid-derived graph node to its resource: the underlying `(row, col)` cell, or
+        `(row, col, direction % 2)` for a level-free (diamond) crossing so the two crossing axes count
+        as distinct resources - mirrors `GridResourceMap.get_resource()`.
+        """
+        resource_map = {}
+        for n in g.nodes:
+            r, c, d = ast.literal_eval(n)
+            if (r, c) in rail_env.resource_map.level_free_positions:
+                resource_map[n] = str((r, c, d % 2))
+            else:
+                resource_map[n] = str((r, c))
+        return resource_map
+
+    @staticmethod
+    def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
+        """Converts `rail_env`'s agents' grid `Waypoint`-based waypoints/speeds into the plain
+        string-keyed shape `from_graph` expects."""
+        gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+        agent_waypoints = {
+            agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
+            for agent in rail_env.agents
+        }
+        agent_speeds = {agent.handle: agent.speed_counter.max_speed for agent in rail_env.agents}
+        return agent_waypoints, agent_speeds
+
+    @staticmethod
+    def _warn_if_rewards_mismatch(rail_env: RailEnv, graph_env: "GraphRailEnv") -> None:
         if type(rail_env.rewards) is not type(graph_env.rewards):
             warnings.warn(
                 f"rail_env.rewards is {type(rail_env.rewards).__name__}, but graph_env.rewards is "
                 f"{type(graph_env.rewards).__name__} (no matching `rewards` was passed to from_rail_env) - "
                 f"rewards will not be directly comparable between the two envs."
             )
-        # TODO https://github.com/flatland-association/flatland-rl/pull/341 hack while awaiting this pr
-        s = random_state_to_hashablestate(rail_env.np_random)
-        graph_env.np_random = random_state_from_hashablestate(s)
-        return graph_env
 
     @staticmethod
     def from_graph(
@@ -117,18 +138,13 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             e.g. `lambda *a, **k: TimetableUtils.from_agents(source_agents, max_episode_steps)` to
             reuse an existing timetable instead (mirrors how `from_rail_env` reuses its source env's).
         """
-        import flatland.envs.timetable_generators as ttg
-
-        if timetable_generator is None:
-            timetable_generator = ttg.ttgen_flatland2
-        number_of_agents = len(agent_waypoints)
-        if agent_speeds is None:
-            agent_speeds = {handle: 1.0 for handle in agent_waypoints}
+        timetable_generator, agent_speeds = GraphRailEnv._resolve_from_graph_defaults(
+            timetable_generator, agent_speeds, agent_waypoints)
         gtm = GraphTransitionMap(g)
         line = Line(agent_waypoints=agent_waypoints, agent_speeds=agent_speeds)
 
         graph_env = GraphRailEnv(
-            number_of_agents=number_of_agents,
+            number_of_agents=len(agent_waypoints),
             rail_generator=lambda *args, **kwargs: ({"resource_map": resource_map}, gtm),
             line_generator=lambda *args, **kwargs: line,
             timetable_generator=timetable_generator,
@@ -138,6 +154,23 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         )
         graph_env.reset(random_seed=seed)
         return graph_env
+
+    @staticmethod
+    def _resolve_from_graph_defaults(
+        timetable_generator: Optional[TimetableGenerator],
+        agent_speeds: Optional[Dict[int, float]],
+        agent_waypoints: Dict[int, List[List[str]]],
+    ) -> Tuple[TimetableGenerator, Dict[int, float]]:
+        """Resolves `from_graph`'s optional `timetable_generator`/`agent_speeds` to their concrete
+        defaults (`ttg.ttgen_flatland2`, uniform speed `1.0`) - a local import avoids a circular import
+        with `flatland.envs.timetable_generators` at module load time."""
+        import flatland.envs.timetable_generators as ttg
+
+        if timetable_generator is None:
+            timetable_generator = ttg.ttgen_flatland2
+        if agent_speeds is None:
+            agent_speeds = {handle: 1.0 for handle in agent_waypoints}
+        return timetable_generator, agent_speeds
 
     def __init__(
         self,
