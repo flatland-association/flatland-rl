@@ -122,6 +122,34 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
 ConfigurationType = TypeVar('ConfigurationType')
 
 
+def _sanitize_configuration(configuration):
+    """Coerce a grid (position, direction) configuration's numeric elements to plain int.
+
+    Rail/line generation code (and various cached grid-transition helpers) can hand back numpy scalars
+    (e.g. np.int64) instead of plain int for a cell position/direction. Left unsanitized, that numpy-ness
+    gets stored into agent.initial_configuration/current_configuration and can later make a position tuple
+    compare unequal-via-array-broadcast instead of a clean False against a differently-shaped tuple
+    elsewhere (e.g. agent_chains.py's level-free-crossing resources), raising "The truth value of an array
+    with more than one element is ambiguous". attrs converters only run in __init__, not on later
+    attribute assignment, so this has to be called explicitly at every write site instead.
+
+    A no-op for graph configurations (or anything else that doesn't look like a grid
+    ((row, col), direction) tuple), since ConfigurationType is generic across grid and graph envs.
+    """
+    if configuration is None:
+        return None
+    try:
+        position, direction = configuration
+    except (TypeError, ValueError):
+        return configuration
+    if not isinstance(position, tuple) or len(position) != 2:
+        return configuration
+    position = tuple(int(c) if isinstance(c, (np.generic, np.ndarray)) else c for c in position)
+    if isinstance(direction, (np.generic, np.ndarray)):
+        direction = int(direction)
+    return (position, direction)
+
+
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
     # backwards compatibility
@@ -132,7 +160,7 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @initial_position.setter
     def initial_position(self, value):
-        self.initial_configuration = (value, self.initial_direction)
+        self.initial_configuration = _sanitize_configuration((value, self.initial_direction))
 
     @property
     def initial_direction(self):
@@ -140,7 +168,7 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @initial_direction.setter
     def initial_direction(self, value):
-        self.initial_configuration = (self.initial_position, value)
+        self.initial_configuration = _sanitize_configuration((self.initial_position, value))
 
     @property
     def position(self):
@@ -150,7 +178,7 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @position.setter
     def position(self, value):
-        self.current_configuration = (value, self.direction)
+        self.current_configuration = _sanitize_configuration((value, self.direction))
 
     @property
     def direction(self):
@@ -160,7 +188,7 @@ class EnvAgent(Generic[ConfigurationType]):
 
     @direction.setter
     def direction(self, value):
-        self.current_configuration = (self.position, value)
+        self.current_configuration = _sanitize_configuration((self.position, value))
 
     # used in rendering
     @property
@@ -184,9 +212,13 @@ class EnvAgent(Generic[ConfigurationType]):
         self.old_configuration = (self.old_position, value)
 
     # INIT FROM HERE IN _from_line()
-    initial_configuration = attrib(type=ConfigurationType)
+    # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
+    # exactly where the numpy-dtype taint described on _sanitize_configuration has been observed entering) -
+    # attrs converters only run in __init__, so later direct assignments (agent.initial_configuration = ...,
+    # agent.current_configuration = ...) still need to call _sanitize_configuration explicitly themselves.
+    initial_configuration = attrib(type=ConfigurationType, converter=_sanitize_configuration)
 
-    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None), converter=_sanitize_configuration)
     targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
 
     moving = attrib(default=False, type=bool)

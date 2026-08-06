@@ -45,13 +45,22 @@ def mirror(dir):
 MOVEMENT_ARRAY = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
 
+# Module-level lru_cache (no grid/env instance in the key) shared across the whole process, keyed purely by
+# (position, movement) value equality - and grid positions are small, low-cardinality integers that
+# routinely collide by value across completely unrelated tests/grids. int(...) here guarantees the cached
+# return value is always plain int, regardless of whatever dtype (e.g. a numpy scalar from rail/line
+# generation code) the first caller to populate a given cache key happened to pass in - otherwise that
+# numpy-ness gets served to every later, unrelated caller with a value-equal position, which can make a
+# position tuple compare unequal-via-array-broadcast instead of a clean False elsewhere (see
+# agent_chains.py's level-free-crossing resources), raising "The truth value of an array with more than one
+# element is ambiguous".
 @lru_cache(maxsize=1_000_000)
 def get_new_position(position, movement):
     """
     Get new (r,c) when exiting in direction movement.
     """
     m = MOVEMENT_ARRAY[movement]
-    return (position[0] + m[0], position[1] + m[1])
+    return (int(position[0]) + m[0], int(position[1]) + m[1])
 
 
 @lru_cache(maxsize=1_000_000)
@@ -60,7 +69,7 @@ def get_old_position(position, movement):
     Get old (r,c) when entering in direction movement.
     """
     m = MOVEMENT_ARRAY[mirror(movement)]
-    return (position[0] + m[0], position[1] + m[1])
+    return (int(position[0]) + m[0], int(position[1]) + m[1])
 
 
 def direction_to_point(pos1: IntVector2D, pos2: IntVector2D) -> Grid4TransitionsEnum:
