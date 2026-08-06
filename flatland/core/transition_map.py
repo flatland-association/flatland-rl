@@ -287,7 +287,9 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     @lru_cache(maxsize=4_000_000)
     def get_transition(self, configuration: Tuple[Tuple[int, int], int], transition_index):
         row_col, orientation = configuration
-        return self.transitions.get_transition(self.grid[row_col], orientation, transition_index)
+        # int(...): see get_full_transitions's comment for why this boundary cast matters - same numpy-dtype
+        # leak via fast_grid4_get_transition's module-level lru_cache (grid4.py).
+        return self.transitions.get_transition(int(self.grid[row_col]), orientation, transition_index)
 
     def set_transition(self, configuration: Tuple[Tuple[int, int], int], transition_index, new_transition, remove_deadends=False):
         """
