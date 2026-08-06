@@ -218,7 +218,18 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             The cell content int the format of this map's Transitions.
 
         """
-        return self.grid[(row, column)]
+        # Cast away from self.grid's numpy dtype (e.g. np.uint16) here, at the read boundary, rather than
+        # downstream: fast_grid4_get_transitions (grid4.py) is a *module*-level lru_cache (no `self` in its
+        # key, unlike this method), shared across every RailGridTransitionMap instance in the process. A
+        # numpy-typed cell_transition there gets cached and returned verbatim to any later, unrelated grid
+        # that happens to query the same (very common, since rail cell-transition bit patterns are a small
+        # fixed vocabulary) (cell_transition, orientation) pair - silently tainting that grid's own
+        # position/direction values with numpy dtypes. That in turn can make a plain (row, col) position
+        # tuple compare unequal-via-array-broadcast (not a clean False) against a differently-shaped nested
+        # resource tuple elsewhere (see agent_chains.py's level-free-crossing resources), raising "The truth
+        # value of an array with more than one element is ambiguous" - reproduced this way, but only ever
+        # cross-test as part of a full suite run under a shared worker process, never in isolation.
+        return int(self.grid[(row, column)])
 
     @lru_cache(maxsize=4_000_000)
     def get_transitions(self, configuration: Tuple[Tuple[int, int], int]) -> Tuple[Grid4Transitions]:
@@ -243,7 +254,8 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
         """
         row_col, orientation = configuration
-        return self.transitions.get_transitions(self.grid[row_col], orientation)
+        # int(...): see get_full_transitions's comment above for why this boundary cast matters.
+        return self.transitions.get_transitions(int(self.grid[row_col]), orientation)
 
     def set_transitions(self, configuration: IntVector2D, new_transitions: Transitions):
         """
