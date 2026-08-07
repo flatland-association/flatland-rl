@@ -110,24 +110,12 @@ jobs:
                 password: ${{ secrets.GITHUB_TOKEN }}
         steps:
             -   uses: actions/checkout@v6
-            # Runs the deptry commands directly rather than `tox run -e py{version}-verify-requirements`:
-            # tox would create its own venv and reinstall requirements-dev.txt/requirements-ml.txt into it
-            # regardless of what the image's system Python already has. Mirrors tox.ini's
-            # [testenv:py{...}-verify-requirements] set_env/commands exactly; that env remains the source
-            # of truth for local/non-container runs.
+            # Runs tox.ini's own [testenv:py{...}-verify-requirements] against this image's already-installed
+            # packages: --current-env (tox-current-env, a requirements-dev.txt dependency) skips venv
+            # creation/dependency install, but still applies tox.ini's set_env and runs its exact commands -
+            # so the actual deptry invocation lives in exactly one place (tox.ini), not two.
             -   name: Run deptry
-                env:
-                    PINNED_AND_DYNAMICALLY_LOADED_MODULES: "cachetools|dm-tree|wandb|contourpy|scipy|rpds-py"
-                    DEV_MODULES: "coverage|deptry|flake8|flake8-eradicate|jupyter|jupyter-core|nbmake|notebook|pip-tools|pytest|pytest-retry|tox|testcontainers|pytest-xdist|cython"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    python --version
-                    python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python benchmarks/*.ipynb
-                    python -m jupyter nbconvert --ExecutePreprocessor.timeout=1800 --to python notebooks/*.ipynb
-                    deptry . --verbose --ignore DEP003 --pep621-dev-dependency-groups dev,ml -ee flatland/ml -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                    deptry . --ignore DEP003 --pep621-dev-dependency-groups dev -ee tests -ee benchmarks -ee notebooks -ee examples --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                    deptry . --ignore DEP003 --pep621-dev-dependency-groups ml -ee flatland/ml -ee tests/ml -ee "notebooks/rllib_demo.*" --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
-                    deptry . --ignore DEP003 --per-rule-ignores "DEP002=${PINNED_AND_DYNAMICALLY_LOADED_MODULES}|${DEV_MODULES}"
+                run: tox run -e py${{ matrix.python-version }}-verify-requirements --current-env
 
     testml:
         needs: [ build-ci-env-ml ]
@@ -173,18 +161,13 @@ jobs:
                 with:
                     path: episodes
                     key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            # Runs pytest directly rather than `tox run -e py{version}-ml`: tox would create its own venv
-            # and reinstall requirements-dev.txt/requirements-ml.txt into it regardless of what the image's
-            # system Python already has, rebuilding scipy/dm-tree from source again and defeating the point
-            # of this image. Mirrors tox.ini's [testenv:py{...}-ml] set_env/commands exactly; that env
-            # remains the source of truth for local/non-container runs.
+            # Runs tox.ini's own [testenv:py{...}-ml] against this image's already-installed packages:
+            # --current-env skips venv creation/dependency reinstall (which would rebuild scipy/dm-tree from
+            # source again, defeating the point of this image) but still applies tox.ini's set_env
+            # (including BENCHMARK_EPISODES_FOLDER/PYTHONPATH, both resolved portably via {tox_root}/
+            # {toxinidir}) and runs its exact commands.
             -   name: Run tests
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
-                    PYTHONDONTWRITEBYTECODE: "1"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: python -m pytest -n auto --retries 2 --retry-delay 5 tests/ml
+                run: tox run -e py${{ matrix.python-version }}-ml --current-env
 
     # See run-ci-env-test.yml (shared with publish.yml's own pre-release test job) for the actual test
     # invocation.
@@ -308,21 +291,13 @@ jobs:
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
-            # Runs the script directly rather than `tox run -e py{version}-examples`: tox would create its
-            # own venv and reinstall requirements-dev.txt into it regardless of what the image's system
-            # Python already has, rebuilding scipy from source again and defeating the point of this image.
-            # Mirrors tox.ini's [testenv:py{...}-examples] set_env/commands exactly; that env remains the
-            # source of truth for local/non-container runs. Doesn't install flatland-rl itself even though
-            # tox's env technically does (default skip_install=false) - PYTHONPATH alone is enough (same
-            # reasoning as testml/test's main pytest run - see those jobs).
+            # Runs tox.ini's own [testenv:py{...}-examples] against this image's already-installed packages:
+            # --current-env skips venv creation/dependency reinstall (which would rebuild scipy from source
+            # again, defeating the point of this image) but still applies tox.ini's set_env (including
+            # SCENARIOS_FOLDER/PYTHONPATH, resolved portably via {tox_root}/{toxinidir}) and runs its exact
+            # commands.
             -   name: Run examples
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    SCENARIOS_FOLDER: ${{ github.workspace }}/scenarios
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: |
-                    python --version
-                    python benchmarks/run_all_examples.py
+                run: tox run -e py${{ matrix.python-version }}-examples --current-env
 
     verify-cython-build:
         runs-on: ubuntu-24.04

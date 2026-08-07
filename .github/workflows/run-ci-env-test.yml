@@ -69,34 +69,20 @@ jobs:
                 with:
                     path: episodes
                     key: episodes-${{ env.flatland-benchmarks-episodes-url }}
-            # Runs pytest directly rather than `tox run -e py{version}`: tox would create its own venv and
-            # reinstall requirements-dev.txt into it regardless of what the image's system Python already
-            # has, rebuilding scipy from source again and defeating the point of this image. Mirrors
-            # tox.ini's [testenv:py{...}] set_env/commands exactly; that env remains the source of truth for
-            # local/non-container runs. Doesn't install flatland-rl itself even though tox's env technically
-            # does (default skip_install=false) - PYTHONPATH alone is enough for tests to import it
-            # (confirmed empirically: testml's equivalent tox env has the identical default, and its
-            # container-based run already passes without installing the package).
+            # Runs tox.ini's own [testenv:py{...}] against this image's already-installed packages:
+            # --current-env skips venv creation/dependency reinstall (which would rebuild scipy from source
+            # again, defeating the point of this image) but still applies tox.ini's set_env (including
+            # BENCHMARK_EPISODES_FOLDER/PYTHONPATH, resolved portably via {tox_root}/{toxinidir}) and runs
+            # its exact commands. Doesn't install flatland-rl itself - --current-env unconditionally forces
+            # no_package=True regardless of a testenv's own skip_install setting, which happens to match
+            # what this step already wanted (PYTHONPATH alone is enough for tests to import it).
             -   name: Run tests
-                env:
-                    PYTHONPATH: ${{ github.workspace }}
-                    BENCHMARK_EPISODES_FOLDER: ${{ github.workspace }}/episodes
-                    PYTHONDONTWRITEBYTECODE: "1"
-                    CMAKE_POLICY_VERSION_MINIMUM: "3.5"
-                run: python -m pytest -n auto --ignore=tests/ml -m "not slow"
-            # Mirrors tox.ini's [testenv:py{...}-verify-install] - unlike the step above, this one's whole
-            # point is to test the installed-package/entry-points path, so it genuinely needs `pip install
-            # .` rather than relying on PYTHONPATH.
-            -   name: Install flatland-rl and verify entry points
-                run: |
-                    python --version
-                    pip install --no-cache-dir .
-                    python -c 'from flatland.evaluators.service import FlatlandRemoteEvaluationService'
-                    python -c 'import flatland.integrations.interactiveai.interactiveai'
-                    evaluator --help
-                    flatland-demo --help
-                    flatland-evaluator --help
-                    flatland-trajectory-evaluate --help
-                    flatland-trajectory-generate-from-policy --help
-                    flatland-trajectory-generate-from-metadata --help
-                    flatland-trajectory-analysis --help
+                run: tox run -e py${{ inputs.python-version }} --current-env
+            # Unlike the step above, --current-env's forced no_package=True is NOT what we want here: this
+            # env's whole point is testing the installed-package/entry-points path, so it needs a real `pip
+            # install .` first; only the verification commands themselves are tox-sourced (see tox.ini's
+            # [testenv:py{...}-verify-install]).
+            -   name: Install flatland-rl
+                run: pip install --no-cache-dir .
+            -   name: Verify entry points
+                run: tox run -e py${{ inputs.python-version }}-verify-install --current-env

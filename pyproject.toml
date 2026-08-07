@@ -77,6 +77,9 @@ dev = [
     "snakeviz",
     "testcontainers",
     "tox",
+    # lets checks.yml's containerized jobs run `tox run -e ... --current-env` against this image's
+    # already-installed deps instead of hand-copying tox.ini's commands/set_env - see checks.yml for why.
+    "tox-current-env",
 ]
 ml = [
     "dm-tree<0.1.11,!=0.1.9", # pin dm-tree: 0.1.9 has import errors under MacOS M1 at least; <0.1.9 has no cp3.13/cp3.14 wheels, so allow up to 0.1.10 (latest) for python 3.13/3.14 support.
