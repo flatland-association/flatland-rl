@@ -397,7 +397,6 @@ class EnvAgent(Generic[ConfigurationType]):
             f"\tinitial_direction={self.initial_configuration[1]},\n"
             f"\tposition={self.current_configuration[0] if self.current_configuration is not None else None},\n"
             f"\tdirection={direction if direction is None else Grid4TransitionsEnum(direction).value},\n"
-            f"\ttarget={next(iter(self.targets))[0]},\n"
             f"\ttargets={self.targets},\n"
             f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
             f"\told_direction={self.old_configuration[1] if self.old_configuration is not None else None},\n"
