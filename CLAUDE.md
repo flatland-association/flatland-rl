@@ -41,8 +41,9 @@ flags it as unused.
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
 - **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is currently
-  disabled (`if: false`) but the config is still the source of truth for style.
+  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
+  `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
+  'true' }}`) — unset means disabled — but the config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
 - **Check for dependency drift** (unused/missing/misdeclared deps across the `flatland`/`flatland/ml`/`tests`
   boundary): `tox -e py3.13-verify-requirements` (uses `deptry`).
@@ -101,6 +102,26 @@ desired next configuration from the action via the `step_utils` state machine (`
 conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
 state/position/rewards. `EnvAgent` (`agent_utils.py`) holds per-agent state; `observations.py`/`predictions.py`
 build the observation returned to policies, typically via the distance map's shortest paths.
+
+`flatland/envs/graph_rail_env.py`'s `GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str])`
+is a full graph-native sibling to `RailEnv`, not just an implementation detail of the grid/graph split above.
+`GraphRailEnv.from_rail_env()` converts an existing grid `RailEnv` into its graph-native equivalent (via
+`GraphTransitionMap.grid_to_digraph`), while `GraphRailEnv.from_graph()` builds one directly from an
+`nx.DiGraph` plus string-node-id `agent_waypoints` — no grid tuples or `Waypoint` objects involved at all. Both
+envs share `AbstractRailEnv.step()`/`handle_done_state()` verbatim (a single shared definition), so behavior
+differences between the two are almost entirely about topology/configuration representation, not control flow.
+
+### Configuration values are sanitized against numpy-dtype taint
+
+`agent_utils.py`'s `_sanitize_configuration()` coerces a grid `(position, direction)` configuration's numpy
+scalar elements (e.g. `np.int64` from rail/line generation) to plain `int` — left untouched, this numpy-ness
+can later break tuple equality (e.g. `agent_chains.py`'s level-free-crossing resource comparisons raising "the
+truth value of an array with more than one element is ambiguous"). It's wired in as an attrs `converter=` on
+`EnvAgent`'s four configuration attribs (`initial_configuration`/`current_configuration`/`old_configuration`/
+`target_configuration`), but attrs converters only run in `__init__` — any direct assignment after construction
+(e.g. `agent.current_configuration = ...` in `rail_env.py`'s `step()`) must call `_sanitize_configuration()`
+explicitly itself, unless the assigned value is already a known-sanitized configuration copied from elsewhere
+on the same agent.
 
 ### Speed is always a `Fraction` internally
 
