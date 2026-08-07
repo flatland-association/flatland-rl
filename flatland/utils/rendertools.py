@@ -7,6 +7,7 @@ import numpy as np
 from numpy import array
 from recordtype import recordtype
 
+from flatland.envs.agent_utils import virtual_configuration
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.utils.graphics_layer import GraphicsLayer
 from flatland.utils.graphics_pgl import PGLGL
@@ -210,8 +211,9 @@ class RenderLocal(RenderBase):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            agent_position = agent.current_configuration[0] if agent.current_configuration is not None else None
-            agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
+            configuration = virtual_configuration(agent)
+            agent_position = configuration[0] if configuration is not None else None
+            agent_direction = configuration[1] if configuration is not None else None
             target = next(iter(agent.targets))[0] if targets else None
             self.plot_single_agent(agent_position, agent_direction, color, target=target,
                                    static=True, selected=agent_idx == selected_agent)
@@ -220,8 +222,9 @@ class RenderLocal(RenderBase):
             if agent is None:
                 continue
             color = color_map(agent_idx)
-            agent_position = agent.current_configuration[0] if agent.current_configuration is not None else None
-            agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
+            configuration = virtual_configuration(agent)
+            agent_position = configuration[0] if configuration is not None else None
+            agent_direction = configuration[1] if configuration is not None else None
             target = next(iter(agent.targets))[0] if targets else None
             self.plot_single_agent(agent_position, agent_direction, color, target=target)
 
