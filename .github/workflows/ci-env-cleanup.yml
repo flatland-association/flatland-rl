@@ -1,0 +1,46 @@
+name: Clean up CI-env GHCR package
+
+# Prunes old flatland-rl-ci-env versions (see Dockerfile.ci-env, and checks.yml's build-ci-env-ml/
+# build-ci-env-default jobs that produce them). Unlike actions/cache's automatic 7-day eviction, GHCR has no
+# built-in expiry: every requirements-dev.txt/requirements-ml.txt/Dockerfile.ci-env change mints a brand-new
+# py{version}-{ml,default}-{hash} tag, and once no branch still needs that exact content, nothing else ever
+# reclaims it - this is the scheduled fallback for that.
+on:
+    workflow_dispatch:
+    schedule:
+        # Weekly, not tied to checks.yml's own triggers - cleanup doesn't need to run on every push/PR.
+        -   cron: '0 4 * * 0'
+
+jobs:
+    cleanup:
+        runs-on: ubuntu-24.04
+        permissions:
+            packages: write
+        steps:
+            # Untagged versions are always safe to remove here: build-ci-env-ml/-default never re-push an
+            # already-existing runnable tag (their "Check if CI-env image already exists" step skips the
+            # build entirely in that case), so a given tag is pushed exactly once. The only way a version
+            # becomes untagged is BuildKit's cache-to (mode=max) overwriting cache-py{version}-{ml,default}
+            # in place, leaving its previous manifest dangling. Dockerfile.ci-env only ever builds
+            # linux/amd64 (no multi-arch manifest lists), so there's no risk of this deleting a still-
+            # referenced per-platform child of a tagged multi-arch image.
+            -   name: Delete untagged versions
+                uses: actions/delete-package-versions@v5
+                with:
+                    package-name: flatland-rl-ci-env
+                    package-type: container
+                    delete-only-untagged-versions: true
+                    token: ${{ secrets.GITHUB_TOKEN }}
+            # Flat count across the whole package, not grouped per (python-version, variant): the action
+            # doesn't support grouping, and since a single requirements/Dockerfile change tends to bump most
+            # of build-ci-env-ml/-default's 10 (5 versions x 2 variants) tags at once, 30 is roughly 3
+            # "generations" of headroom. cache-* refs are excluded since they're mutable pointers BuildKit
+            # already overwrites in place - they don't need (and shouldn't get) count-based pruning.
+            -   name: Delete old tagged versions
+                uses: actions/delete-package-versions@v5
+                with:
+                    package-name: flatland-rl-ci-env
+                    package-type: container
+                    min-versions-to-keep: 30
+                    ignore-versions: "^cache-.*"
+                    token: ${{ secrets.GITHUB_TOKEN }}

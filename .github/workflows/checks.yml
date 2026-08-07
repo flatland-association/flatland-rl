@@ -60,225 +60,162 @@ jobs:
                 run: ${{ steps.get_actionlint.outputs.executable }} -color
                 shell: bash
 
-    deptry:
-        runs-on: ubuntu-24.04
+    # Builds/pushes the CI-only dependency image consumed by the deptry/testml jobs below (see
+    # Dockerfile.ci-env, a separate, non-user-facing image from the ones docker.yml/publish.yml build and
+    # publish to end users). See build-ci-env.yml (shared with publish.yml's own pre-release test job) for
+    # the actual build/cache-check/push logic and why GHCR was chosen over actions/cache for this.
+    build-ci-env-ml:
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
-        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
-        env:
-            CC: gcc-12
-            CXX: g++-12
+        uses: ./.github/workflows/build-ci-env.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            with-ml: true
+
+    # Leaner counterpart to build-ci-env-ml, consumed by the test/examples jobs below: no
+    # requirements-ml.txt, no dm-tree/cmake, since neither ever installs it.
+    build-ci-env-default:
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        uses: ./.github/workflows/build-ci-env.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            with-ml: false
+
+    deptry:
+        needs: [ build-ci-env-ml ]
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
+        # are baked into this image by build-ci-env-ml above - nothing left to install here.
+        container:
+            # Matches build-ci-env-ml's tag exactly (see build-ci-env.yml for why it's keyed on a content
+            # hash, not just Python-version). Read via needs.*.outputs rather than computing
+            # hashFiles() here directly: container: is resolved before this job's own checkout runs, so
+            # hashFiles() would see no files yet - needs.*.outputs works because it's just a stored value
+            # from the already-completed build-ci-env-ml job, not a live filesystem read.
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-ml.outputs.image-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
-                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
-                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
-                    sudo apt-get -y install gcc-12 g++-12
-                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
-                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
-                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
+            # Runs tox.ini's own [testenv:py{...}-verify-requirements] against this image's already-installed
+            # packages: --current-env (tox-current-env, a requirements-dev.txt dependency) skips venv
+            # creation/dependency install, but still applies tox.ini's set_env and runs its exact commands -
+            # so the actual deptry invocation lives in exactly one place (tox.ini), not two.
             -   name: Run deptry
-                run: tox -e py${{ matrix.python-version }}-verify-requirements
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-deptry-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
+                run: tox run -e py${{ matrix.python-version }}-verify-requirements --current-env
 
     testml:
+        needs: [ build-ci-env-ml ]
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's default);
-        # gcc-12/g++-12 (installed below) build it fine. tox passes CC/CXX through by default.
-        env:
-            CC: gcc-12
-            CXX: g++-12
+        # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
+        # are baked into this image by build-ci-env-ml above - nothing left to install here.
+        container:
+            # Matches build-ci-env-ml's tag exactly (see build-ci-env.yml for why it's keyed on a content
+            # hash, not just Python-version). Read via needs.*.outputs rather than computing
+            # hashFiles() here directly: container: is resolved before this job's own checkout runs, so
+            # hashFiles() would see no files yet - needs.*.outputs works because it's just a stored value
+            # from the already-completed build-ci-env-ml job, not a live filesystem read.
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-ml-${{ needs.build-ci-env-ml.outputs.image-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
         steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
-                    # TODO As long as scipy is pinned to < 1.16 (to ensure to support for Python 3.10), we need to install it from source
-                    # https://docs.scipy.org/doc/scipy/building/index.html
-                    sudo apt-get -y build-dep scipy
-                    # scipy's build-dep pulls in an old pybind11-dev that meson picks up via pkg-config ahead of
-                    # the newer pip-installed pybind11, breaking contourpy's from-source build on newer Pythons
-                    sudo apt-get -y remove pybind11-dev || true
-                    # dm-tree's vendored abseil-cpp (20210324.2) fails to compile with GCC 13+ (the runner's
-                    # default); gcc-12/g++-12 build it fine. CC/CXX are set at job level below (tox passes them through by default).
-                    sudo apt-get -y install gcc-12 g++-12
-                    # scipy's meson build looks for OpenBLAS specifically via pkg-config; the generic BLAS/LAPACK
-                    # virtual package satisfied by `build-dep scipy` doesn't necessarily provide openblas.pc.
-                    sudo apt-get -y install libopenblas-dev
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
-                uses: actions/setup-python@v6
+            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # no invalidation is needed until the workflow itself is updated to a new URL.
+            -   name: Restore cached episodes
+                id: cache-episodes
+                uses: actions/cache/restore@v5
                 with:
-                    python-version: ${{ matrix.python-version }}
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download episodes
+                if: steps.cache-episodes.outputs.cache-hit != 'true'
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
-            -   name: Run tests
-                run: tox run -e py${{ matrix.python-version }}-ml
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
+            -   name: Save cached episodes
+                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
                 uses: actions/cache/save@v5
                 with:
-                    path: .tox
-                    key: tox-testml-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt', 'requirements-ml.txt') }}
-            -   name: Check disk space
-                run: df . -h
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
+            # Runs tox.ini's own [testenv:py{...}-ml] against this image's already-installed packages:
+            # --current-env skips venv creation/dependency reinstall (which would rebuild scipy/dm-tree from
+            # source again, defeating the point of this image) but still applies tox.ini's set_env
+            # (including BENCHMARK_EPISODES_FOLDER/PYTHONPATH, both resolved portably via {tox_root}/
+            # {toxinidir}) and runs its exact commands.
+            -   name: Run tests
+                run: tox run -e py${{ matrix.python-version }}-ml --current-env
 
+    # See run-ci-env-test.yml (shared with publish.yml's own pre-release test job) for the actual test
+    # invocation.
     test:
-        runs-on: ubuntu-24.04
+        needs: [ build-ci-env-default ]
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
-        steps:
-            -   name: Inspect disk
-                run: |
-                    df -h
-                    docker system df
-            # https://stackoverflow.com/questions/30604846/docker-complains-about-no-space-left-on-device-how-to-clean-up
-            -   name: Prune docker system
-                run: |
-                    docker system prune --all --force
-            # https://www.dzombak.com/blog/2024/09/freeing-disk-space-on-github-actions-runners/
-            -   name: Free disk space
-                run: |
-                    curl -fsSL https://raw.githubusercontent.com/kou/arrow/e49d8ae15583ceff03237571569099a6ad62be32/ci/scripts/util_free_space.sh | bash
-            -   name: Inspect disk again
-                run: |
-                    df -h
-                    docker system df
-            -   name: Install ffmpeg
-                run: |
-                    set -euxo pipefail
-                    # https://askubuntu.com/questions/1512042/ubuntu-24-04-getting-error-you-must-put-some-deb-src-uris-in-your-sources-list
-                    sudo sed -i 's/^Types: deb/Types: deb deb-src/' /etc/apt/sources.list.d/ubuntu.sources
-                    sudo apt-get update
-                    sudo apt-get -y install ffmpeg
+        uses: ./.github/workflows/run-ci-env-test.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            image-hash: ${{ needs.build-ci-env-default.outputs.image-hash }}
 
-            -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
-            -   name: Download episodes
-                run: |
-                    wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
-                    mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
-            -   name: Run tests
-                run: tox -e py${{ matrix.python-version }},py${{ matrix.python-version }}-verify-install
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-test-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Check disk space
-                run: df . -h
-
+    # Not containerized (unlike deptry/testml/test/examples above) despite using the same requirements-dev.txt
+    # - blocked on this job's "Start Redis" services: container below, for two compounding reasons:
+    #
+    # 1. The simple fix - add `container: {image: ...}` and keep everything else as-is - doesn't work,
+    #    because a containerized job's `container:` can't be given `--network host` to make it share the
+    #    runner's own network namespace: GH's docs for `container:`/`services:` `options:` state plainly
+    #    "The --network and --entrypoint options are not supported."
+    #    https://docs.github.com/en/actions/using-jobs/running-jobs-in-a-container
+    #
+    # 2. Without --network host, GH Actions' actual supported mechanism for a containerized job to reach a
+    #    services: container is different, not absent: it auto-joins the job's container and the service
+    #    container to a shared Docker bridge network, reachable via the service's label as a hostname (e.g.
+    #    `redis`), not via localhost/127.0.0.1 - see "About service containers":
+    #    https://docs.github.com/en/actions/using-containerized-services/about-service-containers
+    #    That's exactly the opposite of how it works today: this job runs directly on the runner (no
+    #    container:), so Redis's port is published straight onto the runner's own localhost, which is
+    #    exactly what notebooks/test_service.ipynb and notebooks/test-service-timeouts.ipynb hardcode
+    #    (localhost/127.0.0.1). Containerizing without also editing those notebook cells to use the `redis`
+    #    hostname would just trade one failure (no --network host) for another (wrong hostname).
+    #
+    # A fix does exist (parameterize the Redis host in the two notebooks, then add `container:` + keep
+    # `services:` here), but this job deliberately keeps its current tox+actions/cache setup instead of
+    # pursuing it:
+    # - Unlike deptry/testml/test/examples, this job's slowness isn't dominated by rebuilding scipy/dm-tree
+    #   from source - that's what the GHCR image caching elsewhere in this file targets - so containerizing
+    #   it wouldn't recover anywhere near the same payoff for the added complexity (a new/adapted CI-env
+    #   image variant, plus wiring notebooks into build-ci-env.yml/run-ci-env-test.yml).
+    # - notebooks/test_service.ipynb and notebooks/test-service-timeouts.ipynb are read and run
+    #   interactively by humans, not just executed by CI - hardcoding a `redis` hostname instead of
+    #   localhost/127.0.0.1 to satisfy the containerized-job networking model would be a behavior change for
+    #   that interactive use too, not a CI-only config tweak, which is out of scope for a CI-time-reduction
+    #   effort.
+    # - This job already carves out python-version 3.10 as "failing too often" (see the matrix below) - it's
+    #   an already-accepted soft spot in this workflow, not the main bottleneck this effort was aimed at.
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
@@ -297,7 +234,6 @@ jobs:
                     sudo apt-get update
                     sudo apt-get -y install ffmpeg
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -313,7 +249,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-notebooks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -327,46 +263,41 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-notebooks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-notebooks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
 
     examples:
+        needs: [ build-ci-env-default ]
         runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: read
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+        # requirements-dev.txt (incl. scipy, already built from source) is baked into this image by
+        # build-ci-env-default above - nothing left to install here. Same image as test (no Redis/other
+        # service dependency here, so no networking wrinkle - see notebooks, which does have one and isn't
+        # containerized yet for that reason).
+        container:
+            image: ghcr.io/${{ github.repository }}-ci-env:py${{ matrix.python-version }}-default-${{ needs.build-ci-env-default.outputs.image-hash }}
+            credentials:
+                username: ${{ github.actor }}
+                password: ${{ secrets.GITHUB_TOKEN }}
         steps:
             -   uses: actions/checkout@v6
-            -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
-                uses: actions/setup-python@v6
-                with:
-                    python-version: ${{ matrix.python-version }}
             -   name: Download Olten scenario
                 run: |
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
                     unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
-            # https://adamj.eu/tech/2023/11/02/github-actions-faster-python-virtual-environments/ - skipped on
-            # scheduled runs so the nightly cron always exercises a from-scratch install.
-            -   name: Restore cached tox environments
-                if: ${{ github.event_name != 'schedule' }}
-                uses: actions/cache/restore@v5
-                with:
-                    path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
-            -   name: Install tox
-                run: |
-                    python -m pip install --upgrade pip
-                    python -m pip install -U tox tox-gh-actions
+            # Runs tox.ini's own [testenv:py{...}-examples] against this image's already-installed packages:
+            # --current-env skips venv creation/dependency reinstall (which would rebuild scipy from source
+            # again, defeating the point of this image) but still applies tox.ini's set_env (including
+            # SCENARIOS_FOLDER/PYTHONPATH, resolved portably via {tox_root}/{toxinidir}) and runs its exact
+            # commands.
             -   name: Run examples
-                run: tox run -e py${{ matrix.python-version }}-examples
-            -   name: Save cached tox environments
-                if: ${{ always() && github.event_name != 'schedule' }}
-                uses: actions/cache/save@v5
-                with:
-                    path: .tox
-                    key: tox-examples-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                run: tox run -e py${{ matrix.python-version }}-examples --current-env
 
     verify-cython-build:
         runs-on: ubuntu-24.04
@@ -499,7 +430,6 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
@@ -515,7 +445,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -527,7 +457,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-profiling-get-k-shortest-paths-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-profiling-get-k-shortest-paths-results-${{ matrix.python-version }}
@@ -560,16 +490,30 @@ jobs:
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
-                id: setup_python
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
+            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # no invalidation is needed until the workflow itself is updated to a new URL.
+            -   name: Restore cached episodes
+                id: cache-episodes
+                uses: actions/cache/restore@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download episodes
+                if: steps.cache-episodes.outputs.cache-hit != 'true'
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
                     unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
+            -   name: Save cached episodes
+                if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
+                uses: actions/cache/save@v5
+                with:
+                    path: episodes
+                    key: episodes-${{ env.flatland-benchmarks-episodes-url }}
             -   name: Download ecml2026 scenario
                 run: wget "${{ env.ecml2026-pkl }}" -O level_0_scenario_1.pkl
                 working-directory: ${{ github.workspace }}
@@ -580,7 +524,7 @@ jobs:
                 uses: actions/cache/restore@v5
                 with:
                     path: .tox
-                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-benchmarks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -592,7 +536,7 @@ jobs:
                 uses: actions/cache/save@v5
                 with:
                     path: .tox
-                    key: tox-benchmarks-${{ runner.os }}-${{ steps.setup_python.outputs.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
+                    key: tox-benchmarks-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('tox.ini', 'requirements-dev.txt') }}
             -   uses: actions/upload-artifact@v6
                 with:
                     name: upload-benchmarks-results-${{ matrix.python-version }}

@@ -12,7 +12,16 @@ policies, rendering, trajectory recording/replay, and evaluation services for th
 
 All commands assume dependencies from `requirements-dev.txt` (+ `requirements-ml.txt` for `flatland/ml`/`tests/ml`)
 are installed, and are run from the repo root. `tox` wraps most of these into reproducible environments (see
-`tox.ini`) — CI (`.github/workflows/checks.yml`) invokes tox directly, e.g. `tox -e py3.12,py3.12-verify-install`.
+`tox.ini`) — CI (`.github/workflows/checks.yml`)'s containerized jobs run tox's own testenvs directly via
+`tox run -e <env> --current-env` (the `tox-current-env` plugin: skips venv creation/dependency reinstall against
+an image's already-installed deps, but still applies the testenv's `set_env`/`commands` verbatim), so `tox.ini`
+is the single source of truth for both local and CI runs — editing it changes CI behavior without touching
+`checks.yml`. Two gotchas this implies: (1) a `[testenv:...]` section that declares its own `set_env` *replaces*
+rather than merges with the base `[testenv]` section's `set_env` (tox does not merge these) — any testenv needing
+extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently loses `PYTHONPATH`/
+`CMAKE_POLICY_VERSION_MINIMUM`; (2) a dev dependency that's only invoked via CLI and never `import`ed (e.g. `tox`,
+`tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
+flags it as unused.
 
 - **Run the core test suite** (matches CI's `test` job): `benchmarks/benchmark_episodes.py`'s regression tests need
   a `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see

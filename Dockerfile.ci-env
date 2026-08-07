@@ -1,0 +1,44 @@
+# CI-only dependency cache for flatland-rl's test matrix (checks.yml's deptry/testml/test jobs) - NOT a
+# runtime image, see the sibling Dockerfile for that (installs flatland-rl itself from a released ref,
+# multi-arch, published to end users). This image only bakes in requirements-dev.txt (and, for the "ml"
+# variant, requirements-ml.txt too) so CI's `pip install` can hit BuildKit's registry layer cache instead
+# of recompiling scipy/dm-tree from source on every run.
+ARG PYTHON_VERSION=3.12
+ARG WITH_ML=true
+
+# Pinned to a known Debian codename (not the floating "slim" alias) so the default gcc version is
+# predictable - bookworm ships gcc-12 by default, avoiding the GCC13+/dm-tree incompatibility that
+# checks.yml's "Install ffmpeg" step otherwise has to work around explicitly on the Ubuntu 24.04 runner.
+FROM python:${PYTHON_VERSION}-slim-bookworm AS base
+
+# See docker/install-build-toolchain.sh for what's installed and why - shared with the sibling Dockerfile
+# so a toolchain fix needed by one doesn't silently stay missing from the other (this is literally how the
+# numpy build-toolchain packages in that script got added here first).
+COPY docker/install-build-toolchain.sh /tmp/install-build-toolchain.sh
+RUN bash /tmp/install-build-toolchain.sh && rm /tmp/install-build-toolchain.sh
+
+WORKDIR /deps
+
+FROM base AS ml-true
+# cmake: dm-tree's setup.py does its own `cmake --version` prerequisite check before building (unlike
+# scipy, it doesn't rely on pip's build-isolation cmake package for this). git is already installed in the
+# base stage above (also needed there for setuptools_scm); dm-tree's CMakeLists.txt additionally shells out
+# to it via `FetchContent_Populate`/`ExternalProject_Add` to fetch pybind11 at build time.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends cmake && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+# dm-tree's vendored abseil-cpp (20210324.2) bundles very old CMakeLists.txt files that recent cmake
+# (>=4.0, pulled in via pip's build isolation) hard-errors on unless told to allow them - same setting
+# tox.ini passes for the equivalent (non-containerized) CI job.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+COPY requirements-dev.txt requirements-ml.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-dev.txt -r requirements-ml.txt
+
+FROM base AS ml-false
+COPY requirements-dev.txt ./
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements-dev.txt
+
+FROM ml-${WITH_ML} AS final
