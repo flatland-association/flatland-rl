@@ -23,7 +23,7 @@ from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_effects_generators as mfg
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs.agent_utils import EnvAgent, _filter_valid_target_configurations
+from flatland.envs.agent_utils import EnvAgent, _filter_valid_target_configurations, _sanitize_configuration
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -563,14 +563,14 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # (10) POSITION AND SPEED_COUNTER UPDATE
             if agent.state == TrainState.MOVING:
                 # only position update while MOVING and motion_check OK
-                agent.current_configuration = agent_transition_data.new_configuration
+                agent.current_configuration = _sanitize_configuration(agent_transition_data.new_configuration)
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
                     agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
-                agent.current_configuration = initial_configuration
+                agent.current_configuration = _sanitize_configuration(initial_configuration)
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
                 agent.speed_counter.step(speed=Fraction(0))

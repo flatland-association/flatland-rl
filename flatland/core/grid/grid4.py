@@ -10,15 +10,27 @@ from flatland.core.transitions import Transitions
 # maxsize=None can be used because the number of possible transition is limited (16 bit encoded) and the
 # direction/orientation is also limited (2bit). Where the 16bit are only sparse used = number of rail types
 # Those methods can be cached -> the are independant of the railways (env)
+#
+# This lru_cache is module-level (no `self`/grid instance in the key), so it's shared across every
+# RailGridTransitionMap for the life of the process - including across unrelated tests, since rail
+# cell-transition bit patterns are a small fixed vocabulary reused everywhere. If cell_transition is ever
+# passed in as a numpy scalar (e.g. read directly from a numpy-backed grid without casting - GridTransitionMap
+# is supposed to always cast to plain int at that boundary, but this is cheap insurance against a caller that
+# doesn't) that numpy-ness would otherwise get cached and returned to every later, unrelated caller with a
+# matching key - silently tainting that caller's own position/direction values with numpy dtypes, which can
+# make position tuples compare unequal-via-array-broadcast instead of a clean False against a differently-
+# shaped tuple elsewhere (e.g. agent_chains.py's level-free-crossing resources), raising "The truth value of
+# an array with more than one element is ambiguous". Returning plain int here guarantees that can't happen,
+# regardless of what dtype came in.
 @lru_cache(maxsize=128)
 def fast_grid4_get_transitions(cell_transition, orientation):
-    bits = (cell_transition >> ((3 - orientation) * 4))
+    bits = int(cell_transition) >> ((3 - orientation) * 4)
     return ((bits >> 3) & 1, (bits >> 2) & 1, (bits >> 1) & 1, (bits) & 1)
 
 
 @lru_cache(maxsize=128)
 def fast_grid4_get_transition(cell_transition, orientation, direction):
-    return ((cell_transition >> ((4 - 1 - orientation) * 4)) >> (4 - 1 - direction)) & 1
+    return (int(cell_transition) >> ((4 - 1 - orientation) * 4) >> (4 - 1 - direction)) & 1
 
 
 @lru_cache(maxsize=128)
