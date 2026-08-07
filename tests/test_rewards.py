@@ -616,6 +616,8 @@ def test_zero_distance_target_arrival_recorded(rewards, assert_result):
         targets={((3, 3), 3)},
         current_configuration=None,
         old_configuration=None,
+        # mirrors what AbstractRailEnv.handle_done_state() sets before current_configuration is cleared
+        target_configuration=((3, 3), 3),
         state_machine=TrainStateMachine(initial_state=TrainState.DONE),
         earliest_departure=0,
         latest_arrival=10,
@@ -640,6 +642,8 @@ def test_punctuality_rewards_single_direction_target_does_not_crash():
         targets={((3, 3), 3)},
         current_configuration=((3, 3), 3),
         old_configuration=((2, 2), 2),
+        # mirrors what AbstractRailEnv.handle_done_state() sets before current_configuration is cleared
+        target_configuration=((3, 3), 3),
         state_machine=TrainStateMachine(initial_state=TrainState.DONE),
         earliest_departure=3,
         latest_arrival=10,

@@ -236,12 +236,18 @@ def test_virtual_configuration():
     agent._set_state(TrainState.MOVING)
     assert virtual_configuration(agent) == agent.current_configuration
 
-    # done, agent still has a (now stale) current_configuration
+    # done, agent still has a (now stale) current_configuration - which must actually be one of the
+    # target alternatives, since DONE is only reachable by having arrived at one
+    agent.current_configuration = next(iter(agent.targets))
     agent._set_state(TrainState.DONE)
+    # mirrors what AbstractRailEnv.handle_done_state() does before current_configuration is cleared
+    agent.target_configuration = agent.current_configuration
     assert virtual_configuration(agent) in agent.targets
+    assert virtual_configuration(agent) == agent.target_configuration
 
     # done and removed from the map (`current_configuration` is None): still a real configuration
     agent.current_configuration = None
     configuration = virtual_configuration(agent)
     assert configuration is not None
     assert configuration in agent.targets
+    assert configuration == agent.target_configuration

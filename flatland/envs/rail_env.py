@@ -396,6 +396,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         """ Any updates to agent to be made in Done state """
         if agent.state == TrainState.DONE and agent.arrival_time is None:
             agent.arrival_time = self._elapsed_steps
+            # capture which specific target alternative was reached before current_configuration is
+            # possibly cleared below - see EnvAgent.target_configuration.
+            agent.target_configuration = agent.current_configuration
             self.dones[agent.handle] = True
             if self.remove_agents_at_target:
                 agent.current_configuration = None

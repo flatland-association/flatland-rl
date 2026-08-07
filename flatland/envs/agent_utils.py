@@ -41,6 +41,10 @@ class Agent(NamedTuple):
     waypoints: List[List[Waypoint]] = None
     waypoints_earliest_departure: List[int] = None
     waypoints_latest_arrival: List[int] = None
+    # the specific target alternative actually reached - see `EnvAgent.target_configuration`. `None` for
+    # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
+    target_position: Tuple[int, int] = None
+    target_direction: Grid4TransitionsEnum = None
 
 
 def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> List[List[Waypoint]]:
@@ -98,11 +102,10 @@ def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], 
     against even for off-map or arrived agents:
     - off map: `initial_configuration`.
     - on map: `current_configuration`.
-    - done (arrived, possibly already removed from the map): the minimum of `agent`'s
-  valid `targets`
-
-      configurations, so a real, rail-valid direction is returned instead of the `None` `direction`
-      that `current_configuration` would give once the agent is removed from the map.
+    - done (arrived, possibly already removed from the map): `agent.target_configuration` - the
+      specific configuration actually reached, so a real, rail-valid direction is returned instead of
+      the `None` `direction` that `current_configuration` would give once the agent is removed from
+      the map.
     - any other state (e.g. malfunctioning while still off map): `None`.
     """
     if agent.state.is_off_map_state():
@@ -110,7 +113,7 @@ def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], 
     elif agent.state.is_on_map_state():
         return agent.current_configuration
     elif agent.state == TrainState.DONE:
-        return min(agent.targets)
+        return agent.target_configuration
     return None
 
 
@@ -133,6 +136,9 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
         old_configuration=(
             agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
+        target_configuration=(
+            agent_tuple.target_position, agent_tuple.target_direction
+        ) if agent_tuple.target_position is not None and agent_tuple.target_direction is not None else None,
         targets=targets,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
@@ -193,6 +199,12 @@ class EnvAgent(Generic[ConfigurationType]):
 
     current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None), converter=_sanitize_configuration)
     targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
+    # the specific configuration (a member of `targets`) the agent actually arrived at, once
+    # `state == TrainState.DONE` - set exactly once, by `AbstractRailEnv.handle_done_state()`, before
+    # `current_configuration` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
+    # the agent reaches DONE. Unlike `next(iter(targets))`, this is deterministic: `targets` may hold
+    # several direction alternatives at the same position, only one of which was actually reached.
+    target_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
 
     moving = attrib(default=False, type=bool)
 
@@ -228,6 +240,7 @@ class EnvAgent(Generic[ConfigurationType]):
         """
         self.current_configuration = None
         self.old_configuration = None
+        self.target_configuration = None
         self.moving = False
         self.arrival_time = None
 
@@ -259,6 +272,8 @@ class EnvAgent(Generic[ConfigurationType]):
                      waypoints=self.waypoints,
                      waypoints_earliest_departure=self.waypoints_earliest_departure,
                      waypoints_latest_arrival=self.waypoints_latest_arrival,
+                     target_position=self.target_configuration[0] if self.target_configuration is not None else None,
+                     target_direction=self.target_configuration[1] if self.target_configuration is not None else None,
                      )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
@@ -381,6 +396,7 @@ class EnvAgent(Generic[ConfigurationType]):
             f"\ttargets={self.targets},\n"
             f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
             f"\told_direction={self.old_configuration[1] if self.old_configuration is not None else None},\n"
+            f"\ttarget_configuration={self.target_configuration},\n"
             f"\tearliest_departure={self.earliest_departure},\n"
             f"\tlatest_arrival={self.latest_arrival},\n"
             f"\tstate_machine={str(self.state_machine)},\n"

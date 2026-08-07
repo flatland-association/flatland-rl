@@ -514,8 +514,7 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # TODO revise design -  target configurations have no arrival - should we change that?
         if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and not any(
             target_configuration in self.arrivals[agent.handle] for target_configuration in agent_targets):
-            # TODO bad design smell - we haven't kept track of which one was reach, we take any of them here
-            self.arrivals[agent.handle][next(iter(agent_targets))].append(elapsed_steps)
+            self.arrivals[agent.handle][agent.target_configuration].append(elapsed_steps)
 
         if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
