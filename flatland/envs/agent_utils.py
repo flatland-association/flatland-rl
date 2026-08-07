@@ -194,17 +194,21 @@ class EnvAgent(Generic[ConfigurationType]):
     # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
     # exactly where the numpy-dtype taint described on _sanitize_configuration has been observed entering) -
     # attrs converters only run in __init__, so later direct assignments (agent.initial_configuration = ...,
-    # agent.current_configuration = ...) still need to call _sanitize_configuration explicitly themselves.
+    # agent.current_configuration = ..., agent.old_configuration = ..., agent.target_configuration = ...)
+    # still need to call _sanitize_configuration explicitly themselves, unless the assigned value is already
+    # known-sanitized (e.g. copied from another already-sanitized configuration attrib on the same agent).
     initial_configuration = attrib(type=ConfigurationType, converter=_sanitize_configuration)
 
-    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None), converter=_sanitize_configuration)
+    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                                   converter=_sanitize_configuration)
     targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
     # the specific configuration (a member of `targets`) the agent actually arrived at, once
     # `state == TrainState.DONE` - set exactly once, by `AbstractRailEnv.handle_done_state()`, before
     # `current_configuration` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
     # the agent reaches DONE. Unlike `next(iter(targets))`, this is deterministic: `targets` may hold
     # several direction alternatives at the same position, only one of which was actually reached.
-    target_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    target_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                                  converter=_sanitize_configuration)
 
     moving = attrib(default=False, type=bool)
 
@@ -232,7 +236,8 @@ class EnvAgent(Generic[ConfigurationType]):
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                               converter=_sanitize_configuration)
 
     def reset(self):
         """
