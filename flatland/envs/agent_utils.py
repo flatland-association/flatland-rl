@@ -41,6 +41,10 @@ class Agent(NamedTuple):
     waypoints: List[List[Waypoint]] = None
     waypoints_earliest_departure: List[int] = None
     waypoints_latest_arrival: List[int] = None
+    # the specific target alternative actually reached - see `EnvAgent.target_configuration`. `None` for
+    # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
+    target_position: Tuple[int, int] = None
+    target_direction: Grid4TransitionsEnum = None
 
 
 def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> List[List[Waypoint]]:
@@ -82,6 +86,37 @@ def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4
     return {(targets, d) for d in Grid4TransitionsEnum}
 
 
+def with_direction(configuration: Optional[Tuple[Tuple[int, int], int]], direction: int) -> Tuple[Tuple[int, int], int]:
+    """
+    Returns a grid `(position, direction)` configuration with `direction` replaced, preserving
+    `configuration`'s position - or `(None, direction)` if `configuration` is `None` (e.g. the agent is
+    currently off map).
+    """
+    return (configuration[0] if configuration is not None else None, direction)
+
+
+def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], int]]:
+    """
+    Returns the effective grid `(position, direction)` for `agent`, regardless of whether it is
+    currently on the map - used by observations/predictions that need a configuration to compute
+    against even for off-map or arrived agents:
+    - off map: `initial_configuration`.
+    - on map: `current_configuration`.
+    - done (arrived, possibly already removed from the map): `agent.target_configuration` - the
+      specific configuration actually reached, so a real, rail-valid direction is returned instead of
+      the `None` `direction` that `current_configuration` would give once the agent is removed from
+      the map.
+    - any other state (e.g. malfunctioning while still off map): `None`.
+    """
+    if agent.state.is_off_map_state():
+        return agent.initial_configuration
+    elif agent.state.is_on_map_state():
+        return agent.current_configuration
+    elif agent.state == TrainState.DONE:
+        return agent.target_configuration
+    return None
+
+
 def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # Target configurations are serialised without rail validity (rail is not stored per-agent), so filter
     # them against `rail` here - previously a post-load step in `RailEnvPersister.set_full_state`. The target
@@ -101,6 +136,9 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
         old_configuration=(
             agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
+        target_configuration=(
+            agent_tuple.target_position, agent_tuple.target_direction
+        ) if agent_tuple.target_position is not None and agent_tuple.target_direction is not None else None,
         targets=targets,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
@@ -152,74 +190,25 @@ def _sanitize_configuration(configuration):
 
 @attrs
 class EnvAgent(Generic[ConfigurationType]):
-    # backwards compatibility
-    # TODO https://github.com/flatland-association/flatland-rl/issues/366 split grid special cases from general implementation
-    @property
-    def initial_position(self):
-        return self.initial_configuration[0]
-
-    @initial_position.setter
-    def initial_position(self, value):
-        self.initial_configuration = _sanitize_configuration((value, self.initial_direction))
-
-    @property
-    def initial_direction(self):
-        return self.initial_configuration[1]
-
-    @initial_direction.setter
-    def initial_direction(self, value):
-        self.initial_configuration = _sanitize_configuration((self.initial_position, value))
-
-    @property
-    def position(self):
-        if self.current_configuration is None:
-            return None
-        return self.current_configuration[0]
-
-    @position.setter
-    def position(self, value):
-        self.current_configuration = _sanitize_configuration((value, self.direction))
-
-    @property
-    def direction(self):
-        if self.current_configuration is None:
-            return None
-        return self.current_configuration[1]
-
-    @direction.setter
-    def direction(self, value):
-        self.current_configuration = _sanitize_configuration((self.position, value))
-
-    # used in rendering
-    @property
-    def old_position(self):
-        if self.old_configuration is None:
-            return None
-        return self.old_configuration[0]
-
-    @old_position.setter
-    def old_position(self, value):
-        self.old_configuration = (value, self.old_direction)
-
-    @property
-    def old_direction(self):
-        if self.old_configuration is None:
-            return None
-        return self.old_configuration[1]
-
-    @old_direction.setter
-    def old_direction(self, value):
-        self.old_configuration = (self.old_position, value)
-
     # INIT FROM HERE IN _from_line()
     # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
     # exactly where the numpy-dtype taint described on _sanitize_configuration has been observed entering) -
     # attrs converters only run in __init__, so later direct assignments (agent.initial_configuration = ...,
-    # agent.current_configuration = ...) still need to call _sanitize_configuration explicitly themselves.
+    # agent.current_configuration = ..., agent.old_configuration = ..., agent.target_configuration = ...)
+    # still need to call _sanitize_configuration explicitly themselves, unless the assigned value is already
+    # known-sanitized (e.g. copied from another already-sanitized configuration attrib on the same agent).
     initial_configuration = attrib(type=ConfigurationType, converter=_sanitize_configuration)
 
-    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None), converter=_sanitize_configuration)
+    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                                   converter=_sanitize_configuration)
     targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
+    # the specific configuration (a member of `targets`) the agent actually arrived at, once
+    # `state == TrainState.DONE` - set exactly once, by `AbstractRailEnv.handle_done_state()`, before
+    # `current_configuration` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
+    # the agent reaches DONE. Unlike `next(iter(targets))`, this is deterministic: `targets` may hold
+    # several direction alternatives at the same position, only one of which was actually reached.
+    target_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                                  converter=_sanitize_configuration)
 
     moving = attrib(default=False, type=bool)
 
@@ -247,7 +236,8 @@ class EnvAgent(Generic[ConfigurationType]):
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None))
+    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
+                               converter=_sanitize_configuration)
 
     def reset(self):
         """
@@ -255,6 +245,7 @@ class EnvAgent(Generic[ConfigurationType]):
         """
         self.current_configuration = None
         self.old_configuration = None
+        self.target_configuration = None
         self.moving = False
         self.arrival_time = None
 
@@ -265,9 +256,9 @@ class EnvAgent(Generic[ConfigurationType]):
         self.state_machine.reset()
 
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_position,
-                     initial_direction=self.initial_direction,
-                     direction=self.direction,
+        return Agent(initial_position=self.initial_configuration[0],
+                     initial_direction=self.initial_configuration[1],
+                     direction=self.current_configuration[1] if self.current_configuration is not None else None,
                      # N.B. the full arrival-configuration set is serialized, but re-filtered against the rail
                      # on load (see `set_full_state`), since rail validity is not stored with the agent.
                      targets=set(self.targets),
@@ -275,9 +266,9 @@ class EnvAgent(Generic[ConfigurationType]):
                      earliest_departure=self.earliest_departure,
                      latest_arrival=self.latest_arrival,
                      handle=self.handle,
-                     position=self.position,
-                     old_direction=self.old_direction,
-                     old_position=self.old_position,
+                     position=self.current_configuration[0] if self.current_configuration is not None else None,
+                     old_direction=self.old_configuration[1] if self.old_configuration is not None else None,
+                     old_position=self.old_configuration[0] if self.old_configuration is not None else None,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
                      arrival_time=self.arrival_time,
@@ -286,6 +277,8 @@ class EnvAgent(Generic[ConfigurationType]):
                      waypoints=self.waypoints,
                      waypoints_earliest_departure=self.waypoints_earliest_departure,
                      waypoints_latest_arrival=self.waypoints_latest_arrival,
+                     target_position=self.target_configuration[0] if self.target_configuration is not None else None,
+                     target_direction=self.target_configuration[1] if self.target_configuration is not None else None,
                      )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
@@ -396,17 +389,18 @@ class EnvAgent(Generic[ConfigurationType]):
         return agents
 
     def __str__(self):
+        direction = self.current_configuration[1] if self.current_configuration is not None else None
         return (
             f"EnvAgent(\n"
             f"\thandle={self.handle},\n"
-            f"\tinitial_position={self.initial_position},\n"
-            f"\tinitial_direction={self.initial_direction},\n"
-            f"\tposition={self.position},\n"
-            f"\tdirection={self.direction if self.direction is None else Grid4TransitionsEnum(self.direction).value},\n"
-            f"\ttarget={next(iter(self.targets))[0]},\n"
+            f"\tinitial_position={self.initial_configuration[0]},\n"
+            f"\tinitial_direction={self.initial_configuration[1]},\n"
+            f"\tposition={self.current_configuration[0] if self.current_configuration is not None else None},\n"
+            f"\tdirection={direction if direction is None else Grid4TransitionsEnum(direction).value},\n"
             f"\ttargets={self.targets},\n"
-            f"\told_position={self.old_position},\n"
-            f"\told_direction={self.old_direction},\n"
+            f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
+            f"\told_direction={self.old_configuration[1] if self.old_configuration is not None else None},\n"
+            f"\ttarget_configuration={self.target_configuration},\n"
             f"\tearliest_departure={self.earliest_departure},\n"
             f"\tlatest_arrival={self.latest_arrival},\n"
             f"\tstate_machine={str(self.state_machine)},\n"

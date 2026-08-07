@@ -31,21 +31,21 @@ def ndom_seeding():
             env.step(actions)
         agent_positions = []
 
-        env.agents[0].initial_position == (3, 2)
-        env.agents[1].initial_position == (3, 5)
-        env.agents[2].initial_position == (3, 6)
-        env.agents[3].initial_position == (5, 6)
-        env.agents[4].initial_position == (3, 4)
-        env.agents[5].initial_position == (3, 1)
-        env.agents[6].initial_position == (3, 9)
-        env.agents[7].initial_position == (4, 6)
-        env.agents[8].initial_position == (0, 3)
-        env.agents[9].initial_position == (3, 7)
+        env.agents[0].initial_configuration[0] == (3, 2)
+        env.agents[1].initial_configuration[0] == (3, 5)
+        env.agents[2].initial_configuration[0] == (3, 6)
+        env.agents[3].initial_configuration[0] == (5, 6)
+        env.agents[4].initial_configuration[0] == (3, 4)
+        env.agents[5].initial_configuration[0] == (3, 1)
+        env.agents[6].initial_configuration[0] == (3, 9)
+        env.agents[7].initial_configuration[0] == (4, 6)
+        env.agents[8].initial_configuration[0] == (0, 3)
+        env.agents[9].initial_configuration[0] == (3, 7)
         # Test generation print
         # for a in range(env.get_num_agents()):
         #    print("env.agents[{}].initial_position == {}".format(a,env.agents[a].initial_position))
         # print("env.agents[0].initial_position == {}".format(env.agents[0].initial_position))
-        # print("assert env.agents[0].position ==  {}".format(env.agents[0].position))
+        # print("assert env.agents[0].current_configuration[0] ==  {}".format(env.agents[0].current_configuration[0]))
 
 
 def test_seeding_and_observations():
@@ -65,16 +65,16 @@ def test_seeding_and_observations():
     env.reset(False, False, random_seed=12)
     env2.reset(False, False, random_seed=12)
     # Check that both environments produce the same initial start positions
-    assert env.agents[0].initial_position == env2.agents[0].initial_position
-    assert env.agents[1].initial_position == env2.agents[1].initial_position
-    assert env.agents[2].initial_position == env2.agents[2].initial_position
-    assert env.agents[3].initial_position == env2.agents[3].initial_position
-    assert env.agents[4].initial_position == env2.agents[4].initial_position
-    assert env.agents[5].initial_position == env2.agents[5].initial_position
-    assert env.agents[6].initial_position == env2.agents[6].initial_position
-    assert env.agents[7].initial_position == env2.agents[7].initial_position
-    assert env.agents[8].initial_position == env2.agents[8].initial_position
-    assert env.agents[9].initial_position == env2.agents[9].initial_position
+    assert env.agents[0].initial_configuration[0] == env2.agents[0].initial_configuration[0]
+    assert env.agents[1].initial_configuration[0] == env2.agents[1].initial_configuration[0]
+    assert env.agents[2].initial_configuration[0] == env2.agents[2].initial_configuration[0]
+    assert env.agents[3].initial_configuration[0] == env2.agents[3].initial_configuration[0]
+    assert env.agents[4].initial_configuration[0] == env2.agents[4].initial_configuration[0]
+    assert env.agents[5].initial_configuration[0] == env2.agents[5].initial_configuration[0]
+    assert env.agents[6].initial_configuration[0] == env2.agents[6].initial_configuration[0]
+    assert env.agents[7].initial_configuration[0] == env2.agents[7].initial_configuration[0]
+    assert env.agents[8].initial_configuration[0] == env2.agents[8].initial_configuration[0]
+    assert env.agents[9].initial_configuration[0] == env2.agents[9].initial_configuration[0]
 
     action_dict = {}
     for step in range(10):
@@ -84,18 +84,12 @@ def test_seeding_and_observations():
         env.step(action_dict)
         env2.step(action_dict)
     # Check that both environments end up in the same position
-    assert env.agents[0].position == env2.agents[0].position
-    assert env.agents[1].position == env2.agents[1].position
-    assert env.agents[2].position == env2.agents[2].position
-    assert env.agents[3].position == env2.agents[3].position
-    assert env.agents[4].position == env2.agents[4].position
-    assert env.agents[5].position == env2.agents[5].position
-    assert env.agents[6].position == env2.agents[6].position
-    assert env.agents[7].position == env2.agents[7].position
-    assert env.agents[8].position == env2.agents[8].position
-    assert env.agents[9].position == env2.agents[9].position
+
+    def _position(agent):
+        return agent.current_configuration[0] if agent.current_configuration is not None else None
+
     for a in range(env.get_num_agents()):
-        print("assert env.agents[{}].position == env2.agents[{}].position".format(a, a))
+        assert _position(env.agents[a]) == _position(env2.agents[a])
 
 
 def test_seeding_and_malfunction():
@@ -122,16 +116,16 @@ def test_seeding_and_malfunction():
         env2.reset(True, False, random_seed=tests)
 
         # Check that both environments produce the same initial start positions
-        assert env.agents[0].initial_position == env2.agents[0].initial_position
-        assert env.agents[1].initial_position == env2.agents[1].initial_position
-        assert env.agents[2].initial_position == env2.agents[2].initial_position
-        assert env.agents[3].initial_position == env2.agents[3].initial_position
-        assert env.agents[4].initial_position == env2.agents[4].initial_position
-        assert env.agents[5].initial_position == env2.agents[5].initial_position
-        assert env.agents[6].initial_position == env2.agents[6].initial_position
-        assert env.agents[7].initial_position == env2.agents[7].initial_position
-        assert env.agents[8].initial_position == env2.agents[8].initial_position
-        assert env.agents[9].initial_position == env2.agents[9].initial_position
+        assert env.agents[0].initial_configuration[0] == env2.agents[0].initial_configuration[0]
+        assert env.agents[1].initial_configuration[0] == env2.agents[1].initial_configuration[0]
+        assert env.agents[2].initial_configuration[0] == env2.agents[2].initial_configuration[0]
+        assert env.agents[3].initial_configuration[0] == env2.agents[3].initial_configuration[0]
+        assert env.agents[4].initial_configuration[0] == env2.agents[4].initial_configuration[0]
+        assert env.agents[5].initial_configuration[0] == env2.agents[5].initial_configuration[0]
+        assert env.agents[6].initial_configuration[0] == env2.agents[6].initial_configuration[0]
+        assert env.agents[7].initial_configuration[0] == env2.agents[7].initial_configuration[0]
+        assert env.agents[8].initial_configuration[0] == env2.agents[8].initial_configuration[0]
+        assert env.agents[9].initial_configuration[0] == env2.agents[9].initial_configuration[0]
 
         action_dict = {}
         for step in range(10):
@@ -149,16 +143,11 @@ def test_seeding_and_malfunction():
                 assert done1[a] == done2[a]
         # Check that both environments end up in the same position
 
-        assert env.agents[0].position == env2.agents[0].position
-        assert env.agents[1].position == env2.agents[1].position
-        assert env.agents[2].position == env2.agents[2].position
-        assert env.agents[3].position == env2.agents[3].position
-        assert env.agents[4].position == env2.agents[4].position
-        assert env.agents[5].position == env2.agents[5].position
-        assert env.agents[6].position == env2.agents[6].position
-        assert env.agents[7].position == env2.agents[7].position
-        assert env.agents[8].position == env2.agents[8].position
-        assert env.agents[9].position == env2.agents[9].position
+        def _position(agent):
+            return agent.current_configuration[0] if agent.current_configuration is not None else None
+
+        for a in range(env.get_num_agents()):
+            assert _position(env.agents[a]) == _position(env2.agents[a])
 
 
 def test_reproducability_env():

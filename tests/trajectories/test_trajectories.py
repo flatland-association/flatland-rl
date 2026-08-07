@@ -59,8 +59,11 @@ def test_restore_episode():
         env_10, _ = RailEnvPersister.load_new(data_dir / SERIALISED_STATE_SUBDIR / f"{trajectory.ep_id}_step{10:04d}.pkl")
 
         # TODO poor man's state comparison for now
-        assert [a.position for a in env_5.agents] == [a.position for a in env.agents]
-        assert [a.position for a in env_10.agents] != [a.position for a in env.agents]
+        def _position(a):
+            return a.current_configuration[0] if a.current_configuration is not None else None
+
+        assert [_position(a) for a in env_5.agents] == [_position(a) for a in env.agents]
+        assert [_position(a) for a in env_10.agents] != [_position(a) for a in env.agents]
 
 
 def test_load_env_replay_overrides():

@@ -23,14 +23,17 @@ extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently
 `tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
 flags it as unused.
 
-- **Run the core test suite** (matches CI's `test` job): `benchmarks/benchmark_episodes.py`'s regression tests need
-  a `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
+- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
+  and `benchmarks/benchmark_episodes.py`'s fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a
+  `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
   `flatland-benchmarks-episodes-url` in `checks.yml`):
   ```
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
   Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
-  `python -m pytest tests/envs/test_foo.py`.
+  `python -m pytest tests/envs/test_foo.py`. If the `flatland-baselines` checkout lives inside this repo's own
+  tree (as CI's `test` job does it, and as needed to put it on `PYTHONPATH` without an absolute path), add
+  `--ignore=flatland-baselines` — otherwise pytest's default recursive collection picks up its test suite too.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`
   since training runs are inherently non-deterministic:
@@ -38,13 +41,14 @@ flags it as unused.
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
 - **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is currently
-  disabled (`if: false`) but the config is still the source of truth for style.
+  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
+  `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
+  'true' }}`) — unset means disabled — but the config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
 - **Check for dependency drift** (unused/missing/misdeclared deps across the `flatland`/`flatland/ml`/`tests`
   boundary): `tox -e py3.13-verify-requirements` (uses `deptry`).
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
-- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.13 — slow; prefer targeted `pytest`/`flake8`
+- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.14 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
 - **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
   `tox -e py3.12-verify-cython-build`. To manually build in place and check (Cython auto-provisions via
@@ -96,8 +100,37 @@ desired next configuration from the action via the `step_utils` state machine (`
 `TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
 `(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
 conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
-state/position/rewards. `EnvAgent` (`agent_utils.py`) holds per-agent state; `observations.py`/`predictions.py`
-build the observation returned to policies, typically via the distance map's shortest paths.
+state/position, then `handle_done_state()`, then rewards, per agent, in that order. `EnvAgent` (`agent_utils.py`)
+holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
+via the distance map's shortest paths.
+
+`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_configuration`
+and, if `remove_agents_at_target` (the default), clears `agent.current_configuration` to `None` — so on the
+exact step an agent reaches `TrainState.DONE`, a `Rewards.step_reward()` implementation already sees
+`current_configuration is None`. A reward implementation that needs "where is this agent right now" must key
+off `target_configuration` (or `agent_utils.virtual_configuration()`) for a `DONE` agent, not
+`current_configuration` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
+departure booking as a result.
+
+`flatland/envs/graph_rail_env.py`'s `GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str])`
+is a full graph-native sibling to `RailEnv`, not just an implementation detail of the grid/graph split above.
+`GraphRailEnv.from_rail_env()` converts an existing grid `RailEnv` into its graph-native equivalent (via
+`GraphTransitionMap.grid_to_digraph`), while `GraphRailEnv.from_graph()` builds one directly from an
+`nx.DiGraph` plus string-node-id `agent_waypoints` — no grid tuples or `Waypoint` objects involved at all. Both
+envs share `AbstractRailEnv.step()`/`handle_done_state()` verbatim (a single shared definition), so behavior
+differences between the two are almost entirely about topology/configuration representation, not control flow.
+
+### Configuration values are sanitized against numpy-dtype taint
+
+`agent_utils.py`'s `_sanitize_configuration()` coerces a grid `(position, direction)` configuration's numpy
+scalar elements (e.g. `np.int64` from rail/line generation) to plain `int` — left untouched, this numpy-ness
+can later break tuple equality (e.g. `agent_chains.py`'s level-free-crossing resource comparisons raising "the
+truth value of an array with more than one element is ambiguous"). It's wired in as an attrs `converter=` on
+`EnvAgent`'s four configuration attribs (`initial_configuration`/`current_configuration`/`old_configuration`/
+`target_configuration`), but attrs converters only run in `__init__` — any direct assignment after construction
+(e.g. `agent.current_configuration = ...` in `rail_env.py`'s `step()`) must call `_sanitize_configuration()`
+explicitly itself, unless the assigned value is already a known-sanitized configuration copied from elsewhere
+on the same agent.
 
 ### Speed is always a `Fraction` internally
 
@@ -189,6 +222,11 @@ just step 0.
 - `utils/` — rendering (`rendertools.py`, `editor.py`), grid helpers, seeding.
 - `env_generation/` — higher-level convenience env-builder over the generators.
 - `png/`, `svg/` — static rendering image assets, not code.
+- `benchmarks/` — performance profiling/regression scripts and notebooks (exercised by the `tox -e
+  *-profiling*`/`*-benchmarks` envs); `benchmark_episodes.py` is itself a pytest module, so it's swept into a
+  bare `pytest` invocation from the repo root, not just the dedicated benchmark envs.
+- `scripts/make_coverage.py` — runs the suite under `coverage`, generates an HTML report, opens it in a browser
+  (same as `tox -e coverage`).
 
 ### CLI entry points (`pyproject.toml`'s `[project.scripts]`, implemented in `cli.py`)
 

@@ -5,6 +5,7 @@ import tempfile
 import time
 from fractions import Fraction
 from pathlib import Path
+from typing import Optional, Tuple
 
 import numpy as np
 import pytest
@@ -12,7 +13,7 @@ import pytest
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, with_direction
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -37,11 +38,17 @@ def test_save_load():
                   line_generator=sparse_line_generator(), number_of_agents=2)
     env.reset()
 
-    agent_1_pos = env.agents[0].position
-    agent_1_dir = env.agents[0].direction
+    def _position(agent: EnvAgent) -> Optional[Tuple[int, int]]:
+        return agent.current_configuration[0] if agent.current_configuration is not None else None
+
+    def _direction(agent: EnvAgent) -> Optional[int]:
+        return agent.current_configuration[1] if agent.current_configuration is not None else None
+
+    agent_1_pos = _position(env.agents[0])
+    agent_1_dir = _direction(env.agents[0])
     agent_1_tar = next(iter(env.agents[0].targets))[0]
-    agent_2_pos = env.agents[1].position
-    agent_2_dir = env.agents[1].direction
+    agent_2_pos = _position(env.agents[1])
+    agent_2_dir = _direction(env.agents[1])
     agent_2_tar = next(iter(env.agents[1].targets))[0]
 
     os.makedirs("tmp", exist_ok=True)
@@ -53,11 +60,11 @@ def test_save_load():
     assert (env.width == 30)
     assert (env.height == 30)
     assert (len(env.agents) == 2)
-    assert (agent_1_pos == env.agents[0].position)
-    assert (agent_1_dir == env.agents[0].direction)
+    assert (agent_1_pos == _position(env.agents[0]))
+    assert (agent_1_dir == _direction(env.agents[0]))
     assert (agent_1_tar == next(iter(env.agents[0].targets))[0])
-    assert (agent_2_pos == env.agents[1].position)
-    assert (agent_2_dir == env.agents[1].direction)
+    assert (agent_2_pos == _position(env.agents[1]))
+    assert (agent_2_dir == _direction(env.agents[1]))
     assert (agent_2_tar == next(iter(env.agents[1].targets))[0])
 
 
@@ -79,8 +86,12 @@ def test_save_load_mpk():
     assert (len(env2.agents) == len(env.agents))
 
     for agent1, agent2 in zip(env.agents, env2.agents):
-        assert (agent1.position == agent2.position)
-        assert (agent1.direction == agent2.direction)
+        pos1 = agent1.current_configuration[0] if agent1.current_configuration is not None else None
+        pos2 = agent2.current_configuration[0] if agent2.current_configuration is not None else None
+        dir1 = agent1.current_configuration[1] if agent1.current_configuration is not None else None
+        dir2 = agent2.current_configuration[1] if agent2.current_configuration is not None else None
+        assert (pos1 == pos2)
+        assert (dir1 == dir2)
         assert (next(iter(agent1.targets))[0] == next(iter(agent2.targets))[0])
 
 
@@ -143,9 +154,10 @@ def test_rail_environment_single_agent(show=False):
         # Check that trains are always initialized at a consistent position
         # or direction.
         # They should always be able to go somewhere.
+        agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
         if show:
-            print("After reset - agent pos:", agent.position, "dir: ", agent.direction)
-            print(transitions.get_transitions(rail_map[agent.position], agent.direction))
+            print("After reset - agent pos:", agent.current_configuration[0], "dir: ", agent_direction)
+            print(transitions.get_transitions(rail_map[agent.current_configuration[0]], agent_direction))
 
         # assert (transitions.get_transitions(
         #    rail_map[agent.position],
@@ -153,14 +165,15 @@ def test_rail_environment_single_agent(show=False):
 
         # HACK - force the direction to one we know is good.
         # agent.initial_position = agent.position = (2,3)
-        agent.initial_direction = agent.direction = 0
+        agent.initial_configuration = with_direction(agent.initial_configuration, 0)
+        agent.current_configuration = with_direction(agent.current_configuration, 0)
 
         if show:
             print("handle:", agent.handle)
         # agent.initial_position = initial_pos = agent.position
 
         valid_active_actions_done = 0
-        pos = agent.position
+        pos = agent.current_configuration[0]
 
         if show:
             env_renderer.render_env(show=show, show_agents=True)
@@ -175,9 +188,10 @@ def test_rail_environment_single_agent(show=False):
             _, _, dict_done, _ = rail_env.step({0: action})
 
             prev_pos = pos
-            pos = agent.position  # rail_env.agents_position[0]
+            pos = agent.current_configuration[0]  # rail_env.agents_position[0]
 
-            print("action:", action, "pos:", agent.position, "prev:", prev_pos, agent.direction)
+            print("action:", action, "pos:", agent.current_configuration[0], "prev:", prev_pos,
+                  agent.current_configuration[1] if agent.current_configuration is not None else None)
             print(dict_done)
             if prev_pos != pos:
                 valid_active_actions_done += 1
@@ -196,7 +210,7 @@ def test_rail_environment_single_agent(show=False):
         for _ in range(10):
             _ = rail_env.reset()
 
-            rail_env.agents[0].direction = 0
+            rail_env.agents[0].current_configuration = with_direction(rail_env.agents[0].current_configuration, 0)
 
             # JW - to avoid problem with sparse_line_generator.
             # rail_env.agents[0].position = (1,2)
@@ -540,42 +554,41 @@ def test_symmetric_switch_stop_action():
     agent = env.agents[0]
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.max_speed == Fraction(1, 2)
-    agent.initial_position = (15, 14)
-    agent.initial_direction = 1
+    agent.initial_configuration = ((15, 14), 1)
     assert agent.speed_counter.distance == Fraction(0)
     while not agent.state == TrainState.READY_TO_DEPART:
         env.step({})
         assert agent.speed_counter.distance == Fraction(0)
         assert agent.speed_counter.speed == Fraction(1, 2)
-        assert agent.position is None
+        assert agent.current_configuration is None
 
     # enter grid
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(2, 5)
     assert agent.speed_counter.distance == Fraction(9, 10)
 
     # TODO bug: we should have been stopped before entering 15,15
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
-    assert agent.position == (15, 15)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 15)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(3, 10)
     assert agent.speed_counter.distance == Fraction(1, 5)
@@ -600,49 +613,48 @@ def test_symmetric_switch_move_forward_action():
     agent = env.agents[0]
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.max_speed == Fraction(1, 2)
-    agent.initial_position = (15, 14)
-    agent.initial_direction = 1
+    agent.initial_configuration = ((15, 14), 1)
     assert agent.speed_counter.distance == Fraction(0)
     while not agent.state == TrainState.READY_TO_DEPART:
         env.step({})
         assert agent.speed_counter.distance == Fraction(0)
         assert agent.speed_counter.speed == Fraction(1, 2)
-        assert agent.position is None
+        assert agent.current_configuration is None
 
     # enter grid
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
-    assert agent.position == (15, 14)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 14)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
     # TODO bug: we should have been stopped before entering 15,15!
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.position == (15, 15)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 15)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.position == (15, 15)
-    assert agent.direction == 1
+    assert agent.current_configuration[0] == (15, 15)
+    assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
     # TODO re-evaluate design: speed was 0.5 when stopped - should we not have travelled to 0.5 when stopped?

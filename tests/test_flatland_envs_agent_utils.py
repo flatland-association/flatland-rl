@@ -1,6 +1,6 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_configurations,
-                                       load_env_agent)
+                                       load_env_agent, virtual_configuration, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -105,35 +105,35 @@ def test_from_line():
     line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     env_agents = EnvAgent.from_line(line)
-    assert env_agents[0].initial_position == (11, 40)
-    assert env_agents[0].initial_direction == 3
+    assert env_agents[0].initial_configuration[0] == (11, 40)
+    assert env_agents[0].initial_configuration[1] == 3
     assert next(iter(env_agents[0].targets))[0] == (39, 8)
-    assert env_agents[1].initial_position == (38, 8)
-    assert env_agents[1].initial_direction == 1
+    assert env_agents[1].initial_configuration[0] == (38, 8)
+    assert env_agents[1].initial_configuration[1] == 1
     assert next(iter(env_agents[1].targets))[0] == (10, 40)
-    assert env_agents[2].initial_position == (17, 5)
-    assert env_agents[2].initial_direction == 3
+    assert env_agents[2].initial_configuration[0] == (17, 5)
+    assert env_agents[2].initial_configuration[1] == 3
     assert next(iter(env_agents[2].targets))[0] == (42, 22)
-    assert env_agents[3].initial_position == (41, 22)
-    assert env_agents[3].initial_direction == 3
+    assert env_agents[3].initial_configuration[0] == (41, 22)
+    assert env_agents[3].initial_configuration[1] == 3
     assert next(iter(env_agents[3].targets))[0] == (18, 5)
-    assert env_agents[4].initial_position == (11, 40)
-    assert env_agents[4].initial_direction == 1
+    assert env_agents[4].initial_configuration[0] == (11, 40)
+    assert env_agents[4].initial_configuration[1] == 1
     assert next(iter(env_agents[4].targets))[0] == (39, 8)
-    assert env_agents[5].initial_position == (38, 8)
-    assert env_agents[5].initial_direction == 3
+    assert env_agents[5].initial_configuration[0] == (38, 8)
+    assert env_agents[5].initial_configuration[1] == 3
     assert next(iter(env_agents[5].targets))[0] == (12, 40)
-    assert env_agents[6].initial_position == (38, 8)
-    assert env_agents[6].initial_direction == 1
+    assert env_agents[6].initial_configuration[0] == (38, 8)
+    assert env_agents[6].initial_configuration[1] == 1
     assert next(iter(env_agents[6].targets))[0] == (31, 27)
-    assert env_agents[7].initial_position == (31, 26)
-    assert env_agents[7].initial_direction == 0
+    assert env_agents[7].initial_configuration[0] == (31, 26)
+    assert env_agents[7].initial_configuration[1] == 0
     assert next(iter(env_agents[7].targets))[0] == (39, 8)
-    assert env_agents[8].initial_position == (41, 22)
-    assert env_agents[8].initial_direction == 1
+    assert env_agents[8].initial_configuration[0] == (41, 22)
+    assert env_agents[8].initial_configuration[1] == 1
     assert next(iter(env_agents[8].targets))[0] == (8, 27)
-    assert env_agents[9].initial_position == (9, 27)
-    assert env_agents[9].initial_direction == 3
+    assert env_agents[9].initial_configuration[0] == (9, 27)
+    assert env_agents[9].initial_configuration[1] == 3
     assert next(iter(env_agents[9].targets))[0] == (44, 22)
 
 
@@ -207,3 +207,47 @@ def test_agent_tuple_targets():
 
     # legacy positional pickle: the `targets` slot holds a bare (row, col) position, not a set
     assert _agent_tuple_targets(_agent((3, 3))) == {((3, 3), d) for d in Grid4TransitionsEnum}
+
+
+def test_with_direction():
+    assert with_direction(((3, 3), 1), 2) == ((3, 3), 2)
+    assert with_direction(None, 2) == (None, 2)
+
+
+def test_virtual_configuration():
+    """
+    `virtual_configuration` must return a real, rail-valid configuration for a `TrainState.DONE` agent
+    even after it has been removed from the map (`current_configuration` is `None`) - unlike
+    `current_configuration` itself, which observations/predictions cannot compute anything useful from
+    once the agent is gone.
+    """
+    rail, rail_map, optionals = make_oval_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset()
+    agent = env.agents[0]
+
+    # off map: initial_configuration
+    assert virtual_configuration(agent) == agent.initial_configuration
+
+    # on map: current_configuration
+    agent.current_configuration = agent.initial_configuration
+    agent._set_state(TrainState.MOVING)
+    assert virtual_configuration(agent) == agent.current_configuration
+
+    # done, agent still has a (now stale) current_configuration - which must actually be one of the
+    # target alternatives, since DONE is only reachable by having arrived at one
+    agent.current_configuration = next(iter(agent.targets))
+    agent._set_state(TrainState.DONE)
+    # mirrors what AbstractRailEnv.handle_done_state() does before current_configuration is cleared
+    agent.target_configuration = agent.current_configuration
+    assert virtual_configuration(agent) in agent.targets
+    assert virtual_configuration(agent) == agent.target_configuration
+
+    # done and removed from the map (`current_configuration` is None): still a real configuration
+    agent.current_configuration = None
+    configuration = virtual_configuration(agent)
+    assert configuration is not None
+    assert configuration in agent.targets
+    assert configuration == agent.target_configuration

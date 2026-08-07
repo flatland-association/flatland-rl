@@ -1,29 +1,10 @@
-
-
-import os
 import time
 from collections import deque
 
-from typing import Optional
-
-import ipywidgets
-#import jpy_canvas
-from ipycanvas import Canvas
+# import jpy_canvas
 import ipyevents as ipe
 
-import numpy as np
-from ipywidgets import IntSlider, VBox, HBox, Checkbox, Output, Text, RadioButtons, Tab
-from numpy import array
-
-import flatland.utils.rendertools as rt
-from flatland.core.grid.grid4_utils import mirror
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.observations import TreeObsForRailEnv
-from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
-
+from flatland.envs.agent_utils import with_direction
 from flatland.utils.editor_interfaces import AbstractController, AbstractModel, AbstractView
 
 
@@ -75,7 +56,7 @@ class Controller(AbstractController):
             if nButtons > 0:
                 self.bMouseDown = True
                 self.on_mouse_move(event)
-            else:  # nButtons == 0, ie mouse is now up 
+            else:  # nButtons == 0, ie mouse is now up
                 if self.bMouseDown:  # mouse was down, now up
                     self.bMouseDown = False
                     self.log("testing 123")
@@ -84,7 +65,7 @@ class Controller(AbstractController):
                     self.log("testing 456")
                     self.on_mouse_move(event) # process a move event with no buttons pressed
         elif event['type'] == 'click':
-            nStroke = self.model.get_len_stroke() 
+            nStroke = self.model.get_len_stroke()
             if nStroke == 0:
                 self.on_click(event)
             else:
@@ -146,14 +127,14 @@ class Controller(AbstractController):
         if nButtons > 0:
             q_events.append((time.time(), x, y))
             bShift, bCtrl, bAlt = self.getModKeys(event)
-            
+
             # Reset the stroke, if ALT, CTRL or SHIFT pressed
             if bShift or bCtrl or bAlt:
                 self.model.clear_stroke()
                 while len(q_events) > 0:
                     t, x, y = q_events.popleft()
                 return
-            
+
         # NCW: this can't be right.  If the mouse is not held down, treat it as a mouseup, and draw the stroke.
         #else:
         #    self.model.clear_stroke()
@@ -216,9 +197,10 @@ class Controller(AbstractController):
                 if agent is None:
                     continue
                 if agent_idx == self.model.selected_agent:
-                    agent.initial_direction = (agent.initial_direction + 1) % 4
-                    agent.direction = agent.initial_direction
-                    agent.old_direction = agent.direction
+                    new_direction = (agent.initial_configuration[1] + 1) % 4
+                    agent.initial_configuration = with_direction(agent.initial_configuration, new_direction)
+                    agent.current_configuration = with_direction(agent.current_configuration, new_direction)
+                    agent.old_configuration = with_direction(agent.old_configuration, new_direction)
         self.model.redraw()
 
     def reset_agents(self, event):

@@ -60,7 +60,7 @@ def _step_along_shortest_path(env, obs_builder, rail):
         shortest_distance = np.inf
 
         for exit_direction in range(4):
-            neighbour = get_new_position(agent.position, exit_direction)
+            neighbour = get_new_position(agent.current_configuration[0], exit_direction)
 
             if neighbour[0] >= 0 and neighbour[0] < env.height and neighbour[1] >= 0 and neighbour[1] < env.width:
                 desired_movement_from_new_cell = (exit_direction + 2) % 4
@@ -72,9 +72,10 @@ def _step_along_shortest_path(env, obs_builder, rail):
                                                                    desired_movement_from_new_cell)
                     if is_valid:
                         distance_to_target = obs_builder.env.distance_map.get()[
-                            (agent.handle, *agent.position, exit_direction)]
-                        print("agent {} at {} facing {} taking {} distance {}".format(agent.handle, agent.position,
-                                                                                      agent.direction,
+                            (agent.handle, *agent.current_configuration[0], exit_direction)]
+                        print("agent {} at {} facing {} taking {} distance {}".format(agent.handle,
+                                                                                      agent.current_configuration[0],
+                                                                                      agent.current_configuration[1],
                                                                                       exit_direction,
                                                                                       distance_to_target))
 
@@ -88,7 +89,9 @@ def _step_along_shortest_path(env, obs_builder, rail):
                             }
                             print("   improved (direction) -> {}".format(exit_direction))
 
-                            actions[agent.handle] = actions_to_be_taken[(exit_direction - agent.direction) % len(rail.transitions.get_direction_enum())]
+                            num_directions = len(rail.transitions.get_direction_enum())
+                            agent_dir_idx = (exit_direction - agent.current_configuration[1]) % num_directions
+                            actions[agent.handle] = actions_to_be_taken[agent_dir_idx]
                             expected_next_position[agent.handle] = neighbour
                             print("   improved (action) -> {}".format(actions[agent.handle]))
     _, rewards, dones, _ = env.step(actions)
@@ -105,19 +108,15 @@ def test_reward_function_conflict(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.position = (5, 6)  # south dead-end
-    agent.initial_position = (5, 6)  # south dead-end
-    agent.direction = 0  # north
-    agent.initial_direction = 0  # north
+    agent.current_configuration = ((5, 6), 0)  # south dead-end, facing north
+    agent.initial_configuration = ((5, 6), 0)  # south dead-end, facing north
     agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
-    agent.position = (3, 8)  # east dead-end
-    agent.initial_position = (3, 8)  # east dead-end
-    agent.direction = 3  # west
-    agent.initial_direction = 3  # west
+    agent.current_configuration = ((3, 8), 3)  # east dead-end, facing west
+    agent.initial_configuration = ((3, 8), 3)  # east dead-end, facing west
     agent.targets = {((6, 6), d) for d in Grid4TransitionsEnum}  # south dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
@@ -127,10 +126,8 @@ def test_reward_function_conflict(rendering=False):
     env.agents[1].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
-    env.agents[0].position = env.agents[0].initial_position
-    env.agents[0].direction = env.agents[0].initial_direction
-    env.agents[1].position = env.agents[1].initial_position
-    env.agents[1].direction = env.agents[1].initial_direction
+    env.agents[0].current_configuration = env.agents[0].initial_configuration
+    env.agents[1].current_configuration = env.agents[1].initial_configuration
     print("\n")
     print(env.agents[0])
     print(env.agents[1])
@@ -176,10 +173,9 @@ def test_reward_function_conflict(rendering=False):
         for agent in env.agents:
             # assert rewards[agent.handle] == 0
             expected_position = expected_positions[iteration + 1][agent.handle]
-            assert agent.position == expected_position, "[{}] agent {} at {}, expected {}".format(iteration + 1,
-                                                                                                  agent.handle,
-                                                                                                  agent.position,
-                                                                                                  expected_position)
+            assert agent.current_configuration[0] == expected_position, \
+                "[{}] agent {} at {}, expected {}".format(iteration + 1, agent.handle,
+                                                          agent.current_configuration[0], expected_position)
         if rendering:
             renderer.render_env(show=True, show_observations=True)
 
@@ -197,20 +193,16 @@ def test_reward_function_waiting(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.initial_position = (3, 8)  # east dead-end
-    agent.initial_direction = 3  # west
-    agent.position = (3, 8)  # east dead-end
-    agent.direction = 3  # west
+    agent.initial_configuration = ((3, 8), 3)  # east dead-end, facing west
+    agent.current_configuration = ((3, 8), 3)  # east dead-end, facing west
 
     agent.targets = {((3, 1), d) for d in Grid4TransitionsEnum}  # west dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
-    agent.initial_position = (5, 6)  # south dead-end
-    agent.initial_direction = 0  # north
-    agent.position = (5, 6)  # south dead-end
-    agent.direction = 0  # north
+    agent.initial_configuration = ((5, 6), 0)  # south dead-end, facing north
+    agent.current_configuration = ((5, 6), 0)  # south dead-end, facing north
     agent.targets = {((3, 8), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
@@ -220,10 +212,8 @@ def test_reward_function_waiting(rendering=False):
     env.agents[1].moving = True
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
-    env.agents[0].position = env.agents[0].initial_position
-    env.agents[0].direction = env.agents[0].initial_direction
-    env.agents[1].position = env.agents[1].initial_position
-    env.agents[1].direction = env.agents[1].initial_direction
+    env.agents[0].current_configuration = env.agents[0].initial_configuration
+    env.agents[1].current_configuration = env.agents[1].initial_configuration
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")
@@ -310,14 +300,16 @@ def test_reward_function_waiting(rendering=False):
 
         print(env.dones["__all__"])
         for agent in env.agents:
-            print("[{}] agent {} at {}, target {} ".format(iteration + 1, agent.handle, agent.position, agent.targets))
-        print(np.all([np.array_equal(agent2.position, next(iter(agent2.targets))[0]) for agent2 in env.agents]))
+            print("[{}] agent {} at {}, target {} ".format(
+                iteration + 1, agent.handle, agent.current_configuration[0], agent.targets))
+        print(np.all([np.array_equal(agent2.current_configuration[0], next(iter(agent2.targets))[0])
+                      for agent2 in env.agents]))
         for agent in env.agents:
             expected_position = expectations[iteration + 1]['positions'][agent.handle]
-            assert agent.position == expected_position, \
+            assert agent.current_configuration[0] == expected_position, \
                 "[{}] agent {} at {}, expected {}".format(iteration + 1,
                                                           agent.handle,
-                                                          agent.position,
+                                                          agent.current_configuration[0],
                                                           expected_position)
             # expected_reward = expectations[iteration + 1]['rewards'][agent.handle]
             # actual_reward = rewards[agent.handle]

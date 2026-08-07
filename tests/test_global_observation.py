@@ -32,9 +32,9 @@ def test_get_global_observation():
     obs, all_rewards, done, _ = env.step({i: RailEnvActions.MOVE_FORWARD for i in range(number_of_agents)})
     for i in range(len(env.agents)):
         agent: EnvAgent = env.agents[i]
-        print("[{}] state={}, position={}, target={}, initial_position={}".format(i, agent.state, agent.position,
-                                                                                  agent.targets,
-                                                                                  agent.initial_position))
+        position = agent.current_configuration[0] if agent.current_configuration is not None else None
+        print("[{}] state={}, position={}, target={}, initial_position={}".format(
+            i, agent.state, position, agent.targets, agent.initial_configuration[0]))
 
     for i, agent in enumerate(env.agents):
         obs_agents_state = obs[i][1]
@@ -58,17 +58,19 @@ def test_get_global_observation():
                     _other_agent_target)
 
         # test first channel of obs_agents_state: direction at own position
+        agent_position = agent.current_configuration[0] if agent.current_configuration is not None else None
+        agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
         for r in range(env.height):
             for c in range(env.width):
-                if (agent.state.is_on_map_state() or agent.state == TrainState.DONE) and (
-                    r, c) == agent.position:
-                    assert np.isclose(obs_agents_state[(r, c)][0], agent.direction), \
+                if (agent.state.is_on_map_state() or agent.state == TrainState.DONE) and (r, c) == agent_position:
+                    assert np.isclose(obs_agents_state[(r, c)][0], agent_direction), \
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
-                elif (agent.state == TrainState.READY_TO_DEPART) and (r, c) == agent.initial_position:
-                    assert (obs_agents_state[(r, c)][0] and agent.direction is None) or np.isclose(obs_agents_state[(r, c)][0], agent.initial_direction), \
+                            .format(i, agent.state, (r, c), agent_direction, obs_agents_state[(r, c)][0])
+                elif (agent.state == TrainState.READY_TO_DEPART) and (r, c) == agent.initial_configuration[0]:
+                    assert (obs_agents_state[(r, c)][0] and agent_direction is None) \
+                           or np.isclose(obs_agents_state[(r, c)][0], agent.initial_configuration[1]), \
                         "agent {} in state {} at {} expected to contain own direction {}, found {}" \
-                            .format(i, agent.state, (r, c), agent.direction, obs_agents_state[(r, c)][0])
+                            .format(i, agent.state, (r, c), agent_direction, obs_agents_state[(r, c)][0])
                 else:
                     assert np.isclose(obs_agents_state[(r, c)][0], -1), \
                         "agent {} in state {} at {} expected contain -1 found {}" \
@@ -81,11 +83,16 @@ def test_get_global_observation():
                 for other_i, other_agent in enumerate(env.agents):
                     if i == other_i:
                         continue
+                    if other_agent.current_configuration is not None:
+                        other_agent_position = other_agent.current_configuration[0]
+                    else:
+                        other_agent_position = None
                     if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED, TrainState.DONE] and (
-                        r, c) == other_agent.position:
-                        assert np.isclose(obs_agents_state[(r, c)][1], other_agent.direction), \
+                            r, c) == other_agent_position:
+                        other_direction = other_agent.current_configuration[1]
+                        assert np.isclose(obs_agents_state[(r, c)][1], other_direction), \
                             "agent {} in state {} at {} should see other agent with direction {}, found = {}" \
-                                .format(i, agent.state, (r, c), other_agent.direction, obs_agents_state[(r, c)][1])
+                                .format(i, agent.state, (r, c), other_direction, obs_agents_state[(r, c)][1])
                     has_agent = True
                 if not has_agent:
                     assert np.isclose(obs_agents_state[(r, c)][1], -1), \
@@ -98,7 +105,7 @@ def test_get_global_observation():
                 has_agent = False
                 for other_i, other_agent in enumerate(env.agents):
                     if other_agent.state in [TrainState.MOVING, TrainState.MALFUNCTION, TrainState.STOPPED,
-                                             TrainState.DONE] and other_agent.position == (r, c):
+                                             TrainState.DONE] and other_agent.current_configuration[0] == (r, c):
                         assert np.isclose(obs_agents_state[(r, c)][2], other_agent.malfunction_handler.malfunction_down_counter), \
                             "agent {} in state {} at {} should see agent malfunction {}, found = {}" \
                                 .format(i, agent.state, (r, c), other_agent.malfunction_handler.malfunction_down_counter,
@@ -118,7 +125,8 @@ def test_get_global_observation():
             for c in range(env.width):
                 count = 0
                 for other_i, other_agent in enumerate(env.agents):
-                    if other_agent.state == TrainState.READY_TO_DEPART and other_agent.initial_position == (r, c):
+                    if (other_agent.state == TrainState.READY_TO_DEPART
+                        and other_agent.initial_configuration[0] == (r, c)):
                         count += 1
                 assert np.isclose(obs_agents_state[(r, c)][4], count), \
                     "agent {} in state {} at {} should see {} agents ready to depart, found{}" \

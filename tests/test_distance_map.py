@@ -59,8 +59,7 @@ def test_walker():
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents[0].position = (0, 1)
-    env.agents[0].direction = 1
+    env.agents[0].current_configuration = ((0, 1), 1)
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
     # reset to set agents from agents_static
     # env.reset(False, False)

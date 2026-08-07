@@ -8,16 +8,26 @@ from flatland.env_generation.env_generator import env_generator
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
+from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rewards import BaseDefaultRewards, DefaultRewards, PunctualityRewards
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.seeding import random_state_to_hashablestate
+from flatland.utils.simple_rail import make_simple_rail
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 
+@pytest.mark.parametrize("rewards_cls", [DefaultRewards, BaseDefaultRewards, PunctualityRewards])
+@pytest.mark.parametrize("malfunction_interval", [540, 20])
 @pytest.mark.parametrize("seed", range(42, 58))
-def test_graph_transition_map_from_with_random_policy(seed):
-    grid_env, _, _ = env_generator(seed=seed)
-    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
+def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval, rewards_cls):
+    # N.B. a fresh instance per test invocation - Rewards accumulates mutable state
+    # (arrivals/departures/states) over an episode, so instances must never be shared/reused
+    # across parametrize cases or between the grid and graph env (see GraphRailEnv.from_rail_env).
+    grid_env, _, _ = env_generator(seed=seed, malfunction_interval=malfunction_interval, rewards=rewards_cls())
+    graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed, rewards=rewards_cls())
     assert random_state_to_hashablestate(grid_env.np_random) == random_state_to_hashablestate(graph_env.np_random)
 
     for r in range(grid_env.height):
@@ -64,13 +74,25 @@ def test_graph_transition_map_from_with_random_policy(seed):
         grid_trajectory = PolicyRunner.create_from_policy(env=grid_env, policy=RandomPolicy(), data_dir=data_dir / "one")
         graph_trajectory = PolicyRunner.create_from_policy(env=graph_env, policy=RandomPolicy(), data_dir=data_dir / "two", snapshot_interval=0, no_save=True)
 
+        def _any_malfunction(trajectory):
+            return trajectory.trains_rewards_dones_infos["info"].map(lambda info: info["malfunction"] > 0).any()
+
+        if malfunction_interval <= 20:
+            # only guaranteed frequent enough to reliably hit at least once across all seeds at this rate -
+            # the default (rarer) malfunction_interval may legitimately produce zero malfunctions for some seeds.
+            # N.B. exact malfunction/info equality between grid and graph is already covered below by
+            # compare_rewards_dones_infos (which diffs the full info dict, incl. malfunction) - this only
+            # additionally guarantees malfunctions weren't trivially absent on both sides.
+            assert _any_malfunction(grid_trajectory), "expected at least one malfunction in the grid env's run"
+            assert _any_malfunction(graph_trajectory), "expected at least one malfunction in the graph env's run"
+
         assert len(grid_trajectory.compare_arrived(graph_trajectory)) == 0
         assert len(grid_trajectory.compare_actions(graph_trajectory)) == 0
         graph_trajectory.trains_positions["position"] = graph_trajectory.trains_positions["position"].map(
             GraphTransitionMap.graph_configuration_to_grid_configuration)
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
-        assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory)) == 0
+        assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory, ignoring_action_required=False)) == 0
 
 
 @pytest.mark.parametrize("seed", range(42, 58))
@@ -87,4 +109,45 @@ def test_apply_timetable_to_agents_waypoints_well_formed(seed):
         for wps in agent.waypoints:
             for configuration in wps:
                 assert configuration in graph_env.rail.g.nodes
+                assert isinstance(configuration, str)
         assert set(agent.waypoints[-1]) == agent.targets
+
+
+def test_from_graph_defaults():
+    """
+    Regression test: `GraphRailEnv.from_graph`'s default `timetable_generator`/`agent_speeds`
+    branches - never exercised via `from_rail_env`, which always supplies both explicitly - must
+    produce a working env: `ttgen_flatland2`'s fixed departure/arrival window and a uniform speed
+    of `1.0` for every agent.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2)
+    env.reset(False, False)
+
+    g = GraphTransitionMap.grid_to_digraph(env.rail)
+    gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+    agent_waypoints = {
+        agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
+        for agent in env.agents
+    }
+    resource_map = {n: n for n in g.nodes}
+
+    # N.B. agent_speeds and timetable_generator deliberately omitted to exercise from_graph's defaults.
+    graph_env: GraphRailEnv = GraphRailEnv.from_graph(
+        g=g,
+        resource_map=resource_map,
+        agent_waypoints=agent_waypoints,
+        observation_builder=DummyObservationBuilder(),
+    )
+
+    assert graph_env._max_episode_steps == 1000
+    for agent in graph_env.agents:
+        assert agent.speed_counter.max_speed == 1.0
+        assert agent.earliest_departure == 0
+        assert agent.latest_arrival == 1000
+
+    # smoke test: the resulting env must actually be steppable.
+    for _ in range(5):
+        graph_env.step({i: RailEnvActions.MOVE_FORWARD for i in range(graph_env.get_num_agents())})

@@ -164,5 +164,5 @@ def makeTestEnv(sName="single_alternative", nAg=2, remove_agents_at_target=True)
 def getAgentState(env):
     dAgState = {}
     for iAg, ag in enumerate(env.agents):
-        dAgState[iAg] = (*ag.position, ag.direction)
+        dAgState[iAg] = (*ag.current_configuration[0], ag.current_configuration[1])
     return dAgState

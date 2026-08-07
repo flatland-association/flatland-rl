@@ -29,9 +29,8 @@ def test_get_shortest_paths_unreachable():
 
     # set the initial position
     agent = env.agents[0]
-    agent.position = (3, 1)  # west dead-end
-    agent.initial_position = (3, 1)  # west dead-end
-    agent.direction = Grid4TransitionsEnum.WEST
+    agent.current_configuration = ((3, 1), Grid4TransitionsEnum.WEST)  # west dead-end
+    agent.initial_configuration = ((3, 1), agent.initial_configuration[1])  # west dead-end
     agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -122,7 +121,8 @@ def test_get_shortest_paths():
 def _assert_paths_equal(iAgent:int, actual:List[Waypoint], expected:List[Waypoint]):
     assert len(actual) == len(expected), f"Lengths differ: actual={len(actual)}, expected={len(expected)}"
     for iWP, (wpA, wpE) in enumerate(zip(actual, expected)):
-        assert wpA.position == wpE.position, f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.position}, expected={wpE.position}"
+        assert wpA.position == wpE.position, \
+            f"Agent {iAgent} Waypoints at step {iWP} differ: actual={wpA.position}, expected={wpE.position}"
         assert wpA.direction == wpE.direction, f"Agent {iAgent} Waypoint directions at step {iWP} differ:actual={wpA.direction}, expected={wpE.direction}"
 
 # todo file test_002.pkl has to be generated automatically
@@ -255,9 +255,8 @@ def test_get_k_shortest_paths(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.position = initial_position
-    agent.initial_position = initial_position
-    agent.direction = initial_direction
+    agent.current_configuration = (initial_position, initial_direction)
+    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -422,10 +421,9 @@ def test_get_k_shortest_paths_with_forbidden_cells(rendering=False):
     target_position = (3, 9)  # east
 
     agent = env.agents[0]
-    agent.position = initial_position
-    agent.initial_position = initial_position
-    agent.direction = initial_direction
-    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
+    agent.current_configuration = (initial_position, initial_direction)
+    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)
@@ -547,10 +545,9 @@ def test_get_k_shortest_paths_with_forbidden_cells_blocks_all_paths(rendering=Fa
     target_position = (3, 9)  # east
 
     agent = env.agents[0]
-    agent.position = initial_position
-    agent.initial_position = initial_position
-    agent.direction = initial_direction
-    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
+    agent.current_configuration = (initial_position, initial_direction)
+    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)
@@ -586,9 +583,8 @@ def test_get_k_shortest_paths_with_direction_at_target(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.position = initial_position
-    agent.initial_position = initial_position
-    agent.direction = initial_direction
+    agent.current_configuration = (initial_position, initial_direction)
+    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 

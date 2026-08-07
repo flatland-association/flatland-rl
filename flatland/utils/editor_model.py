@@ -335,10 +335,10 @@ class EditorModel(AbstractModel):
 
     def find_agent_at(self, cell_row_col):
         for agent_idx, agent in enumerate(self.env.agents):
-            if agent.position is None:
-                rc_pos = agent.initial_position
+            if agent.current_configuration is None:
+                rc_pos = agent.initial_configuration[0]
             else:
-                rc_pos = agent.position
+                rc_pos = agent.current_configuration[0]
             if tuple(rc_pos) == tuple(cell_row_col):
                 return agent_idx
         return None
@@ -378,9 +378,10 @@ class EditorModel(AbstractModel):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                agent.initial_position = tuple(cell_row_col)
-                agent.position = tuple(cell_row_col)
-                agent.old_position = tuple(cell_row_col)
+                cur, old = agent.current_configuration, agent.old_configuration
+                agent.initial_configuration = (tuple(cell_row_col), agent.initial_configuration[1])
+                agent.current_configuration = (tuple(cell_row_col), cur[1] if cur is not None else None)
+                agent.old_configuration = (tuple(cell_row_col), old[1] if old is not None else None)
         else:
             # Yes
             # Have they clicked on the agent already selected?

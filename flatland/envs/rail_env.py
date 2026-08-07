@@ -396,6 +396,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         """ Any updates to agent to be made in Done state """
         if agent.state == TrainState.DONE and agent.arrival_time is None:
             agent.arrival_time = self._elapsed_steps
+            # capture which specific target alternative was reached before current_configuration is
+            # possibly cleared below - see EnvAgent.target_configuration.
+            agent.target_configuration = agent.current_configuration
             self.dones[agent.handle] = True
             if self.remove_agents_at_target:
                 agent.current_configuration = None
@@ -490,8 +493,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             if new_configuration is not None:
                 valid_position_direction = any(self.rail.get_transitions(new_configuration))
                 if not valid_position_direction:
+                    infra = self._infrastructure_representation(agent.current_configuration)
                     warnings.warn(f"{new_configuration} not valid on the grid."
-                                  f" Coming from {current_or_initial_configuration} with action {action} and action valid {action_valid}. {self._infrastructure_representation(agent)}")
+                                  f" Coming from {current_or_initial_configuration} with action {action}"
+                                  f" and action valid {action_valid}. {infra}")
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
 
@@ -661,7 +666,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
     def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[ConfigurationType]]:
-        raise NotImplementedError()
+        return EnvAgent.apply_timetable(agents, timetable)
 
     def _agents_from_line(self, line: "Line") -> List[EnvAgent[ConfigurationType]]:
         raise NotImplementedError()
@@ -759,11 +764,13 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def _update_agent_positions_map(self, ignore_old_positions=True):
         """ Update the agent_positions array for agents that changed positions """
         for agent in self.agents:
-            if not ignore_old_positions or agent.old_position != agent.position:
-                if agent.position is not None:
-                    self.agent_positions[agent.position] = agent.handle
-                if agent.old_position is not None:
-                    self.agent_positions[agent.old_position] = -1
+            position = agent.current_configuration[0] if agent.current_configuration is not None else None
+            old_position = agent.old_configuration[0] if agent.old_configuration is not None else None
+            if not ignore_old_positions or old_position != position:
+                if position is not None:
+                    self.agent_positions[position] = agent.handle
+                if old_position is not None:
+                    self.agent_positions[old_position] = -1
 
     def clone_from(self, env: 'RailEnv', obs_builder: Optional[ObservationBuilder["RailEnv", Any]] = None):
         from flatland.envs.persistence import RailEnvPersister
@@ -778,10 +785,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
-        return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration.position)).name
-
-    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
-        return EnvAgent.apply_timetable(self.agents, timetable)
+        return RailEnvTransitionsEnum(self.rail.get_full_transitions(*configuration[0])).name
 
     def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         agents = EnvAgent.from_line(line)
@@ -790,4 +794,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             # N.B. only the target's direction alternatives (last waypoint group) can be invalid - the
             # line generator's own routing already guarantees valid configurations everywhere else.
             agent.waypoints[-1] = _filter_valid_target_configurations(rail, agent.waypoints[-1])
+            assert len(agent.targets) > 0, (
+                f"agent {agent.handle}: none of the target's direction alternatives are valid "
+                f"configurations on the rail - the agent would end up with an empty `targets`."
+            )
         return agents
