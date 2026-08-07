@@ -100,8 +100,17 @@ desired next configuration from the action via the `step_utils` state machine (`
 `TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
 `(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
 conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
-state/position/rewards. `EnvAgent` (`agent_utils.py`) holds per-agent state; `observations.py`/`predictions.py`
-build the observation returned to policies, typically via the distance map's shortest paths.
+state/position, then `handle_done_state()`, then rewards, per agent, in that order. `EnvAgent` (`agent_utils.py`)
+holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
+via the distance map's shortest paths.
+
+`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_configuration`
+and, if `remove_agents_at_target` (the default), clears `agent.current_configuration` to `None` — so on the
+exact step an agent reaches `TrainState.DONE`, a `Rewards.step_reward()` implementation already sees
+`current_configuration is None`. A reward implementation that needs "where is this agent right now" must key
+off `target_configuration` (or `agent_utils.virtual_configuration()`) for a `DONE` agent, not
+`current_configuration` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
+departure booking as a result.
 
 `flatland/envs/graph_rail_env.py`'s `GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str])`
 is a full graph-native sibling to `RailEnv`, not just an implementation detail of the grid/graph split above.
