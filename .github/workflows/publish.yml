@@ -189,31 +189,17 @@ jobs:
                     name: python-package
                     path: dist/
 
-    docker-publish:
-        # Runs after whichever publish flow ran - the other is always skipped, so the default
-        # needs-implies-success() condition would otherwise block this job.
+    # Resolves what docker-publish below needs before it can call build-docker-image.yml (a `uses:` job
+    # can't have its own preceding steps). Runs after whichever publish flow ran - the other is always
+    # skipped, so the default needs-implies-success() condition would otherwise block this job.
+    resolve-docker-publish-ref:
         if: ${{ !cancelled() && (needs.publish-pypi.result == 'success' || needs.publish-test-pypi.result == 'success') }}
         needs: [ publish-pypi, publish-test-pypi ]
         runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-            packages: write
-        env:
-            REGISTRY: ghcr.io
-        strategy:
-            fail-fast: false
-            matrix:
-                python-version: [ "3.12" ]
-                variant:
-                    -   name: default
-                        with-ml: "false"
-                        tag-suffix: ""
-                    -   name: ml
-                        with-ml: "true"
-                        tag-suffix: "-ml"
+        outputs:
+            version_tag: ${{ steps.version.outputs.VERSION_TAG }}
+            flatland_rl_ref: ${{ steps.version.outputs.FLATLAND_RL_REF }}
         steps:
-            -   name: Checkout
-                uses: actions/checkout@v6
             -   name: Resolve version tag and flatland-rl ref
                 id: version
                 run: |
@@ -224,28 +210,26 @@ jobs:
                         echo "VERSION_TAG=${{ needs.publish-test-pypi.outputs.version_tag }}" >> "$GITHUB_OUTPUT"
                         echo "FLATLAND_RL_REF=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
                     fi
-            -   name: Log in to GHCR
-                uses: docker/login-action@v4
-                with:
-                    registry: ${{ env.REGISTRY }}
-                    username: ${{ github.actor }}
-                    password: ${{ secrets.GITHUB_TOKEN }}
-            -   name: Set up QEMU
-                uses: docker/setup-qemu-action@v4
-            -   name: Set up Docker Buildx
-                uses: docker/setup-buildx-action@v4
-            -   name: Build image name
-                id: image-name
-                run: echo "IMAGE_NAME=$(echo '${{ env.REGISTRY }}/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-            -   name: Build and push image
-                uses: docker/build-push-action@v7
-                with:
-                    context: .
-                    platforms: linux/amd64,linux/arm64
-                    build-args: |
-                        PYTHON_VERSION=${{ matrix.python-version }}
-                        WITH_ML=${{ matrix.variant.with-ml }}
-                        FLATLAND_RL_REF=${{ steps.version.outputs.FLATLAND_RL_REF }}
-                    no-cache: true
-                    push: true
-                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:${{ steps.version.outputs.VERSION_TAG }}-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
+
+    # See build-docker-image.yml (shared with docker.yml's own docker-publish job) for the actual
+    # build/skip-if-unchanged/retag logic. No explicit `if:` needed here - resolve-docker-publish-ref being
+    # skipped already propagates via the default needs-implies-success() condition.
+    docker-publish:
+        needs: [ resolve-docker-publish-ref ]
+        strategy:
+            fail-fast: false
+            matrix:
+                python-version: [ "3.12" ]
+                variant:
+                    -   name: default
+                        with-ml: false
+                        tag-suffix: ""
+                    -   name: ml
+                        with-ml: true
+                        tag-suffix: "-ml"
+        uses: ./.github/workflows/build-docker-image.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            with-ml: ${{ matrix.variant.with-ml }}
+            flatland-rl-ref: ${{ needs.resolve-docker-publish-ref.outputs.flatland_rl_ref }}
+            human-facing-tag: ${{ needs.resolve-docker-publish-ref.outputs.version_tag }}-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}

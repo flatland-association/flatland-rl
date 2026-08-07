@@ -8,9 +8,6 @@ on:
     schedule:
         -   cron: '0 3 * * *'
 
-env:
-    REGISTRY: ghcr.io
-
 jobs:
     actionlint:
         # Static analysis of .github/workflows/*.yml itself - catches invalid expressions/`if:` typos and
@@ -27,47 +24,28 @@ jobs:
                 run: ${{ steps.get_actionlint.outputs.executable }} -color
                 shell: bash
 
+    # See build-docker-image.yml (shared with publish.yml's own docker-publish job) for the actual
+    # build/skip-if-unchanged/retag logic.
     docker-publish:
-        runs-on: ubuntu-24.04
-        permissions:
-            contents: read
-            packages: write
         strategy:
             fail-fast: false
             matrix:
                 python-version: [ "3.12" ]
                 variant:
                     -   name: default
-                        with-ml: "false"
+                        with-ml: false
                         tag-suffix: ""
                     -   name: ml
-                        with-ml: "true"
+                        with-ml: true
                         tag-suffix: "-ml"
-        steps:
-            -   name: Checkout
-                uses: actions/checkout@v6
-            -   name: Log in to GHCR
-                if: ${{ github.event_name != 'pull_request' }}
-                uses: docker/login-action@v4
-                with:
-                    registry: ${{ env.REGISTRY }}
-                    username: ${{ github.actor }}
-                    password: ${{ secrets.GITHUB_TOKEN }}
-            -   name: Set up QEMU
-                uses: docker/setup-qemu-action@v4
-            -   name: Set up Docker Buildx
-                uses: docker/setup-buildx-action@v4
-            -   name: Build image name
-                id: image-name
-                run: echo "IMAGE_NAME=$(echo '${{ env.REGISTRY }}/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
-            -   name: Build and push image
-                uses: docker/build-push-action@v7
-                with:
-                    context: .
-                    platforms: linux/amd64,linux/arm64
-                    build-args: |
-                        PYTHON_VERSION=${{ matrix.python-version }}
-                        WITH_ML=${{ matrix.variant.with-ml }}
-                    no-cache: true
-                    push: ${{ github.event_name != 'pull_request' }}
-                    tags: ${{ steps.image-name.outputs.IMAGE_NAME }}:latest-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
+        uses: ./.github/workflows/build-docker-image.yml
+        with:
+            python-version: ${{ matrix.python-version }}
+            with-ml: ${{ matrix.variant.with-ml }}
+            flatland-rl-ref: main
+            human-facing-tag: latest-py${{ matrix.python-version }}${{ matrix.variant.tag-suffix }}
+            # Nightly always rebuilds from scratch even if nothing we control changed, so it keeps
+            # exercising a fresh build (catching e.g. base-image/upstream drift) rather than just re-tagging
+            # a possibly-stale cached image indefinitely.
+            force-rebuild: ${{ github.event_name == 'schedule' }}
+            push: ${{ github.event_name != 'pull_request' }}

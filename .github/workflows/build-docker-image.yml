@@ -1,0 +1,118 @@
+name: Build Docker image
+
+# Reusable workflow: builds/pushes the published, multi-arch flatland-rl runtime image (see the sibling
+# Dockerfile - not to be confused with build-ci-env.yml/Dockerfile.ci-env, the throwaway CI-only test
+# image). Used by both docker.yml (on-push/nightly "latest" builds) and publish.yml (release/test-pypi
+# builds), so this build/skip-if-unchanged/retag logic only has to exist in one place.
+#
+# Skip-if-unchanged works differently here than build-ci-env.yml, because this Dockerfile's actual content
+# depends on a *remote* ref: requirements.txt/requirements-ml.txt are curl'd from flatland-rl-ref, and
+# flatland-rl itself is installed via `pip install git+...@flatland-rl-ref`. Docker's own layer cache can't
+# see past a RUN command's literal (always-identical) text to notice that a moving ref like "main" has new
+# content - naively caching those layers risks silently serving a stale requirements.txt/flatland-rl
+# install forever. Instead of relying on layer caching, this resolves flatland-rl-ref to its exact
+# (immutable) commit SHA up front and folds that into the image tag alongside a hash of this repo's own
+# Dockerfile/toolchain script - so "does this already exist" is precise regardless of Docker's cache
+# semantics, and a real content change (anywhere) always produces a new tag.
+on:
+    workflow_call:
+        inputs:
+            python-version:
+                required: true
+                type: string
+            with-ml:
+                required: true
+                type: boolean
+            flatland-rl-ref:
+                description: "Git ref (branch, tag, or commit SHA) of flatland-rl to build the image from."
+                required: true
+                type: string
+            human-facing-tag:
+                description: "Mutable tag consumers actually pull, e.g. 'latest-py3.12' or 'v4.3.0-py3.12' - always repointed at the resulting image, whether freshly built or already existing."
+                required: true
+                type: string
+            force-rebuild:
+                description: "Rebuild even if an image already exists for this exact (ref, Dockerfile) combination - set true for scheduled/nightly runs, so they keep exercising a genuinely fresh build."
+                required: false
+                type: boolean
+                default: false
+            push:
+                description: "Whether to push/tag at all - false for pull_request validation builds, which just build once and skip all registry interaction entirely."
+                required: false
+                type: boolean
+                default: true
+
+jobs:
+    build:
+        runs-on: ubuntu-24.04
+        permissions:
+            contents: read
+            packages: write
+        steps:
+            -   uses: actions/checkout@v6
+            -   uses: docker/setup-qemu-action@v4
+            -   uses: docker/setup-buildx-action@v4
+            -   name: Log in to GHCR
+                if: inputs.push
+                uses: docker/login-action@v4
+                with:
+                    registry: ghcr.io
+                    username: ${{ github.actor }}
+                    password: ${{ secrets.GITHUB_TOKEN }}
+            -   name: Build image name
+                id: image-name
+                run: echo "IMAGE_NAME=$(echo 'ghcr.io/${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+            -   name: Compute variant name
+                id: variant
+                run: echo "name=${{ inputs.with-ml && 'ml' || 'default' }}" >> "$GITHUB_OUTPUT"
+            # Resolves to an immutable commit SHA rather than trusting Docker's layer cache to notice a
+            # moving ref's remote content changed - see the header comment. `git ls-remote` only resolves
+            # branch/tag names; if flatland-rl-ref is already a commit SHA (no matching ref), fall back to
+            # using it as-is.
+            -   name: Resolve flatland-rl-ref to a commit SHA
+                id: resolve-ref
+                run: |
+                    sha=$(git ls-remote "https://github.com/${{ github.repository }}.git" "${{ inputs.flatland-rl-ref }}" | cut -f1 | cut -c1-8)
+                    if [ -z "$sha" ]; then
+                        sha=$(echo "${{ inputs.flatland-rl-ref }}" | cut -c1-8)
+                    fi
+                    echo "sha=$sha" >> "$GITHUB_OUTPUT"
+            -   name: Compute content tag
+                id: content-tag
+                run: echo "tag=py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}-${{ steps.resolve-ref.outputs.sha }}-${{ hashFiles('Dockerfile', 'docker/install-build-toolchain.sh') }}" >> "$GITHUB_OUTPUT"
+            # Lets the build step below be skipped when this exact (python-version, variant, resolved
+            # commit, Dockerfile/toolchain) combination was already built and pushed. Not consulted at all
+            # for pull_request validation builds (inputs.push is false) or when force-rebuild is set.
+            -   name: Check if image already exists
+                if: inputs.push
+                id: image-exists
+                run: |
+                    if [ "${{ inputs.force-rebuild }}" != "true" ] && docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:${{ steps.content-tag.outputs.tag }}" > /dev/null 2>&1; then
+                        echo "exists=true" >> "$GITHUB_OUTPUT"
+                    else
+                        echo "exists=false" >> "$GITHUB_OUTPUT"
+                    fi
+            -   name: Build and push image
+                if: ${{ !inputs.push || steps.image-exists.outputs.exists != 'true' }}
+                uses: docker/build-push-action@v7
+                with:
+                    context: .
+                    platforms: linux/amd64,linux/arm64
+                    build-args: |
+                        PYTHON_VERSION=${{ inputs.python-version }}
+                        WITH_ML=${{ inputs.with-ml }}
+                        FLATLAND_RL_REF=${{ inputs.flatland-rl-ref }}
+                    push: ${{ inputs.push }}
+                    tags: |
+                        ${{ steps.image-name.outputs.IMAGE_NAME }}:${{ steps.content-tag.outputs.tag }}
+                        ${{ steps.image-name.outputs.IMAGE_NAME }}:${{ inputs.human-facing-tag }}
+            # No rebuild happened above (content tag already existed and force-rebuild wasn't set) - still
+            # make sure the mutable human-facing tag actually points at this content. Server-side manifest
+            # re-tag (no layer download/upload), not a rebuild:
+            # https://docs.docker.com/reference/cli/docker/buildx/imagetools/create/
+            -   name: Repoint human-facing tag at existing image
+                if: ${{ inputs.push && steps.image-exists.outputs.exists == 'true' }}
+                run: |
+                    docker buildx imagetools create \
+                        --tag "${{ steps.image-name.outputs.IMAGE_NAME }}:${{ inputs.human-facing-tag }}" \
+                        "${{ steps.image-name.outputs.IMAGE_NAME }}:${{ steps.content-tag.outputs.tag }}"
