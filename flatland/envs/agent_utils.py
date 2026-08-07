@@ -98,7 +98,9 @@ def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], 
     against even for off-map or arrived agents:
     - off map: `initial_configuration`.
     - on map: `current_configuration`.
-    - done (arrived, possibly already removed from the map): one of `agent`'s valid `targets`
+    - done (arrived, possibly already removed from the map): the minimum of `agent`'s
+  valid `targets`
+
       configurations, so a real, rail-valid direction is returned instead of the `None` `direction`
       that `current_configuration` would give once the agent is removed from the map.
     - any other state (e.g. malfunctioning while still off map): `None`.
@@ -108,7 +110,7 @@ def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], 
     elif agent.state.is_on_map_state():
         return agent.current_configuration
     elif agent.state == TrainState.DONE:
-        return next(iter(agent.targets))
+        return min(agent.targets)
     return None
 
 
