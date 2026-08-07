@@ -423,7 +423,7 @@ def test_get_k_shortest_paths_with_forbidden_cells(rendering=False):
     agent = env.agents[0]
     agent.current_configuration = (initial_position, initial_direction)
     agent.initial_configuration = (initial_position, agent.initial_configuration[1])
-    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)
@@ -547,7 +547,7 @@ def test_get_k_shortest_paths_with_forbidden_cells_blocks_all_paths(rendering=Fa
     agent = env.agents[0]
     agent.current_configuration = (initial_position, initial_direction)
     agent.initial_configuration = (initial_position, agent.initial_configuration[1])
-    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}
+    agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
     env.reset(False, False)

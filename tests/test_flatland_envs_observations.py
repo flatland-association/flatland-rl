@@ -108,14 +108,14 @@ def test_reward_function_conflict(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.current_configuration = ((5, 6), 0)  # south dead-end
+    agent.current_configuration = ((5, 6), 0)  # south dead-end, facing north
     agent.initial_configuration = ((5, 6), 0)  # south dead-end, facing north
     agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     agent._set_state(TrainState.MOVING)
 
     agent = env.agents[1]
-    agent.current_configuration = ((3, 8), 3)  # east dead-end
+    agent.current_configuration = ((3, 8), 3)  # east dead-end, facing west
     agent.initial_configuration = ((3, 8), 3)  # east dead-end, facing west
     agent.targets = {((6, 6), d) for d in Grid4TransitionsEnum}  # south dead-end
     agent.moving = True
