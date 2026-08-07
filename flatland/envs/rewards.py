@@ -504,21 +504,23 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         self.departures = defaultdict(defaultdict_list)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
-        # N.B. agent.targets is always a set of already-exploded (position, direction) configurations
-        # (see EnvAgent.targets), never a placeholder with a None direction - so no further exploding needed here.
-        agent_targets = agent.targets
-        # N.B. assuming target is only travelled once
-        # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
-        # have actually been at a target configuration - so old_configuration being None here (e.g. a zero-distance
-        # journey reaching DONE on the very first on-map step) does not mean the target wasn't really reached.
-        # TODO revise design -  target configurations have no arrival - should we change that?
-        if agent.current_configuration is None and agent.state_machine.state == TrainState.DONE and not any(
-            target_configuration in self.arrivals[agent.handle] for target_configuration in agent_targets):
-            self.arrivals[agent.handle][agent.target_configuration].append(elapsed_steps)
-
-        if agent.current_configuration is not None and agent.current_configuration not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][agent.current_configuration].append(elapsed_steps)
-            self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
+        # N.B. assuming a configuration is only ever visited once - arrivals[configuration]/departures[configuration]
+        # are only ever appended to once, coupled together, so end_of_episode_reward()'s zip(arrivals[wp],
+        # departures[wp]) stays aligned.
+        # `agent.target_configuration` is set deterministically by AbstractRailEnv.handle_done_state() before
+        # `current_configuration` is possibly cleared to None (remove_agents_at_target) - see
+        # EnvAgent.target_configuration and agent_utils.virtual_configuration(), whose DONE branch this mirrors.
+        configuration = (
+            agent.target_configuration if agent.state_machine.state == TrainState.DONE else agent.current_configuration
+        )
+        if configuration is not None and configuration not in self.arrivals[agent.handle]:
+            self.arrivals[agent.handle][configuration].append(elapsed_steps)
+            # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
+            # have actually been at a target configuration - so old_configuration being None here (e.g. a
+            # zero-distance journey reaching DONE on the very first on-map step) does not mean the target wasn't
+            # really reached; it just means there's no real "previous stop" to book a departure against.
+            if agent.old_configuration is not None:
+                self.departures[agent.handle][agent.old_configuration].append(elapsed_steps)
 
         return 0, 0
 

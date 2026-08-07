@@ -581,7 +581,13 @@ def test_punctuality_rewards_target():
     agent.current_configuration = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=4))
     agent.old_configuration = ((4, 4), 0)
+    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_configuration from
+    # current_configuration, then clear current_configuration (remove_agents_at_target=True) - all before
+    # step_reward() runs, exercising the real default-env arrival path instead of a direct shortcut.
     agent.current_configuration = ((3, 3), 3)
+    agent.state_machine.set_state(TrainState.DONE)
+    agent.target_configuration = ((3, 3), 3)
+    agent.current_configuration = None
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
@@ -596,6 +602,54 @@ def test_punctuality_rewards_target():
 
     # on time only at target
     assert rewards.cumulate(*collect) == (1, 3)
+
+
+def test_punctuality_rewards_departure_recorded_on_done_with_removal():
+    """Regression test: when an agent's last leg goes directly from an intermediate stop to its
+    target and reaches TrainState.DONE with remove_agents_at_target=True (the default), the
+    departure from that intermediate stop must still be recorded - AbstractRailEnv.handle_done_state()
+    clears current_configuration to None (and step_reward() only sees the target via
+    target_configuration) before step_reward() runs, so a naive current_configuration-is-not-None
+    guard would silently skip booking that departure and cause end_of_episode_reward() to
+    wrongly report the intermediate stop as not served."""
+    rewards = PunctualityRewards()
+    agent = EnvAgent(
+        handle=0, initial_configuration=((0, 0), 0),
+        targets={((3, 3), d) for d in Grid4TransitionsEnum},
+        current_configuration=(None, 3),
+        state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+        earliest_departure=5,
+        latest_arrival=10,
+        waypoints=[[Waypoint((0, 0), 0)], [Waypoint((2, 2), 2)], [Waypoint((3, 3), 3)]],
+        waypoints_earliest_departure=[5, 3, None],
+        waypoints_latest_arrival=[None, 10, 10],
+        arrival_time=5
+    )
+
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+
+    agent.old_configuration = ((0, 0), 0)
+    agent.current_configuration = ((2, 2), 2)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2)
+
+    agent.old_configuration = ((2, 2), 2)
+    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_configuration
+    # from current_configuration, then clear current_configuration (remove_agents_at_target=True) -
+    # all before step_reward() runs.
+    agent.current_configuration = ((3, 3), 3)
+    agent.state_machine.set_state(TrainState.DONE)
+    agent.target_configuration = ((3, 3), 3)
+    agent.current_configuration = None
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
+
+    # the previously-missing entry: departure from the last intermediate stop before the target.
+    assert rewards.departures[0][((2, 2), 2)] == [5]
+
+    n_stops_on_time, n_stops = rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
+    # initial departure (2) is before its earliest_departure (5), so not on time; intermediate and
+    # target are both on time - the intermediate only counts once its departure is recorded.
+    assert (n_stops_on_time, n_stops) == (2, 3)
 
 
 @pytest.mark.parametrize("rewards,assert_result", [
@@ -634,7 +688,9 @@ def test_zero_distance_target_arrival_recorded(rewards, assert_result):
 def test_punctuality_rewards_single_direction_target_does_not_crash():
     """Regression test: agent.targets can be filtered down to a single (position, direction)
     configuration (e.g. a dead-end target reachable from only one direction) - step_reward must
-    not crash indexing this as if it were a subscriptable sequence."""
+    not crash indexing this as if it were a subscriptable sequence. Also covers a real
+    DONE-with-removal arrival: the departure from the agent's last stop (old_configuration) must
+    still be recorded even though current_configuration is already None by the time step_reward runs."""
     rewards = PunctualityRewards()
     agent = EnvAgent(
         handle=0,
@@ -656,6 +712,7 @@ def test_punctuality_rewards_single_direction_target_does_not_crash():
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10)
 
     assert rewards.arrivals[0][((3, 3), 3)] == [10]
+    assert rewards.departures[0][((2, 2), 2)] == [10]
 
 
 def test_punctuality_rewards_arrival_recorded_once_per_configuration():
