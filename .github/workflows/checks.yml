@@ -219,8 +219,20 @@ jobs:
     #    (localhost/127.0.0.1). Containerizing without also editing those notebook cells to use the `redis`
     #    hostname would just trade one failure (no --network host) for another (wrong hostname).
     #
-    # So this needs an actual code change (parameterize the Redis host in the two notebooks, then add
-    # `container:` + keep `services:` here), not just a workflow tweak.
+    # A fix does exist (parameterize the Redis host in the two notebooks, then add `container:` + keep
+    # `services:` here), but this job deliberately keeps its current tox+actions/cache setup instead of
+    # pursuing it:
+    # - Unlike deptry/testml/test/examples, this job's slowness isn't dominated by rebuilding scipy/dm-tree
+    #   from source - that's what the GHCR image caching elsewhere in this file targets - so containerizing
+    #   it wouldn't recover anywhere near the same payoff for the added complexity (a new/adapted CI-env
+    #   image variant, plus wiring notebooks into build-ci-env.yml/run-ci-env-test.yml).
+    # - notebooks/test_service.ipynb and notebooks/test-service-timeouts.ipynb are read and run
+    #   interactively by humans, not just executed by CI - hardcoding a `redis` hostname instead of
+    #   localhost/127.0.0.1 to satisfy the containerized-job networking model would be a behavior change for
+    #   that interactive use too, not a CI-only config tweak, which is out of scope for a CI-time-reduction
+    #   effort.
+    # - This job already carves out python-version 3.10 as "failing too often" (see the matrix below) - it's
+    #   an already-accepted soft spot in this workflow, not the main bottleneck this effort was aimed at.
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
