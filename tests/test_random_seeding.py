@@ -264,11 +264,20 @@ def test_env_generator_no_seed():
     `env_generator` without `seed` nor `post_seed` behaves
     - non-deterministically for rail generation
     - non-deterministically for initialization of env's random state
+
+    N.B. `sparse_rail_generator`'s default city placement occasionally falls back to a
+    deterministic layout (`SparseRailGen._generate_evenly_distr_city_positions`), so a single
+    pair of draws can rarely collide by chance. Draw several samples and require variation
+    across them instead of asserting inequality on just one pair.
     """
-    env_generated_1, _, _ = env_generator()
-    env_generated_2, _, _ = env_generator()
-    assert not (env_generated_1.rail.grid == env_generated_2.rail.grid).all()
-    assert not (env_generated_1.np_random.get_state()[1] == env_generated_2.np_random.get_state()[1]).all()
+    grids = []
+    random_states = []
+    for _ in range(8):
+        env_generated, _, _ = env_generator()
+        grids.append(str(env_generated.rail.grid.tolist()))
+        random_states.append(str(env_generated.np_random.get_state()[1].tolist()))
+    assert len(set(grids)) > 1
+    assert len(set(random_states)) > 1
 
 
 def test_env_generator_no_seed_but_post_seed():

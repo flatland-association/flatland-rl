@@ -35,6 +35,7 @@ def fast_grid4_get_transition(cell_transition, orientation, direction):
 
 @lru_cache(maxsize=128)
 def fast_grid4_set_transitions(cell_transition, orientation, new_transitions):
+    cell_transition = int(cell_transition)
     mask = (1 << ((4 - orientation) * 4)) - (1 << ((3 - orientation) * 4))
     negmask = ~mask
 
@@ -54,6 +55,7 @@ def fast_grid4_remove_deadends(cell_transition):
     """
     Remove all turn-arounds (e.g. N-S, S-N, E-W,...).
     """
+    cell_transition = int(cell_transition)
     maskDeadEnds = Grid4Transitions.maskDeadEnds()
     cell_transition &= cell_transition & (~maskDeadEnds) & 0xffff
     return cell_transition
