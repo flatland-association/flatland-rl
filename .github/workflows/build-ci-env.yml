@@ -83,12 +83,23 @@ jobs:
                     fi
             # Lets everything below skip the disk-space dance (and the build itself) when this exact
             # (python-version, variant, hash) combination was already built and pushed - most runs, once the
-            # cache is warm, since requirements change far less often than commits.
+            # cache is warm, since requirements change far less often than commits. A manifest reference
+            # existing isn't enough on its own to prove that: GHCR can end up with a dangling manifest whose
+            # blobs were garbage-collected out from under it (observed in practice - ci-env-cleanup.yml's
+            # "delete untagged versions" step deleting a version that turned out to share blobs with a still-
+            # tagged manifest), which `imagetools inspect` alone can't detect since it only fetches the
+            # manifest JSON, not the blobs it references. Actually pulling is the same operation the
+            # downstream test/examples/deptry/testml jobs need to succeed, so it's what actually proves the
+            # image is usable - if the pull fails, this falls through to a real rebuild+push below instead of
+            # leaving a broken tag for those jobs to discover later. The pulled image is removed immediately
+            # after, since this job doesn't otherwise need it.
             -   name: Check if CI-env image already exists
                 id: image-exists
                 run: |
-                    if docker buildx imagetools inspect "${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}-${{ steps.image-hash.outputs.hash }}" > /dev/null 2>&1; then
+                    IMAGE="${{ steps.image-name.outputs.IMAGE_NAME }}:py${{ inputs.python-version }}-${{ steps.variant.outputs.name }}-${{ steps.image-hash.outputs.hash }}"
+                    if docker buildx imagetools inspect "$IMAGE" > /dev/null 2>&1 && docker pull "$IMAGE" > /dev/null 2>&1; then
                         echo "exists=true" >> "$GITHUB_OUTPUT"
+                        docker rmi "$IMAGE" > /dev/null 2>&1 || true
                     else
                         echo "exists=false" >> "$GITHUB_OUTPUT"
                     fi
