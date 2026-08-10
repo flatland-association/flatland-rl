@@ -5,6 +5,68 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [4.3.0](https://github.com/flatland-association/flatland-rl/compare/v4.2.6...v4.3.0) (2026-08-10)
+
+
+### Features
+
+* **backend:** fix edge case in link map. ([477b564](https://github.com/flatland-association/flatland-rl/commit/477b56458a61c68b82a6c3a0d1d8d19619cefc2a))
+* **baseimage:** add base image. ([#456](https://github.com/flatland-association/flatland-rl/issues/456)) ([6992491](https://github.com/flatland-association/flatland-rl/commit/69924913baf015208b28b67d205e8031b0e3cf59))
+* **chore:** add is deadend/straight/one_one for rail env transitions. ([274275b](https://github.com/flatland-association/flatland-rl/commit/274275b51af5dc5782596142d353107c07e1b821))
+* fix case when the mapped cells are not neighbors. ([909efa2](https://github.com/flatland-association/flatland-rl/commit/909efa2cc00931dc24f9ed88bda2727acb6bf451))
+* **grid4-utils:** add find_connected_cells flood-fill from an open set. ([8d5a723](https://github.com/flatland-association/flatland-rl/commit/8d5a723ead4ec5bc5d43b86ff5cb79127ffa7adc))
+* handle double slips in link map. ([e7c3a59](https://github.com/flatland-association/flatland-rl/commit/e7c3a5920c2226a3dc85950de3fc2ed8d604ddf2))
+* interface for exposing stations and inter-city lines in rail env and rail generators. ([#441](https://github.com/flatland-association/flatland-rl/issues/441)) ([0d341ce](https://github.com/flatland-association/flatland-rl/commit/0d341cee5e750a7467b4ac5a0515d4ef9cbbad92))
+* **policy runner:** add possibility to change the policy with corresponding obs builder. ([890b687](https://github.com/flatland-association/flatland-rl/commit/890b6872ee31a334b7d1d9c867e96e8dcf7437a2))
+* **rail generator:** expose stations and inter-city lines. ([d826504](https://github.com/flatland-association/flatland-rl/commit/d8265048e82e2e02705950a790831801ce0ae5cd))
+* **rail-generator:** ban inter-city fibre search from cutting through inner-city tracks. ([fef9f0e](https://github.com/flatland-association/flatland-rl/commit/fef9f0e3c2a4ca842745465adee099d8ec7c0680))
+* **rewards:** add delay rewards. ([#486](https://github.com/flatland-association/flatland-rl/issues/486)) ([6e395f8](https://github.com/flatland-association/flatland-rl/commit/6e395f8c41faf1fbbd0e39d0a2ec958955452e14))
+* **rewards:** add ecml2026 fine-grained-rewards. ([#454](https://github.com/flatland-association/flatland-rl/issues/454)) ([15998d4](https://github.com/flatland-association/flatland-rl/commit/15998d4f42018e4930dc9838918205fced195368))
+
+
+### Bug Fixes
+
+* __getstate__ crashes with AttributeError when condition is a plain callable. ([ced02bc](https://github.com/flatland-association/flatland-rl/commit/ced02bc8734a3769bc69b9e3ace9932cdb23dddc))
+* **ci:** verify CI-env image is pullable, not just that its manifest … ([#494](https://github.com/flatland-association/flatland-rl/issues/494)) ([0854483](https://github.com/flatland-association/flatland-rl/commit/0854483c3475435dabb2e376051e7f4f0cf3c77b))
+* **evaluator-service:** supported client versions fails if flatland is not installed in env. ([#455](https://github.com/flatland-association/flatland-rl/issues/455)) ([bf6e5f2](https://github.com/flatland-association/flatland-rl/commit/bf6e5f2dd784edebc01d7a935056a2498e363196))
+* global obs gym. ([ec9c1c7](https://github.com/flatland-association/flatland-rl/commit/ec9c1c78155f9ad55e0650b0907feea5ffdd69bb))
+* global obs gym. ([26de6ca](https://github.com/flatland-association/flatland-rl/commit/26de6ca645212715af0e43d378e3527a857a5395))
+* **persistence:** combine effects_generator override in set_full_state instead of discarding it ([c61f68a](https://github.com/flatland-association/flatland-rl/commit/c61f68a7ca398754e93629d9785a48f47a9e07a7))
+* **persistence:** keep serialized agent targets hashable for older readers ([3b68a29](https://github.com/flatland-association/flatland-rl/commit/3b68a29e177e88d240eb2167dbad8d0a78fcdb88))
+* **persistence:** keep serialized agent.targets hashable for older readers. ([#491](https://github.com/flatland-association/flatland-rl/issues/491)) ([3b68a29](https://github.com/flatland-association/flatland-rl/commit/3b68a29e177e88d240eb2167dbad8d0a78fcdb88))
+* **persistence:** replace effects_generator instead of combining it, matching obs_builder/rewards. ([394e3fe](https://github.com/flatland-association/flatland-rl/commit/394e3fede4101c7a85e383d9bcb7f6d896016866))
+* **persistence:** restore dev_obs_dict guarded by its own presence check. ([399e184](https://github.com/flatland-association/flatland-rl/commit/399e1848f737d897919c2d8d042c53d7ce1cbea0))
+* **policy-runner:** cleanup. ([582a607](https://github.com/flatland-association/flatland-rl/commit/582a6078c63360484971aa428c5332f1fe8192e9))
+* **policy-runner:** CLI fork uses source's ep_id instead of user's. ([0429a37](https://github.com/flatland-association/flatland-rl/commit/0429a37f8850f9e3bb1008e84dd1cd3a8959c78a))
+* **policy-runner:** restore clear error and regression test for env/trajectory step mismatch. ([f6c13fa](https://github.com/flatland-association/flatland-rl/commit/f6c13fa46afcf493bf4c205771e435c3a5f95b89))
+* py310 numpy dtype. ([#492](https://github.com/flatland-association/flatland-rl/issues/492)) ([b41a964](https://github.com/flatland-association/flatland-rl/commit/b41a9643eb871e50c5bd4be337b25add15d69ad1))
+* **rail-generator:** fix city naming overflow and drop redundant path search. ([69cab66](https://github.com/flatland-association/flatland-rl/commit/69cab665ec74f4c9465ad03768f5fdca113dadd6))
+* **rail-generator:** replace remaining debug print with warnings.warn. ([cd53b3e](https://github.com/flatland-association/flatland-rl/commit/cd53b3ecaf6c7cdd805fe7930b12fc39a470b315))
+* **rail-generator:** skip empty/mismatched inter-city connections. ([cbad3c6](https://github.com/flatland-association/flatland-rl/commit/cbad3c68fd9f0c1cd14cb7041e289de16ef25c99))
+* **rewards:** collision penalty should not apply when controller issues the `STOP` action. ([#452](https://github.com/flatland-association/flatland-rl/issues/452)) ([27b4c4b](https://github.com/flatland-association/flatland-rl/commit/27b4c4bb3860eab3106a81160119df2c3d1fa7d2))
+* **rewards:** intermediate stop served if train stops at any halting cell of the station ([#453](https://github.com/flatland-association/flatland-rl/issues/453)) ([7db80f3](https://github.com/flatland-association/flatland-rl/commit/7db80f34cd06771a4a439fbb81fb3e867ef7cdf4))
+* **rewards:** normalization BaseDefaultRewards affecting also BaseECML2026Rewards. ([#457](https://github.com/flatland-association/flatland-rl/issues/457)) ([a4d5b0a](https://github.com/flatland-association/flatland-rl/commit/a4d5b0a7420d79f8b9cdc52e4375f2d3f69c6cb3))
+* **sparse rail gen:** one link per gate-gate pair according to data model. ([#451](https://github.com/flatland-association/flatland-rl/issues/451)) ([4da01ed](https://github.com/flatland-association/flatland-rl/commit/4da01ed908df69540d3b22f340959ead464fd613))
+* **tests:** de-flake test_env_generator_no_seed. ([#493](https://github.com/flatland-association/flatland-rl/issues/493)) ([1ad097f](https://github.com/flatland-association/flatland-rl/commit/1ad097f05750e7e915b4e6e5a731fbdb2b290781))
+* **trajectories:** replay-to-step fallback drops obs_builder/rewards/effects_generator overrides. ([d0f92a0](https://github.com/flatland-association/flatland-rl/commit/d0f92a078b07e604f8c5f81b9ba120f875c80437))
+* Zero-arg construction defers a TypeError to deep inside env.step(). ([8c363af](https://github.com/flatland-association/flatland-rl/commit/8c363af65b7327b24ebd51db9e32570c906d1a26))
+
+
+### Performance Improvements
+
+* **core:** add Cython to performance profiling. ([191c30b](https://github.com/flatland-association/flatland-rl/commit/191c30ba6cb07f7ec423f921aa86d8d8d6557fa6))
+* **core:** profile get-k-shortest-paths. Define performance threshold for step profiling. ([#448](https://github.com/flatland-association/flatland-rl/issues/448)) ([2cc09ca](https://github.com/flatland-association/flatland-rl/commit/2cc09ca48c9a111adf798f5c70a78b1cf168bb69))
+* **core:** use Cython for state machine and states. ([#449](https://github.com/flatland-association/flatland-rl/issues/449)) ([b70137c](https://github.com/flatland-association/flatland-rl/commit/b70137cb4206ac5595e67ded4007c03ddaed6cf2))
+* **rewards:** use dict.from_keys from tuple instead of comprehension from set. ([#484](https://github.com/flatland-association/flatland-rl/issues/484)) ([90359df](https://github.com/flatland-association/flatland-rl/commit/90359df7775ac20037a11f138c718f660784704a))
+* **shortest paths:** use default dict to avoid greedy initialization. ([c40874f](https://github.com/flatland-association/flatland-rl/commit/c40874fec0e7d4f0990204b35dc894feaf42ef8e))
+* **shortest paths:** use heap per length to avoid iterating through all paths in the heap. ([997898b](https://github.com/flatland-association/flatland-rl/commit/997898b3dc3d52134284ba983f2173ebf64ba16d))
+
+
+### Miscellaneous Chores
+
+* release 4.2.7 ([4c58875](https://github.com/flatland-association/flatland-rl/commit/4c58875c8a42109802fe68a08d2b13b9f1533bc4))
+* release 4.3.0 ([9b1b014](https://github.com/flatland-association/flatland-rl/commit/9b1b014aba17aacf297d4a43a531ee5523aa14c9))
+
 ## [[v4.2.6]](https://github.com/flatland-association/flatland-rl/compare/v4.2.5...v4.2.6) 2026-06-01
 
 ### Added
