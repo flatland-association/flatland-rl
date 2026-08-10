@@ -17,20 +17,20 @@ jobs:
         permissions:
             packages: write
         steps:
-            # Untagged versions are always safe to remove here: build-ci-env-ml/-default never re-push an
-            # already-existing runnable tag (their "Check if CI-env image already exists" step skips the
-            # build entirely in that case), so a given tag is pushed exactly once. The only way a version
-            # becomes untagged is BuildKit's cache-to (mode=max) overwriting cache-py{version}-{ml,default}
-            # in place, leaving its previous manifest dangling. Dockerfile.ci-env only ever builds
-            # linux/amd64 (no multi-arch manifest lists), so there's no risk of this deleting a still-
-            # referenced per-platform child of a tagged multi-arch image.
-            -   name: Delete untagged versions
-                uses: actions/delete-package-versions@v5
-                with:
-                    package-name: flatland-rl-ci-env
-                    package-type: container
-                    delete-only-untagged-versions: true
-                    token: ${{ secrets.GITHUB_TOKEN }}
+            # Deliberately does NOT delete untagged versions, despite BuildKit's cache-to (mode=max)
+            # overwriting cache-py{version}-{ml,default} in place leaving its previous manifest dangling as
+            # one. This used to run `delete-package-versions --delete-only-untagged-versions=true` on the
+            # assumption that an untagged manifest can never be depended on by anything else - but GHCR
+            # doesn't guarantee that layer blobs are exclusive to the manifest "owning" them: deleting an
+            # untagged version can garbage-collect a blob a *different*, still-tagged manifest also
+            # references. That's what broke py3.11-default-<hash> in practice - its manifest reference kept
+            # resolving fine (`imagetools inspect` only fetches the manifest JSON), but the image was no
+            # longer actually pullable, and nothing here could tell which untagged version was safe to
+            # remove and which wasn't. build-ci-env.yml's own existence check now verifies pullability, not
+            # just manifest presence, so a recurrence would self-heal there instead of silently breaking a
+            # tag - but that doesn't make deleting untagged versions safe again, so it stays removed. Untagged
+            # cache-manifest orphans are left to accumulate: unlike actions/cache, GHCR has no hard quota
+            # forcing eviction (see build-ci-env.yml's own comment on why GHCR was chosen for that reason).
             # Flat count across the whole package, not grouped per (python-version, variant): the action
             # doesn't support grouping, and since a single requirements/Dockerfile change tends to bump most
             # of build-ci-env-ml/-default's 10 (5 versions x 2 variants) tags at once, 30 is roughly 3
