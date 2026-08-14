@@ -73,9 +73,10 @@ def cached_distance_update(distance, speed, crossing_completed=True):
 
     if crossing_completed:
         # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-        # TODO usde mod instead?
-        while distance >= SEGMENT_LENGTH:
-            distance = distance - SEGMENT_LENGTH
+        # N.B. distance is always >= 0 here (it only ever accumulates non-negative speed increments), so
+        # this is equivalent to the while-loop-based wrap it replaces; % would wrap a negative distance
+        # into [0, SEGMENT_LENGTH) instead of leaving it unchanged, but that case never arises in practice.
+        distance = distance % SEGMENT_LENGTH
         return distance, distance < speed
 
     # crossing_completed_or_unattempted=False: the transition into the next cell was blocked by a resource conflict this
