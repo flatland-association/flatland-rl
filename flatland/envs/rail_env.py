@@ -810,9 +810,73 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
+        pre_speeds = {agent.handle: agent.speed_counter.speed for agent in self.agents}
+        pre_configurations = {agent.handle: agent.current_configuration for agent in self.agents}
+        pre_dones = {agent.handle: self.dones[agent.handle] for agent in self.agents}
+        pre_exits = {agent.handle: agent.speed_counter.is_cell_exit() for agent in self.agents}
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
+
+        def distribute(actual, expected, mc, agent):
+            if mc:
+                assert actual == expected
+            else:
+                assert actual == 0
+
+        # speed update invariant
+        for h, pre_speed in pre_speeds.items():
+            # in malfunction
+            agent = self.agents[h]
+            action = action_dict.get(h, RailEnvActions.DO_NOTHING)
+            mc = self.temp_transition_data[h].state_transition_signal.movement_allowed
+            # done
+            if pre_dones[h] is True:
+                # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                assert self.agents[h].speed_counter.speed == pre_speed
+            # malfunction
+            elif agent.malfunction_handler.in_malfunction:  # N.B. in_malfunction updated
+                if agent.state in [TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    assert self.agents[h].speed_counter.speed == 0
+            # map entry
+            elif pre_configurations[h] is None and RailEnvActions.is_moving_action(action) and pre_dones[
+                h] is False and self._elapsed_steps >= agent.earliest_departure:
+                # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                assert agent.speed_counter.speed == pre_speed
+            # TODO invalid action check requires cleanup in grid implementation, extract "tau" cleanly, see straight condition below
+            # # invalid action
+            # elif not action_valid:
+            #     assert agent.speed_counter.speed == 0
+            # acceleration
+            # TODO what about straight condition from overleaf?
+            elif RailEnvActions.from_value(action) == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
+                if agent.state in [TrainState.WAITING]:
+                    assert agent.speed_counter.speed == agent.speed_counter._speed
+                else:
+                    # TODO very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
+                    if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
+
+                        assert agent.speed_counter.speed == 0
+                    elif agent.state in [TrainState.MALFUNCTION_OFF_MAP] and not agent.malfunction_handler.in_malfunction:
+                        assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                    elif agent.state in [TrainState.DONE]:
+                        assert agent.speed_counter.speed == pre_speed
+                    else:
+                        distribute(agent.speed_counter.speed, min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed), mc, agent)
+            # braking
+            elif RailEnvActions.from_value(action) == RailEnvActions.STOP_MOVING:
+                if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    distribute(agent.speed_counter.speed, max(pre_speed + self.braking_delta, 0), mc, agent)
+            # default
+            else:
+                if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    distribute(agent.speed_counter.speed, pre_speed, mc, agent)
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
