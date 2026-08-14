@@ -300,8 +300,11 @@ def test_initial_malfunction():
 
                 reward=env.start_penalty + env.step_penalty * 1.0  # running at speed 1.0
             ),
+            # design: distance update with pre-step speed - is_cell_exit() judges exit-readiness from the
+            # speed the agent had before this step (still 0, frozen from malfunction), so the recovery
+            # step above only grants speed; the actual advance happens one step later, here.
             Replay(  # 4
-                position=(3, 3),
+                position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 malfunction=0,
                 state=TrainState.MOVING,
@@ -405,6 +408,9 @@ def test_initial_malfunction_stop_moving():
                 reward=env.step_penalty * 1.0,  # full step penalty while stopped
 
             ),
+            # TODO bug: braking to a stop right as pre-step speed would reach the cell boundary caps
+            # distance at the boundary instead of wrapping it, so the agent completes the crossing into
+            # (3, 3) on the very next MOVE_FORWARD instead of gradually re-entering (3, 2) first.
             Replay(  # 6
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,

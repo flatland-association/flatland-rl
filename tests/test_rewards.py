@@ -1173,7 +1173,18 @@ def test_env_no_collision_penalty_on_voluntary_stop():
 
 
 def test_env_collision_penalty_on_head_on_conflict():
-    """Two agents drive head-on; the motion check force-stops the losing agent -> penalty at full speed."""
+    """Two agents drive head-on; the motion check force-stops the losing agent -> penalty at full speed.
+
+    N.B. KNOWN BUG (https://github.com/flatland-association/flatland-rl/issues/175): once the two agents are
+    adjacent, they do not settle into a stable deadlock but livelock forever, alternating MOVING <-> STOPPED
+    every step and re-incurring the collision penalty on every MOVING -> STOPPED edge. Root cause: the
+    resume-from-STOPPED step's cell-exit intent check (`rail_env.py`'s first loop) uses the agent's pre-step
+    speed (0, just reset while STOPPED) rather than this step's post-acceleration `new_speed`, so a resuming
+    agent always self-loops (skipping the real MotionCheck test) on the step it resumes, then immediately
+    re-requests the still-contested cell next step and gets bounced back to STOPPED - forever. This test
+    documents the current (buggy) behaviour rather than the desired one; a real fix still needs to make that
+    intent check use `new_speed` when resuming from STOPPED/MALFUNCTION.
+    """
     env = _make_simple_env(n_agents=2)
     agent_0, agent_1 = env.agents
 
@@ -1183,8 +1194,13 @@ def test_env_collision_penalty_on_head_on_conflict():
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
         assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
-    # 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them;
-    # both request entry -> motion check awards the cell to agent 0 and force-stops agent 1
+    # before 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them
+    assert agent_0.current_configuration == ((3, 2), Grid4TransitionsEnum.EAST)
+    assert agent_0.speed_counter.distance == 0
+    assert agent_1.current_configuration == ((3, 4), Grid4TransitionsEnum.WEST)
+    assert agent_1.speed_counter.distance == 0
+
+    # 4th step: both request entry into (3,3) -> motion check awards the cell to agent 0 and force-stops agent 1
     _, rewards, _, _ = env.step(forward)
     assert agent_1.state_machine.previous_state == TrainState.MOVING
     assert agent_1.state == TrainState.STOPPED
@@ -1193,6 +1209,11 @@ def test_env_collision_penalty_on_head_on_conflict():
     # the agent winning the conflict resolution keeps moving unpenalized
     assert agent_0.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    # after 4th step: agent 0 has moved into the contested cell, agent 1 stayed put (force-stopped)
+    assert agent_0.current_configuration == ((3, 3), Grid4TransitionsEnum.EAST)
+    assert agent_0.speed_counter.distance == 0
+    assert agent_1.current_configuration == ((3, 4), Grid4TransitionsEnum.WEST)
+    assert agent_1.speed_counter.distance == 1
 
     # 5th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
     # make it collide with agent 1, which the motion check forbids -> agent 0 force-stopped
@@ -1310,17 +1331,19 @@ def test_platoon_same_speed_no_collision_penalty(start_columns):
 
 
 def test_platoon_slow_leader_periodic_collision_penalty():
-    """Leader runs at max speed 0.8, the two followers at 1.0. On steps where the leader does not
-    change cell (it needs 1/0.8 = 5 ticks per 4 cells), the followers request its still-occupied
-    cell and are force-stopped -> collision penalty. When the leader advances, the platoon moves in
-    step and no penalty arises. The blocked pattern therefore repeats with period 5."""
+    """Leader runs at max speed 0.8, the two followers at 1.0. Immediately after departure, the leader
+    hasn't advanced yet (still on its starting cell) while both followers are already requesting it at
+    full speed -> force-stopped once, at departure, with a collision penalty. From then on, each
+    follower's own resume-from-stop re-acceleration costs it one step of lag, which desynchronizes its
+    cell-boundary arrivals from the leader's periodic stall (it needs 1/0.8 = 5 ticks per 4 cells): a
+    follower now always reaches the leader's rear cell a tick before or after the leader is actually
+    sitting stalled in it, so the two near-misses never overlap into an actual conflict again for the
+    rest of this episode - unlike the departure tick, where every agent is simultaneously in that same
+    just-resumed, zero-lag state, so the very first request does line up with the stall."""
     env = _make_platoon_env(3, start_columns=(3, 2, 1), lead_max_speed=0.8)
     _depart(env)
     leader, follower_1, follower_2 = env.agents
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(3)}
-
-    def leader_column(step_positions):
-        return step_positions[0]
 
     # step 0: leader occupies its starting cell (has not advanced yet) -> both followers blocked
     _, rewards, _, _ = env.step(forward)

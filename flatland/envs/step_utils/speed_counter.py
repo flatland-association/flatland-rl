@@ -68,14 +68,21 @@ def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -
 
 
 @lru_cache()
-def cached_distance_update(distance, speed):
+def cached_distance_update(distance, speed, crossing_completed=True):
     distance += speed
 
-    # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-    while distance >= SEGMENT_LENGTH:
-        distance = distance - SEGMENT_LENGTH
+    if crossing_completed:
+        # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
+        # TODO usde mod instead?
+        while distance >= SEGMENT_LENGTH:
+            distance = distance - SEGMENT_LENGTH
+        return distance, distance < speed
 
-    return distance, distance < speed
+    # crossing_completed_or_unattempted=False: the transition into the next cell was blocked by a resource conflict this
+    # step, even though the state machine still reports MOVING - do not wrap around as if the agent had
+    # actually crossed into the next cell; cap distance at the cell boundary instead, so the agent stays
+    # pinned at the exit, ready to move as soon as the conflict clears.
+    return min(distance, SEGMENT_LENGTH), False
 
 
 class SpeedCounter:
@@ -94,20 +101,41 @@ class SpeedCounter:
         assert self._speed >= 0.0
         self.reset()
 
-    def step(self, speed: Fraction = None):
+    def step(self, speed: Fraction, crossing_completed: bool = True):
         """
         Step the speed counter.
+
+        N.B. the distance travelled this step is computed from the speed the agent had BEFORE this call
+        (i.e. the speed set by the previous `step()`, or the initial speed if this is the first call) - only
+        after that distance update is `speed` applied, taking effect for the NEXT call's distance update.
 
         Parameters
         ----------
         speed : Fraction
-            Set new speed effective immediately.
+            The new speed, effective from the next step.
+        crossing_completed : bool
+            Whether the transition into the next cell implied by this step's distance/speed actually
+            completed. Defaults to True (the ordinary case, including when no crossing was attempted at
+            all). Pass False only when the state machine reports MOVING but the agent's transition into the
+            next cell was blocked by a resource conflict this step - the distance update is then capped at
+            the cell boundary instead of wrapping into the next cell, so distance/is_cell_entry never
+            overshoot as if the agent had actually moved.
         """
+        self._distance, self._is_cell_entry = cached_distance_update(self._distance, self._speed, crossing_completed)
+        self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
 
-        if speed is not None:
-            self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
+    def stop(self):
+        """
+        Freeze speed at 0 without touching distance.
 
-        self._distance, self._is_cell_entry = cached_distance_update(self._distance, self._speed)
+        Use this instead of step() whenever the agent's on-map state changes for a reason other than a
+        completed or denied cell-boundary crossing - e.g. a malfunction interrupting a MOVING agent mid-cell,
+        or an agent that's simply continuing STOPPED/MALFUNCTION this step. Unlike step(), this never risks
+        treating already-accumulated in-cell distance as a completed crossing: the agent's position hasn't
+        changed and no crossing was even attempted this step, so distance must stay exactly as-is.
+        """
+        self._speed = Fraction(0)
+        self._is_cell_entry = False
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -126,11 +154,11 @@ class SpeedCounter:
         """
         return self._is_cell_entry
 
-    def is_cell_exit(self, speed: Fraction):
+    def is_cell_exit(self) -> bool:
         """
-        With the given speed, do we exit cell at next time step?
+        At the current speed, do we exit the cell at the next time step?
         """
-        return cached_cell_exit(self._max_speed, speed, self._distance)
+        return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property
     def speed(self) -> Fraction:

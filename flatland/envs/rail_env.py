@@ -365,8 +365,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                     state - State from the trains's state machine
         """
         info_dict = {
-            # TODO https://github.com/flatland-association/flatland-rl/issues/149 revise action required
-            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit(agent.speed_counter.max_speed))
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit())
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
@@ -479,7 +478,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif state.is_on_map_state():
                 new_configuration = current_or_initial_configuration
                 # transition to next cell: at end of cell and next state potentially MOVING
-                if (agent.speed_counter.is_cell_exit(new_speed)
+                # N.B. is_cell_exit() uses the speed the agent had at the beginning of this step (not
+                # new_speed, this step's post-acceleration/braking target) - distance/position only
+                # advance by however fast the agent already was, consistent with SpeedCounter.step().
+                if (agent.speed_counter.is_cell_exit()
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and action_valid), new_speed,
                                                                  (stop_action_given or not action_valid))
@@ -556,8 +558,18 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             # - action leading to valid next cell
             # - inside cell or at end of cell and no conflict with other trains and
             # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
+            # N.B. checks current_configuration == new_configuration (not an is_cell_exit()-based guess):
+            # this is the exact same self-loop condition MotionCheck's own conflict graph uses (see
+            # agent_chains.py's MotionCheck._construct_graph: `if pos == target: self.stopped.add(iAg)`,
+            # keyed on resources, but resource equality is implied by configuration equality), so it can
+            # never disagree with what motion_check actually decided for THIS agent - e.g. a voluntary
+            # STOP_MOVING/braking-to-zero this step still predicts a cell exit under the pre-step speed,
+            # even though can_get_moving_independent's own new_speed==0 check keeps new_configuration at
+            # the current cell; an is_cell_exit()-based guess here would miss that and wrongly fall
+            # through to motion_check, which trivially reports such a self-looping agent as "stopped" and
+            # would misclassify a voluntary stop as an env-forced one downstream in rewards.
             action_valid = action_valid and (
-                (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check)
+                (agent.state.is_on_map_state() and agent.current_configuration == agent_transition_data.new_configuration) or motion_check)
 
             agent_transition_data.state_transition_signal.movement_allowed = action_valid
 
@@ -565,20 +577,39 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
             agent.state_machine.step()
 
-            # (10) POSITION AND SPEED_COUNTER UPDATE
+            # (10a) POSITION UPDATE
             if agent.state == TrainState.MOVING:
-                # only position update while MOVING and motion_check OK
                 agent.current_configuration = _sanitize_configuration(agent_transition_data.new_configuration)
+                agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
+            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
+                agent.current_configuration = _sanitize_configuration(initial_configuration)
+
+            # (10b) SPEED_COUNTER UPDATE
+            # N.B. distinguish a real MotionCheck conflict (the agent DID request the next cell via
+            # new_configuration, but lost the conflict) from a voluntary self-loop stop (e.g. an instant
+            # STOP_MOVING brake, where new_configuration never left the current cell in the first place -
+            # motion_check is False for self-looping agents too, see MotionCheck._construct_graph) - only
+            # the former should retain speed/distance (motion-check-capped at the cell boundary); the
+            # latter must still reset to speed=0/distance=0 as if newly stopped.
+            # N.B. current_or_initial_configuration is the PRE-(10a) position, captured before (10a) ran -
+            # by now agent.current_configuration has already been overwritten for MOVING agents, so it can't
+            # be used here to tell a genuine attempted crossing from a self-loop.
+            if agent.state == TrainState.MOVING or (agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING):
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    agent.speed_counter.step(speed=agent_transition_data.new_speed)
-                agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
-            elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
-                agent.current_configuration = _sanitize_configuration(initial_configuration)
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
-            if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
-                agent.speed_counter.step(speed=Fraction(0))
+                    crossing_completed = (current_or_initial_configuration != agent_transition_data.new_configuration) and motion_check
+                    # TODO simplify
+                    speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)
+                    agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
+            elif agent.state.is_on_map_state():
+                # no distance travelled - agent.speed_counter.stop() rather than .step(speed=Fraction(0)):
+                # the latter would run distance through cached_distance_update using the agent's OLD speed,
+                # which can wrongly wrap already-accumulated in-cell progress into a "completed crossing"
+                # (e.g. a MOVING agent malfunctioning mid-cell) even though position never actually changed
+                # this step.
+                agent.speed_counter.stop()
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent)

@@ -214,6 +214,22 @@ a higher-level, tabular (pandas) episode recorder: per-step actions/positions/re
 plus `RailEnvPersister`-saved env snapshots so a trajectory can be replayed/resumed from any recorded step, not
 just step 0.
 
+### Testing patterns
+
+Most state-machine/speed/malfunction behavior tests (`tests/test_multi_speed.py`, `tests/test_variable_speed.py`,
+`tests/test_flatland_malfunction.py`, etc.) drive the env through `tests/test_utils.py`'s `Replay`/`ReplayConfig`
+(attrs classes) via `run_replay_config()`, rather than asserting after ad-hoc `env.step()` calls. Each `Replay`
+entry declares the expected `position`/`direction`/`state`/`speed`/`distance`/`malfunction` to verify *before*
+that step, then the `action` to apply - so a test reads as a step-by-step table of expected states rather than
+imperative code. `skip_reward_check`/`skip_action_required_check` opt out of the (fragile) reward/action-required
+assertions when a test only cares about position/speed/state progression.
+
+For a specific env state that's tedious or fragile to reach by scripting actions from scratch (e.g. deep into a
+multi-agent malfunction/deadlock scenario), prefer capturing a one-off snapshot via `RailEnvPersister.save()` once
+and loading it in the test via `RailEnvPersister.load_new()`, rather than replaying a long action script - the
+latter is brittle against unrelated timing changes elsewhere in the env (see `tests/test_known_flatland_bugs.py`'s
+`test_two_trains_on_same_cell_bug_FIXED` and its committed `*_snapshot.pkl` fixture for the pattern).
+
 ### Other top-level dirs
 
 - `callbacks/` — episode-lifecycle hooks (e.g. movie generation).

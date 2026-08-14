@@ -6,126 +6,134 @@ import numpy as np
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 
 
+# design: distance update with pre-step speed - step() now always requires an explicit speed argument
+# (no more implicit "keep current speed"), and computes this step's distance from the speed stored BEFORE
+# the call; is_cell_exit() is now no-arg, judging exit-readiness against that same stored (pre-step) speed
+# rather than an explicitly-passed target speed. Every sc.step(sc.speed)/is_cell_exit() call and every
+# distance value below is a direct consequence of this API/semantics change.
 def test_step_counter_speed025():
     sc = SpeedCounter(speed=0.25)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == True
+    assert sc.is_cell_exit() == True
     assert sc.distance == 0.75
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
 
+# design: distance update with pre-step speed - see test_step_counter_speed025 above.
 def test_step_counter_speed05():
     sc = SpeedCounter(speed=0.5)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.5)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.5)) == True
+    assert sc.is_cell_exit() == True
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.5)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.0
     assert np.isclose(float(sc.speed), 0.5)
 
 
+# design: distance update with pre-step speed - see test_step_counter_speed025 above.
 def test_step_counter_speed025_05():
     sc = SpeedCounter(speed=0.25, max_speed=1.0)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
     sc.step(speed=0.5)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.5)) == True
-    assert sc.distance == 0.75
+    assert sc.is_cell_exit() == True
+    assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.5)) == False
-    assert sc.distance == 0.25
+    assert sc.is_cell_exit() == False
+    assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
     sc.step(speed=0.25)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.25)
 
 
+# design: distance update with pre-step speed - see test_step_counter_speed025 above.
 def test_step_counter_speed025_03():
     sc = SpeedCounter(speed=0.25, max_speed=0.3)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.25)) == False
+    assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
     sc.step(speed=Fraction(1, 2))
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.3)) == False
-    assert np.isclose(float(sc.distance), 0.55)
+    assert sc.is_cell_exit() == False
+    assert np.isclose(float(sc.distance), 0.5)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0.3)) == True
-    assert np.isclose(float(sc.distance), 0.85)
+    assert sc.is_cell_exit() == True
+    assert np.isclose(float(sc.distance), 0.8)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.step()
+    sc.step(sc.speed)
     assert sc.is_cell_entry == True
-    assert sc.is_cell_exit(_pseudo_fractional(0.3)) == False
-    assert np.isclose(float(sc.distance), 0.15)
+    assert sc.is_cell_exit() == False
+    assert np.isclose(float(sc.distance), 0.1)
     assert np.isclose(float(sc.speed), 0.3)
 
     sc.step(speed=-0.5)
     # invalidate cell_entry despite speed 0
     assert sc.is_cell_entry == False
-    assert sc.is_cell_exit(_pseudo_fractional(0)) == False
-    assert np.isclose(float(sc.distance), 0.15)
+    assert sc.is_cell_exit() == False
+    assert np.isclose(float(sc.distance), 0.4)
     assert np.isclose(float(sc.speed), 0.0)
 
 
@@ -141,7 +149,9 @@ def test_clone_speed_counter_fractional_speed():
     assert pickle.loads(pickle.dumps(sc)) == sc
     sc.step(speed=1 / 10)
     assert not sc.is_cell_entry
-    assert np.isclose(float(sc.distance), 0.1)
+    # design: distance update with pre-step speed - distance advances by the pre-step speed (1/5), not
+    # the just-passed 1/10.
+    assert np.isclose(float(sc.distance), 0.2)
     assert pickle.loads(pickle.dumps(sc)) == sc
 
 
