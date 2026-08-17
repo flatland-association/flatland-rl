@@ -17,25 +17,25 @@ def test_step_counter_speed025():
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.75
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, True)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
@@ -50,13 +50,13 @@ def test_step_counter_speed05():
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, True)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.0
@@ -71,25 +71,25 @@ def test_step_counter_speed025_05():
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(speed=0.5)
+    sc.step(0.5, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, True)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.step(speed=0.25)
+    sc.step(0.25, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
@@ -104,31 +104,31 @@ def test_step_counter_speed025_03():
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.step(speed=Fraction(1, 2))
+    sc.step(Fraction(1, 2), False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
     assert np.isclose(float(sc.distance), 0.5)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
     assert np.isclose(float(sc.distance), 0.8)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.step(sc.speed)
+    sc.step(sc.speed, True)
     assert sc.is_cell_entry == True
     assert sc.is_cell_exit() == False
     assert np.isclose(float(sc.distance), 0.1)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.step(speed=-0.5)
+    sc.step(-0.5, False)
     # invalidate cell_entry despite speed 0
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == False
@@ -146,7 +146,7 @@ def test_clone_speed_counter_fractional_speed():
     """Test that a SpeedCounter stays consistent when restored from a pickled state."""
     sc = SpeedCounter(speed=1 / 5, max_speed=1 / 3)
     assert pickle.loads(pickle.dumps(sc)) == sc
-    sc.step(speed=1 / 10)
+    sc.step(1 / 10, False)
     assert not sc.is_cell_entry
     # design: distance update with pre-step speed.
     assert np.isclose(float(sc.distance), 0.2)
@@ -293,7 +293,7 @@ def test_step_crossing_not_completed_caps_at_boundary():
     """A MOVING agent whose transition into the next cell is blocked by a resource conflict this step:
     distance must be capped at the cell boundary, not wrapped into the next cell as if it had moved."""
     sc = SpeedCounter(speed=0.5)
-    sc.step(sc.speed)  # distance -> 1/2 (from the pre-step speed 1/2); speed stays 1/2 for the next call
+    sc.step(sc.speed, False)  # distance -> 1/2 (from the pre-step speed 1/2); speed stays 1/2 for the next call
     sc.step(speed=0.5, crossing_completed=False)
     assert sc.distance == Fraction(1, 1)
     assert not sc.is_cell_entry
@@ -311,7 +311,7 @@ def test_stop_freezes_speed_without_touching_distance():
     """design: distance update with pre-step speed - stop() must leave already-accumulated in-cell
     distance untouched (e.g. a malfunction interrupting a MOVING agent mid-cell)."""
     sc = SpeedCounter(speed=0.5)
-    sc.step(sc.speed)  # distance -> 1/2
+    sc.step(sc.speed, False)  # distance -> 1/2
     sc.stop()
     assert sc.speed == Fraction(0)
     assert sc.distance == Fraction(1, 2)
@@ -323,15 +323,15 @@ def test_stop_vs_step_speed_zero_regression():
     in-cell progress to 0 and flags a false cell entry, since it still runs distance through
     cached_distance_update using the old (pre-step) speed. This is exactly the bug stop() fixes."""
     sc = SpeedCounter(speed=0.5)
-    sc.step(sc.speed)  # distance -> 1/2
-    sc.step(speed=Fraction(0))
+    sc.step(sc.speed, False)  # distance -> 1/2
+    sc.step(Fraction(0), True)
     assert sc.distance == Fraction(0)
     assert sc.is_cell_entry
 
 
 def test_reset_clears_distance_and_cell_entry_but_not_speed():
     sc = SpeedCounter(speed=0.5, max_speed=1.0)
-    sc.step(sc.speed)
+    sc.step(sc.speed, False)
     assert sc.distance != 0
     assert not sc.is_cell_entry
     sc.reset()
@@ -361,7 +361,7 @@ def test_eq_between_speed_counters_with_different_state():
 
     sc1 = SpeedCounter(speed=0.5)
     sc2 = SpeedCounter(speed=0.5)
-    sc2.step(sc2.speed)
+    sc2.step(sc2.speed, False)
     assert sc1 != sc2  # differs in distance now
 
 
