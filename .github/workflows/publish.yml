@@ -212,9 +212,14 @@ jobs:
                     fi
 
     # See build-docker-image.yml (shared with docker.yml's own docker-publish job) for the actual
-    # build/skip-if-unchanged/retag logic. No explicit `if:` needed here - resolve-docker-publish-ref being
-    # skipped already propagates via the default needs-implies-success() condition.
+    # build/skip-if-unchanged/retag logic. Needs its own explicit guard here (same reasoning as
+    # publish-test-pypi's above): the implicit needs-success() check walks the *whole* transitive
+    # ancestor chain, not just the direct `resolve-docker-publish-ref` need - so on a real release
+    # (a push event), publish-test-pypi being skipped by design would poison this job too, one hop
+    # further out through resolve-docker-publish-ref, silently skipping the Docker publish on every
+    # release (confirmed: this is exactly what happened for the 4.3.0 release).
     docker-publish:
+        if: ${{ !failure() && !cancelled() && needs.resolve-docker-publish-ref.result == 'success' }}
         needs: [ resolve-docker-publish-ref ]
         strategy:
             fail-fast: false
