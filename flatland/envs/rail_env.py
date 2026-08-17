@@ -817,18 +817,18 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
 
-        def distribute(actual, expected, mc, agent):
-            if mc:
-                assert actual == expected
+        def assert_speed_matches_if_movement_allowed(actual: Fraction, expected: Fraction, movement_allowed: bool, agent: EnvAgent):
+            if movement_allowed:
+                assert actual == expected, agent
             else:
-                assert actual == 0
+                assert actual == 0, agent
 
         # speed update invariant
         for h, pre_speed in pre_speeds.items():
             # in malfunction
             agent = self.agents[h]
             action = action_dict.get(h, RailEnvActions.DO_NOTHING)
-            mc = self.temp_transition_data[h].state_transition_signal.movement_allowed
+            movement_allowed = self.temp_transition_data[h].state_transition_signal.movement_allowed
             # done
             if pre_dones[h] is True:
                 # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
@@ -852,7 +852,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             # TODO what about straight condition from overleaf?
             elif RailEnvActions.from_value(action) == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
                 if agent.state in [TrainState.WAITING]:
-                    assert agent.speed_counter.speed == agent.speed_counter._speed
+                    assert agent.speed_counter.speed == pre_speeds[h]
                 else:
                     # TODO very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
                     if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
@@ -863,19 +863,24 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                     elif agent.state in [TrainState.DONE]:
                         assert agent.speed_counter.speed == pre_speed
                     else:
-                        distribute(agent.speed_counter.speed, min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed), mc, agent)
+                        assert_speed_matches_if_movement_allowed(
+                            agent.speed_counter.speed,
+                            min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed),
+                            movement_allowed, agent)
             # braking
             elif RailEnvActions.from_value(action) == RailEnvActions.STOP_MOVING:
                 if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
                     assert agent.speed_counter.speed == agent.speed_counter.max_speed
                 else:
-                    distribute(agent.speed_counter.speed, max(pre_speed + self.braking_delta, 0), mc, agent)
+                    assert_speed_matches_if_movement_allowed(
+                        agent.speed_counter.speed, max(pre_speed + self.braking_delta, 0), movement_allowed, agent)
             # default
             else:
                 if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
                     assert agent.speed_counter.speed == agent.speed_counter.max_speed
                 else:
-                    distribute(agent.speed_counter.speed, pre_speed, mc, agent)
+                    assert_speed_matches_if_movement_allowed(agent.speed_counter.speed, pre_speed,
+                                                             movement_allowed, agent)
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:
