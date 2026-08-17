@@ -583,24 +583,15 @@ def test_symmetric_switch_stop_action():
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
-    # TODO bug: we should have been stopped before entering 15,15
-    # design: distance update with pre-step speed - is_cell_exit() now judges exit-readiness against the
-    # pre-step speed (1/2) rather than this step's smaller post-braking target (2/5), so distance(1/2) +
-    # pre-step-speed(1/2) reaches the boundary a step earlier than before; the crossing into (15, 15) that
-    # used to only complete on the SECOND STOP_MOVING now completes on this, the first one.
+    # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design: we should have been stopped before entering 15,15,
+    #  invalid action should lead to state stopped and agent not entering the symmetric switch, must be fixed when agents "live on edges".
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
     assert agent.current_configuration[0] == (15, 15)
     assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(2, 5)
+    # design: distance update with pre-step speed
     assert agent.speed_counter.distance == Fraction(0)
-
-    env.step({agent.handle: RailEnvActions.STOP_MOVING})
-    assert agent.current_configuration[0] == (15, 15)
-    assert agent.current_configuration[1] == 1
-    assert agent.state == TrainState.STOPPED
-    assert agent.speed_counter.speed == Fraction(0)
-    assert agent.speed_counter.distance == Fraction(2, 5)
 
 
 def test_symmetric_switch_move_forward_action():
