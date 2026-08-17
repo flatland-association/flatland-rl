@@ -827,7 +827,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         for h, pre_speed in pre_speeds.items():
             # in malfunction
             agent = self.agents[h]
-            action = action_dict.get(h, RailEnvActions.DO_NOTHING)
+            action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
             movement_allowed = self.temp_transition_data[h].state_transition_signal.movement_allowed
             # done
             if pre_dones[h] is True:
@@ -850,7 +850,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             #     assert agent.speed_counter.speed == 0
             # acceleration
             # TODO what about straight condition from overleaf?
-            elif RailEnvActions.from_value(action) == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
+            elif action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
                 if agent.state in [TrainState.WAITING]:
                     assert agent.speed_counter.speed == pre_speeds[h]
                 else:
@@ -868,7 +868,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                             min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed),
                             movement_allowed, agent)
             # braking
-            elif RailEnvActions.from_value(action) == RailEnvActions.STOP_MOVING:
+            elif action == RailEnvActions.STOP_MOVING:
                 if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
                     assert agent.speed_counter.speed == agent.speed_counter.max_speed
                 else:
