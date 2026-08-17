@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
@@ -1451,3 +1452,37 @@ def test_apply_action_independent_only_left_right_valid_at_symmetric_switch(acti
         assert result is not None
     else:
         assert result is None
+
+
+_NON_EMPTY_RAIL_ENV_TRANSITIONS = [t for t in RailEnvTransitionsEnum if t != RailEnvTransitionsEnum.empty]
+
+
+@pytest.mark.parametrize("rail_env_transition", _NON_EMPTY_RAIL_ENV_TRANSITIONS,
+                         ids=[t.name for t in _NON_EMPTY_RAIL_ENV_TRANSITIONS])
+@pytest.mark.parametrize("direction", list(Grid4TransitionsEnum), ids=[d.name for d in Grid4TransitionsEnum])
+def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transition, direction):
+    """For every non-empty RailEnvTransitionsEnum element placed at the center of a 3x3 grid, surrounded by a
+    straight track on every side from which the element itself has an outgoing transition (i.e. a side that
+    get_predecessor_configurations reports as a valid entry), apply_action_independent() finds at least one
+    valid action (MOVE_LEFT/MOVE_FORWARD/MOVE_RIGHT) for the configuration reached by entering from that side."""
+    transitions = RailEnvTransitions()
+    center = (1, 1)
+    grid = np.zeros((3, 3), dtype=np.uint16)
+    grid[center] = rail_env_transition
+    for d in Grid4TransitionsEnum:
+        if not any(transitions.get_transitions(int(rail_env_transition), d)):
+            continue  # element has no transition for this incoming orientation -- no neighbor to connect
+        previous_cell = get_new_position(center, (d + 2) % 4)
+        is_vertical = d in (Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.SOUTH)
+        sender = RailEnvTransitionsEnum.vertical_straight if is_vertical else RailEnvTransitionsEnum.horizontal_straight
+        grid[previous_cell] = sender
+
+    rail = RailGridTransitionMap(width=3, height=3, transitions=transitions)
+    rail.grid = grid
+
+    configuration = (center, direction)
+    if not rail.get_predecessor_configurations(configuration):
+        pytest.skip(f"{rail_env_transition.name} has no valid entry from {direction.name}")
+
+    assert any(rail.apply_action_independent(action, configuration) is not None
+               for action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT))
