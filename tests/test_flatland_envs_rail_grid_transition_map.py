@@ -602,6 +602,15 @@ def test_is_valid_configuration_out_of_bounds(configuration, expected):
 
 _NON_EMPTY_RAIL_ENV_TRANSITIONS = [t for t in RailEnvTransitionsEnum if t != RailEnvTransitionsEnum.empty]
 
+# at a symmetric switch, entering head-on (facing the fork) makes MOVE_FORWARD invalid by design -- only
+# MOVE_LEFT/MOVE_RIGHT are valid there (see test_apply_action_independent_only_left_right_valid_at_symmetric_switch).
+_SYMMETRIC_SWITCH_FACING_ENTRIES = {
+    (RailEnvTransitionsEnum.symmetric_switch_from_east, Grid4TransitionsEnum.WEST),
+    (RailEnvTransitionsEnum.symmetric_switch_from_south, Grid4TransitionsEnum.NORTH),
+    (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.EAST),
+    (RailEnvTransitionsEnum.symmetric_switch_from_north, Grid4TransitionsEnum.SOUTH),
+}
+
 
 @pytest.mark.parametrize("rail_env_transition", _NON_EMPTY_RAIL_ENV_TRANSITIONS,
                          ids=[t.name for t in _NON_EMPTY_RAIL_ENV_TRANSITIONS])
@@ -609,8 +618,11 @@ _NON_EMPTY_RAIL_ENV_TRANSITIONS = [t for t in RailEnvTransitionsEnum if t != Rai
 def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transition, direction):
     """For every non-empty RailEnvTransitionsEnum element placed at the center of a 3x3 grid, surrounded by a
     straight track on every side from which the element itself has an outgoing transition (i.e. a side that
-    get_predecessor_configurations reports as a valid entry), apply_action_independent() finds at least one
-    valid action (MOVE_LEFT/MOVE_FORWARD/MOVE_RIGHT) for the configuration reached by entering from that side."""
+    get_predecessor_configurations reports as a valid entry), apply_action_independent() finds every action
+    (MOVE_LEFT/MOVE_FORWARD/MOVE_RIGHT) valid for the configuration reached by entering from that side."""
+    if (rail_env_transition, direction) in _SYMMETRIC_SWITCH_FACING_ENTRIES:
+        pytest.skip(f"{rail_env_transition.name} facing {direction.name} disallows MOVE_FORWARD by design")
+
     transitions = RailEnvTransitions()
     center = (1, 1)
     grid = np.zeros((3, 3), dtype=np.uint16)
@@ -630,7 +642,7 @@ def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transit
     if not rail.get_predecessor_configurations(configuration):
         pytest.skip(f"{rail_env_transition.name} has no valid entry from {direction.name}")
 
-    assert any(rail.apply_action_independent(action, configuration) is not None
+    assert all(rail.apply_action_independent(action, configuration) is not None
                for action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT))
 
 
