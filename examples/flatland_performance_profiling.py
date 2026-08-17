@@ -33,7 +33,7 @@ class RandomAgent:
         return self.random_actions[self.rnd_cnt % self.rnd_size]
 
 
-def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
+def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300, check_step_pre_post_conditions=False):
     # Rail Generator:
 
     num_cities = 5  # Number of cities to place on the map
@@ -98,7 +98,8 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
         number_of_agents=number_of_agents,
         random_seed=seed,
         obs_builder_object=observation_builder,
-        malfunction_generator=malfunction_generator
+        malfunction_generator=malfunction_generator,
+        check_step_pre_post_conditions=check_step_pre_post_conditions,
     )
     env.reset()
     return env
