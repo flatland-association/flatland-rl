@@ -616,10 +616,7 @@ _SYMMETRIC_SWITCH_FACING_ENTRIES = {
                          ids=[t.name for t in _NON_EMPTY_RAIL_ENV_TRANSITIONS])
 @pytest.mark.parametrize("direction", list(Grid4TransitionsEnum), ids=[d.name for d in Grid4TransitionsEnum])
 def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transition, direction):
-    """For every non-empty RailEnvTransitionsEnum element placed at the center of a 3x3 grid, surrounded by a
-    straight track on every side from which the element itself has an outgoing transition (i.e. a side that
-    get_predecessor_configurations reports as a valid entry), apply_action_independent() finds every action
-    (MOVE_LEFT/MOVE_FORWARD/MOVE_RIGHT) valid for the configuration reached by entering from that side."""
+    """Show that all actions are valid except for L/R on symmetric switches facing."""
     if (rail_env_transition, direction) in _SYMMETRIC_SWITCH_FACING_ENTRIES:
         pytest.skip(f"{rail_env_transition.name} facing {direction.name} disallows MOVE_FORWARD by design")
 
@@ -648,9 +645,7 @@ def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transit
 
 @pytest.mark.parametrize("action", list(RailEnvActions), ids=[a.name for a in RailEnvActions])
 def test_apply_action_independent_only_left_right_valid_at_symmetric_switch(action):
-    """At the symmetric switch at the center (1,1) of a 3x3 grid, heading WEST, only north/south transitions
-    exist, so only MOVE_LEFT/MOVE_RIGHT are valid actions -- apply_action_independent() returns None for every
-    other action (DO_NOTHING, MOVE_FORWARD, STOP_MOVING)."""
+    """Document invalid actions L/R for symmetric switch explicitly."""
     transitions = RailEnvTransitions()
     center = (1, 1)
     grid = np.zeros((3, 3), dtype=np.uint16)
