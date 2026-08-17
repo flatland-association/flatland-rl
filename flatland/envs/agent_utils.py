@@ -239,6 +239,13 @@ class EnvAgent(Generic[EntryPoint]):
     old_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
+    # transient per-step scratch value: the entry point `RailEnv.step()` computed for this agent this step
+    # (independent of motion-check conflict resolution) - written in step()'s first per-agent loop, consumed
+    # in its second once conflicts are resolved. Not part of `Agent`/`to_agent()`: it is recomputed from
+    # scratch every step, never meaningful across a save/load boundary.
+    next_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
+                              converter=_sanitize_entry_point)
+
     def reset(self):
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
@@ -246,6 +253,7 @@ class EnvAgent(Generic[EntryPoint]):
         self.current_entry_point = None
         self.old_entry_point = None
         self.target_entry_point = None
+        self.next_entry_point = None
         self.moving = False
         self.arrival_time = None
 

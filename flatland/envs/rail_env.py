@@ -224,7 +224,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         else:
             self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
@@ -352,7 +352,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         # Empty the episode store of agent positions
         self.cur_episode = []
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
@@ -542,7 +542,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
             self.temp_transition_data[i_agent].current_resource = current_resource
 
-            self.temp_transition_data[i_agent].new_entry_point = new_entry_point
+            agent.next_entry_point = new_entry_point
             self.temp_transition_data[i_agent].new_speed = new_speed
 
             self.motion_check.add_agent(i_agent, current_resource, new_resource)
@@ -571,7 +571,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # - inside cell or at end of cell and no conflict with other trains and
             # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
             movement_allowed = action_valid and (
-                (agent.state.is_on_map_state() and agent.current_entry_point == agent_transition_data.new_entry_point) or motion_check)
+                (agent.state.is_on_map_state() and agent.current_entry_point == agent.next_entry_point) or motion_check)
 
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
@@ -581,7 +581,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
 
             # (10a) POSITION UPDATE
             if agent.state == TrainState.MOVING:
-                agent.current_entry_point = _sanitize_entry_point(agent_transition_data.new_entry_point)
+                agent.current_entry_point = _sanitize_entry_point(agent.next_entry_point)
                 agent.state_machine.update_if_reached(agent.current_entry_point, agent.targets)
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
@@ -594,7 +594,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    crossing_completed = (current_or_initial_entry_point != agent_transition_data.new_entry_point) and motion_check
+                    crossing_completed = (current_or_initial_entry_point != agent.next_entry_point) and motion_check
                     # TODO simplify
                     speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)

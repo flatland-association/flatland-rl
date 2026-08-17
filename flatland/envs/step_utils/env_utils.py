@@ -9,7 +9,6 @@ from flatland.envs.step_utils.states import StateTransitionSignals
 class AgentTransitionData:
     """ Class for keeping track of temporary agent data for position update """
     speed: Fraction
-    new_entry_point: Tuple[Tuple[int, int], int]
     new_speed: Fraction
     current_resource: Tuple[int, int]
     state_transition_signal: StateTransitionSignals
