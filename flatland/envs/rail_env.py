@@ -813,7 +813,6 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         pre_speeds = {agent.handle: agent.speed_counter.speed for agent in self.agents}
         pre_configurations = {agent.handle: agent.current_configuration for agent in self.agents}
         pre_dones = {agent.handle: self.dones[agent.handle] for agent in self.agents}
-        pre_exits = {agent.handle: agent.speed_counter.is_cell_exit() for agent in self.agents}
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
