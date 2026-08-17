@@ -831,7 +831,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             movement_allowed = self.temp_transition_data[h].state_transition_signal.movement_allowed
             # done
             if pre_dones[h] is True:
-                # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
                 assert agent.speed_counter.speed == pre_speed
             # malfunction
             elif agent.malfunction_handler.in_malfunction:  # N.B. in_malfunction updated
@@ -842,19 +842,19 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             # map entry
             elif pre_configurations[h] is None and RailEnvActions.is_moving_action(action) and pre_dones[
                 h] is False and self._elapsed_steps >= agent.earliest_departure:
-                # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
                 assert agent.speed_counter.speed == pre_speed
-            # TODO invalid action check requires cleanup in grid implementation, extract "tau" cleanly, see straight condition below
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 invalid action check requires cleanup in grid implementation, extract "tau" cleanly, see straight condition below
             # # invalid action
             # elif not action_valid:
             #     assert agent.speed_counter.speed == 0
             # acceleration
-            # TODO what about straight condition from overleaf?
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 what about straight condition from overleaf?
             elif action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
                 if agent.state in [TrainState.WAITING]:
                     assert agent.speed_counter.speed == pre_speeds[h]
                 else:
-                    # TODO very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
+                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
                     if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
 
                         assert agent.speed_counter.speed == 0
