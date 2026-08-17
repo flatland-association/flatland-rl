@@ -567,23 +567,13 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             action_valid = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
 
             # Movement allowed if both
-            # - action leading to valid next cell
+            # - action leading to valid next cell (no forced stop)
             # - inside cell or at end of cell and no conflict with other trains and
-            # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
-            # N.B. checks current_configuration == new_configuration (not an is_cell_exit()-based guess):
-            # this is the exact same self-loop condition MotionCheck's own conflict graph uses (see
-            # agent_chains.py's MotionCheck._construct_graph: `if pos == target: self.stopped.add(iAg)`,
-            # keyed on resources, but resource equality is implied by configuration equality), so it can
-            # never disagree with what motion_check actually decided for THIS agent - e.g. a voluntary
-            # STOP_MOVING/braking-to-zero this step still predicts a cell exit under the pre-step speed,
-            # even though can_get_moving_independent's own new_speed==0 check keeps new_configuration at
-            # the current cell; an is_cell_exit()-based guess here would miss that and wrongly fall
-            # through to motion_check, which trivially reports such a self-looping agent as "stopped" and
-            # would misclassify a voluntary stop as an env-forced one downstream in rewards.
-            action_valid = action_valid and (
+            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
+            movement_allowed = action_valid and (
                 (agent.state.is_on_map_state() and agent.current_configuration == agent_transition_data.new_configuration) or motion_check)
 
-            agent_transition_data.state_transition_signal.movement_allowed = action_valid
+            agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
             # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
@@ -598,7 +588,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 agent.current_configuration = _sanitize_configuration(initial_configuration)
 
             # (10b) SPEED_COUNTER UPDATE
-            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2): distinguish forced stop (motion check or invalid action)
+            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
             if agent.state == TrainState.MOVING or (agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING):
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)

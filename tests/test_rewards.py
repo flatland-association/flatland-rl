@@ -1173,18 +1173,7 @@ def test_env_no_collision_penalty_on_voluntary_stop():
 
 
 def test_env_collision_penalty_on_head_on_conflict():
-    """Two agents drive head-on; the motion check force-stops the losing agent -> penalty at full speed.
-
-    N.B. KNOWN BUG (https://github.com/flatland-association/flatland-rl/issues/175): once the two agents are
-    adjacent, they do not settle into a stable deadlock but livelock forever, alternating MOVING <-> STOPPED
-    every step and re-incurring the collision penalty on every MOVING -> STOPPED edge. Root cause: the
-    resume-from-STOPPED step's cell-exit intent check (`rail_env.py`'s first loop) uses the agent's pre-step
-    speed (0, just reset while STOPPED) rather than this step's post-acceleration `new_speed`, so a resuming
-    agent always self-loops (skipping the real MotionCheck test) on the step it resumes, then immediately
-    re-requests the still-contested cell next step and gets bounced back to STOPPED - forever. This test
-    documents the current (buggy) behaviour rather than the desired one; a real fix still needs to make that
-    intent check use `new_speed` when resuming from STOPPED/MALFUNCTION.
-    """
+    """Two agents drive head-on; the motion check force-stops the losing agent -> penalty at full speed."""
     env = _make_simple_env(n_agents=2)
     agent_0, agent_1 = env.agents
 
@@ -1224,6 +1213,12 @@ def test_env_collision_penalty_on_head_on_conflict():
         "An env-forced stop (swap prevention) must incur the collision penalty proportional to speed"
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0, \
         "The penalty fires once on the MOVING -> STOPPED transition, not per deadlocked step"
+
+    # deadlock persists: no positions change, no further collision penalties accrue
+    _, rewards, _, _ = env.step(forward)
+    assert (agent_0.current_configuration[0], agent_1.current_configuration[0]) == ((3, 3), (3, 4))
+    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
     # deadlock persists: no positions change, no further collision penalties accrue
     _, rewards, _, _ = env.step(forward)
