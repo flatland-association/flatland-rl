@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -48,7 +48,7 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
 
 
 @lru_cache()
-def cached_cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
+def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
     v = max(Fraction(0), min(agent_max_speed, new_speed))
     assert isinstance(v, Fraction)
     assert v >= 0.0
@@ -63,12 +63,13 @@ def _cached_cell_exit(_distance, speed: Fraction) -> bool:
 
 @lru_cache()
 def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
-    speed = cached_cap_speed(max_speed, speed)
+    speed = _cap_speed(max_speed, speed)
     return _cached_cell_exit(distance, speed)
 
 
 @lru_cache()
-def cached_distance_update(distance, speed, crossing_completed=True):
+def _distance_update(distance: Fraction, speed: Fraction,
+                     crossing_completed: bool = True) -> Tuple[Fraction, bool]:
     distance += speed
 
     if crossing_completed:
@@ -102,30 +103,23 @@ class SpeedCounter:
         assert self._speed >= 0.0
         self.reset()
 
-    def step(self, speed: Fraction, crossing_completed: bool = True):
+    def step(self, speed: Fraction, crossing_completed: bool) -> None:
         """
-        Step the speed counter.
-
-        N.B. the distance travelled this step is computed from the speed the agent had BEFORE this call
-        (i.e. the speed set by the previous `step()`, or the initial speed if this is the first call) - only
-        after that distance update is `speed` applied, taking effect for the NEXT call's distance update.
+        Step the speed counter:
+        - the distance traveled this step is computed from the pre-step speed.
+        - the speed is updated to the new speed (modulo capping by max speed).
 
         Parameters
         ----------
         speed : Fraction
             The new speed, effective from the next step.
         crossing_completed : bool
-            Whether the transition into the next cell implied by this step's distance/speed actually
-            completed. Defaults to True (the ordinary case, including when no crossing was attempted at
-            all). Pass False only when the state machine reports MOVING but the agent's transition into the
-            next cell was blocked by a resource conflict this step - the distance update is then capped at
-            the cell boundary instead of wrapping into the next cell, so distance/is_cell_entry never
-            overshoot as if the agent had actually moved.
+            Whether the transition into the next cell actually completed.
         """
-        self._distance, self._is_cell_entry = cached_distance_update(self._distance, self._speed, crossing_completed)
-        self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
+        self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
+        self._speed = _cap_speed(self._max_speed, _pseudo_fractional(speed))
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Freeze speed at 0 without touching distance.
 

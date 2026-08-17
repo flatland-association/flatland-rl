@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import cached_cap_speed
+from flatland.envs.step_utils.speed_counter import _cap_speed
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
@@ -481,7 +481,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
-            new_speed = cached_cap_speed(agent_max_speed, new_speed)
+            new_speed = _cap_speed(agent_max_speed, new_speed)
 
             # get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
@@ -601,17 +601,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                 agent.current_configuration = _sanitize_configuration(initial_configuration)
 
             # (10b) SPEED_COUNTER UPDATE
-            # N.B. distinguish a real MotionCheck conflict (the agent DID request the next cell via
-            # new_configuration, but lost the conflict) from a voluntary self-loop stop (e.g. an instant
-            # STOP_MOVING brake, where new_configuration never left the current cell in the first place -
-            # motion_check is False for self-looping agents too, see MotionCheck._construct_graph) - only
-            # the former should retain speed/distance (motion-check-capped at the cell boundary); the
-            # latter must still reset to speed=0/distance=0 as if newly stopped.
-            # N.B. current_or_initial_configuration is the PRE-(10a) position, captured before (10a) ran -
-            # by now agent.current_configuration has already been overwritten for MOVING agents, so it can't
-            # be used here to tell a genuine attempted crossing from a self-loop.
+            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2): distinguish forced stop (motion check or invalid action)
             if agent.state == TrainState.MOVING or (agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING):
                 # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
                     crossing_completed = (current_or_initial_configuration != agent_transition_data.new_configuration) and motion_check
@@ -619,7 +612,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                     speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
             elif agent.state.is_on_map_state():
-                # no distance travelled - agent.speed_counter.stop() rather than .step(speed=Fraction(0)):
+                # no distance traveled - agent.speed_counter.stop() rather than .step(speed=Fraction(0)):
                 # the latter would run distance through cached_distance_update using the agent's OLD speed,
                 # which can wrongly wrap already-accumulated in-cell progress into a "completed crossing"
                 # (e.g. a MOVING agent malfunctioning mid-cell) even though position never actually changed
@@ -713,7 +706,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         pre-step snapshot captured by `_capture_speed_invariant_pre_step_snapshot()`.
         """
 
-        def assert_speed_matches_if_movement_allowed(actual: Fraction, expected: Fraction, movement_allowed: bool, agent: EnvAgent):
+        def assert_speed_matches_if_movement_allowed(actual: Fraction, expected: Fraction, movement_allowed: bool,
+                                                     agent: EnvAgent) -> None:
             if movement_allowed:
                 assert actual == expected, agent
             else:

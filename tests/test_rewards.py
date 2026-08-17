@@ -405,23 +405,23 @@ def test_energy_efficiency_smoothniss_in_morl():
                      latest_arrival=14,
                      arrival_time=12)
 
-    agent.speed_counter.step(_pseudo_fractional(0))
+    agent.speed_counter.step(_pseudo_fractional(0), False)
     agent.state_machine.set_state(TrainState.WAITING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, 0, 0)
 
-    agent.speed_counter.step(_pseudo_fractional(1))
+    agent.speed_counter.step(_pseudo_fractional(1), False)
     agent.state_machine.set_state(TrainState.MOVING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, -1, -1)
 
-    agent.speed_counter.step(_pseudo_fractional(0.6))
+    agent.speed_counter.step(_pseudo_fractional(0.6), False)
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.36, -0.16))
 
-    agent.speed_counter.step(_pseudo_fractional(0.6))
+    agent.speed_counter.step(_pseudo_fractional(0.6), False)
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, 0, -0.36))
 
-    agent.speed_counter.step(_pseudo_fractional(0.3))
+    agent.speed_counter.step(_pseudo_fractional(0.3), False)
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.09, -0.09))
 

@@ -5,8 +5,8 @@ from fractions import Fraction
 import numpy as np
 import pytest
 
-from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, cached_cap_speed, \
-    cached_cell_exit, _cached_cell_exit, cached_distance_update
+from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
+    cached_cell_exit, _cached_cell_exit, _distance_update
 
 
 # design: distance update with pre-step speed.
@@ -231,15 +231,15 @@ def test__pseudo_fractional_invalid_type_raises():
 
 
 def test_cached_cap_speed_clamps_negative_to_zero():
-    assert cached_cap_speed(Fraction(1, 2), Fraction(-1, 4)) == Fraction(0)
+    assert _cap_speed(Fraction(1, 2), Fraction(-1, 4)) == Fraction(0)
 
 
 def test_cached_cap_speed_clamps_above_max_speed():
-    assert cached_cap_speed(Fraction(1, 2), Fraction(3, 4)) == Fraction(1, 2)
+    assert _cap_speed(Fraction(1, 2), Fraction(3, 4)) == Fraction(1, 2)
 
 
 def test_cached_cap_speed_passthrough_within_range():
-    assert cached_cap_speed(Fraction(1, 2), Fraction(1, 4)) == Fraction(1, 4)
+    assert _cap_speed(Fraction(1, 2), Fraction(1, 4)) == Fraction(1, 4)
 
 
 def test_cached_cell_exit_true():
@@ -257,13 +257,13 @@ def test_cached_cell_exit_caps_speed_at_max_speed():
 
 
 def test_cached_distance_update_crossing_completed_no_wrap():
-    distance, is_cell_entry = cached_distance_update(Fraction(1, 4), Fraction(1, 4), True)
+    distance, is_cell_entry = _distance_update(Fraction(1, 4), Fraction(1, 4), True)
     assert distance == Fraction(1, 2)
     assert is_cell_entry == False
 
 
 def test_cached_distance_update_crossing_completed_single_wrap():
-    distance, is_cell_entry = cached_distance_update(Fraction(3, 4), Fraction(1, 2), True)
+    distance, is_cell_entry = _distance_update(Fraction(3, 4), Fraction(1, 2), True)
     assert distance == Fraction(1, 4)
     assert is_cell_entry == True
 
@@ -272,19 +272,19 @@ def test_cached_distance_update_crossing_completed_multiple_wraps():
     # exercises the while loop running more than once - not reachable via normal SpeedCounter.step() usage
     # (distance is always kept < SEGMENT_LENGTH and speed capped at <= max_speed <= 1 between calls), but
     # the raw function must still handle it correctly if ever called with an out-of-range starting distance.
-    distance, is_cell_entry = cached_distance_update(Fraction(3, 2), Fraction(1), True)
+    distance, is_cell_entry = _distance_update(Fraction(3, 2), Fraction(1), True)
     assert distance == Fraction(1, 2)
     assert is_cell_entry == True
 
 
 def test_cached_distance_update_crossing_not_completed_under_boundary():
-    distance, is_cell_entry = cached_distance_update(Fraction(1, 4), Fraction(1, 4), False)
+    distance, is_cell_entry = _distance_update(Fraction(1, 4), Fraction(1, 4), False)
     assert distance == Fraction(1, 2)
     assert is_cell_entry == False
 
 
 def test_cached_distance_update_crossing_not_completed_capped_at_boundary():
-    distance, is_cell_entry = cached_distance_update(Fraction(3, 4), Fraction(1, 2), False)
+    distance, is_cell_entry = _distance_update(Fraction(3, 4), Fraction(1, 2), False)
     assert distance == Fraction(1, 1)
     assert is_cell_entry == False
 
