@@ -19,20 +19,20 @@ from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_count_nonzero
 from flatland.utils.ordered_set import OrderedSet
 
-UnderlyingEntryPointType = TypeVar('EntryPointType')
-UnderlyingTransitionsType = TypeVar('UnderlyingTransitionsType')
-UnderlyingTransitionsValidityType = TypeVar('UnderlyingTransitionsValidityType')
-ActionsType = TypeVar('ActionsType')
+UnderlyingEntryPoint = TypeVar('EntryPoint')
+UnderlyingTransitions = TypeVar('UnderlyingTransitions')
+UnderlyingTransitionsValidity = TypeVar('UnderlyingTransitionsValidity')
+Actions = TypeVar('Actions')
 
 
-class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType, UnderlyingTransitionsValidityType, ActionsType]):
+class TransitionMap(Generic[UnderlyingEntryPoint, UnderlyingTransitions, UnderlyingTransitionsValidity, Actions]):
     """
     Base TransitionMap class.
 
     Generic class that implements a collection of transitions over a set of cells.
     """
 
-    def get_transitions(self, entry_point: UnderlyingEntryPointType) -> Tuple[UnderlyingTransitionsValidityType]:
+    def get_transitions(self, entry_point: UnderlyingEntryPoint) -> Tuple[UnderlyingTransitionsValidity]:
         """
         Return a tuple of transitions available in a cell specified by
         `entry_point` (e.g., a tuple of size of the maximum number of transitions,
@@ -51,7 +51,7 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
         """
         raise NotImplementedError()
 
-    def set_transitions(self, entry_point: UnderlyingEntryPointType, new_transitions: UnderlyingTransitionsType):
+    def set_transitions(self, entry_point: UnderlyingEntryPoint, new_transitions: UnderlyingTransitions):
         """
         Replaces the available transitions in cell `entry_point` with the tuple
         `new_transitions'. `new_transitions` must have
@@ -59,7 +59,7 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
 
         Parameters
         ----------
-        entry_point : [EntryPointType]
+        entry_point : [EntryPoint]
             The entry_point object depends on the specific implementation.
             It generally is an int (e.g., an index) or a tuple of indices.
         new_transitions : [TransitionsType]
@@ -68,7 +68,7 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
         """
         raise NotImplementedError()
 
-    def get_transition(self, entry_point: UnderlyingEntryPointType, transition_index: int) -> UnderlyingTransitionsValidityType:
+    def get_transition(self, entry_point: UnderlyingEntryPoint, transition_index: int) -> UnderlyingTransitionsValidity:
         """
         Return the status of whether an agent in cell `entry_point` can perform a
         movement along transition `transition_index` (e.g., the NESW direction
@@ -93,7 +93,7 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
         """
         raise NotImplementedError()
 
-    def set_transition(self, entry_point: UnderlyingEntryPointType, transition_index, new_transition):
+    def set_transition(self, entry_point: UnderlyingEntryPoint, transition_index, new_transition):
         """
         Replaces the validity of transition to `transition_index` in cell
         `entry_point' with the new `new_transition`.
@@ -115,41 +115,41 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
         """
         raise NotImplementedError()
 
-    def apply_action_independent(self, action: ActionsType, entry_point: UnderlyingEntryPointType) -> Optional[Tuple[UnderlyingEntryPointType, bool]]:
+    def apply_action_independent(self, action: Actions, entry_point: UnderlyingEntryPoint) -> Optional[Tuple[UnderlyingEntryPoint, bool]]:
         """
         Apply the action on the train regardless of locations of other agents.
         Checks for valid cells to move and valid rail transitions.
 
         Parameters
         ----------
-        action : [ActionsType]
+        action : [Actions]
             Action to execute
-        entry_point : EntryPointType
+        entry_point : EntryPoint
             position and orientation
 
         Returns
         -------
-        entry_point : UnderlyingEntryPointType
+        entry_point : UnderlyingEntryPoint
             the next entry_point (cell + entry direction)
         straight : bool
             whether the transition allows acceleration (only straight transitions in the grid, i.e. facing along the same axis: N->N/S, E->E/W, S->S/N, W->W/E)
         """
         raise NotImplementedError()
 
-    def get_successor_entry_points(self, entry_point: UnderlyingEntryPointType) -> Set[UnderlyingEntryPointType]:
+    def get_successor_entry_points(self, entry_point: UnderlyingEntryPoint) -> Set[UnderlyingEntryPoint]:
         raise NotImplementedError()
 
-    def get_predecessor_entry_points(self, entry_point: UnderlyingEntryPointType) -> Set[UnderlyingEntryPointType]:
+    def get_predecessor_entry_points(self, entry_point: UnderlyingEntryPoint) -> Set[UnderlyingEntryPoint]:
         raise NotImplementedError()
 
-    def is_valid_entry_point(self, entry_point: UnderlyingEntryPointType) -> bool:
+    def is_valid_entry_point(self, entry_point: UnderlyingEntryPoint) -> bool:
         """
         Whether the map contains the entry_point (a cell plus entry direction - a position+direction tuple
         for grid, a node id encoding the same for graph).
 
         Parameters
         ----------
-        entry_point : UnderlyingEntryPointType
+        entry_point : UnderlyingEntryPoint
             the entry_point to check
 
         Returns
@@ -160,7 +160,7 @@ class TransitionMap(Generic[UnderlyingEntryPointType, UnderlyingTransitionsType,
         raise NotImplementedError()
 
 
-class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsType]):
+class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[Actions]):
     """
     Implements a TransitionMap over a 2D grid.
 
@@ -203,7 +203,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         return self.uuid
 
     @lru_cache(maxsize=1_000_000)
-    def get_full_transitions(self, row, column) -> UnderlyingTransitionsType:
+    def get_full_transitions(self, row, column) -> UnderlyingTransitions:
         """
         Returns the full transitions for the cell at (row, column) in the format transition_map's transitions.
 

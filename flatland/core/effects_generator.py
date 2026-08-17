@@ -3,13 +3,13 @@ from typing import Callable, TypeVar, Generic, Dict, Any, List, Optional, Type
 from flatland.core.env import Environment
 from flatland.utils.cli_utils import resolve_type
 
-EnvType = TypeVar('EnvType', bound=Environment, covariant=True)
+Env = TypeVar('Env', bound=Environment, covariant=True)
 
 StateDict = Dict[str, Any]
 Specs = Dict[str, Any]
 
 
-class EffectsGenerator(Generic[EnvType]):
+class EffectsGenerator(Generic[Env]):
     """
     Hook for external events modifying the env (state) before observations and rewards are computed.
 
@@ -18,15 +18,15 @@ class EffectsGenerator(Generic[EnvType]):
 
     def __init__(
         self,
-        on_episode_start: Callable[[EnvType], EnvType] = None,
-        on_episode_step_start: Callable[[EnvType], EnvType] = None,
-        on_episode_step_end: Callable[[EnvType], EnvType] = None,
+        on_episode_start: Callable[[Env], Env] = None,
+        on_episode_step_start: Callable[[Env], Env] = None,
+        on_episode_step_end: Callable[[Env], Env] = None,
     ):
         self._on_episode_start = on_episode_start
         self._on_episode_step_start = on_episode_step_start
         self._on_episode_step_end = on_episode_step_end
 
-    def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_start(self, env: Env, *args, **kwargs) -> Env:
         """
         Called by env at the end of reset before computing observations and infos.
 
@@ -48,7 +48,7 @@ class EffectsGenerator(Generic[EnvType]):
             return env
         return self._on_episode_start(*args, **kwargs)
 
-    def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_step_start(self, env: Env, *args, **kwargs) -> Env:
         """
         Called by env at the beginning of step before evaluating the agent's actions.
 
@@ -70,7 +70,7 @@ class EffectsGenerator(Generic[EnvType]):
             return env
         return self._on_episode_step_start(*args, **kwargs)
 
-    def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_step_end(self, env: Env, *args, **kwargs) -> Env:
         """
         Called by env at the end of step before computing observations and infos.
 
@@ -119,21 +119,21 @@ class EffectsGenerator(Generic[EnvType]):
 
 
 
-class MultiEffectsGeneratorWrapped(EffectsGenerator[EnvType]):
-    def __init__(self, *effects_generators: EffectsGenerator[EnvType]):
+class MultiEffectsGeneratorWrapped(EffectsGenerator[Env]):
+    def __init__(self, *effects_generators: EffectsGenerator[Env]):
         self.effects_generators = effects_generators
 
-    def on_episode_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_start(self, env: Env, *args, **kwargs) -> Env:
         for eff in self.effects_generators:
             env = eff.on_episode_start(env, *args, **kwargs)
         return env
 
-    def on_episode_step_start(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_step_start(self, env: Env, *args, **kwargs) -> Env:
         for eff in self.effects_generators:
             env = eff.on_episode_step_start(env, *args, **kwargs)
         return env
 
-    def on_episode_step_end(self, env: EnvType, *args, **kwargs) -> EnvType:
+    def on_episode_step_end(self, env: Env, *args, **kwargs) -> Env:
         for eff in self.effects_generators:
             env = eff.on_episode_step_end(env, *args, **kwargs)
         return env
@@ -161,7 +161,7 @@ def _flatten_effects_generators(effects_generators):
     return flattened
 
 
-def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType]) -> EffectsGenerator[EnvType]:
+def make_multi_effects_generator(*effects_generators: EffectsGenerator[Env]) -> EffectsGenerator[Env]:
     """
     Compose effects generators into a single flat `MultiEffectsGeneratorWrapped` - any argument that is itself a
     `MultiEffectsGeneratorWrapped` (however deeply nested) is unwrapped first, so nesting never accumulates
@@ -173,7 +173,7 @@ def make_multi_effects_generator(*effects_generators: EffectsGenerator[EnvType])
 T = TypeVar('T', bound=EffectsGenerator)
 
 
-def find_all_effects_generators(effects_generator: EffectsGenerator[EnvType], cls: Type[T]) -> List[T]:
+def find_all_effects_generators(effects_generator: EffectsGenerator[Env], cls: Type[T]) -> List[T]:
     """
     Recursively collect all instances of `cls` within a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator.
     """
@@ -186,7 +186,7 @@ def find_all_effects_generators(effects_generator: EffectsGenerator[EnvType], cl
     return found
 
 
-def find_effects_generator(effects_generator: EffectsGenerator[EnvType], cls: Type[T]) -> Optional[T]:
+def find_effects_generator(effects_generator: EffectsGenerator[Env], cls: Type[T]) -> Optional[T]:
     """
     Recursively search a (possibly `MultiEffectsGeneratorWrapped`-composed) effects generator for an instance of `cls`.
     """

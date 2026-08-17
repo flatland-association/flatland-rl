@@ -3,10 +3,10 @@ from typing import Optional, TypeVar, Generic
 
 from flatland.core.env import Environment
 
-EnvType = TypeVar('EnvType', bound=Environment, covariant=True)
+Env = TypeVar('Env', bound=Environment, covariant=True)
 
 
-class FlatlandCallbacks(Generic[EnvType]):
+class FlatlandCallbacks(Generic[Env]):
     """
     Abstract base class for Flatland callbacks similar to rllib, see https://github.com/ray-project/ray/blob/master/rllib/callbacks/callbacks.py.
 
@@ -18,7 +18,7 @@ class FlatlandCallbacks(Generic[EnvType]):
     def on_episode_start(
         self,
         *,
-        env: Optional[EnvType] = None,
+        env: Optional[Env] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -40,7 +40,7 @@ class FlatlandCallbacks(Generic[EnvType]):
     def on_episode_step(
         self,
         *,
-        env: Optional[EnvType] = None,
+        env: Optional[Env] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -68,7 +68,7 @@ class FlatlandCallbacks(Generic[EnvType]):
     def on_episode_end(
         self,
         *,
-        env: Optional[EnvType] = None,
+        env: Optional[Env] = None,
         data_dir: Path = None,
         **kwargs,
     ) -> None:
@@ -89,8 +89,8 @@ class FlatlandCallbacks(Generic[EnvType]):
 
 
 # https://github.com/ray-project/ray/blob/3b94e5ff0038798a6955cde37459a0d30aa718c4/rllib/callbacks/utils.py#L41
-def make_multi_callbacks(*_callback_list: FlatlandCallbacks[EnvType]):
-    class _MultiFlatlandCallbacks(FlatlandCallbacks[EnvType]):
+def make_multi_callbacks(*_callback_list: FlatlandCallbacks[Env]):
+    class _MultiFlatlandCallbacks(FlatlandCallbacks[Env]):
         IS_CALLBACK_CONTAINER = True
 
         def __init__(self, *callback_list: FlatlandCallbacks):

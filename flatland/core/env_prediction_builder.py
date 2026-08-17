@@ -12,11 +12,11 @@ case of multi-agent environments.
 """
 from typing import Generic, TypeVar
 
-PredictionType = TypeVar('PredictionType')
-EnvType = TypeVar('EnvType')
+Prediction = TypeVar('Prediction')
+Env = TypeVar('Env')
 
 
-class PredictionBuilder(Generic[EnvType, PredictionType]):
+class PredictionBuilder(Generic[Env, Prediction]):
     """
     PredictionBuilder base class.
 
@@ -24,21 +24,21 @@ class PredictionBuilder(Generic[EnvType, PredictionType]):
 
     def __init__(self, max_depth: int = 20):
         self.max_depth = max_depth
-        self.env: EnvType = None
+        self.env: Env = None
 
-    def reset(self, env: EnvType):
+    def reset(self, env: Env):
         """
         Called after each environment reset. Receives the env instance so prediction-builder-specific
         instantiations depending on env parameters can be made here.
 
         Parameters
         ----------
-        env : EnvType
+        env : Env
             the (possibly newly generated) environment instance
         """
         self.env = env
 
-    def get(self, handle: int = 0) -> PredictionType:
+    def get(self, handle: int = 0) -> Prediction:
         """
         Called whenever get_many in the observation builder is called.
 

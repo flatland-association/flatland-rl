@@ -115,7 +115,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         -------
         new_cell_valid: bool
             is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-        new_position: [EntryPointType]
+        new_position: [EntryPoint]
             New position after applying the action
         transition_valid: bool
             Whether the transition from old and direction is defined in the grid.

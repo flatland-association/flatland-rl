@@ -98,7 +98,7 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
 @pytest.mark.parametrize("seed", range(42, 58))
 def test_apply_timetable_to_agents_waypoints_well_formed(seed):
     """Regression test: `GraphRailEnv._apply_timetable_to_agents` must produce `agent.waypoints` as a
-    well-formed `List[List[EntryPointType]]` - every entry, including the exploded target directions,
+    well-formed `List[List[EntryPoint]]` - every entry, including the exploded target directions,
     must itself be a list of entry points, and only entry points that actually exist in the graph
     (e.g. not a direction blocked by a dead end) may be included."""
     grid_env, _, _ = env_generator(seed=seed)

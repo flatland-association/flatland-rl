@@ -94,7 +94,7 @@ a node-id string for graph.
 ### `flatland/envs/` — env control flow
 
 `RailEnv`/`AbstractRailEnv` (`rail_env.py`) is the env facade, generic over `(TransitionMap, ResourceMap,
-EntryPointType)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
+EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
 assignment), `timetable_generators.py` (departure/arrival windows). Per `step()`, for each agent: derive the
 desired next entry point from the action via the `step_utils` state machine (`TrainState`/
 `TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
