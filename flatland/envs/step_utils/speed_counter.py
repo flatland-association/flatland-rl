@@ -118,11 +118,7 @@ class SpeedCounter:
         """
         Freeze speed at 0 without touching distance.
 
-        Use this instead of step() whenever the agent's on-map state changes for a reason other than a
-        completed or denied cell-boundary crossing - e.g. a malfunction interrupting a MOVING agent mid-cell,
-        or an agent that's simply continuing STOPPED/MALFUNCTION this step. Unlike step(), this never risks
-        treating already-accumulated in-cell distance as a completed crossing: the agent's position hasn't
-        changed and no crossing was even attempted this step, so distance must stay exactly as-is.
+        Use this instead of step() whenever the agent's on-map is malfunction or force stop.
         """
         self._speed = Fraction(0)
         self._is_cell_entry = False

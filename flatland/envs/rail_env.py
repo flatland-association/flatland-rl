@@ -609,11 +609,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                     speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
             elif agent.state.is_on_map_state():
-                # no distance traveled - agent.speed_counter.stop() rather than .step(speed=Fraction(0)):
-                # the latter would run distance through cached_distance_update using the agent's OLD speed,
-                # which can wrongly wrap already-accumulated in-cell progress into a "completed crossing"
-                # (e.g. a MOVING agent malfunctioning mid-cell) even though position never actually changed
-                # this step.
+                # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2): should apply when forced stop or malfunction, check condition
                 agent.speed_counter.stop()
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
