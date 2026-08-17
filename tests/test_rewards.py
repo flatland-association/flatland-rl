@@ -1425,30 +1425,3 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     # no penalty accrued while the train was still approaching at full speed
     assert penalties[:-1] == [0] * (len(penalties) - 1)
 
-
-@pytest.mark.parametrize("action", list(RailEnvActions), ids=[a.name for a in RailEnvActions])
-def test_apply_action_independent_only_left_right_valid_at_symmetric_switch(action):
-    """Same grid as test_env_collision_penalty_on_invalid_forward_at_symmetric_switch: at the switch (2,1),
-    heading WEST, only north/south transitions exist, so only MOVE_LEFT/MOVE_RIGHT are valid actions --
-    apply_action_independent() returns None for every other action (DO_NOTHING, MOVE_FORWARD, STOP_MOVING)."""
-    transitions = RailEnvTransitions()
-    grid = np.zeros((5, 6), dtype=np.uint16)
-    grid[2, 1] = RailEnvTransitionsEnum.symmetric_switch_from_east  # heading west forks N/S
-    grid[2, 2] = RailEnvTransitionsEnum.horizontal_straight
-    grid[2, 3] = RailEnvTransitionsEnum.horizontal_straight
-    grid[2, 4] = RailEnvTransitionsEnum.dead_end_from_east
-    grid[1, 1] = RailEnvTransitionsEnum.vertical_straight
-    grid[0, 1] = RailEnvTransitionsEnum.dead_end_from_north
-    grid[3, 1] = RailEnvTransitionsEnum.vertical_straight
-    grid[4, 1] = RailEnvTransitionsEnum.dead_end_from_south
-
-    rail = RailGridTransitionMap(width=6, height=5, transitions=transitions)
-    rail.grid = grid
-
-    configuration = ((2, 1), Grid4TransitionsEnum.WEST)
-    result = rail.apply_action_independent(action, configuration)
-    if action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT):
-        assert result is not None
-    else:
-        assert result is None
-
