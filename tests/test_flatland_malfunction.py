@@ -300,9 +300,7 @@ def test_initial_malfunction():
 
                 reward=env.start_penalty + env.step_penalty * 1.0  # running at speed 1.0
             ),
-            # design: distance update with pre-step speed - is_cell_exit() judges exit-readiness from the
-            # speed the agent had before this step (still 0, frozen from malfunction), so the recovery
-            # step above only grants speed; the actual advance happens one step later, here.
+            # design: distance update with pre-step speed.
             Replay(  # 4
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,

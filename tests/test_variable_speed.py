@@ -35,8 +35,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
-            # design: distance update with pre-step speed - this step's distance advances by the speed the
-            # agent had BEFORE it (0.5, from replay #0), not the just-accelerated 0.7 granted by this step.
+            # design: distance update with pre-step speed.
             Replay(  # 1
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
@@ -55,10 +54,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
-            # design: distance update with pre-step speed - distance/position now lag the pre-fix table by
-            # one step throughout: is_cell_exit() judges exit-readiness from the speed the agent had BEFORE
-            # this step, not the post-acceleration speed granted THIS step, so a boundary crossing that used
-            # to complete here now completes one step later.
+            # design: distance update with pre-step speed.
             Replay(  # 3
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
@@ -76,11 +72,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 action=RailEnvActions.MOVE_LEFT,
 
             ),
-            # design: distance update with pre-step speed - the one-step exit-timing lag means MOVE_LEFT is
-            # now issued one step before the agent actually reaches the switch cell (3, 6); it lands on a
-            # straight (3, 7)->(3, 6) segment instead, where a left turn isn't a valid transition, so it's
-            # treated as a forward move. The agent never turns south and just continues west - this scripted
-            # action sequence no longer exercises the switch turn it was originally written to test.
+            # design: distance update with pre-step speed.
             Replay(  # 5
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,

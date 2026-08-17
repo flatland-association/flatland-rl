@@ -9,11 +9,7 @@ from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractio
     cached_cell_exit, _cached_cell_exit, cached_distance_update
 
 
-# design: distance update with pre-step speed - step() now always requires an explicit speed argument
-# (no more implicit "keep current speed"), and computes this step's distance from the speed stored BEFORE
-# the call; is_cell_exit() is now no-arg, judging exit-readiness against that same stored (pre-step) speed
-# rather than an explicitly-passed target speed. Every sc.step(sc.speed)/is_cell_exit() call and every
-# distance value below is a direct consequence of this API/semantics change.
+# design: distance update with pre-step speed.
 def test_step_counter_speed025():
     sc = SpeedCounter(speed=0.25)
     assert sc.is_cell_entry == True
@@ -46,7 +42,7 @@ def test_step_counter_speed025():
     assert np.isclose(float(sc.speed), 0.25)
 
 
-# design: distance update with pre-step speed - see test_step_counter_speed025 above.
+# design: distance update with pre-step speed.
 def test_step_counter_speed05():
     sc = SpeedCounter(speed=0.5)
     assert sc.is_cell_entry == True
@@ -67,7 +63,7 @@ def test_step_counter_speed05():
     assert np.isclose(float(sc.speed), 0.5)
 
 
-# design: distance update with pre-step speed - see test_step_counter_speed025 above.
+# design: distance update with pre-step speed.
 def test_step_counter_speed025_05():
     sc = SpeedCounter(speed=0.25, max_speed=1.0)
     assert sc.is_cell_entry == True
@@ -100,7 +96,7 @@ def test_step_counter_speed025_05():
     assert np.isclose(float(sc.speed), 0.25)
 
 
-# design: distance update with pre-step speed - see test_step_counter_speed025 above.
+# design: distance update with pre-step speed.
 def test_step_counter_speed025_03():
     sc = SpeedCounter(speed=0.25, max_speed=0.3)
     assert sc.is_cell_entry == True
@@ -152,8 +148,7 @@ def test_clone_speed_counter_fractional_speed():
     assert pickle.loads(pickle.dumps(sc)) == sc
     sc.step(speed=1 / 10)
     assert not sc.is_cell_entry
-    # design: distance update with pre-step speed - distance advances by the pre-step speed (1/5), not
-    # the just-passed 1/10.
+    # design: distance update with pre-step speed.
     assert np.isclose(float(sc.distance), 0.2)
     assert pickle.loads(pickle.dumps(sc)) == sc
 

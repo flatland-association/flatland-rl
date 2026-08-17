@@ -499,9 +499,7 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            # design: distance update with pre-step speed - is_cell_exit() judges exit-readiness from the
-            # speed the agent had before this step (still 0, frozen from malfunction), so the recovery
-            # step above only grants speed; position doesn't advance until this step's own MOVE_FORWARD.
+            # design: distance update with pre-step speed.
             Replay(  # 6
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
@@ -540,9 +538,7 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
-            # design: distance update with pre-step speed - same recovery-lag as above (replay #6), but this
-            # time the very next action is STOP_MOVING rather than another MOVE_FORWARD, so the missed
-            # distance is never recovered: positions #10-16 below are all one cell behind the pre-fix table.
+            # design: distance update with pre-step speed.
             Replay(  # 10
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,

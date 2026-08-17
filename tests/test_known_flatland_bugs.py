@@ -234,9 +234,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
     assert agent.malfunction_handler.malfunction_down_counter == 0
 
     # Even though the train is in a malfunction state we can dispatch it
-    # design: distance update with pre-step speed - is_cell_exit() judges exit-readiness from the speed
-    # the agent had before this step (still 0, frozen from malfunction), so this step only grants speed;
-    # position doesn't actually advance until the next MOVE_FORWARD, below.
+    # design: distance update with pre-step speed.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration[0] == (org_pos[0], org_pos[1])

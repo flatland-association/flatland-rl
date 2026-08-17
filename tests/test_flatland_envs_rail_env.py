@@ -501,9 +501,7 @@ def test_speed_after_malfunction():
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == speed + env.acceleration_delta
     assert agent.speed_counter.speed <= agent.speed_counter.max_speed
-    # design: distance update with pre-step speed - distance is unchanged: this step's distance update
-    # uses the speed the agent had at the beginning of the step (still 0, frozen from malfunction), not
-    # the newly-accelerated one.
+    # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == distance
 
 
@@ -537,9 +535,7 @@ def test_speed_after_malfunction_full_acceleration_braking():
     # takes up old speed plus increment.
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    # design: distance update with pre-step speed - distance is unchanged: this step's distance update
-    # uses the speed the agent had at the beginning of the step (still 0, frozen from malfunction), not
-    # the newly-accelerated one.
+    # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == previous_distance
 
 
@@ -627,7 +623,6 @@ def test_symmetric_switch_move_forward_action():
     assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
@@ -642,13 +637,11 @@ def test_symmetric_switch_move_forward_action():
     assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
-    # design: distance update with pre-step speed - is_cell_exit() judges exit-readiness against the
-    # pre-step speed (1/2, not yet fully braked to 0), so distance(1/2) + pre-step-speed(1/2) reaches the
-    # boundary; the crossing is denied (STOP_MOVING), so distance is capped at the boundary rather than
-    # wrapped - stopped, but moving to end of cell.
+    # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == Fraction(1, 1)
 
-    # TODO bug: we should have been stopped before entering 15,15!
+    # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design: we should have been stopped before entering 15,15,
+    #  invalid action should lead to state stopped and agent not entering the symmetric switch, must be fixed when agents "live on edges".
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.current_configuration[0] == (15, 15)
     assert agent.current_configuration[1] == 1
@@ -661,9 +654,6 @@ def test_symmetric_switch_move_forward_action():
     assert agent.current_configuration[1] == 1
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
-    # design: distance update with pre-step speed - distance advances by the pre-step speed (1/2) granted
-    # on the previous MOVE_FORWARD, not the just-braked-to-0 speed of this step.
-    # TODO re-evaluate design: speed was 0.5 when stopped - should we not have travelled to 0.5 when stopped?
     assert agent.speed_counter.distance == Fraction(1, 2)
 
 
@@ -703,18 +693,14 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_configuration)
     third_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_configuration)
 
-    # design: distance update with pre-step speed - first real moving step: speed_counter accelerates from
-    # 0 to 0.5, but this step's distance update still uses the speed the agent had at the beginning of it
-    # (0), so no progress yet. Also is_cell_exit()-gated: exit-readiness is judged against this same
-    # pre-step speed (0), so the departure itself now needs an extra step too.
+    # design: distance update with pre-step speed.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == first_configuration
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(0)
 
-    # design: distance update with pre-step speed - speed accelerates to max (1), but distance advances
-    # using the pre-acceleration speed (0.5) - not yet enough to leave the initial configuration.
+    # design: distance update with pre-step speed.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == first_configuration
@@ -967,11 +953,7 @@ def test_malfunction_state_transitions_to_moving():
         assert agent.speed_counter.speed == Fraction(0)
         assert agent.speed_counter.distance == distance
 
-    # design: distance update with pre-step speed - MALFUNCTION -> MOVING: malfunction cleared and
-    # MOVE_FORWARD given - the agent resumes moving, re-accelerating from 0 (same acceleration curve as a
-    # fresh departure). This step's distance update still uses the speed the agent had at the beginning of
-    # it (0, frozen from malfunction), so no progress yet - and is_cell_exit() judges exit-readiness
-    # against that same pre-step speed, so the recovery itself needs an extra step too.
+    # design: distance update with pre-step speed - MALFUNCTION -> MOVING.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == malfunction_configuration
@@ -981,8 +963,7 @@ def test_malfunction_state_transitions_to_moving():
     second_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, malfunction_configuration)
     third_configuration, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_configuration)
 
-    # design: distance update with pre-step speed - speed accelerates to max (1), but distance advances
-    # using the pre-acceleration speed (0.5) - not yet enough to leave the malfunction configuration.
+    # design: distance update with pre-step speed.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_configuration == malfunction_configuration
