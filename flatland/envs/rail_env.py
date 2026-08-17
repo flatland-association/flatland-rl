@@ -128,10 +128,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
         Determines how much speed is decreased by STOP_MOVING action.
         As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
     check_step_pre_post_conditions : bool
-        If True (the default), `step()` asserts that every agent's speed update matches the expected
-        transition on every call - useful for catching regressions during development/testing, at the cost
-        of extra per-step overhead. Set to False to skip these assertions, e.g. in performance-sensitive
-        production use.
+        Set to False to skip checking step() pre- and postconditions, e.g. in performance-sensitive production use.
     rewards : DefaultRewards
         The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
     effects_generator : Optional[EffectsGenerator["RailEnv"]]
