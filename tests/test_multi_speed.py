@@ -609,10 +609,10 @@ def test_multispeed_actions_malfunction_no_blocking():
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-    run_replay_config(env, [test_config], skip_reward_check=True,
-                      # TODO https://github.com/flatland-association/flatland-rl/issues/175 fix action_required
-                      skip_action_required_check=True
-                      )
+    run_replay_config(env, [test_config],
+                      skip_reward_check=True,
+                      # we want to accelerate even when action not required
+                      skip_action_required_check=True)
 
 
 # TODO invalid action penalty seems only given when forward is not possible - is this the intended behaviour?

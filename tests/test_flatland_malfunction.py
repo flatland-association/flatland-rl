@@ -537,8 +537,7 @@ def test_initial_malfunction_do_nothing():
     run_replay_config(env, [replay_config], activate_agents=False,
                       skip_reward_check=True,
                       set_ready_to_depart=True,
-                      # TODO https://github.com/flatland-association/flatland-rl/issues/175 fix action_required
-                      skip_action_required_check=True
+                      skip_action_required_check=False
                       )
 
 
