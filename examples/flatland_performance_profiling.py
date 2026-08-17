@@ -1,4 +1,5 @@
 import cProfile
+import inspect
 import sys
 from timeit import default_timer
 from typing import Optional
@@ -90,7 +91,7 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300, check_s
     number_of_agents = nAgents  # Number of trains to create
     seed = 1  # Random seed
 
-    env = RailEnv(
+    rail_env_kwargs = dict(
         width=width,
         height=height,
         rail_generator=rail_generator,
@@ -99,8 +100,14 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300, check_s
         random_seed=seed,
         obs_builder_object=observation_builder,
         malfunction_generator=malfunction_generator,
-        check_step_pre_post_conditions=check_step_pre_post_conditions,
     )
+    # this script is also run (via PYTHONPATH) against historical flatland-rl versions for profiling
+    # comparisons (see benchmarks/flatland_performance_profiling.ipynb's `loop`) - only pass
+    # check_step_pre_post_conditions if the installed RailEnv actually accepts it.
+    if "check_step_pre_post_conditions" in inspect.signature(RailEnv.__init__).parameters:
+        rail_env_kwargs["check_step_pre_post_conditions"] = check_step_pre_post_conditions
+
+    env = RailEnv(**rail_env_kwargs)
     env.reset()
     return env
 
