@@ -32,16 +32,16 @@ class DistanceMap(
         return np.full(shape=(num_agents, self.env_height, self.env_width, 4), fill_value=np.inf)
 
     def _valid_targets(self, agent: EnvAgent, rail: RailGridTransitionMap) -> List[Tuple[Tuple[int, int], int]]:
-        return [target for target in agent.targets if rail.is_valid_configuration(target)]
+        return [target for target in agent.targets if rail.is_valid_entry_point(target)]
 
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         # just copy the distance map from other agent with same target (performance)
         self.distance_map[target_nr, :, :, :] = np.copy(self.distance_map[source_target_nr, :, :, :])
 
-    def _set_agent_distance(self, source_configuration: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
-        (r, c), direction = source_configuration
+    def _set_agent_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+        (r, c), direction = source_entry_point
         self.distance_map[target_nr, r, c, direction] = new_distance
 
-    def _get_agent_distance(self, source_configuration: Tuple[Tuple[int, int], int], target_nr: int):
-        (r, c), direction = source_configuration
+    def _get_agent_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int):
+        (r, c), direction = source_entry_point
         return self.distance_map[target_nr, r, c, direction]

@@ -15,14 +15,14 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
         self._shortest_paths = {}
 
     def _act(self, env: RailEnv, agent: EnvAgent):
-        if agent.current_configuration is None:
+        if agent.current_entry_point is None:
             return RailEnvActions.MOVE_FORWARD
 
         if len(self._shortest_paths[agent.handle]) == 0:
             return RailEnvActions.DO_NOTHING
 
         for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), agent.current_configuration)
+            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), agent.current_entry_point)
             if result is not None:
                 (new_position, new_direction), _ = result
                 next_waypoint = self._shortest_paths[agent.handle][1]
@@ -61,10 +61,10 @@ class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
             p += p_next
             self._shortest_paths[agent.handle] = p
 
-        if agent.current_configuration is None:
+        if agent.current_entry_point is None:
             return
 
-        position = agent.current_configuration[0]
+        position = agent.current_entry_point[0]
         while self._shortest_paths[agent.handle][0].position != position:
             self._shortest_paths[agent.handle] = self._shortest_paths[agent.handle][1:]
         assert self._shortest_paths[agent.handle][0].position == position

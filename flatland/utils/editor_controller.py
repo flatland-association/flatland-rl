@@ -197,10 +197,10 @@ class Controller(AbstractController):
                 if agent is None:
                     continue
                 if agent_idx == self.model.selected_agent:
-                    new_direction = (agent.initial_configuration[1] + 1) % 4
-                    agent.initial_configuration = with_direction(agent.initial_configuration, new_direction)
-                    agent.current_configuration = with_direction(agent.current_configuration, new_direction)
-                    agent.old_configuration = with_direction(agent.old_configuration, new_direction)
+                    new_direction = (agent.initial_entry_point[1] + 1) % 4
+                    agent.initial_entry_point = with_direction(agent.initial_entry_point, new_direction)
+                    agent.current_entry_point = with_direction(agent.current_entry_point, new_direction)
+                    agent.old_entry_point = with_direction(agent.old_entry_point, new_direction)
         self.model.redraw()
 
     def reset_agents(self, event):

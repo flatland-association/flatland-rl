@@ -41,7 +41,7 @@ class Agent(NamedTuple):
     waypoints: List[List[Waypoint]] = None
     waypoints_earliest_departure: List[int] = None
     waypoints_latest_arrival: List[int] = None
-    # the specific target alternative actually reached - see `EnvAgent.target_configuration`. `None` for
+    # the specific target alternative actually reached - see `EnvAgent.target_entry_point`. `None` for
     # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
     target_position: Tuple[int, int] = None
     target_direction: Grid4TransitionsEnum = None
@@ -57,26 +57,26 @@ def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> Li
     return [wp if isinstance(wp, list) else [wp] for wp in waypoints]
 
 
-def _filter_valid_target_configurations(rail: TransitionMap, waypoint_group: List[Waypoint]) -> List[Waypoint]:
+def _filter_valid_target_entry_points(rail: TransitionMap, waypoint_group: List[Waypoint]) -> List[Waypoint]:
     """
-    Keeps only the arrival alternatives in a target waypoint group that are valid configurations on `rail`.
+    Keeps only the arrival alternatives in a target waypoint group that are valid entry points on `rail`.
     Envs persisted before routing-flexibility alternatives were introduced store a legacy `None`-direction
     placeholder (meaning "any direction") - explode that into one `Waypoint` per valid direction instead of
-    filtering it out (since `None` itself is never a valid configuration). A no-op for waypoints already
+    filtering it out (since `None` itself is never a valid entry point). A no-op for waypoints already
     filtered to concrete, rail-valid directions.
     """
     if None in {wp.direction for wp in waypoint_group}:
         position = waypoint_group[0].position
-        return [Waypoint(position, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((position, d))]
-    return [wp for wp in waypoint_group if rail.is_valid_configuration((wp.position, wp.direction))]
+        return [Waypoint(position, d) for d in Grid4TransitionsEnum if rail.is_valid_entry_point((position, d))]
+    return [wp for wp in waypoint_group if rail.is_valid_entry_point((wp.position, wp.direction))]
 
 
 def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4TransitionsEnum]]:
     """
-    Reads the target-configuration set off a persisted `Agent`. `Agent.targets` replaced the legacy single
+    Reads the target-entry-point set off a persisted `Agent`. `Agent.targets` replaced the legacy single
     `target` position (which implied "any direction"); envs pickled before that switch reconstruct positionally,
     landing a bare `(row, col)` position in the `targets` slot instead of a set - explode such a position to one
-    configuration per direction. Concrete arrival directions are re-filtered against the rail on load anyway
+    entry point per direction. Concrete arrival directions are re-filtered against the rail on load anyway
     (see `set_full_state`), so exploding to all four here is safe.
     """
     targets = agent_tuple.targets
@@ -86,41 +86,41 @@ def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4
     return {(targets, d) for d in Grid4TransitionsEnum}
 
 
-def with_direction(configuration: Optional[Tuple[Tuple[int, int], int]], direction: int) -> Tuple[Tuple[int, int], int]:
+def with_direction(entry_point: Optional[Tuple[Tuple[int, int], int]], direction: int) -> Tuple[Tuple[int, int], int]:
     """
-    Returns a grid `(position, direction)` configuration with `direction` replaced, preserving
-    `configuration`'s position - or `(None, direction)` if `configuration` is `None` (e.g. the agent is
+    Returns a grid `(position, direction)` entry_point with `direction` replaced, preserving
+    `entry_point`'s position - or `(None, direction)` if `entry_point` is `None` (e.g. the agent is
     currently off map).
     """
-    return (configuration[0] if configuration is not None else None, direction)
+    return (entry_point[0] if entry_point is not None else None, direction)
 
 
-def virtual_configuration(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], int]]:
+def virtual_entry_point(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], int]]:
     """
     Returns the effective grid `(position, direction)` for `agent`, regardless of whether it is
-    currently on the map - used by observations/predictions that need a configuration to compute
+    currently on the map - used by observations/predictions that need an entry point to compute
     against even for off-map or arrived agents:
-    - off map: `initial_configuration`.
-    - on map: `current_configuration`.
-    - done (arrived, possibly already removed from the map): `agent.target_configuration` - the
-      specific configuration actually reached, so a real, rail-valid direction is returned instead of
-      the `None` `direction` that `current_configuration` would give once the agent is removed from
+    - off map: `initial_entry_point`.
+    - on map: `current_entry_point`.
+    - done (arrived, possibly already removed from the map): `agent.target_entry_point` - the
+      specific entry point actually reached, so a real, rail-valid direction is returned instead of
+      the `None` `direction` that `current_entry_point` would give once the agent is removed from
       the map.
     - any other state (e.g. malfunctioning while still off map): `None`.
     """
     if agent.state.is_off_map_state():
-        return agent.initial_configuration
+        return agent.initial_entry_point
     elif agent.state.is_on_map_state():
-        return agent.current_configuration
+        return agent.current_entry_point
     elif agent.state == TrainState.DONE:
-        return agent.target_configuration
+        return agent.target_entry_point
     return None
 
 
 def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
-    # Target configurations are serialised without rail validity (rail is not stored per-agent), so filter
+    # Target entry points are serialised without rail validity (rail is not stored per-agent), so filter
     # them against `rail` here - previously a post-load step in `RailEnvPersister.set_full_state`. The target
-    # waypoint group is filtered via `_filter_valid_target_configurations` (which also explodes a legacy
+    # waypoint group is filtered via `_filter_valid_target_entry_points` (which also explodes a legacy
     # `None`-direction placeholder), and `targets` is kept exactly in sync with it, per the invariant that
     # `EnvAgent.targets` is the last waypoint group.
     if agent_tuple.waypoints is not None:
@@ -129,14 +129,14 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         waypoints = [
             [Waypoint(agent_tuple.initial_position, agent_tuple.initial_direction)],
             [Waypoint(position, direction) for position, direction in sorted(_agent_tuple_targets(agent_tuple))]]
-    waypoints[-1] = _filter_valid_target_configurations(rail, waypoints[-1])
+    waypoints[-1] = _filter_valid_target_entry_points(rail, waypoints[-1])
     targets = {(wp.position, wp.direction) for wp in waypoints[-1]}
     return EnvAgent(
-        initial_configuration=(agent_tuple.initial_position, agent_tuple.initial_direction),
-        current_configuration=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
-        old_configuration=(
+        initial_entry_point=(agent_tuple.initial_position, agent_tuple.initial_direction),
+        current_entry_point=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
+        old_entry_point=(
             agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
-        target_configuration=(
+        target_entry_point=(
             agent_tuple.target_position, agent_tuple.target_direction
         ) if agent_tuple.target_position is not None and agent_tuple.target_direction is not None else None,
         targets=targets,
@@ -157,31 +157,31 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     )
 
 
-ConfigurationType = TypeVar('ConfigurationType')
+EntryPointType = TypeVar('EntryPointType')
 
 
-def _sanitize_configuration(configuration):
-    """Coerce a grid (position, direction) configuration's numeric elements to plain int.
+def _sanitize_entry_point(entry_point):
+    """Coerce a grid (position, direction) entry_point's numeric elements to plain int.
 
     Rail/line generation code (and various cached grid-transition helpers) can hand back numpy scalars
     (e.g. np.int64) instead of plain int for a cell position/direction. Left unsanitized, that numpy-ness
-    gets stored into agent.initial_configuration/current_configuration and can later make a position tuple
+    gets stored into agent.initial_entry_point/current_entry_point and can later make a position tuple
     compare unequal-via-array-broadcast instead of a clean False against a differently-shaped tuple
     elsewhere (e.g. agent_chains.py's level-free-crossing resources), raising "The truth value of an array
     with more than one element is ambiguous". attrs converters only run in __init__, not on later
     attribute assignment, so this has to be called explicitly at every write site instead.
 
-    A no-op for graph configurations (or anything else that doesn't look like a grid
-    ((row, col), direction) tuple), since ConfigurationType is generic across grid and graph envs.
+    A no-op for graph entry points (or anything else that doesn't look like a grid
+    ((row, col), direction) tuple), since EntryPointType is generic across grid and graph envs.
     """
-    if configuration is None:
+    if entry_point is None:
         return None
     try:
-        position, direction = configuration
+        position, direction = entry_point
     except (TypeError, ValueError):
-        return configuration
+        return entry_point
     if not isinstance(position, tuple) or len(position) != 2:
-        return configuration
+        return entry_point
     position = tuple(int(c) if isinstance(c, (np.generic, np.ndarray)) else c for c in position)
     if isinstance(direction, (np.generic, np.ndarray)):
         direction = int(direction)
@@ -189,26 +189,26 @@ def _sanitize_configuration(configuration):
 
 
 @attrs
-class EnvAgent(Generic[ConfigurationType]):
+class EnvAgent(Generic[EntryPointType]):
     # INIT FROM HERE IN _from_line()
-    # converter=_sanitize_configuration: covers construction (e.g. from rail/line generation code, which is
-    # exactly where the numpy-dtype taint described on _sanitize_configuration has been observed entering) -
-    # attrs converters only run in __init__, so later direct assignments (agent.initial_configuration = ...,
-    # agent.current_configuration = ..., agent.old_configuration = ..., agent.target_configuration = ...)
-    # still need to call _sanitize_configuration explicitly themselves, unless the assigned value is already
-    # known-sanitized (e.g. copied from another already-sanitized configuration attrib on the same agent).
-    initial_configuration = attrib(type=ConfigurationType, converter=_sanitize_configuration)
+    # converter=_sanitize_entry_point: covers construction (e.g. from rail/line generation code, which is
+    # exactly where the numpy-dtype taint described on _sanitize_entry_point has been observed entering) -
+    # attrs converters only run in __init__, so later direct assignments (agent.initial_entry_point = ...,
+    # agent.current_entry_point = ..., agent.old_entry_point = ..., agent.target_entry_point = ...)
+    # still need to call _sanitize_entry_point explicitly themselves, unless the assigned value is already
+    # known-sanitized (e.g. copied from another already-sanitized entry point attrib on the same agent).
+    initial_entry_point = attrib(type=EntryPointType, converter=_sanitize_entry_point)
 
-    current_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
-                                   converter=_sanitize_configuration)
-    targets = attrib(type=Set[ConfigurationType], default=Factory(lambda: set()))
-    # the specific configuration (a member of `targets`) the agent actually arrived at, once
+    current_entry_point = attrib(type=Optional[EntryPointType], default=Factory(lambda: None),
+                                 converter=_sanitize_entry_point)
+    targets = attrib(type=Set[EntryPointType], default=Factory(lambda: set()))
+    # the specific entry point (a member of `targets`) the agent actually arrived at, once
     # `state == TrainState.DONE` - set exactly once, by `AbstractRailEnv.handle_done_state()`, before
-    # `current_configuration` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
+    # `current_entry_point` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
     # the agent reaches DONE. Unlike `next(iter(targets))`, this is deterministic: `targets` may hold
     # several direction alternatives at the same position, only one of which was actually reached.
-    target_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
-                                  converter=_sanitize_configuration)
+    target_entry_point = attrib(type=Optional[EntryPointType], default=Factory(lambda: None),
+                                converter=_sanitize_entry_point)
 
     moving = attrib(default=False, type=bool)
 
@@ -236,16 +236,16 @@ class EnvAgent(Generic[ConfigurationType]):
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    old_configuration = attrib(type=Optional[ConfigurationType], default=Factory(lambda: None),
-                               converter=_sanitize_configuration)
+    old_entry_point = attrib(type=Optional[EntryPointType], default=Factory(lambda: None),
+                             converter=_sanitize_entry_point)
 
     def reset(self):
         """
         Resets the agents to their initial values of the episode. Called after ScheduleTime generation.
         """
-        self.current_configuration = None
-        self.old_configuration = None
-        self.target_configuration = None
+        self.current_entry_point = None
+        self.old_entry_point = None
+        self.target_entry_point = None
         self.moving = False
         self.arrival_time = None
 
@@ -256,19 +256,19 @@ class EnvAgent(Generic[ConfigurationType]):
         self.state_machine.reset()
 
     def to_agent(self) -> Agent:
-        return Agent(initial_position=self.initial_configuration[0],
-                     initial_direction=self.initial_configuration[1],
-                     direction=self.current_configuration[1] if self.current_configuration is not None else None,
-                     # N.B. the full arrival-configuration set is serialized, but re-filtered against the rail
+        return Agent(initial_position=self.initial_entry_point[0],
+                     initial_direction=self.initial_entry_point[1],
+                     direction=self.current_entry_point[1] if self.current_entry_point is not None else None,
+                     # N.B. the full arrival-entry-point set is serialized, but re-filtered against the rail
                      # on load (see `set_full_state`), since rail validity is not stored with the agent.
                      targets=set(self.targets),
                      moving=self.moving,
                      earliest_departure=self.earliest_departure,
                      latest_arrival=self.latest_arrival,
                      handle=self.handle,
-                     position=self.current_configuration[0] if self.current_configuration is not None else None,
-                     old_direction=self.old_configuration[1] if self.old_configuration is not None else None,
-                     old_position=self.old_configuration[0] if self.old_configuration is not None else None,
+                     position=self.current_entry_point[0] if self.current_entry_point is not None else None,
+                     old_direction=self.old_entry_point[1] if self.old_entry_point is not None else None,
+                     old_position=self.old_entry_point[0] if self.old_entry_point is not None else None,
                      speed_counter=self.speed_counter,
                      action_saver=self.action_saver,
                      arrival_time=self.arrival_time,
@@ -277,8 +277,8 @@ class EnvAgent(Generic[ConfigurationType]):
                      waypoints=self.waypoints,
                      waypoints_earliest_departure=self.waypoints_earliest_departure,
                      waypoints_latest_arrival=self.waypoints_latest_arrival,
-                     target_position=self.target_configuration[0] if self.target_configuration is not None else None,
-                     target_direction=self.target_configuration[1] if self.target_configuration is not None else None,
+                     target_position=self.target_entry_point[0] if self.target_entry_point is not None else None,
+                     target_direction=self.target_entry_point[1] if self.target_entry_point is not None else None,
                      )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:
@@ -315,10 +315,10 @@ class EnvAgent(Generic[ConfigurationType]):
             speed = line.agent_speeds[i_agent] if line.agent_speeds is not None else 1.0
 
             agent = EnvAgent(
-                initial_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                initial_entry_point=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
                 # why
-                current_configuration=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
-                old_configuration=None,
+                current_entry_point=(line.agent_waypoints[i_agent][0][0].position, line.agent_waypoints[i_agent][0][0].direction),
+                old_entry_point=None,
                 targets={(line.agent_waypoints[i_agent][-1][0].position, d) for d in Grid4TransitionsEnum},
                 waypoints=line.agent_waypoints[i_agent],
                 moving=False,
@@ -343,21 +343,21 @@ class EnvAgent(Generic[ConfigurationType]):
     def load_legacy_static_agent(cls, static_agents_data: Tuple, rail: TransitionMap = None):
         agents = []
         for i, static_agent in enumerate(static_agents_data):
-            initial_configuration = (static_agent[0], static_agent[1])
+            initial_entry_point = (static_agent[0], static_agent[1])
             targets = {(static_agent[2], d) for d in Grid4TransitionsEnum}
             if len(static_agent) >= 6:
                 speed = static_agent[4]['speed']
                 speed = _pseudo_fractional(speed)
 
                 agent = EnvAgent(
-                    initial_configuration=initial_configuration,
-                    current_configuration=initial_configuration,
-                    old_configuration=None,
+                    initial_entry_point=initial_entry_point,
+                    current_entry_point=initial_entry_point,
+                    old_entry_point=None,
                     # N.B. valid targets cleaned in _agents_from_line
                     targets=targets,
                     moving=static_agent[3],
                     speed_counter=SpeedCounter(speed), handle=i,
-                    waypoints=[[Waypoint(*initial_configuration)], [Waypoint(*target) for target in targets]],
+                    waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,
                     waypoints_earliest_departure=[0, None],
                     latest_arrival=sys.maxsize,
@@ -365,15 +365,15 @@ class EnvAgent(Generic[ConfigurationType]):
                 )
             else:
                 agent = EnvAgent(
-                    initial_configuration=initial_configuration,
-                    current_configuration=initial_configuration,
-                    old_configuration=None,
+                    initial_entry_point=initial_entry_point,
+                    current_entry_point=initial_entry_point,
+                    old_entry_point=None,
                     # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
                     speed_counter=SpeedCounter(1.0),
                     handle=i,
-                    waypoints=[[Waypoint(*initial_configuration)], [Waypoint(*target) for target in targets]],
+                    waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,
                     waypoints_earliest_departure=[0, None],
                     latest_arrival=sys.maxsize,
@@ -383,24 +383,24 @@ class EnvAgent(Generic[ConfigurationType]):
             # is available), keeping `targets` and the target waypoint group in sync. Callers without a rail
             # (deprecated msgpack loaders) leave this to a later step.
             if rail is not None:
-                agent.waypoints[-1] = _filter_valid_target_configurations(rail, agent.waypoints[-1])
+                agent.waypoints[-1] = _filter_valid_target_entry_points(rail, agent.waypoints[-1])
                 agent.targets = {(wp.position, wp.direction) for wp in agent.waypoints[-1]}
             agents.append(agent)
         return agents
 
     def __str__(self):
-        direction = self.current_configuration[1] if self.current_configuration is not None else None
+        direction = self.current_entry_point[1] if self.current_entry_point is not None else None
         return (
             f"EnvAgent(\n"
             f"\thandle={self.handle},\n"
-            f"\tinitial_position={self.initial_configuration[0]},\n"
-            f"\tinitial_direction={self.initial_configuration[1]},\n"
-            f"\tposition={self.current_configuration[0] if self.current_configuration is not None else None},\n"
+            f"\tinitial_position={self.initial_entry_point[0]},\n"
+            f"\tinitial_direction={self.initial_entry_point[1]},\n"
+            f"\tposition={self.current_entry_point[0] if self.current_entry_point is not None else None},\n"
             f"\tdirection={direction if direction is None else Grid4TransitionsEnum(direction).value},\n"
             f"\ttargets={self.targets},\n"
-            f"\told_position={self.old_configuration[0] if self.old_configuration is not None else None},\n"
-            f"\told_direction={self.old_configuration[1] if self.old_configuration is not None else None},\n"
-            f"\ttarget_configuration={self.target_configuration},\n"
+            f"\told_position={self.old_entry_point[0] if self.old_entry_point is not None else None},\n"
+            f"\told_direction={self.old_entry_point[1] if self.old_entry_point is not None else None},\n"
+            f"\ttarget_entry_point={self.target_entry_point},\n"
             f"\tearliest_departure={self.earliest_departure},\n"
             f"\tlatest_arrival={self.latest_arrival},\n"
             f"\tstate_machine={str(self.state_machine)},\n"

@@ -22,13 +22,13 @@ class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
             agent = env.agents[i_agent]
             # the int cast is to avoid numpy types which may cause problems with msgpack
             # in env v2, agents may have position None, before starting
-            position = agent.current_configuration[0] if agent.current_configuration is not None else None
+            position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
             if position is None:
                 pos = (None, None)
                 dir = None
             else:
                 pos = (int(position[0]), int(position[1]))
-                dir = int(agent.current_configuration[1])
+                dir = int(agent.current_entry_point[1])
             list_agents_state.append([
                 *pos, dir,
                 agent.malfunction_handler.malfunction_down_counter,

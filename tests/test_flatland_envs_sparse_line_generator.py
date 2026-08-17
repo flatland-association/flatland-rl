@@ -217,7 +217,7 @@ def test_sparse_line_generator():
                         [[Grid4TransitionsEnum.EAST]], [[Grid4TransitionsEnum.WEST]]]
     agent_targets = [(39, 8), (10, 40), (42, 22), (18, 5), (39, 8), (12, 40), (31, 27), (39, 8), (8, 27), (44, 22)]
     agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
-                          [[Waypoint(target, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((target, d))]]
+                          [[Waypoint(target, d) for d in Grid4TransitionsEnum if rail.is_valid_entry_point((target, d))]]
                        for i, (pas, das, target)
                        in enumerate(zip(agent_positions, agent_directions, agent_targets))}
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
@@ -426,13 +426,13 @@ def test_sparse_line_generator_with_intermediate_stops():
     line = line_gen(rail, 10, agents_hints, 0, np_random)
 
     # Each agent's full stop sequence (start, any intermediate stops, target) as (position, direction)
-    # configurations - matching the shape of `EnvAgent.targets`/`EnvAgent.waypoints`. The start is always a
-    # single, fixed configuration (the agent's actual initial position/direction), but every later stop -
-    # intermediate or target - is the full set of configurations actually reachable from the previous stop,
+    # entry points - matching the shape of `EnvAgent.targets`/`EnvAgent.waypoints`. The start is always a
+    # single, fixed entry point (the agent's actual initial position/direction), but every later stop -
+    # intermediate or target - is the full set of entry points actually reachable from the previous stop,
     # not just the single direction originally guessed for that station. N.B. not every direction that is
-    # structurally valid at a stop's position (rail.is_valid_configuration) is actually reachable from the
+    # structurally valid at a stop's position (rail.is_valid_entry_point) is actually reachable from the
     # agent's approach - e.g. only 2 of a switch's valid directions may be reachable from a given previous
-    # stop - so each of these is a strict subset of (or equal to) the structurally-valid configurations.
+    # stop - so each of these is a strict subset of (or equal to) the structurally-valid entry points.
     agent_stops = [
         [[((11, 40), 3)], [((38, 8), 1), ((38, 8), 3)], [((27, 41), 0), ((27, 41), 2)]],
         [[((27, 40), 0)], [((38, 8), 1), ((38, 8), 3)], [((12, 40), 1), ((12, 40), 3)]],
@@ -453,8 +453,8 @@ def test_sparse_line_generator_with_intermediate_stops():
     assert line == Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     for a in EnvAgent.from_line(line):
         print(
-            f"EnvAgent(handle={a.handle}, initial_position={a.initial_configuration[0]}, "
-            f"initial_direction={a.initial_configuration[1]}, target={next(iter(a.targets))[0]}, "
-            f"direction={a.current_configuration[1]}, waypoints={a.waypoints}, "
+            f"EnvAgent(handle={a.handle}, initial_position={a.initial_entry_point[0]}, "
+            f"initial_direction={a.initial_entry_point[1]}, target={next(iter(a.targets))[0]}, "
+            f"direction={a.current_entry_point[1]}, waypoints={a.waypoints}, "
             f"waypoints_latest_arrival={a.waypoints_earliest_departure}, "
             f"waypoints_earliest_departure={a.waypoints_latest_arrival}),")

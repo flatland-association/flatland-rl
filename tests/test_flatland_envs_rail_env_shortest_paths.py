@@ -29,8 +29,8 @@ def test_get_shortest_paths_unreachable():
 
     # set the initial position
     agent = env.agents[0]
-    agent.current_configuration = ((3, 1), Grid4TransitionsEnum.WEST)  # west dead-end
-    agent.initial_configuration = ((3, 1), agent.initial_configuration[1])  # west dead-end
+    agent.current_entry_point = ((3, 1), Grid4TransitionsEnum.WEST)  # west dead-end
+    agent.initial_entry_point = ((3, 1), agent.initial_entry_point[1])  # west dead-end
     agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -255,8 +255,8 @@ def test_get_k_shortest_paths(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.current_configuration = (initial_position, initial_direction)
-    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.current_entry_point = (initial_position, initial_direction)
+    agent.initial_entry_point = (initial_position, agent.initial_entry_point[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -421,8 +421,8 @@ def test_get_k_shortest_paths_with_forbidden_cells(rendering=False):
     target_position = (3, 9)  # east
 
     agent = env.agents[0]
-    agent.current_configuration = (initial_position, initial_direction)
-    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.current_entry_point = (initial_position, initial_direction)
+    agent.initial_entry_point = (initial_position, agent.initial_entry_point[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -545,8 +545,8 @@ def test_get_k_shortest_paths_with_forbidden_cells_blocks_all_paths(rendering=Fa
     target_position = (3, 9)  # east
 
     agent = env.agents[0]
-    agent.current_configuration = (initial_position, initial_direction)
-    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.current_entry_point = (initial_position, initial_direction)
+    agent.initial_entry_point = (initial_position, agent.initial_entry_point[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 
@@ -583,8 +583,8 @@ def test_get_k_shortest_paths_with_direction_at_target(rendering=False):
 
     # set the initial position
     agent = env.agents[0]
-    agent.current_configuration = (initial_position, initial_direction)
-    agent.initial_configuration = (initial_position, agent.initial_configuration[1])
+    agent.current_entry_point = (initial_position, initial_direction)
+    agent.initial_entry_point = (initial_position, agent.initial_entry_point[1])
     agent.targets = {(target_position, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
 

@@ -34,11 +34,11 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
         for c in range(grid_env.width):
             for d in range(4):
                 assert (sum(grid_env.rail.get_transitions(((r, c), d))) > 0) == (f"{r, c, d}" in graph_env.rail.g.nodes)
-                u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
-                is_grid_configuration = sum(grid_env.rail.get_transitions(((r, c), d))) > 0
-                is_graph_configuration = u in graph_env.rail.g.nodes
-                assert is_graph_configuration == is_grid_configuration
-                if not is_grid_configuration:
+                u = GraphTransitionMap.grid_entry_point_to_graph_entry_point(r, c, d)
+                is_grid_entry_point = sum(grid_env.rail.get_transitions(((r, c), d))) > 0
+                is_graph_entry_point = u in graph_env.rail.g.nodes
+                assert is_graph_entry_point == is_grid_entry_point
+                if not is_grid_entry_point:
                     continue
 
                 if "symmetric" in RailEnvTransitionsEnum(grid_env.rail.get_full_transitions(r, c)).name and sum(
@@ -89,7 +89,7 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
         assert len(grid_trajectory.compare_arrived(graph_trajectory)) == 0
         assert len(grid_trajectory.compare_actions(graph_trajectory)) == 0
         graph_trajectory.trains_positions["position"] = graph_trajectory.trains_positions["position"].map(
-            GraphTransitionMap.graph_configuration_to_grid_configuration)
+            GraphTransitionMap.graph_entry_point_to_grid_entry_point)
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
 
         assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory, ignoring_action_required=False)) == 0
@@ -98,8 +98,8 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
 @pytest.mark.parametrize("seed", range(42, 58))
 def test_apply_timetable_to_agents_waypoints_well_formed(seed):
     """Regression test: `GraphRailEnv._apply_timetable_to_agents` must produce `agent.waypoints` as a
-    well-formed `List[List[ConfigurationType]]` - every entry, including the exploded target directions,
-    must itself be a list of configurations, and only configurations that actually exist in the graph
+    well-formed `List[List[EntryPointType]]` - every entry, including the exploded target directions,
+    must itself be a list of entry points, and only entry points that actually exist in the graph
     (e.g. not a direction blocked by a dead end) may be included."""
     grid_env, _, _ = env_generator(seed=seed)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
@@ -107,9 +107,9 @@ def test_apply_timetable_to_agents_waypoints_well_formed(seed):
     for agent in graph_env.agents:
         assert all(isinstance(wps, list) for wps in agent.waypoints)
         for wps in agent.waypoints:
-            for configuration in wps:
-                assert configuration in graph_env.rail.g.nodes
-                assert isinstance(configuration, str)
+            for entry_point in wps:
+                assert entry_point in graph_env.rail.g.nodes
+                assert isinstance(entry_point, str)
         assert set(agent.waypoints[-1]) == agent.targets
 
 
@@ -127,7 +127,7 @@ def test_from_graph_defaults():
     env.reset(False, False)
 
     g = GraphTransitionMap.grid_to_digraph(env.rail)
-    gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+    gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
     agent_waypoints = {
         agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
         for agent in env.agents

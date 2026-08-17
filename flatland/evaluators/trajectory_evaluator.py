@@ -94,7 +94,7 @@ class TrajectoryEvaluator:
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 expected_position = position_cache[elapsed_after_step][agent_id]
-                actual_position = agent.current_configuration
+                actual_position = agent.current_entry_point
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
                                                              f"- expected_position:\t{expected_position}\n" \

@@ -11,7 +11,7 @@ from flatland.core.env_observation_builder import ObservationBuilder, AgentHandl
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.grid.grid_utils import coordinate_to_position
-from flatland.envs.agent_utils import EnvAgent, virtual_configuration
+from flatland.envs.agent_utils import EnvAgent, virtual_entry_point
 from flatland.envs.fast_methods import fast_argmax, fast_count_nonzero, fast_position_equal, fast_delete, fast_where
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.ordered_set import OrderedSet
@@ -86,7 +86,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 self.max_prediction_depth = len(self.predicted_pos)
         # Update local lookup table for all agents' positions
         # ignore other agents not in the grid (only status active and done)
-        # self.location_has_agent = {tuple(agent.current_configuration[0]): 1 for agent in self.env.agents if
+        # self.location_has_agent = {tuple(agent.current_entry_point[0]): 1 for agent in self.env.agents if
         #                         agent.status in [RailAgentStatus.ACTIVE, RailAgentStatus.DONE]}
 
         self.location_has_agent = {}
@@ -97,21 +97,21 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
 
         for _agent in self.env.agents:
             if not _agent.state.is_off_map_state() and \
-                _agent.current_configuration is not None:
-                _agent_position = _agent.current_configuration[0]
+                _agent.current_entry_point is not None:
+                _agent_position = _agent.current_entry_point[0]
                 self.location_has_agent[tuple(_agent_position)] = 1
-                self.location_has_agent_direction[tuple(_agent_position)] = _agent.current_configuration[1]
+                self.location_has_agent_direction[tuple(_agent_position)] = _agent.current_entry_point[1]
                 self.location_has_agent_speed[tuple(_agent_position)] = _agent.speed_counter.speed
                 self.location_has_agent_malfunction[tuple(_agent_position)] = \
                     _agent.malfunction_handler.malfunction_down_counter
 
             # [NIMISH] WHAT IS THIS
             if _agent.state.is_off_map_state() and \
-                _agent.initial_configuration[0]:
-                self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_configuration[0]), 0)
-                self.location_has_agent_ready_to_depart[tuple(_agent.initial_configuration[0])] += 1
-            # self.location_has_agent_ready_to_depart[tuple(_agent.initial_configuration[0])] = \
-            #     self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_configuration[0]), 0) + 1
+                _agent.initial_entry_point[0]:
+                self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_entry_point[0]), 0)
+                self.location_has_agent_ready_to_depart[tuple(_agent.initial_entry_point[0])] += 1
+            # self.location_has_agent_ready_to_depart[tuple(_agent.initial_entry_point[0])] = \
+            #     self.location_has_agent_ready_to_depart.get(tuple(_agent.initial_entry_point[0]), 0) + 1
 
         observations = super().get_many(handles)
 
@@ -200,10 +200,10 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             print("ERROR: obs _get - handle ", handle, " len(agents)", len(self.env.agents))
         agent = self.env.agents[handle]  # TODO: handle being treated as index
 
-        configuration = virtual_configuration(agent)
-        if configuration is None:
+        entry_point = virtual_entry_point(agent)
+        if entry_point is None:
             return None
-        agent_virtual_position, agent_virtual_direction = configuration
+        agent_virtual_position, agent_virtual_direction = entry_point
 
         possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = fast_count_nonzero(possible_transitions)
@@ -560,10 +560,10 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
 
         agent = self.env.agents[handle]
         agent_target = next(iter(agent.targets))[0]
-        configuration = virtual_configuration(agent)
-        if configuration is None:
+        entry_point = virtual_entry_point(agent)
+        if entry_point is None:
             return None
-        agent_virtual_position, agent_virtual_direction = configuration
+        agent_virtual_position, agent_virtual_direction = entry_point
 
         obs_targets = np.zeros((self.env.height, self.env.width, 2))
         obs_agents_state = np.zeros((self.env.height, self.env.width, 5)) - 1
@@ -583,16 +583,16 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             obs_targets[next(iter(other_agent.targets))[0]][1] = 1
 
             # second to fourth channel only if in the grid
-            if other_agent.current_configuration is not None:
-                other_agent_position = other_agent.current_configuration[0]
+            if other_agent.current_entry_point is not None:
+                other_agent_position = other_agent.current_entry_point[0]
                 # second channel only for other agents
                 if i != handle:
-                    obs_agents_state[other_agent_position][1] = other_agent.current_configuration[1]
+                    obs_agents_state[other_agent_position][1] = other_agent.current_entry_point[1]
                 obs_agents_state[other_agent_position][2] = other_agent.malfunction_handler.malfunction_down_counter
                 obs_agents_state[other_agent_position][3] = other_agent.speed_counter.speed
             # fifth channel: all ready to depart on this position
             if other_agent.state.is_off_map_state():
-                obs_agents_state[other_agent.initial_configuration[0]][4] += 1
+                obs_agents_state[other_agent.initial_entry_point[0]][4] += 1
         assert np.count_nonzero(~np.isfinite(self.rail_obs)) == 0, self.rail_obs
         assert np.count_nonzero(np.isnan(self.rail_obs)) == 0, self.rail_obs
         assert np.count_nonzero(~np.isfinite(obs_agents_state)) == 0, obs_agents_state
@@ -654,11 +654,11 @@ class LocalObsForRailEnv(ObservationBuilder):
         agent_target = next(iter(agent.targets))[0]
 
         # Correct agents position for padding
-        # agent_rel_pos[0] = agent.current_configuration[0][0] + self.max_padding
-        # agent_rel_pos[1] = agent.current_configuration[0][1] + self.max_padding
+        # agent_rel_pos[0] = agent.current_entry_point[0][0] + self.max_padding
+        # agent_rel_pos[1] = agent.current_entry_point[0][1] + self.max_padding
 
-        agent_position = agent.current_configuration[0] if agent.current_configuration is not None else None
-        agent_direction = agent.current_configuration[1] if agent.current_configuration is not None else None
+        agent_position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
+        agent_direction = agent.current_entry_point[1] if agent.current_entry_point is not None else None
 
         # Collect visible cells as set to be plotted
         visited, rel_coords = self.field_of_view(agent_position, agent_direction, )
@@ -683,11 +683,11 @@ class LocalObsForRailEnv(ObservationBuilder):
                         obs_map_state[curr_rel_coord[0], curr_rel_coord[1], 1] = 1
             if pos != agent_position:
                 for tmp_agent in agents:
-                    tmp_agent_position = tmp_agent.current_configuration[0] \
-                        if tmp_agent.current_configuration is not None else None
+                    tmp_agent_position = tmp_agent.current_entry_point[0] \
+                        if tmp_agent.current_entry_point is not None else None
                     if pos == tmp_agent_position:
                         obs_other_agents_state[curr_rel_coord[0], curr_rel_coord[1], :] = np.identity(4)[
-                            tmp_agent.current_configuration[1]]
+                            tmp_agent.current_entry_point[1]]
 
             _idx += 1
 

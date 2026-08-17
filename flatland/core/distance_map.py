@@ -1,9 +1,9 @@
 import math
 from typing import Callable, Dict, List, Optional, Set
 
-from flatland.core.configuration_distance_map import (
-    ConfigurationDistanceMap,
-    UnderlyingConfigurationType,
+from flatland.core.entry_point_distance_map import (
+    EntryPointDistanceMap,
+    UnderlyingEntryPointType,
     UnderlyingDistanceMapType,
     UnderlyingTransitionMapType,
     UnderlyingWaypointType,
@@ -14,16 +14,16 @@ from flatland.envs.step_utils.states import TrainState
 
 
 class AgentSourceTargetDistanceMap(
-    ConfigurationDistanceMap[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingConfigurationType,
+    EntryPointDistanceMap[UnderlyingTransitionMapType, UnderlyingDistanceMapType, UnderlyingEntryPointType,
     UnderlyingWaypointType]
 ):
     """
-    Adds agent-handle (target_nr) aware querying on top of `ConfigurationDistanceMap`. `get_agent_distance`
-    returns the minimum distance from a source configuration to any of a given agent's target configurations;
+    Adds agent-handle (target_nr) aware querying on top of `EntryPointDistanceMap`. `get_agent_distance`
+    returns the minimum distance from a source entry point to any of a given agent's target entry points;
     concrete subclasses provide the underlying per-agent storage via `_set_agent_distance`.
     """
 
-    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingConfigurationType], UnderlyingWaypointType]):
+    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingEntryPointType], UnderlyingWaypointType]):
         super().__init__(agents=agents, waypoint_init=waypoint_init)
         self.distance_map = None
         self.agents_previous_computation = None
@@ -74,13 +74,13 @@ class AgentSourceTargetDistanceMap(
         for i, agent in enumerate(agents):
             targets = self._valid_targets(agent, rail)
             if targets not in computed_targets:
-                reachable_configurations = distance_map_walker._distance_map_walker(rail, targets)
-                for configuration in reachable_configurations:
+                reachable_entry_points = distance_map_walker._distance_map_walker(rail, targets)
+                for entry_point in reachable_entry_points:
                     new_distance = min(
-                        (self._get_distance(configuration, target_configuration) for target_configuration in targets),
+                        (self._get_distance(entry_point, target_entry_point) for target_entry_point in targets),
                         default=math.inf
                     )
-                    self._set_agent_distance(configuration, i, new_distance)
+                    self._set_agent_distance(entry_point, i, new_distance)
             else:
                 # just copy the distance map from other agent with same target (performance)
                 self._copy_agent_distance(i, computed_targets.index(targets))
@@ -89,7 +89,7 @@ class AgentSourceTargetDistanceMap(
     def _new_distance_map(self, num_agents: int) -> UnderlyingDistanceMapType:
         raise NotImplementedError()
 
-    def _valid_targets(self, agent: EnvAgent, rail: UnderlyingTransitionMapType) -> List[UnderlyingConfigurationType]:
+    def _valid_targets(self, agent: EnvAgent, rail: UnderlyingTransitionMapType) -> List[UnderlyingEntryPointType]:
         raise NotImplementedError()
 
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
@@ -133,9 +133,9 @@ class AgentSourceTargetDistanceMap(
 
     def _shortest_path_for_agent(self, agent: EnvAgent, max_depth: Optional[int] = None):
         if agent.state.is_off_map_state():
-            configuration = agent.initial_configuration
+            entry_point = agent.initial_entry_point
         elif agent.state.is_on_map_state():
-            configuration = agent.current_configuration
+            entry_point = agent.current_entry_point
         elif agent.state == TrainState.DONE:
             return None
         else:
@@ -143,14 +143,14 @@ class AgentSourceTargetDistanceMap(
         handle = agent.handle
         targets = agent.targets
 
-        return self._reconstruct_shortest_path(configuration, handle, max_depth, targets)
+        return self._reconstruct_shortest_path(entry_point, handle, max_depth, targets)
 
     def _reconstruct_shortest_path(
         self,
-        source: UnderlyingConfigurationType,
+        source: UnderlyingEntryPointType,
         handle,
         max_depth: Optional[int],
-        targets: Set[UnderlyingConfigurationType]
+        targets: Set[UnderlyingEntryPointType]
     ) -> List[UnderlyingWaypointType]:
         """
         Reconstruct shortest path from distance map going forward from source to any of targets.
@@ -161,32 +161,32 @@ class AgentSourceTargetDistanceMap(
         depth = 0
 
         while source not in targets and (max_depth is None or depth < max_depth):
-            best_next_configuration = None
-            next_configurations = self.rail.get_successor_configurations(source)
-            for next_configuration in next_configurations:
+            best_next_entry_point = None
+            next_entry_points = self.rail.get_successor_entry_points(source)
+            for next_entry_point in next_entry_points:
 
-                next_action_distance = self.get_agent_distance(next_configuration, handle)
+                next_action_distance = self.get_agent_distance(next_entry_point, handle)
                 if next_action_distance < distance:
                     distance = next_action_distance
-                    best_next_configuration = next_configuration
+                    best_next_entry_point = next_entry_point
             agent_shortest_path.append(self.waypoint_init(source))
             depth += 1
 
             # if there is no way to continue, the rail must be disconnected!
             # (or distance map is incorrect)
-            if best_next_configuration is None:
+            if best_next_entry_point is None:
                 return None
-            source = best_next_configuration
+            source = best_next_entry_point
         if max_depth is None or depth < max_depth:
             agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
 
-    def get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
+    def get_agent_distance(self, source_entry_point: UnderlyingEntryPointType, target_nr: int):
         self.get()
-        return self._get_agent_distance(source_configuration, target_nr)
+        return self._get_agent_distance(source_entry_point, target_nr)
 
-    def _set_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int, new_distance: int):
+    def _set_agent_distance(self, source_entry_point: UnderlyingEntryPointType, target_nr: int, new_distance: int):
         raise NotImplementedError()
 
-    def _get_agent_distance(self, source_configuration: UnderlyingConfigurationType, target_nr: int):
+    def _get_agent_distance(self, source_entry_point: UnderlyingEntryPointType, target_nr: int):
         raise NotImplementedError()

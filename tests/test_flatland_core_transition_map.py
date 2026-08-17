@@ -54,7 +54,7 @@ def test_grid8_set_transitions():
 
 def check_path(env, rail, position, direction, target, expected, rendering=False):
     agent = env.agents[0]
-    agent.current_configuration = (position, direction)  # south dead-end
+    agent.current_entry_point = (position, direction)  # south dead-end
     agent.targets = {(target, d) for d in Grid4TransitionsEnum}  # east dead-end
     agent.moving = True
     if rendering:
@@ -62,7 +62,7 @@ def check_path(env, rail, position, direction, target, expected, rendering=False
         renderer.render_env(show=True, show_observations=False)
         input("Continue?")
     for t in agent.targets:
-        assert rail.check_path_exists(agent.current_configuration[0], agent.current_configuration[1], t[0]) == expected
+        assert rail.check_path_exists(agent.current_entry_point[0], agent.current_entry_point[1], t[0]) == expected
 
 
 def test_path_exists(rendering=False):

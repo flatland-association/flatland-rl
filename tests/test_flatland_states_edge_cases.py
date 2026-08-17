@@ -115,7 +115,7 @@ def test_malfunction_no_phase_through():
         env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
 
     assert env.agents[0].state == TrainState.STOPPED
-    assert env.agents[0].current_configuration[0] == (3, 5)
+    assert env.agents[0].current_entry_point[0] == (3, 5)
 
 
 def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
@@ -139,21 +139,21 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
 
-    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 0
     env.agents[1].malfunction_handler._set_malfunction_down_counter(2)
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.READY_TO_DEPART
 
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
 
     assert env.agents[1].malfunction_handler.malfunction_down_counter == 1
@@ -161,22 +161,22 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
 
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
     assert env.agents[1].malfunction_handler.malfunction_down_counter == 0
 
     # step 3
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.STOP_MOVING})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.STOPPED
 
     # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
     #   WITHOUT FIX: STOPPED on map in the same cell as agent 0, not respecting motion check!
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
     # \ TEMPORARY FIX
 
@@ -202,44 +202,44 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 55
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
 
-    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 2
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
 
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.WAITING
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.WAITING
     # this is the root cause: the motion check for agent 0 returns OK, the action preprocessing converts to DO_NOTHING only in state WAITING, but not MALFUNCTION_OFF_MAP
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
 
     # step 3
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.WAITING
 
     # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
     # WITHOUT FIX: both agents are inserted into motion check, and the one with lower index wins:
     # - agent 0 with the lower index wins, despite not having reached earliest departure
     # - agent 1 is blocked, despite having reached earliest departure
-    assert env.agents[1].current_configuration[0] == (6, 6)
+    assert env.agents[1].current_entry_point[0] == (6, 6)
     assert env.agents[1].state == TrainState.MOVING
     # \ TEMPORARY FIX
 
@@ -265,44 +265,44 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 3
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
 
-    env.agents[1].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 2
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
 
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.WAITING
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.WAITING
     # this is the root cause: the motion check for agent 0 returns OK, the action preprocessing converts to DO_NOTHING only in state WAITING, but not MALFUNCTION_OFF_MAP
-    assert env.agents[1].current_configuration is None
+    assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
 
     # step 3
     env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.MOVE_FORWARD})
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.READY_TO_DEPART
 
     # / TEMPORARY FIX as adding agent to motion check can hinder other agents having earliest_departure_reached to start
     # WITHOUT FIX:
     # - agent 0 with the lower index wins, despite sending DO_NOTHING
     # - agent 1 is blocked, despite having reached earliest departure
-    assert env.agents[1].current_configuration[0] == (6, 6)
+    assert env.agents[1].current_entry_point[0] == (6, 6)
     assert env.agents[1].state == TrainState.MOVING
     # \ TEMPORARY FIX
 
@@ -328,7 +328,7 @@ def test_malfunction_to_moving_instead_of_stopped():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
     env.agents[0].speed_counter._speed = Fraction(1, 5)
@@ -337,13 +337,13 @@ def test_malfunction_to_moving_instead_of_stopped():
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.READY_TO_DEPART
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
@@ -352,7 +352,7 @@ def test_malfunction_to_moving_instead_of_stopped():
     # step 3
     env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MALFUNCTION
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
@@ -364,7 +364,7 @@ def test_malfunction_to_moving_instead_of_stopped():
 
     # / TEMPORARY FIX avoid setting agent to STOPPED after malfunction unnecessarily
     # WITHOUT FIX: agent is STOPPED
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # design: distance update with pre-step speed.
@@ -393,7 +393,7 @@ def test_stop_and_go():
 
     env.reset(False, False, random_seed=10)
 
-    env.agents[0].initial_configuration = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
     env.agents[0].speed_counter._speed = Fraction(1, 5)
@@ -402,13 +402,13 @@ def test_stop_and_go():
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration is None
+    assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.READY_TO_DEPART
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
@@ -417,7 +417,7 @@ def test_stop_and_go():
     # step 3
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
@@ -425,7 +425,7 @@ def test_stop_and_go():
     # step 4
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.STOPPED
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
     # design: distance update with pre-step speed.
@@ -434,7 +434,7 @@ def test_stop_and_go():
     # step 5
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
-    assert env.agents[0].current_configuration[0] == (6, 6)
+    assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.4)

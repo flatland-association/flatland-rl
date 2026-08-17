@@ -83,7 +83,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
         """Converts `rail_env`'s agents' grid `Waypoint`-based waypoints/speeds into the plain
         string-keyed shape `from_graph` expects."""
-        gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+        gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
         agent_waypoints = {
             agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
             for agent in rail_env.agents
@@ -115,7 +115,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         """
         Factory method to create a `GraphRailEnv` directly from a string-node graph and string-based
         agent waypoints - counterpart to `from_rail_env`, but graph-native from the start: `g`'s nodes
-        and `agent_waypoints`' leaves are plain configuration strings, never `((row, col), direction)`
+        and `agent_waypoints`' leaves are plain entry point strings, never `((row, col), direction)`
         grid tuples or `Waypoint` objects.
 
         Parameters
@@ -217,8 +217,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         else:
             return GraphResourceMap({})
 
-    def _infrastructure_representation(self, configuration: str) -> str:
-        return configuration
+    def _infrastructure_representation(self, entry_point: str) -> str:
+        return entry_point
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         """
@@ -231,17 +231,17 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             speed = line.agent_speeds[handle] if line.agent_speeds is not None else 1.0
             waypoints = list(waypoints)
             # N.B. only the target's alternatives (last waypoint group) can be invalid - the caller's
-            # own routing already guarantees valid configurations everywhere else.
-            waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_configuration(t)]
+            # own routing already guarantees valid entry points everywhere else.
+            waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_entry_point(t)]
             assert len(waypoints[-1]) > 0, (
                 f"agent {handle}: none of the target alternatives {list(line.agent_waypoints[handle][-1])} "
-                f"are valid configurations in the graph - the agent would end up with an empty `targets`."
+                f"are valid entry points in the graph - the agent would end up with an empty `targets`."
             )
-            initial_configuration = waypoints[0][0]
+            initial_entry_point = waypoints[0][0]
             agents.append(EnvAgent(
-                initial_configuration=initial_configuration,
-                current_configuration=initial_configuration,
-                old_configuration=None,
+                initial_entry_point=initial_entry_point,
+                current_entry_point=initial_entry_point,
+                old_entry_point=None,
                 targets=set(waypoints[-1]),
                 waypoints=waypoints,
                 moving=False,

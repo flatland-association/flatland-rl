@@ -89,7 +89,7 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
     def _get_one_hot_for_agent_direction(self, agent) -> np.ndarray:
         """Returns the agent's direction to one-hot encoding."""
         direction = np.zeros(4)
-        direction[agent.current_configuration[1]] = 1
+        direction[agent.current_entry_point[1]] = 1
         return direction
 
 

@@ -1,6 +1,6 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_configurations,
-                                       load_env_agent, virtual_configuration, with_direction)
+from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_entry_points,
+                                       load_env_agent, virtual_entry_point, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -105,35 +105,35 @@ def test_from_line():
     line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     env_agents = EnvAgent.from_line(line)
-    assert env_agents[0].initial_configuration[0] == (11, 40)
-    assert env_agents[0].initial_configuration[1] == 3
+    assert env_agents[0].initial_entry_point[0] == (11, 40)
+    assert env_agents[0].initial_entry_point[1] == 3
     assert next(iter(env_agents[0].targets))[0] == (39, 8)
-    assert env_agents[1].initial_configuration[0] == (38, 8)
-    assert env_agents[1].initial_configuration[1] == 1
+    assert env_agents[1].initial_entry_point[0] == (38, 8)
+    assert env_agents[1].initial_entry_point[1] == 1
     assert next(iter(env_agents[1].targets))[0] == (10, 40)
-    assert env_agents[2].initial_configuration[0] == (17, 5)
-    assert env_agents[2].initial_configuration[1] == 3
+    assert env_agents[2].initial_entry_point[0] == (17, 5)
+    assert env_agents[2].initial_entry_point[1] == 3
     assert next(iter(env_agents[2].targets))[0] == (42, 22)
-    assert env_agents[3].initial_configuration[0] == (41, 22)
-    assert env_agents[3].initial_configuration[1] == 3
+    assert env_agents[3].initial_entry_point[0] == (41, 22)
+    assert env_agents[3].initial_entry_point[1] == 3
     assert next(iter(env_agents[3].targets))[0] == (18, 5)
-    assert env_agents[4].initial_configuration[0] == (11, 40)
-    assert env_agents[4].initial_configuration[1] == 1
+    assert env_agents[4].initial_entry_point[0] == (11, 40)
+    assert env_agents[4].initial_entry_point[1] == 1
     assert next(iter(env_agents[4].targets))[0] == (39, 8)
-    assert env_agents[5].initial_configuration[0] == (38, 8)
-    assert env_agents[5].initial_configuration[1] == 3
+    assert env_agents[5].initial_entry_point[0] == (38, 8)
+    assert env_agents[5].initial_entry_point[1] == 3
     assert next(iter(env_agents[5].targets))[0] == (12, 40)
-    assert env_agents[6].initial_configuration[0] == (38, 8)
-    assert env_agents[6].initial_configuration[1] == 1
+    assert env_agents[6].initial_entry_point[0] == (38, 8)
+    assert env_agents[6].initial_entry_point[1] == 1
     assert next(iter(env_agents[6].targets))[0] == (31, 27)
-    assert env_agents[7].initial_configuration[0] == (31, 26)
-    assert env_agents[7].initial_configuration[1] == 0
+    assert env_agents[7].initial_entry_point[0] == (31, 26)
+    assert env_agents[7].initial_entry_point[1] == 0
     assert next(iter(env_agents[7].targets))[0] == (39, 8)
-    assert env_agents[8].initial_configuration[0] == (41, 22)
-    assert env_agents[8].initial_configuration[1] == 1
+    assert env_agents[8].initial_entry_point[0] == (41, 22)
+    assert env_agents[8].initial_entry_point[1] == 1
     assert next(iter(env_agents[8].targets))[0] == (8, 27)
-    assert env_agents[9].initial_configuration[0] == (9, 27)
-    assert env_agents[9].initial_configuration[1] == 3
+    assert env_agents[9].initial_entry_point[0] == (9, 27)
+    assert env_agents[9].initial_entry_point[1] == 3
     assert next(iter(env_agents[9].targets))[0] == (44, 22)
 
 
@@ -143,7 +143,7 @@ def test_load_env_agent_fallback_waypoints():
     including the initial stop - must itself be a list, not a bare `Waypoint`; and the target group must be
     filtered to the arrival directions valid on `rail`."""
     rail, _, _ = make_oval_rail()
-    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid entry points here
     agent_tuple = Agent(
         initial_position=(0, 0),
         initial_direction=Grid4TransitionsEnum(0),
@@ -174,24 +174,24 @@ def test_load_env_agent_fallback_waypoints():
     Rewards._sanitize_waypoints(env_agent.waypoints)
 
 
-def test_filter_valid_target_configurations():
-    """`_filter_valid_target_configurations` must keep only rail-valid directions at a group's position, and
+def test_filter_valid_target_entry_points():
+    """`_filter_valid_target_entry_points` must keep only rail-valid directions at a group's position, and
     must explode a legacy `None`-direction placeholder into concrete valid directions instead of dropping it."""
     rail, _, _ = make_oval_rail()
-    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid entry points here
 
-    assert _filter_valid_target_configurations(rail, [
+    assert _filter_valid_target_entry_points(rail, [
         Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3)), Waypoint(position, Grid4TransitionsEnum(2))
     ]) == [Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
 
-    assert _filter_valid_target_configurations(rail, [Waypoint(position, None)]) == [
+    assert _filter_valid_target_entry_points(rail, [Waypoint(position, None)]) == [
         Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
 
 
 def test_agent_tuple_targets():
     """`_agent_tuple_targets` must pass a concrete `(position, direction)` set through unchanged, and must
     explode a legacy bare `(row, col)` position (from an env pickled before `Agent.target` became
-    `Agent.targets`) into one configuration per direction."""
+    `Agent.targets`) into one entry point per direction."""
 
     def _agent(targets):
         return Agent(
@@ -214,11 +214,11 @@ def test_with_direction():
     assert with_direction(None, 2) == (None, 2)
 
 
-def test_virtual_configuration():
+def test_virtual_entry_point():
     """
-    `virtual_configuration` must return a real, rail-valid configuration for a `TrainState.DONE` agent
-    even after it has been removed from the map (`current_configuration` is `None`) - unlike
-    `current_configuration` itself, which observations/predictions cannot compute anything useful from
+    `virtual_entry_point` must return a real, rail-valid entry point for a `TrainState.DONE` agent
+    even after it has been removed from the map (`current_entry_point` is `None`) - unlike
+    `current_entry_point` itself, which observations/predictions cannot compute anything useful from
     once the agent is gone.
     """
     rail, rail_map, optionals = make_oval_rail()
@@ -228,26 +228,26 @@ def test_virtual_configuration():
     env.reset()
     agent = env.agents[0]
 
-    # off map: initial_configuration
-    assert virtual_configuration(agent) == agent.initial_configuration
+    # off map: initial_entry_point
+    assert virtual_entry_point(agent) == agent.initial_entry_point
 
-    # on map: current_configuration
-    agent.current_configuration = agent.initial_configuration
+    # on map: current_entry_point
+    agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
-    assert virtual_configuration(agent) == agent.current_configuration
+    assert virtual_entry_point(agent) == agent.current_entry_point
 
-    # done, agent still has a (now stale) current_configuration - which must actually be one of the
+    # done, agent still has a (now stale) current_entry_point - which must actually be one of the
     # target alternatives, since DONE is only reachable by having arrived at one
-    agent.current_configuration = next(iter(agent.targets))
+    agent.current_entry_point = next(iter(agent.targets))
     agent._set_state(TrainState.DONE)
-    # mirrors what AbstractRailEnv.handle_done_state() does before current_configuration is cleared
-    agent.target_configuration = agent.current_configuration
-    assert virtual_configuration(agent) in agent.targets
-    assert virtual_configuration(agent) == agent.target_configuration
+    # mirrors what AbstractRailEnv.handle_done_state() does before current_entry_point is cleared
+    agent.target_entry_point = agent.current_entry_point
+    assert virtual_entry_point(agent) in agent.targets
+    assert virtual_entry_point(agent) == agent.target_entry_point
 
-    # done and removed from the map (`current_configuration` is None): still a real configuration
-    agent.current_configuration = None
-    configuration = virtual_configuration(agent)
-    assert configuration is not None
-    assert configuration in agent.targets
-    assert configuration == agent.target_configuration
+    # done and removed from the map (`current_entry_point` is None): still a real entry point
+    agent.current_entry_point = None
+    entry_point = virtual_entry_point(agent)
+    assert entry_point is not None
+    assert entry_point in agent.targets
+    assert entry_point == agent.target_entry_point

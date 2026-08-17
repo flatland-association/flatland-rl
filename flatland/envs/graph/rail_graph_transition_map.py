@@ -104,14 +104,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         for r in range(transition_map.height):
             for c in range(transition_map.width):
                 for d in range(4):
-                    u = GraphTransitionMap.grid_configuration_to_graph_configuration(r, c, d)
+                    u = GraphTransitionMap.grid_entry_point_to_graph_entry_point(r, c, d)
                     possible_transitions = transition_map.get_transitions(((r, c), d))
                     for new_direction in range(4):
                         if possible_transitions[new_direction]:
                             new_position = get_new_position((r, c), new_direction)
                             r2, c2 = new_position
                             d2 = new_direction
-                            g.add_edge(u, GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2))
+                            g.add_edge(u, GraphTransitionMap.grid_entry_point_to_graph_entry_point(r2, c2, d2))
                     if u not in g.nodes:
                         continue
                     g.nodes[u].setdefault("prohibited_actions", set())
@@ -121,7 +121,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                             g.nodes[u].setdefault("prohibited_actions", set()).add(a)
                         else:
                             ((r2, c2), d2), straight = t
-                            v = GraphTransitionMap.grid_configuration_to_graph_configuration(r2, c2, d2)
+                            v = GraphTransitionMap.grid_entry_point_to_graph_entry_point(r2, c2, d2)
                             g[u][v].setdefault("actions", set()).add(a)
                             g[u][v].setdefault("straight", False)
                             if a == RailEnvActions.MOVE_FORWARD:
@@ -145,39 +145,39 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, configuration: GridNode) -> Optional[Tuple[GridNode, bool]]:
-        if action in self.g.nodes[configuration].get("prohibited_actions", set()):
+    def apply_action_independent(self, action: RailEnvActions, entry_point: GridNode) -> Optional[Tuple[GridNode, bool]]:
+        if action in self.g.nodes[entry_point].get("prohibited_actions", set()):
             return None
-        succs = list(self.g.successors(configuration))
+        succs = list(self.g.successors(entry_point))
         for v in succs:
-            edge_data = self.g.get_edge_data(configuration, v)
+            edge_data = self.g.get_edge_data(entry_point, v)
             if action in edge_data["actions"]:
                 return v, edge_data["straight"]
 
-    def get_transitions(self, configuration: GridNode) -> Tuple[bool]:
+    def get_transitions(self, entry_point: GridNode) -> Tuple[bool]:
         return True,
 
     @staticmethod
     @lru_cache
-    def grid_configuration_to_graph_configuration(r: int, c: int, d: int) -> str:
+    def grid_entry_point_to_graph_entry_point(r: int, c: int, d: int) -> str:
         return f"{int(r), int(c), int(d)}"
 
     @staticmethod
     @lru_cache
-    def graph_configuration_to_grid_configuration(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
+    def graph_entry_point_to_grid_entry_point(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
         if s is None:
             return None
         r, c, d = ast.literal_eval(s)
         return ((r, c), d)
 
     @lru_cache
-    def get_successor_configurations(self, configuration: GridNode) -> Set[GridNode]:
-        return set(self.g.successors(configuration))
+    def get_successor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+        return set(self.g.successors(entry_point))
 
     @lru_cache
-    def get_predecessor_configurations(self, configuration: GridNode) -> Set[GridNode]:
-        return set(self.g.predecessors(configuration))
+    def get_predecessor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+        return set(self.g.predecessors(entry_point))
 
     @lru_cache
-    def is_valid_configuration(self, configuration: GridNode) -> bool:
-        return configuration in self.g.nodes
+    def is_valid_entry_point(self, entry_point: GridNode) -> bool:
+        return entry_point in self.g.nodes

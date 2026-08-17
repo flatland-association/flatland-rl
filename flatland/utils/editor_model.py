@@ -335,10 +335,10 @@ class EditorModel(AbstractModel):
 
     def find_agent_at(self, cell_row_col):
         for agent_idx, agent in enumerate(self.env.agents):
-            if agent.current_configuration is None:
-                rc_pos = agent.initial_configuration[0]
+            if agent.current_entry_point is None:
+                rc_pos = agent.initial_entry_point[0]
             else:
-                rc_pos = agent.current_configuration[0]
+                rc_pos = agent.current_entry_point[0]
             if tuple(rc_pos) == tuple(cell_row_col):
                 return agent_idx
         return None
@@ -378,10 +378,10 @@ class EditorModel(AbstractModel):
             else:
                 # Move the selected agent to this cell
                 agent = self.env.agents[self.selected_agent]
-                cur, old = agent.current_configuration, agent.old_configuration
-                agent.initial_configuration = (tuple(cell_row_col), agent.initial_configuration[1])
-                agent.current_configuration = (tuple(cell_row_col), cur[1] if cur is not None else None)
-                agent.old_configuration = (tuple(cell_row_col), old[1] if old is not None else None)
+                cur, old = agent.current_entry_point, agent.old_entry_point
+                agent.initial_entry_point = (tuple(cell_row_col), agent.initial_entry_point[1])
+                agent.current_entry_point = (tuple(cell_row_col), cur[1] if cur is not None else None)
+                agent.old_entry_point = (tuple(cell_row_col), old[1] if old is not None else None)
         else:
             # Yes
             # Have they clicked on the agent already selected?
@@ -398,7 +398,7 @@ class EditorModel(AbstractModel):
         if self.selected_agent is not None:
             rc_target = tuple(rc_cell)
             self.env.agents[self.selected_agent].targets = {
-                (rc_target, d) for d in Grid4TransitionsEnum if self.env.rail.is_valid_configuration((rc_target, d))
+                (rc_target, d) for d in Grid4TransitionsEnum if self.env.rail.is_valid_entry_point((rc_target, d))
             }
             self.view.oRT.update_background()
             self.redraw()

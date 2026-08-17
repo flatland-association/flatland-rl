@@ -161,9 +161,9 @@ class View(AbstractView):
             self.oRT.set_new_rail()
             self.model.env.reset_agents()
             for a in self.model.env.agents:
-                position = a.current_configuration[0] if a.current_configuration is not None else None
-                direction = a.current_configuration[1] if a.current_configuration is not None else None
-                a.old_configuration = (position, direction)
+                position = a.current_entry_point[0] if a.current_entry_point is not None else None
+                direction = a.current_entry_point[1] if a.current_entry_point is not None else None
+                a.old_entry_point = (position, direction)
 
             self.oRT.render_env(show_agents=True,
                                 show_inactive_agents=True,

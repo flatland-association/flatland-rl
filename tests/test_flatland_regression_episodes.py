@@ -107,6 +107,6 @@ def test_restore_episode():
 
             # TODO poor man's state comparison for now
             def _position(a):
-                return a.current_configuration[0] if a.current_configuration is not None else None
+                return a.current_entry_point[0] if a.current_entry_point is not None else None
 
             assert [_position(a) for a in env_regen.agents] == [_position(a) for a in env_restored.agents]

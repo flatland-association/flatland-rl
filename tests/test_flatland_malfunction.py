@@ -7,7 +7,7 @@ import numpy as np
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import virtual_configuration
+from flatland.envs.agent_utils import virtual_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -29,10 +29,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        configuration = virtual_configuration(agent)
-        if configuration is None:
+        entry_point = virtual_entry_point(agent)
+        if entry_point is None:
             return None
-        agent_virtual_position, agent_virtual_direction = configuration
+        agent_virtual_position, agent_virtual_direction = entry_point
 
         possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = np.count_nonzero(possible_transitions)
@@ -77,12 +77,12 @@ def test_malfunction_process():
                   )
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
+        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
         env.agents[a_idx].state = TrainState.MOVING
 
     agent_halts = 0
     total_down_time = 0
-    agent_old_position = env.agents[0].current_configuration[0]
+    agent_old_position = env.agents[0].current_entry_point[0]
 
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
@@ -106,9 +106,9 @@ def test_malfunction_process():
 
         if agent_malfunctioning:
             # Check that agent is not moving while malfunctioning
-            assert agent_old_position == env.agents[0].current_configuration[0]
+            assert agent_old_position == env.agents[0].current_entry_point[0]
 
-        agent_old_position = env.agents[0].current_configuration[0]
+        agent_old_position = env.agents[0].current_entry_point[0]
         total_down_time += env.agents[0].malfunction_handler.malfunction_down_counter
     # Check that the appropriate number of malfunctions is achieved
     # Dipam: The number of malfunctions varies by seed
@@ -331,9 +331,9 @@ def test_initial_malfunction_stop_moving():
 
     env._max_episode_steps = 1000
 
-    position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    print(env.agents[0].initial_configuration[0], direction, position, env.agents[0].state)
+    position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    print(env.agents[0].initial_entry_point[0], direction, position, env.agents[0].state)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -652,7 +652,7 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         # Append the rewards of the first trial
-        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
         env_data.append((reward[0], position))
         assert reward[0] == env_data[step][0]
         assert position == env_data[step][1]
@@ -683,7 +683,7 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         assert reward[0] == env_data[step][0]
-        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
         assert position == env_data[step][1]
         if dones['__all__']:
             break
@@ -703,15 +703,15 @@ def test_last_malfunction_step():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
-    env.agents[0].initial_configuration = ((6, 6), 2)
+    env.agents[0].initial_entry_point = ((6, 6), 2)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
     env._max_episode_steps = 1000
 
     env.reset(False, False, random_seed=10)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == 1
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == 1
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
+        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
         env.agents[a_idx].state = TrainState.MOVING
     env.agents[0].malfunction_handler.malfunction_down_counter = 0
 
