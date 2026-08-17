@@ -832,13 +832,13 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             # done
             if pre_dones[h] is True:
                 # TODO revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
-                assert self.agents[h].speed_counter.speed == pre_speed
+                assert agent.speed_counter.speed == pre_speed
             # malfunction
             elif agent.malfunction_handler.in_malfunction:  # N.B. in_malfunction updated
                 if agent.state in [TrainState.MALFUNCTION_OFF_MAP]:
                     assert agent.speed_counter.speed == agent.speed_counter.max_speed
                 else:
-                    assert self.agents[h].speed_counter.speed == 0
+                    assert agent.speed_counter.speed == 0
             # map entry
             elif pre_configurations[h] is None and RailEnvActions.is_moving_action(action) and pre_dones[
                 h] is False and self._elapsed_steps >= agent.earliest_departure:
