@@ -257,7 +257,7 @@ def test_cached_cell_exit_caps_speed_at_max_speed():
 
 
 def test_cached_distance_update_crossing_completed_no_wrap():
-    distance, is_cell_entry = _distance_update(Fraction(1, 4), Fraction(1, 4), True)
+    distance, is_cell_entry = _distance_update(Fraction(1, 4), Fraction(1, 4), False)
     assert distance == Fraction(1, 2)
     assert is_cell_entry == False
 

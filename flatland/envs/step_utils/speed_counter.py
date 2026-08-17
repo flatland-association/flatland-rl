@@ -73,17 +73,12 @@ def _distance_update(distance: Fraction, speed: Fraction,
     distance += speed
 
     if crossing_completed:
-        # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-        # N.B. distance is always >= 0 here (it only ever accumulates non-negative speed increments), so
-        # this is equivalent to the while-loop-based wrap it replaces; % would wrap a negative distance
-        # into [0, SEGMENT_LENGTH) instead of leaving it unchanged, but that case never arises in practice.
+        # check assumption
+        assert distance >= SEGMENT_LENGTH
         distance = distance % SEGMENT_LENGTH
         return distance, distance < speed
 
-    # crossing_completed_or_unattempted=False: the transition into the next cell was blocked by a resource conflict this
-    # step, even though the state machine still reports MOVING - do not wrap around as if the agent had
-    # actually crossed into the next cell; cap distance at the cell boundary instead, so the agent stays
-    # pinned at the exit, ready to move as soon as the conflict clears.
+    # move at most segment end
     return min(distance, SEGMENT_LENGTH), False
 
 
