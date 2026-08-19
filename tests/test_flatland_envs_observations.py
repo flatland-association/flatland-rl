@@ -11,6 +11,7 @@ from flatland.core.env_observation_builder import DummyObservationBuilder, Obser
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, Node
 from flatland.envs.observations_perturbed import perturbation_tree_observation_builder_wrapper
@@ -128,6 +129,12 @@ def test_reward_function_conflict(rendering=False):
     env.agents[1]._set_state(TrainState.MOVING)
     env.agents[0].current_entry_point = env.agents[0].initial_entry_point
     env.agents[1].current_entry_point = env.agents[1].initial_entry_point
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    for a in env.agents:
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
+        assert transition is not None
+        a.next_entry_point = _sanitize_entry_point(transition)
     print("\n")
     print(env.agents[0])
     print(env.agents[1])
@@ -214,6 +221,12 @@ def test_reward_function_waiting(rendering=False):
     env.agents[1]._set_state(TrainState.MOVING)
     env.agents[0].current_entry_point = env.agents[0].initial_entry_point
     env.agents[1].current_entry_point = env.agents[1].initial_entry_point
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    for a in env.agents:
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
+        assert transition is not None
+        a.next_entry_point = _sanitize_entry_point(transition)
 
     if rendering:
         renderer = RenderTool(env, gl="PILSVG")

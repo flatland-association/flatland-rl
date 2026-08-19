@@ -1,6 +1,7 @@
 import time
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -37,6 +38,10 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
+    assert agent_0.next_entry_point is not None
 
     agent_1 = env.agents[1]
     agent_1.initial_entry_point = ((1, 2), 2)  # one cell ahead of diamond crossing facing south
@@ -45,6 +50,10 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
+    assert agent_1.next_entry_point is not None
 
     env.distance_map._compute(env.agents, env.rail)
     done = False
@@ -108,6 +117,10 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
+    assert agent_0.next_entry_point is not None
 
     agent_1 = env.agents[1]
     agent_1.initial_entry_point = ((1, 2), 2)  # one cell ahead of diamond crossing facing south
@@ -116,6 +129,10 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
+    assert agent_1.next_entry_point is not None
 
     env.resource_map.level_free_positions.add((3, 2))
 
@@ -180,6 +197,10 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_0.moving = True
     agent_0.latest_arrival = 999
     agent_0._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
+    assert agent_0.next_entry_point is not None
 
     agent_1 = env.agents[1]
     agent_1.initial_entry_point = ((3, 4), 3)  # one cell ahead of diamond crossing facing west
@@ -188,6 +209,10 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_1.moving = True
     agent_1.latest_arrival = 999
     agent_1._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
+    assert agent_1.next_entry_point is not None
 
     env.resource_map.level_free_positions.add((3, 2))
 

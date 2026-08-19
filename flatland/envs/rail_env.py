@@ -438,9 +438,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             i_agent = agent.handle
 
             initial_entry_point = agent.initial_entry_point
-            current_or_initial_entry_point = agent.current_entry_point
-            if current_or_initial_entry_point is None:  # Agent not added on map yet
-                current_or_initial_entry_point = initial_entry_point
             agent.old_entry_point = agent.current_entry_point
 
 
@@ -467,8 +464,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # action used to validate/decide the pending target itself, exactly as before.
             # `next_entry_point is None` is the sole signal for this - the invariant (both None
             # off-map, both set and different on-map) is enforced on load (see load_env_agent())
-            # and by construction everywhere step() itself writes next_entry_point, so it can never
-            # spuriously equal current_or_initial_entry_point while genuinely pending.
+            # and by construction everywhere step() itself writes next_entry_point.
             # N.B. this is equivalent to `agent.current_entry_point is not None`, i.e. "does this
             # agent currently have a defined physical position" - not the same as
             # `agent.state.is_on_map_state()` (MOVING/STOPPED/MALFUNCTION only): with
@@ -481,11 +477,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 action_valid = True
             else:
                 transition = self.rail.apply_action_independent(
-                    action, current_or_initial_entry_point
+                    action, agent.current_entry_point if state.is_on_map_state() else initial_entry_point
                 )
                 action_valid = transition is not None
                 if action_valid:
-                    new_entry_point_independent = transition
+                    candidate_entry_point_independent = transition
 
             # get desired new entry point independent of motion check
             # design: actions applied at cell entry -- set below (only) when a crossing was
@@ -500,7 +496,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # whether this step is even attempting a crossing - decided here from the pre-step
             # speed/distance alone (is_cell_exit() doesn't need new_speed); the actual
             # can-get-moving resolution does need new_speed and is deferred to (3b) below.
-            attempting_entry = False
+            attempting_crossing = False
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 new_entry_point = initial_entry_point
                 # design: actions applied at cell entry -- initial_entry_point has no direction
@@ -508,22 +504,27 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # target for the very first cell), so this step's action instead seeds the
                 # look-ahead beyond it - reusing the transition already computed above (from
                 # initial_entry_point, since nothing was pending before departure).
-                candidate_entry_point = new_entry_point_independent
+                candidate_entry_point = candidate_entry_point_independent
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
                 movement_action_given or stop_action_given):
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
                 new_entry_point = initial_entry_point
-                candidate_entry_point = new_entry_point_independent
+                candidate_entry_point = candidate_entry_point_independent
             elif state.is_on_map_state():
-                new_entry_point = current_or_initial_entry_point
+                new_entry_point = agent.current_entry_point
                 candidate_entry_point = None
 
                 # transition to next cell: at end of cell and next state potentially MOVING
                 # N.B. is_cell_exit() uses the speed the agent had at the beginning of this step (not
                 # new_speed, this step's post-acceleration/braking target) - distance/position only
                 # advance by however fast the agent already was, consistent with SpeedCounter.step().
-                attempting_entry = agent.speed_counter.is_cell_exit()
+                attempting_crossing = agent.speed_counter.is_cell_exit()
                 assert agent.current_entry_point is not None
+                # design: actions applied at cell entry -- next_entry_point must already be decided
+                # whenever on-map (see the invariant above); step() itself always maintains this by
+                # construction, so this only trips if something outside step() (e.g. a test harness)
+                # placed the agent on the map directly without deriving a next_entry_point.
+                assert is_on_map
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
                 new_entry_point = None
@@ -554,51 +555,31 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
 
             # (3b) POSITION UPDATE (part 2): resolve this step's crossing attempt now that
             # new_speed is known - see (2) above for why this can't run before speed.
-            if (attempting_entry
+            if (attempting_crossing
                 and
-                TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and action_valid), new_speed,
-                                                             (stop_action_given or not action_valid))
+                TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
             ):
-                if is_on_map:
-                    # design: actions applied at cell entry -- attempt the already-decided
-                    # target; this step's action instead decides the look-ahead beyond it. Per
-                    # the current_entry_point/next_entry_point invariant (see (10a) below), the
-                    # crossing is only actually committed together with a valid look-ahead
-                    # beyond it: if this step's action has no valid transition from the pending
-                    # target, the crossing itself is denied - stays at the current cell, forced
-                    # to a stop (see crossing_denied below), retried next step with whatever
-                    # action is given then.
-                    lookahead = self.rail.apply_action_independent(action, agent.next_entry_point)
-                    if lookahead is not None:
-                        new_entry_point = agent.next_entry_point
-                        candidate_entry_point = lookahead
-                    else:
-                        crossing_denied = True
+                # design: actions applied at cell entry -- attempt the already-decided target
+                # (guaranteed by the `assert is_on_map` above); this step's action instead decides
+                # the look-ahead beyond it. Per the current_entry_point/next_entry_point invariant
+                # (see (10a) below), the crossing is only actually committed together with a valid
+                # look-ahead beyond it: if this step's action has no valid transition from the
+                # pending target, the crossing itself is denied - stays at the current cell, forced
+                # to a stop (see crossing_denied below), retried next step with whatever action is
+                # given then.
+                candidate_next_entry_point = self.rail.apply_action_independent(action, agent.next_entry_point)
+                if candidate_next_entry_point is not None:
+                    new_entry_point = agent.next_entry_point
+                    candidate_entry_point = candidate_next_entry_point
                 else:
-                    # design: actions applied at cell entry -- nothing pending yet: decide-and-
-                    # attempt the target this step, as before, and additionally seed the look-
-                    # ahead beyond it with the same action so the pipeline doesn't stay stuck
-                    # re-deciding from scratch every cell. Same invariant applies: without a valid
-                    # look-ahead beyond it, the crossing itself is denied. Reached whenever an
-                    # agent is on-map but next_entry_point hasn't been decided yet from *within*
-                    # step() itself - not just a fresh departure, but also test harnesses that
-                    # force an agent onto the map directly without deriving a next_entry_point
-                    # (e.g. tests/test_multi_speed.py, tests/test_flatland_malfunction.py setting
-                    # current_entry_point/state directly).
-                    new_entry_point = new_entry_point_independent
-                    lookahead = self.rail.apply_action_independent(action, new_entry_point_independent)
-                    if lookahead is not None:
-                        candidate_entry_point = lookahead
-                    else:
-                        new_entry_point = current_or_initial_entry_point
-                        crossing_denied = True
+                    crossing_denied = True
 
             if new_entry_point is not None:
                 valid_position_direction = any(self.rail.get_transitions(new_entry_point))
                 if not valid_position_direction:
                     infra = self._infrastructure_representation(agent.current_entry_point)
                     warnings.warn(f"{new_entry_point} not valid on the grid."
-                                  f" Coming from {current_or_initial_entry_point} with action {action}"
+                                  f" Coming from {agent.current_entry_point if state.is_on_map_state() else initial_entry_point} with action {action}"
                                   f" and action valid {action_valid}. {infra}")
                 # fails if initial position has invalid direction or if the grid is not closed
                 # assert valid_position_direction
@@ -650,7 +631,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         have_all_agents_ended = True
         for agent in self.agents:
             i_agent = agent.handle
-            current_or_initial_entry_point = agent.current_entry_point
 
             # (7) FETCH THE SAVED TRANSITION DATA FOR AGENT
             agent_transition_data = self.temp_transition_data[i_agent]
@@ -706,7 +686,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    crossing_completed = (current_or_initial_entry_point != pending_entry_point) and motion_check
+                    crossing_completed = (agent.old_entry_point != pending_entry_point) and motion_check
                     # MOVING -> STOPPED: we continue with pre-step as far as possible but set speed to 0,
                     # irrespective of whether STOP action was issued or STOP comes from invalid action or motion_check.?
                     speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)

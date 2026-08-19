@@ -2,6 +2,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -71,8 +72,14 @@ def test_multi_speed_init():
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
-        env.agents[a_idx]._set_state(TrainState.MOVING)
+        env_agent = env.agents[a_idx]
+        env_agent.current_entry_point = env_agent.initial_entry_point
+        env_agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness setup.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
+        assert transition is not None
+        env_agent.next_entry_point = _sanitize_entry_point(transition)
 
     def _position(agent):
         return agent.current_entry_point[0] if agent.current_entry_point is not None else None
