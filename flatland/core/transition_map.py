@@ -268,7 +268,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         ----------
         entry_point : tuple
             The entry_point indices a cell as (column, row, orientation),
-            where orientation is the direction an agent is enters a cell.
+            where orientation is the direction an agent enters a cell.
             Alternatively, it can be accessed as (column, row) to replace the
             full cell content.
         new_transitions : tuple
@@ -665,7 +665,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         ----------
         cell : tuple
             The entry_point indices a cell as ((column, row), orientation),
-            where orientation is the direction an agent is facing within a cell.
+            where orientation is the direction an agent enters a cell.
             Alternatively, it can be accessed as (column, row) to return the
             full cell content.
 

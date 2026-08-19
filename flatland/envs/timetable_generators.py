@@ -70,7 +70,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
                     initial_entry_point=(waypoints[i][0].position, waypoints[i][0].direction),
                     # N.B. routing flexibility is ignored by this timetable generator
                     current_entry_point=(waypoints[i][0].position, waypoints[i][0].direction),
-                    old_entry_point=(None, None),
+                    old_entry_point=None,
                     targets={(waypoints[i + 1][0].position, d) for d in Grid4TransitionsEnum},
                 ))
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
