@@ -82,8 +82,6 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         ---------
         actions : Set[str]
             set of actions to go for this edge
-        straight : bool
-            whether this is a straight outgoing edge (at most one outgoing edge)
 
         Node data
         ---------
@@ -120,12 +118,9 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
                         if t is None:
                             g.nodes[u].setdefault("prohibited_actions", set()).add(a)
                         else:
-                            ((r2, c2), d2), straight = t
+                            (r2, c2), d2 = t
                             v = GraphTransitionMap.grid_entry_point_to_graph_entry_point(r2, c2, d2)
                             g[u][v].setdefault("actions", set()).add(a)
-                            g[u][v].setdefault("straight", False)
-                            if a == RailEnvActions.MOVE_FORWARD:
-                                g[u][v]["straight"] = straight
         return g
 
     @staticmethod
@@ -145,14 +140,14 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, entry_point: GridNode) -> Optional[Tuple[GridNode, bool]]:
+    def apply_action_independent(self, action: RailEnvActions, entry_point: GridNode) -> Optional[GridNode]:
         if action in self.g.nodes[entry_point].get("prohibited_actions", set()):
             return None
         succs = list(self.g.successors(entry_point))
         for v in succs:
             edge_data = self.g.get_edge_data(entry_point, v)
             if action in edge_data["actions"]:
-                return v, edge_data["straight"]
+                return v
 
     def get_transitions(self, entry_point: GridNode) -> Tuple[bool]:
         return True,

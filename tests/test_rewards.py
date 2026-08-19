@@ -429,11 +429,16 @@ def test_energy_efficiency_smoothniss_in_morl():
 @pytest.mark.parametrize(
     "rewards,expected_sums",
     [
-        (DefaultRewards(), (-1786.0,)),
-        (BaseDefaultRewards(), (-1786.0,)),
-        (BasicMultiObjectiveRewards(), (-1786.0, -914.0, -138.5625)),
-        (ECML2026Rewards(), (-11724.5,)),
-        (BaseECML2026Rewards(), (-11724.5,)),
+        # design: actions applied at cell entry
+        (DefaultRewards(), (-1724.0,)),
+        # design: actions applied at cell entry
+        (BaseDefaultRewards(), (-1724.0,)),
+        # design: actions applied at cell entry
+        (BasicMultiObjectiveRewards(), (-1724.0, -637.0, -182.625)),
+        # design: actions applied at cell entry
+        (ECML2026Rewards(), (-15786.5,)),
+        # design: actions applied at cell entry
+        (BaseECML2026Rewards(), (-15786.5,)),
     ],
 )
 def test_rewards_via_policy_runner(rewards, expected_sums):
@@ -467,7 +472,8 @@ def test_default_rewards_via_policy_runner():
             data_dir=data_dir / "explicit",
             snapshot_interval=5,
         )
-        assert trajectory_implicit.trains_rewards_dones_infos["reward"].sum() == trajectory_explicit.trains_rewards_dones_infos["reward"].sum() == -1786.0
+        # design: actions applied at cell entry
+        assert trajectory_implicit.trains_rewards_dones_infos["reward"].sum() == trajectory_explicit.trains_rewards_dones_infos["reward"].sum() == -1724.0
 
 
 def test_punctuality_rewards_initial():
@@ -1363,10 +1369,12 @@ def test_platoon_slow_leader_periodic_collision_penalty():
 
 def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     """A train arriving at a symmetric switch must choose left or right; MOVE_FORWARD (going straight)
-    is invalid. The env cannot perform the action and force-stops the train, which -- like any
-    env-imposed stop -- incurs the collision penalty proportional to speed.
+    is invalid. design: actions applied at cell entry -- entry point and next entry point must always
+    advance together (see the invariant documented in RailEnv.step()), so the crossing into the switch
+    is denied and the train is force-stopped one cell short of it, at (2,2); like any env-imposed stop,
+    this incurs the collision penalty proportional to speed.
 
-    Layout (train departs at (2,3) heading WEST, rolls to the symmetric switch at (2,1) whose only
+    Layout (train departs at (2,3) heading WEST, rolls towards the symmetric switch at (2,1) whose only
     valid exits are north and south -- continuing west is invalid):
 
         (0,1) dead-end
@@ -1417,7 +1425,10 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
         if agent.state == TrainState.STOPPED:
             break
 
-    assert agent.current_entry_point[0] == (2, 1), "train should be stopped on the switch cell"
+    # design: actions applied at cell entry -- entry point and next entry point always advance
+    # together, so the denied crossing into the switch leaves the train one cell short of it
+    assert agent.current_entry_point[0] == (2, 2), "train should be stopped short of the switch cell"
+    assert agent.next_entry_point[0] == (2, 1)
     assert agent.state_machine.previous_state == TrainState.MOVING
     assert agent.state == TrainState.STOPPED
     assert penalties[-1] == -1 * 1 * COLLISION_FACTOR, \

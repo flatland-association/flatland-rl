@@ -43,11 +43,10 @@ class TrainStateMachine:
     def _handle_malfunction_off_map(self):
         if not self.st_signals.in_malfunction:
             if self.st_signals.earliest_departure_reached:
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we not go to the READY_TO_DEPART first instead of directly to MOVING and STOPPED?
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we not go to the READY_TO_DEPART first instead of directly to MOVING?
+                # design: disallow entering the map stopped
                 if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
-                elif self.st_signals.stop_action_given and self.st_signals.movement_allowed:
-                    self.next_state = TrainState.STOPPED
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
             else:

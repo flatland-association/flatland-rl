@@ -45,6 +45,11 @@ class Agent(NamedTuple):
     # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
     target_position: Tuple[int, int] = None
     target_direction: Grid4TransitionsEnum = None
+    # the entry point the agent is already committed to (decided one cell ago) - see
+    # `EnvAgent.next_entry_point`. `None` for envs persisted before this field existed, or while the
+    # agent is off-map with nothing pending yet.
+    next_position: Tuple[int, int] = None
+    next_direction: Grid4TransitionsEnum = None
 
 
 def _normalize_waypoints(waypoints: List[Union[Waypoint, List[Waypoint]]]) -> List[List[Waypoint]]:
@@ -131,14 +136,36 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
             [Waypoint(position, direction) for position, direction in sorted(_agent_tuple_targets(agent_tuple))]]
     waypoints[-1] = _filter_valid_target_entry_points(rail, waypoints[-1])
     targets = {(wp.position, wp.direction) for wp in waypoints[-1]}
+
+    current_entry_point = (agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None
+    next_entry_point = (
+        agent_tuple.next_position, agent_tuple.next_direction
+    ) if agent_tuple.next_position is not None and agent_tuple.next_direction is not None else None
+    # design: actions applied at cell entry -- current_entry_point/next_entry_point must always be both
+    # None (off-map/pre-departure) or both not None and different (on-map, mid-crossing) - see the
+    # invariant documented in RailEnv.step(). A pickle predating `next_entry_point` (or one capturing an
+    # agent mid-run under the old actions-applied-at-cell-exit design) can only ever satisfy this at the
+    # two trivial states (nothing started yet, or fully done and removed from the map) - reject any other
+    # de-pickled mid-run state outright instead of silently reinterpreting a decision that was never
+    # actually recorded.
+    assert (current_entry_point is None and next_entry_point is None) or (
+        current_entry_point is not None and next_entry_point is not None and next_entry_point != current_entry_point
+    ), (
+        f"current_entry_point/next_entry_point invariant violated on load for agent {agent_tuple.handle}: "
+        f"current_entry_point={current_entry_point}, next_entry_point={next_entry_point}. Only an env at "
+        f"step 0 (pre-departure) or with this agent fully done and removed can be loaded; a pickle predating "
+        f"`next_entry_point` resumed mid-run is not supported."
+    )
+
     return EnvAgent(
         initial_entry_point=(agent_tuple.initial_position, agent_tuple.initial_direction),
-        current_entry_point=(agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None,
+        current_entry_point=current_entry_point,
         old_entry_point=(
             agent_tuple.old_position, agent_tuple.old_direction) if agent_tuple.old_position is not None and agent_tuple.old_direction is not None else None,
         target_entry_point=(
             agent_tuple.target_position, agent_tuple.target_direction
         ) if agent_tuple.target_position is not None and agent_tuple.target_direction is not None else None,
+        next_entry_point=next_entry_point,
         targets=targets,
         moving=agent_tuple.moving,
         earliest_departure=agent_tuple.earliest_departure,
@@ -239,10 +266,14 @@ class EnvAgent(Generic[EntryPoint]):
     old_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
-    # transient per-step scratch value: the entry point `RailEnv.step()` computed for this agent this step
-    # (independent of motion-check conflict resolution) - written in step()'s first per-agent loop, consumed
-    # in its second once conflicts are resolved. Not part of `Agent`/`to_agent()`: it is recomputed from
-    # scratch every step, never meaningful across a save/load boundary.
+    # design: actions applied at cell entry -- the entry point the agent is already committed to,
+    # decided one cell ago (when `current_entry_point` was set to the cell the agent is now standing
+    # in), and held fixed across however many `step()` calls it takes motion check to grant it. `None`
+    # while off-map with nothing pending yet. Part of `Agent`/`to_agent()`: this can span a save/load
+    # boundary mid-attempt (unlike the one-cell lookahead computed from it each step - see
+    # `AgentTransitionData.candidate_entry_point` - which never needs to survive past the step it was
+    # computed in: it's either promoted into this field on a successful entry, or discarded and
+    # recomputed fresh next call).
     next_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
                               converter=_sanitize_entry_point)
 
@@ -287,6 +318,8 @@ class EnvAgent(Generic[EntryPoint]):
                      waypoints_latest_arrival=self.waypoints_latest_arrival,
                      target_position=self.target_entry_point[0] if self.target_entry_point is not None else None,
                      target_direction=self.target_entry_point[1] if self.target_entry_point is not None else None,
+                     next_position=self.next_entry_point[0] if self.next_entry_point is not None else None,
+                     next_direction=self.next_entry_point[1] if self.next_entry_point is not None else None,
                      )
 
     def get_shortest_path(self, distance_map) -> List[Waypoint]:

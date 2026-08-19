@@ -47,9 +47,9 @@ def test_return_to_ready_to_depart():
     assert env.agents[0].state == TrainState.READY_TO_DEPART
 
 
-def test_ready_to_depart_to_stopped():
+def test_ready_to_depart_to_ready_to_depart_with_stop_action():
     """
-    When going from ready to depart to malfunction off map, if stopped is provided, should go to stopped
+    When going from ready to depart to malfunction off map, if stopped is provided, should stay ready to depart
     """
     stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
                                             min_duration=0,  # Minimal duration of malfunction
@@ -82,7 +82,8 @@ def test_ready_to_depart_to_stopped():
     for _ in range(2):
         env.step({0: RailEnvActions.STOP_MOVING})
 
-    assert env.agents[0].state == TrainState.STOPPED
+    # design: disallow entering the map stopped
+    assert env.agents[0].state == TrainState.READY_TO_DEPART
 
 
 def test_malfunction_no_phase_through():
@@ -174,11 +175,9 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.STOPPED
 
-    # / TEMPORARY FIX FOR MALFUNCTION_OFF_MAP getting into map without motion check
-    #   WITHOUT FIX: STOPPED on map in the same cell as agent 0, not respecting motion check!
+    # design: disallow entering the map stopped
     assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.READY_TO_DEPART
-    # \ TEMPORARY FIX
 
 
 def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached():

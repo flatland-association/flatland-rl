@@ -107,7 +107,7 @@ def test_multi_speed_init():
 
 
 def test_multispeed_actions_no_malfunction_no_blocking():
-    """Test that actions are correctly performed on cell exit for a single agent."""
+    """Test that actions are correctly performed on cell entry for a single agent."""
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
@@ -152,7 +152,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                # design: actions applied at cell entry
+                action=RailEnvActions.MOVE_LEFT,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
@@ -388,12 +389,13 @@ def test_multispeed_actions_no_malfunction_blocking():
                     action=RailEnvActions.STOP_MOVING,
                 ),
                 # blocked although fraction >= 1.0
+                # design: actions applied at cell entry
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.STOPPED,
 
-                    action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
+                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
                 ),
 
                 Replay(  # 9
@@ -410,7 +412,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     distance=0.5,
                     speed=_pseudo_fractional(0.5),
 
-                    action=RailEnvActions.MOVE_LEFT,
+                    action=None,
                 ),
                 Replay(  # 11
                     position=(4, 6),

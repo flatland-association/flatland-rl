@@ -541,7 +541,10 @@ def test_speed_after_malfunction_full_acceleration_braking():
 
 def test_symmetric_switch_stop_action():
     """
-    Document (wrong) agent behaviour when choosing invalid action upon entering. Action is applied upon exit.
+    Document agent behaviour when choosing an invalid action upon entering a symmetric switch:
+    entry point and next entry point must always advance together (see the invariant documented
+    in RailEnv.step()), so the crossing into the switch is denied and the agent is forced to a
+    stop at the cell boundary, until a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) is given.
     """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1)
 
@@ -579,20 +582,41 @@ def test_symmetric_switch_stop_action():
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
-    # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design: we should have been stopped before entering 15,15,
-    #  invalid action should lead to state stopped and agent not entering the symmetric switch, must be fixed when agents "live on edges".
+    # design: entry point and next entry point always advance together (see the invariant in
+    # RailEnv.step()) -- STOP_MOVING has no valid transition from the pending target (15,15),1 (a
+    # symmetric switch has no straight-through option), so the crossing itself is denied: the agent
+    # stays parked at (15,14),1, still pending (15,15),1, forced to a stop (crossing_denied).
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
-    assert agent.current_entry_point[0] == (15, 15)
-    assert agent.current_entry_point[1] == 1
-    assert agent.state == TrainState.MOVING
-    assert agent.speed_counter.speed == Fraction(2, 5)
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == Fraction(0)
     # design: distance update with pre-step speed
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # retrying the same invalid action leaves the agent parked in exactly the same state.
+    env.step({agent.handle: RailEnvActions.STOP_MOVING})
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
+    env.step({agent.handle: RailEnvActions.MOVE_RIGHT})
+    assert agent.current_entry_point == ((15, 15), 1)
+    assert agent.next_entry_point == ((16, 15), 2)
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(0)
 
 
 def test_symmetric_switch_move_forward_action():
     """
-    Document (wrong) agent behaviour when choosing invalid action upon entering. Action is applied upon exit.
+    Document agent behaviour when choosing an invalid action upon entering a symmetric switch:
+    entry point and next entry point must always advance together (see the invariant documented
+    in RailEnv.step()), so the crossing into the switch is denied and the agent is forced to a
+    stop at the cell boundary, until a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) is given.
     """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1)
 
@@ -601,10 +625,10 @@ def test_symmetric_switch_move_forward_action():
     assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
     assert not env.rail.is_valid_entry_point(((15, 16), 1))  # cannot enter (15,16) heading EAST == 1:
 
-    # TODO this should return invalid_entry_point when action is evaluated upon entering! Document behaviour for now.
-    assert env.rail._check_action_on_agent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == (
-        True, ((15, 15), 1), True, RailEnvActions.MOVE_FORWARD, True
-    )
+    # FORWARD east (to enter the cell) on cell left of symmetric switch from west (aka. from left) is allowed:
+    assert env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, ((15, 14), 1)) == ((15, 15), 1)
+    # FORWARD entering symmetric switch facing is not allowed:
+    assert env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, ((15, 15), 1)) is None
 
     agent = env.agents[0]
     assert agent.speed_counter.speed == Fraction(1, 2)
@@ -639,22 +663,36 @@ def test_symmetric_switch_move_forward_action():
     assert agent.speed_counter.speed == Fraction(0)
     # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == Fraction(1, 1)
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
 
-    # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design: we should have been stopped before entering 15,15,
-    #  invalid action should lead to state stopped and agent not entering the symmetric switch, must be fixed when agents "live on edges".
+    # design: entry point and next entry point always advance together (see the invariant in
+    # RailEnv.step()) -- MOVE_FORWARD has no valid transition from the pending target (15,15),1 (a
+    # symmetric switch has no straight-through option), so the crossing itself is denied: the agent
+    # stays parked at (15,14),1, still pending (15,15),1, forced to a stop exactly like an ordinary
+    # invalid action would (crossing_denied), even though a movement action was given.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.current_entry_point[0] == (15, 15)
-    assert agent.current_entry_point[1] == 1
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # retrying the same invalid action leaves the agent parked in exactly the same state.
+    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
+    env.step({agent.handle: RailEnvActions.MOVE_LEFT})
+    assert agent.current_entry_point == ((15, 15), 1)
+    assert agent.next_entry_point == ((14, 15), 0)
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(0)
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.current_entry_point[0] == (15, 15)
-    assert agent.current_entry_point[1] == 1
-    assert agent.state == TrainState.STOPPED
-    assert agent.speed_counter.speed == Fraction(0)
-    assert agent.speed_counter.distance == Fraction(1, 2)
 
 
 def test_earliest_departure_state_transitions_initial_speed_zero():
@@ -690,8 +728,8 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     assert agent.speed_counter.distance == Fraction(0)
 
     first_entry_point = agent.current_entry_point
-    second_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
-    third_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
+    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
+    third_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
 
     # design: distance update with pre-step speed.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
@@ -756,8 +794,8 @@ def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
     assert agent.speed_counter.distance == Fraction(0)
 
     first_entry_point = agent.current_entry_point
-    second_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
-    third_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
+    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
+    third_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
 
     # Already at max speed: the agent advances exactly one entry point every step, distance resetting to 0 cleanly.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
@@ -815,8 +853,8 @@ def test_malfunction_off_map_state_transitions_to_moving():
     assert agent.speed_counter.distance == Fraction(0)
 
     first_entry_point = agent.current_entry_point
-    second_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
-    third_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
+    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
+    third_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
 
     # Already at max speed (1): the agent advances exactly one entry point per step, distance
     # resetting to 0 cleanly every time.
@@ -874,12 +912,12 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
         assert agent.speed_counter.distance == Fraction(0)
 
 
-def test_malfunction_off_map_state_transitions_to_stopped():
+def test_malfunction_off_map_state_transitions_to_ready_to_depart_with_stop_action():
     """
-    Document state transition WAITING -> MALFUNCTION_OFF_MAP -> STOPPED for a single agent that malfunctions
-    before ever departing, issuing STOP_MOVING throughout. Once the malfunction clears (earliest
-    departure is already reached) with a stop action given, the agent still enters the grid at
-    its initial entry point, but with speed reset to 0, skipping READY_TO_DEPART/MOVING.
+    Document state transition WAITING -> MALFUNCTION_OFF_MAP -> READY_TO_DEPART for a single agent that
+    malfunctions before ever departing, issuing STOP_MOVING throughout. Once the malfunction clears
+    (earliest departure is already reached) with only a stop action given, the agent stays off map,
+    ready to depart.
     """
     env, _, _ = env_generator(seed=42, n_agents=1)
     env.acceleration_delta = Fraction(1, 2)
@@ -906,13 +944,12 @@ def test_malfunction_off_map_state_transitions_to_stopped():
         assert agent.speed_counter.speed == speed
         assert agent.speed_counter.distance == Fraction(0)
 
-    # MALFUNCTION_OFF_MAP -> STOPPED: agent still enters the grid at its initial entry point
-    # this step, but with speed reset to 0 rather than resuming its previous speed.
+    # design: disallow entering the map stopped
     for _ in range(3):
         env.step({agent.handle: RailEnvActions.STOP_MOVING})
-        assert agent.state == TrainState.STOPPED
-        assert agent.current_entry_point == agent.initial_entry_point
-        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.state == TrainState.READY_TO_DEPART
+        assert agent.current_entry_point is None
+        assert agent.speed_counter.speed == speed
         assert agent.speed_counter.distance == Fraction(0)
 
 
@@ -960,8 +997,8 @@ def test_malfunction_state_transitions_to_moving():
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(0)
 
-    second_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, malfunction_entry_point)
-    third_entry_point, _ = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
+    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, malfunction_entry_point)
+    third_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
 
     # design: distance update with pre-step speed.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
