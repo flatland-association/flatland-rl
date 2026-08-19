@@ -476,6 +476,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             is_on_map = agent.next_entry_point is not None
             if is_on_map:
                 action_valid = True
+                # design: actions applied at cell entry -- the one-cell lookahead beyond the
+                # already-pending next_entry_point, computed independent of whether this step even
+                # attempts the crossing into it (see (3b) below, where it's only consumed if it does).
+                candidate_entry_point_independent = self.rail.apply_action_independent(action, agent.next_entry_point)
             else:
                 # design: actions applied at cell entry -- the invariant asserted above already
                 # guarantees agent.current_entry_point is None here too (since agent.next_entry_point
@@ -496,7 +500,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # TODO revise design: does it make sense to accelerate when coming from STOPPED/MALFUNCTION as speed not set to 0?
             # get desired new speed independent of motion check
             agent_max_speed = agent.speed_counter.max_speed
-            if not action_valid:
+            if not action_valid and not is_on_map:
+                # N.B. `and not is_on_map` is implied by `not action_valid` given the invariant in
+                # (2) above (is_on_map always forces action_valid = True) - spelled out here anyway
+                # to make explicit that an invalid action can only ever zero the speed off-map.
                 new_speed = Fraction(0)
             elif (state == TrainState.STOPPED or state == TrainState.MALFUNCTION) and movement_action_given:
                 # start moving
@@ -522,35 +529,31 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # to False in loop 2 below, driving the state machine to a stop, exactly like an
             # ordinary invalid action would.
             crossing_denied = False
-            # whether this step is even attempting a crossing - decided here from the pre-step
-            # speed/distance alone (is_cell_exit() doesn't need new_speed); the actual
-            # can-get-moving resolution does need new_speed, checked right below.
-            attempting_crossing = False
             # defaults, overwritten below for every state that actually targets a cell
             # (READY_TO_DEPART, MALFUNCTION_OFF_MAP, on-map) - left as None here for DONE/off-map-
             # and-not-departing states, which the branches below leave untouched.
-            new_entry_point = None
             candidate_entry_point = None
+            candidate_next_entry_point = None
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
-                new_entry_point = initial_entry_point
+                candidate_entry_point = initial_entry_point
                 # design: actions applied at cell entry -- initial_entry_point has no direction
                 # choice of its own (there's no earlier step that could have decided a pending
                 # target for the very first cell), so this step's action instead seeds the
                 # look-ahead beyond it - reusing the transition already computed above (from
                 # initial_entry_point, since nothing was pending before departure).
-                candidate_entry_point = candidate_entry_point_independent
+                candidate_next_entry_point = candidate_entry_point_independent
             elif state == TrainState.MALFUNCTION_OFF_MAP and not in_malfunction and earliest_departure_reached and action_valid and (
                 movement_action_given or stop_action_given):
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
-                new_entry_point = initial_entry_point
-                candidate_entry_point = candidate_entry_point_independent
+                candidate_entry_point = initial_entry_point
+                candidate_next_entry_point = candidate_entry_point_independent
             elif state.is_on_map_state():
-                new_entry_point = agent.current_entry_point
+                candidate_entry_point = agent.current_entry_point
 
-                # transition to next cell: at end of cell and next state potentially MOVING
-                # N.B. is_cell_exit() uses the speed the agent had at the beginning of this step (not
-                # new_speed, this step's post-acceleration/braking target) - distance/position only
-                # advance by however fast the agent already was, consistent with SpeedCounter.step().
+                # transition to next cell: at end of cell and next state potentially MOVING -
+                # decided here from the pre-step speed/distance alone (is_cell_exit() doesn't need
+                # new_speed); the actual can-get-moving resolution does need new_speed, checked
+                # right below.
                 attempting_crossing = agent.speed_counter.is_cell_exit()
                 assert agent.current_entry_point is not None
                 # design: actions applied at cell entry -- next_entry_point must already be decided
@@ -558,33 +561,32 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # construction, so this only trips if something outside step() (e.g. a test harness)
                 # placed the agent on the map directly without deriving a next_entry_point.
                 assert is_on_map
+
+                if (attempting_crossing
+                    and
+                    TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
+                ):
+                    # design: actions applied at cell entry -- attempt the already-decided target
+                    # (guaranteed by the `assert is_on_map` above); this step's action instead decides
+                    # the look-ahead beyond it (candidate_entry_point_independent, computed above in
+                    # (2)). Per the current_entry_point/next_entry_point invariant (see (10a) below),
+                    # the crossing is only actually committed together with a valid look-ahead beyond
+                    # it: if this step's action has no valid transition from the pending target, the
+                    # crossing itself is denied - stays at the current cell, forced to a stop (see
+                    # crossing_denied below), retried next step with whatever action is given then.
+                    if candidate_entry_point_independent is not None:
+                        candidate_entry_point = agent.next_entry_point
+                        candidate_next_entry_point = candidate_entry_point_independent
+                    else:
+                        crossing_denied = True
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
 
-            if (attempting_crossing
-                and
-                TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, new_speed, stop_action_given)
-            ):
-                # design: actions applied at cell entry -- attempt the already-decided target
-                # (guaranteed by the `assert is_on_map` above); this step's action instead decides
-                # the look-ahead beyond it. Per the current_entry_point/next_entry_point invariant
-                # (see (10a) below), the crossing is only actually committed together with a valid
-                # look-ahead beyond it: if this step's action has no valid transition from the
-                # pending target, the crossing itself is denied - stays at the current cell, forced
-                # to a stop (see crossing_denied below), retried next step with whatever action is
-                # given then.
-                candidate_next_entry_point = self.rail.apply_action_independent(action, agent.next_entry_point)
-                if candidate_next_entry_point is not None:
-                    new_entry_point = agent.next_entry_point
-                    candidate_entry_point = candidate_next_entry_point
-                else:
-                    crossing_denied = True
-
-            if new_entry_point is not None:
-                valid_position_direction = any(self.rail.get_transitions(new_entry_point))
+            if candidate_entry_point is not None:
+                valid_position_direction = any(self.rail.get_transitions(candidate_entry_point))
                 if not valid_position_direction:
                     infra = self._infrastructure_representation(agent.current_entry_point)
-                    warnings.warn(f"{new_entry_point} not valid on the grid."
+                    warnings.warn(f"{candidate_entry_point} not valid on the grid."
                                   f" Coming from {agent.current_entry_point if state.is_on_map_state() else initial_entry_point} with action {action}"
                                   f" and action valid {action_valid}. {infra}")
                 # fails if initial position has invalid direction or if the grid is not closed
@@ -593,7 +595,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # (4) MOTION/RESOURCE CHECK
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
             current_resource = self.resource_map.get_resource(agent.current_entry_point)
-            new_resource = self.resource_map.get_resource(new_entry_point)
+            new_resource = self.resource_map.get_resource(candidate_entry_point)
 
             # (5) GATHER STATE TRANSITION SIGNALS
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
@@ -623,8 +625,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # the candidate into agent.next_entry_point once the attempt's outcome (motion check)
             # is known. agent.next_entry_point itself is left untouched here so it still holds the
             # value being contested until that outcome is known.
-            self.temp_transition_data[i_agent].pending_entry_point = new_entry_point
-            self.temp_transition_data[i_agent].candidate_entry_point = candidate_entry_point
+            self.temp_transition_data[i_agent].pending_entry_point = candidate_entry_point
+            self.temp_transition_data[i_agent].candidate_entry_point = candidate_next_entry_point
             self.temp_transition_data[i_agent].crossing_denied = crossing_denied
             self.temp_transition_data[i_agent].new_speed = new_speed
 
