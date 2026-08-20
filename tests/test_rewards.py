@@ -920,7 +920,7 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     agent.next_entry_point = (waypoint.position, waypoint.direction)
     agent.state = state
     transition_data = AgentTransitionData(
-        speed=Fraction(0), new_speed=Fraction(0), current_resource=waypoint.position,
+        speed=Fraction(0), candidate_speed=Fraction(0), current_resource=waypoint.position,
         state_transition_signal=StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True))
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
 

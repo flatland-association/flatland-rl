@@ -151,7 +151,7 @@ class TrainStateMachine:
             self.set_state(self.next_state)
 
     @staticmethod
-    def can_get_moving_independent(state: TrainState, in_malfunction: bool, movement_action_given: bool, new_speed: float, stop_action_given: bool):
+    def can_get_moving_independent(state: TrainState, in_malfunction: bool, movement_action_given: bool, candidate_speed: float, stop_action_given: bool):
         """
         Incoming transitions to go into state MOVING (for motions to be checked - independently of other agents' position):
         - keep MOVING unless (stop action given and reaches new speed is zero) or in malfunction
@@ -163,14 +163,14 @@ class TrainStateMachine:
         state : TrainState
         in_malfunction : bool
         movement_action_given : bool
-        new_speed : float
+        candidate_speed : float
         stop_action_given : float
 
         Returns
         -------
         Whether agents wants to move given its state (independently of other agents' position)
         """
-        can_get_moving = state == TrainState.MOVING and not (stop_action_given and new_speed == 0.0)
+        can_get_moving = state == TrainState.MOVING and not (stop_action_given and candidate_speed == 0.0)
         # malfunction ends and (explicit) movement action given
         can_get_moving |= state == TrainState.MALFUNCTION and not in_malfunction and movement_action_given
         can_get_moving |= state == TrainState.STOPPED and movement_action_given

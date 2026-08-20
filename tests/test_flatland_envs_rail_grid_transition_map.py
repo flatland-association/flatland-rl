@@ -645,7 +645,7 @@ def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transit
     entry_point = lookahead
 
     assert all(rail.apply_action_independent(action, entry_point) is not None
-               for action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT))
+               for action in RailEnvActions)
 
 
 @pytest.mark.parametrize("action", list(RailEnvActions), ids=[a.name for a in RailEnvActions])
