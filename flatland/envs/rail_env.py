@@ -664,7 +664,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
 
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             # N.B. check_motion is False if agent wants to stay in the cell
-            hold_resource = (agent.state.is_on_map_state() and agent.current_entry_point == candidate_entry_point)
+            current_resource = self.resource_map.get_resource(agent.current_entry_point)
+            new_resource = self.resource_map.get_resource(candidate_entry_point)
+            hold_resource = current_resource == new_resource
             no_resource = candidate_entry_point is None
             # TODO generic name: resource_check?
             # TODO push into check_motion and update description
@@ -823,7 +825,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
             # candidates discarded
-            action_valid = self.temp_transition_data[h].candidate_entry_point is not None
             if not self.temp_transition_data[h].motion_check:
                 assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
