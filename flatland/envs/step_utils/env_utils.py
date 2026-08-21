@@ -10,7 +10,6 @@ class AgentTransitionData:
     """ Class for keeping track of temporary agent data for position update """
     speed: Fraction
     candidate_speed: Fraction
-    current_resource: Tuple[int, int]
     state_transition_signal: StateTransitionSignals
     # design: actions applied at cell entry -- this step's attempted target: `agent.next_entry_point`
     # while attempting entry (`is_cell_exit()`), else self (`agent.current_entry_point`, no resource

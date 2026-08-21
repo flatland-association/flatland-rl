@@ -298,7 +298,7 @@ class RailEnvPersister(object):
         if dev_obs_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
 
-        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None) for i in range(env.get_num_agents())}
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(env.get_num_agents())}
         for i_agent in range(env.get_num_agents()):
             env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 

@@ -371,7 +371,7 @@ class MotionCheck(object):
         self.reverse_target[v_target].remove(v)
         return target_conflicts
 
-    def check_motion(self, i: int, r: Resource) -> bool:
+    def check_motion(self, i: int) -> bool:
         """
         Returns
             Will the agent move (either because it does not want to move or because it is stopped by conflict resolution)?

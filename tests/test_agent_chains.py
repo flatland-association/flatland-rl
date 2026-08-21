@@ -415,7 +415,7 @@ def test_agent_chains_new():
     for i, b in expected.items():
         if i not in agents:
             continue
-        assert mc.check_motion(i, None) == b, i
+        assert mc.check_motion(i) == b, i
 
 
 def test_edge_case():

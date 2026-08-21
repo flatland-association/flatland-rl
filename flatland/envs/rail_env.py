@@ -227,7 +227,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         else:
             self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
@@ -355,7 +355,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         # Empty the episode store of agent positions
         self.cur_episode = []
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None) for i in range(self.get_num_agents())}
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(self.get_num_agents())}
         for i_agent in range(self.get_num_agents()):
             self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
 
@@ -637,7 +637,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = self._is_speed_zero(candidate_speed)
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
-            self.temp_transition_data[i_agent].current_resource = current_resource
 
             # design: actions applied at cell entry -- carry this step's attempted target and
             # look-ahead candidate via per-step scratch data; loop 2 decides whether to promote
@@ -669,7 +668,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             no_resource = candidate_entry_point is None
             # TODO generic name: resource_check?
             # TODO push into check_motion and update description
-            motion_check = hold_resource or no_resource or self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
+            motion_check = hold_resource or no_resource or self.motion_check.check_motion(i_agent)
 
             # TODO agents off map may not have cell_exit if speed is < 1! -> rename to action_required make distance off map None and update cell_exit?
             if not agent.speed_counter.is_cell_exit() and agent.state.is_on_map_state():
@@ -679,7 +678,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             movement_allowed = agent_transition_data.state_transition_signal.action_valid and not agent_transition_data.crossing_denied and (
                 hold_resource or motion_check)
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
-            agent_transition_data.state_transition_signal.motion_check = motion_check
+            agent_transition_data.motion_check = motion_check
 
             # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
@@ -824,9 +823,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
             # candidates discarded
-            # TODO use motion_check as overleaf?
-            invalid_action = self.temp_transition_data[h].candidate_entry_point is None
-            if invalid_action or not self.temp_transition_data[h].motion_check:
+            action_valid = self.temp_transition_data[h].candidate_entry_point is not None
+            if not self.temp_transition_data[h].motion_check:
                 assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
             # candidates accepted
@@ -840,13 +838,14 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                         assert agent.current_entry_point is not None
                         assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                         assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
-                        assert agent.current_entry_point ==  agent.target_entry_point
+                        assert agent.current_entry_point == agent.target_entry_point
                 # in malfunction
                 elif agent.malfunction_handler.in_malfunction:
                     assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                     assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
                 # map entry
-                elif pre_step.pre_current_entry_points[h] is None and self._elapsed_steps >= agent.earliest_departure and pre_step.pre_dones[h] and RailEnvActions.is_moving_action(action) and self.temp_transition_data[h].motion_check:
+                elif pre_step.pre_current_entry_points[h] is None and self._elapsed_steps >= agent.earliest_departure and pre_step.pre_dones[
+                    h] and RailEnvActions.is_moving_action(action) and self.temp_transition_data[h].motion_check:
                     assert agent.current_entry_point is not None
                     assert agent.current_entry_point == agent.initial_entry_point
                     assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
@@ -861,7 +860,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                         assert agent.current_entry_point is not None
                         assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
                         assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
-                        assert agent.current_entry_point ==  agent.target_entry_point
+                        assert agent.current_entry_point == agent.target_entry_point
                 # cell transition
                 elif agent.current_entry_point is not None and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH:
                     assert agent.current_entry_point is not None
@@ -871,7 +870,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # else:
                 #     assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                 #     assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
-
 
     def _check_post_speed_invariants(self, action_dict: Dict[int, RailEnvActions],
                                      pre_step: PreStepSnapshot) -> None:
