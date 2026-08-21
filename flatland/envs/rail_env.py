@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed
+from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
@@ -41,12 +41,15 @@ UnderlyingResourceMap = TypeVar('UnderlyingResourceMap', bound=ResourceMap)
 EntryPoint = TypeVar('EntryPoint')
 
 
-class SpeedInvariantPreStepSnapshot(NamedTuple):
+class PreStepSnapshot(NamedTuple):
     """ Per-agent state captured before `step()` runs, for `AbstractRailEnv._check_post_speed_invariants()`
     to verify the post-step speed update against. """
     pre_speeds: Dict[int, Fraction]
-    pre_entry_points: Dict[int, Optional[Any]]
+    pre_current_entry_points: Dict[int, Optional[Any]]
+    pre_next_entry_points: Dict[int, Optional[Any]]
     pre_dones: Dict[int, bool]
+    pre_in_malfunctions: Dict[int, bool]
+    pre_offsets: Dict[int, Fraction]
 
 
 class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingResourceMap, EntryPoint]):
@@ -413,9 +416,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             self.dones[agent.handle] = True
             if self.remove_agents_at_target:
                 agent.current_entry_point = None
-                # design: actions applied at cell entry -- keep the invariant that
-                # next_entry_point is None exactly when current_entry_point is None (see
-                # EnvAgent.next_entry_point's docstring).
                 agent.next_entry_point = None
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
@@ -474,7 +474,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 candidate_entry_point_independent = self.rail.apply_action_independent(action, initial_entry_point)
 
             # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches)
-            action_valid = not agent.speed_counter.is_cell_exit() or candidate_entry_point_independent is not None
+            is_cell_exit = agent.speed_counter.is_cell_exit()
+            action_valid = not is_cell_exit or candidate_entry_point_independent is not None
 
             # (3a) SPEED UPDATE
             # N.B. new speed is only applied if MOVING state and previous was not READY_TO_DEPART/MALFUNCTION_OFF_MAP, see below
@@ -512,7 +513,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # to make explicit that an invalid action can only ever zero the speed off-map.
                 candidate_speed = Fraction(0)
             # (3a.5) invalid action
-            elif is_on_map and candidate_entry_point_independent is None and agent.speed_counter.is_cell_exit():
+            elif is_on_map and candidate_entry_point_independent is None and is_cell_exit:
                 # design: this step's action has no valid look-ahead beyond the pending
                 # next_entry_point, and the crossing attempt is due now (is_cell_exit()) - the
                 # crossing will be denied in (3b) below regardless of candidate_speed's value here
@@ -552,6 +553,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # and-not-departing states, which the branches below leave untouched.
             candidate_entry_point = None
             candidate_next_entry_point = None
+            # TODO harmonize with overleaf - what'sleft?
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
                 candidate_entry_point = initial_entry_point
                 # design: actions applied at cell entry -- initial_entry_point has no direction
@@ -568,11 +570,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             elif state.is_on_map_state():
                 candidate_entry_point = agent.current_entry_point
 
-                # transition to next cell: at end of cell and next state potentially MOVING -
-                # decided here from the pre-step speed/distance alone (is_cell_exit() doesn't need
-                # candidate_speed); the actual can-get-moving resolution does need candidate_speed, checked
-                # right below.
-                attempting_crossing = agent.speed_counter.is_cell_exit()
                 assert agent.current_entry_point is not None
                 # design: actions applied at cell entry -- next_entry_point must already be decided
                 # whenever on-map (see the invariant above); step() itself always maintains this by
@@ -580,8 +577,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # placed the agent on the map directly without deriving a next_entry_point.
                 assert is_on_map
 
-                if (attempting_crossing
+                if (is_cell_exit
                     and
+                    # TODO can we get rid of dependence on state machine here?
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, movement_action_given, candidate_speed, stop_action_given)
                 ):
                     # design: actions applied at cell entry -- attempt the already-decided target
@@ -599,6 +597,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                         crossing_denied = True
             else:
                 assert state.is_off_map_state() or state == TrainState.DONE
+
+            # TODO fails!
+            # self._check_configuration_invariant(candidate_entry_point, candidate_next_entry_point)
 
             if candidate_entry_point is not None:
                 valid_position_direction = any(self.rail.get_transitions(candidate_entry_point))
@@ -663,18 +664,22 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             candidate_entry_point = agent_transition_data.candidate_entry_point
 
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
-            # motion_check is False if agent wants to stay in the cell
-            motion_check = self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
+            # N.B. check_motion is False if agent wants to stay in the cell
+            hold_resource = (agent.state.is_on_map_state() and agent.current_entry_point == candidate_entry_point)
+            no_resource = candidate_entry_point is None
+            # TODO generic name: resource_check?
+            # TODO push into check_motion and update description
+            motion_check = hold_resource or no_resource or self.motion_check.check_motion(i_agent, agent_transition_data.current_resource)
 
-            # Movement allowed if
-            # - action_valid ==approx== not crossing_denied
-            #   - action leading to valid next cell (no forced stop)
-            #   - inside cell or at end of cell and no conflict with other trains and
-            # - motion_check
+            # TODO agents off map may not have cell_exit if speed is < 1! -> rename to action_required make distance off map None and update cell_exit?
+            if not agent.speed_counter.is_cell_exit() and agent.state.is_on_map_state():
+                assert motion_check == True
+
             # TODO cleanup according to docs above
             movement_allowed = agent_transition_data.state_transition_signal.action_valid and not agent_transition_data.crossing_denied and (
-                (agent.state.is_on_map_state() and agent.current_entry_point == candidate_entry_point) or motion_check)
+                hold_resource or motion_check)
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
+            agent_transition_data.state_transition_signal.motion_check = motion_check
 
             # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
@@ -740,8 +745,6 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         # Check if episode has ended and update rewards and dones
         self.end_of_episode_update(have_all_agents_ended)
 
-        self._verify_mutually_exclusive_resource_allocation()
-
         self.effects_generator.on_episode_step_end(self, action_dict=action_dict)
 
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
@@ -783,7 +786,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                         msgs += msg
             assert len(resources) == len(set(resources)), msgs
 
-    def _check_pre_step_invariants_and_capture_snapshot(self) -> SpeedInvariantPreStepSnapshot:
+    def _check_pre_step_invariants_and_capture_snapshot(self) -> PreStepSnapshot:
         """
         Verify the current_entry_point/next_entry_point invariant holds before `step()` runs, and
         capture per-agent speed/entry-point/done state for `_check_post_speed_invariants()` to later
@@ -793,20 +796,88 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # invariant: current_entry_point/next_entry_point are either both None (off-map) or
             # both set and different (on-map, next_entry_point strictly ahead of current_entry_point)
             # - see the design note in step()'s (2) POSITION UPDATE for what this invariant is for.
-            assert (agent.current_entry_point is None) == (agent.next_entry_point is None)
-            assert agent.current_entry_point is None or agent.current_entry_point != agent.next_entry_point
+            current_entry_point = agent.current_entry_point
+            next_entry_point = agent.next_entry_point
+            self._check_configuration_invariant(current_entry_point, next_entry_point)
 
-        return SpeedInvariantPreStepSnapshot(
+        return PreStepSnapshot(
             pre_speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
-            pre_entry_points={agent.handle: agent.current_entry_point for agent in self.agents},
+            pre_current_entry_points={agent.handle: agent.current_entry_point for agent in self.agents},
+            pre_next_entry_points={agent.handle: agent.next_entry_point for agent in self.agents},
             pre_dones={agent.handle: self.dones[agent.handle] for agent in self.agents},
+            pre_in_malfunctions={agent.handle: agent.malfunction_handler.in_malfunction for agent in self.agents},
+            pre_offsets={agent.handle: agent.speed_counter.distance for agent in self.agents},
         )
 
+    def _check_configuration_invariant(self, current_entry_point: Any, next_entry_point: Any):
+        assert (current_entry_point is None) == (next_entry_point is None)
+        # TODO replace by is successor?
+        assert current_entry_point is None or current_entry_point != next_entry_point
+
+    def _check_post_position_invariants(self, action_dict: Dict[int, RailEnvActions],
+                                        pre_step: PreStepSnapshot) -> None:
+        """
+        Verify, for every agent, that this step's position update matches the expected transition given the
+        pre-step snapshot captured.
+        """
+        for h in pre_step.pre_speeds.keys():
+            agent = self.agents[h]
+            action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+            # candidates discarded
+            # TODO use motion_check as overleaf?
+            invalid_action = self.temp_transition_data[h].candidate_entry_point is None
+            if invalid_action or not self.temp_transition_data[h].motion_check:
+                assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
+                assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
+            # candidates accepted
+            else:
+                # done or
+                if pre_step.pre_dones[h]:
+                    if self.remove_agents_at_target:
+                        assert agent.current_entry_point is None
+                        assert agent.next_entry_point is None
+                    else:
+                        assert agent.current_entry_point is not None
+                        assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
+                        assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
+                        assert agent.current_entry_point ==  agent.target_entry_point
+                # in malfunction
+                elif agent.malfunction_handler.in_malfunction:
+                    assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
+                    assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
+                # map entry
+                elif pre_step.pre_current_entry_points[h] is None and self._elapsed_steps >= agent.earliest_departure and pre_step.pre_dones[h] and RailEnvActions.is_moving_action(action) and self.temp_transition_data[h].motion_check:
+                    assert agent.current_entry_point is not None
+                    assert agent.current_entry_point == agent.initial_entry_point
+                    assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
+                    assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                # target reached
+                elif self.temp_transition_data[h].candidate_entry_point in agent.targets and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH:
+                    assert agent.target_entry_point == self.temp_transition_data[h].candidate_entry_point
+                    if self.remove_agents_at_target:
+                        assert agent.current_entry_point is None
+                        assert agent.next_entry_point is None
+                    else:
+                        assert agent.current_entry_point is not None
+                        assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
+                        assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                        assert agent.current_entry_point ==  agent.target_entry_point
+                # cell transition
+                elif agent.current_entry_point is not None and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH:
+                    assert agent.current_entry_point is not None
+                    assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
+                    # TODO diff overleaf vs. implementation!
+                    # assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                # else:
+                #     assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
+                #     assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
+
+
     def _check_post_speed_invariants(self, action_dict: Dict[int, RailEnvActions],
-                                     pre_step: SpeedInvariantPreStepSnapshot) -> None:
+                                     pre_step: PreStepSnapshot) -> None:
         """
         Verify, for every agent, that this step's speed update matches the expected transition given the
-        pre-step snapshot captured by `_check_pre_step_invariants_and_capture_snapshot()`.
+        pre-step snapshot.
         """
 
         def assert_speed_matches_if_movement_allowed(actual: Fraction, expected: Fraction, movement_allowed: bool,
@@ -834,7 +905,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 else:
                     assert agent.speed_counter.speed == 0
             # map entry
-            elif pre_step.pre_entry_points[h] is None and RailEnvActions.is_moving_action(action) \
+            elif pre_step.pre_current_entry_points[h] is None and RailEnvActions.is_moving_action(action) \
                 and pre_step.pre_dones[h] is False and self._elapsed_steps >= agent.earliest_departure:
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
                 assert agent.speed_counter.speed == pre_speed
@@ -922,7 +993,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                  effects_generator: EffectsGenerator["RailEnv"] = None
                  ):
         """
-        All parameters from parent `AbstractRailEnv`
+        All parameters from parent `AbstractRailEnv`. Classic grid rail env, called rail env tout court for continuity.
 
         Parameters
         ----------
@@ -1010,13 +1081,16 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
+        # TODO move up to AbstractRailEnv, invariants should independent of graph/grid implementation.
         pre_step_snapshot = self._check_pre_step_invariants_and_capture_snapshot() \
             if self.check_step_pre_post_conditions else None
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
         if self.check_step_pre_post_conditions:
+            self._verify_mutually_exclusive_resource_allocation()
             self._check_post_speed_invariants(action_dict, pre_step_snapshot)
+            self._check_post_position_invariants(action_dict, pre_step_snapshot)
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, entry_point: Tuple[Tuple[int, int], int]) -> str:

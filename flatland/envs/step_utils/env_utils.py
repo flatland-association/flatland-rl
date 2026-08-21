@@ -33,3 +33,7 @@ class AgentTransitionData:
     # UPDATE for the exact definition (always True while on-map; off-map, reflects whether the
     # transition from initial_entry_point is valid).
     action_valid: bool = False
+    # whether MotionCheck granted this agent's contested resource this step - see RailEnv.step()'s
+    # (8) FETCH CONFLICT RESOLUTION FOR AGENT for the exact definition. False while the agent is not
+    # attempting a crossing this step (mid-cell).
+    motion_check: bool = False
