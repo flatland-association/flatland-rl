@@ -207,7 +207,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
 
         self._seed(seed=random_seed)
 
-        self.motion_check = ac.MotionCheck()
+        self.resource_check = ac.MotionCheck()
 
         # TODO https://github.com/flatland-association/flatland-rl/issues/242 bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
         self.resource_map: UnderlyingResourceMap = self._extract_resource_map_from_optionals({})
@@ -430,7 +430,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
 
         self.clear_rewards_dict()
 
-        self.motion_check = ac.MotionCheck()  # reset the motion check
+        self.resource_check = ac.MotionCheck()  # reset the motion check
 
         self.effects_generator.on_episode_step_start(self)
 
@@ -648,11 +648,11 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             self.temp_transition_data[i_agent].crossing_denied = crossing_denied
             self.temp_transition_data[i_agent].candidate_speed = candidate_speed
 
-            self.motion_check.add_agent(i_agent, current_resource, new_resource)
+            self.resource_check.add_agent(i_agent, current_resource, new_resource)
 
         # (6) RESOURCE CONFLICT RESOLUTION
         # Find conflicts between trains trying to occupy same cell
-        self.motion_check.find_conflicts()
+        self.resource_check.find_conflicts()
 
         have_all_agents_ended = True
         for agent in self.agents:
@@ -663,24 +663,15 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             candidate_entry_point = agent_transition_data.candidate_entry_point
 
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
-            # N.B. check_motion is False if agent wants to stay in the cell
-            current_resource = self.resource_map.get_resource(agent.current_entry_point)
-            new_resource = self.resource_map.get_resource(candidate_entry_point)
-            hold_resource = current_resource == new_resource
-            no_resource = candidate_entry_point is None
-            # TODO generic name: resource_check?
-            # TODO push into check_motion and update description
-            motion_check = hold_resource or no_resource or self.motion_check.check_motion(i_agent)
+            resource_check = self.resource_check.check_resource(i_agent)
 
             # TODO agents off map may not have cell_exit if speed is < 1! -> rename to action_required make distance off map None and update cell_exit?
             if not agent.speed_counter.is_cell_exit() and agent.state.is_on_map_state():
-                assert motion_check == True
+                assert resource_check == True
 
-            # TODO cleanup according to docs above
-            movement_allowed = agent_transition_data.state_transition_signal.action_valid and not agent_transition_data.crossing_denied and (
-                hold_resource or motion_check)
+            movement_allowed = agent_transition_data.state_transition_signal.action_valid and not agent_transition_data.crossing_denied and resource_check
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
-            agent_transition_data.motion_check = motion_check
+            agent_transition_data.resource_check = resource_check
 
             # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
@@ -710,9 +701,9 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
                 if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
                         agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    crossing_completed = (agent.old_entry_point != candidate_entry_point) and motion_check
+                    crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
                     # MOVING -> STOPPED: we continue with pre-step as far as possible but set speed to 0,
-                    # irrespective of whether STOP action was issued or STOP comes from invalid action or motion_check.?
+                    # irrespective of whether STOP action was issued or STOP comes from invalid action or resource_check.?
                     speed = agent_transition_data.candidate_speed if agent.state == TrainState.MOVING else Fraction(0)
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
             # # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
@@ -769,7 +760,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         resources = [self.resource_map.get_resource(agent.current_entry_point) for agent in self.agents if agent.current_entry_point is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
-            msgs += f"- motion check: {list(self.motion_check.stopped)}"
+            msgs += f"- motion check: {list(self.resource_check.stopped)}"
             warnings.warn(msgs)
             counts = {resource: resources.count(resource) for resource in set(resources)}
             dup_resources = [res for res, count in counts.items() if count > 1]
@@ -781,7 +772,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                                f"- state_machine:\t{agent.state_machine}\n"
                                f"- speed_counter:\t{agent.speed_counter}\n"
                                f"- breakpoint:\tself._elapsed_steps == {self._elapsed_steps} and agent.handle == {agent.handle}\n"
-                               f"- motion check:\t{list(self.motion_check.stopped)}\n\n\n"
+                               f"- motion check:\t{list(self.resource_check.stopped)}\n\n\n"
                                f"- agents:\t{self.agents}")
                         warnings.warn(msg)
                         msgs += msg
@@ -825,7 +816,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
             # candidates discarded
-            if not self.temp_transition_data[h].motion_check:
+            if not self.temp_transition_data[h].resource_check:
                 assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
             # candidates accepted
@@ -846,7 +837,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                     assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
                 # map entry
                 elif pre_step.pre_current_entry_points[h] is None and self._elapsed_steps >= agent.earliest_departure and pre_step.pre_dones[
-                    h] and RailEnvActions.is_moving_action(action) and self.temp_transition_data[h].motion_check:
+                    h] and RailEnvActions.is_moving_action(action) and self.temp_transition_data[h].resource_check:
                     assert agent.current_entry_point is not None
                     assert agent.current_entry_point == agent.initial_entry_point
                     assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point

@@ -33,7 +33,7 @@ class RecordStepsEffectsGenerator(EffectsGenerator["RailEnv"]):
                 *pos, dir,
                 agent.malfunction_handler.malfunction_down_counter,
                 agent.state.value,
-                int(position in env.motion_check.deadlocked),
+                int(position in env.resource_check.deadlocked),
             ])
 
         env.cur_episode.append(list_agents_state)
