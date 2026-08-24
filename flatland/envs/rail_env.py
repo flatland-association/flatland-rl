@@ -446,20 +446,13 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             action = RailEnvActions.from_value(action_dict.get(i_agent, RailEnvActions.DO_NOTHING))
 
             # N.B. every candidate_ variable in this loop (candidate_speed, candidate_entry_point,
-            # candidate_entry_point_independent, candidate_next_entry_point, ...) reflects this
-            # step's unilateral update - computed from the action alone, before the motion/resource
-            # check below is resolved - including for an invalid action, which itself just yields a
+            # candidate_entry_point_independent, candidate_next_entry_point, ...) reflects 
+            # the unilateral update of the collect phase (loop 1) - computed from the action alone, 
+            # including for an invalid action, which itself just yields a
             # zeroed/unchanged candidate (e.g. candidate_speed = 0) rather than skipping computation
-            # entirely. Only promoted into committed agent state once loop 2 confirms the motion
-            # check actually granted it.
+            # entirely. Distribute phase (loop 2) checks whether the resource check actually granted it.
 
             # Invariant: both None off-map, both set and different on-map).
-            # The invariant is enforced on load (see load_env_agent())
-            # and by construction everywhere step() itself writes next_entry_point.
-            # with remove_agents_at_target=False, an agent still transitions to DONE on reaching its
-            # target (see TrainStateMachine.update_if_reached()), it just keeps its
-            # current_entry_point/next_entry_point instead of having handle_done_state() clear them
-            # - so such a DONE agent has is_on_map=True here despite is_on_map_state()==False.
 
             # (1) STATE TRANSITION SIGNALS
             stop_action_given = action == RailEnvActions.STOP_MOVING
@@ -487,42 +480,22 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
             # N.B. no acceleration if the action isn't (corrected to) MOVE_FORWARD, e.g. facing a
             # symmetric switch with the action corrected to STOP_MOVING, or MOVE_LEFT/MOVE_RIGHT
             # corrected to MOVE_FORWARD but not accelerated as the original action wasn't forward.
-            # get desired candidate speed independent of motion check
+            # get desired candidate speed independent of resource check
             agent_max_speed = agent.speed_counter.max_speed
             # (3a.1) done
             if state == TrainState.DONE:
-                # design: this step's action is never actually consulted for an already-DONE agent
-                # (its speed_counter is left untouched in (10b) below regardless) - zeroed here anyway
-                # so candidate_speed doesn't reflect a nonsensical acceleration/braking on a stale action.
                 candidate_speed = Fraction(0)
             # (3a.2) malfunction
             elif in_malfunction:
-                # design: while still malfunctioning, the state machine forces next_state ->
-                # MALFUNCTION/MALFUNCTION_OFF_MAP unconditionally (see TrainStateMachine's
-                # _handle_malfunction*() handlers) - (10b) below then either forces speed_counter to
-                # stop (on-map) or leaves it untouched (off-map), discarding candidate_speed either way;
-                # zeroed here anyway so it doesn't reflect a nonsensical acceleration/braking.
                 candidate_speed = Fraction(0)
             # (3a.3) map entry
             elif not is_on_map and movement_action_given and earliest_departure_reached:
-                # design: closes a gap the action == MOVE_FORWARD branch below would otherwise leave
-                # for a departure via MOVE_LEFT/MOVE_RIGHT (only a literal MOVE_FORWARD fires it) -
-                # provably inert either way: (10b) below skips speed_counter entirely whenever
-                # previous_state was READY_TO_DEPART/MALFUNCTION_OFF_MAP, regardless of candidate_speed.
                 candidate_speed = self.acceleration_delta
             # (3a.4) stay off map
             elif not action_valid and not is_on_map:
-                # N.B. `and not is_on_map` is implied by `not action_valid` given the invariant in
-                # (2) above (is_on_map always forces action_valid = True) - spelled out here anyway
-                # to make explicit that an invalid action can only ever zero the speed off-map.
                 candidate_speed = Fraction(0)
             # (3a.5) invalid action
             elif is_on_map and candidate_entry_point_independent is None and is_cell_exit:
-                # design: this step's action has no valid look-ahead beyond the pending
-                # next_entry_point, and the crossing attempt is due now (is_cell_exit()) - the
-                # crossing will be denied in (3b) below regardless of candidate_speed's value here
-                # (mirrors crossing_denied there). N.B. is_cell_exit() doesn't need candidate_speed,
-                # so it's safe to query here, ahead of (3b) computing attempting_crossing itself.
                 candidate_speed = Fraction(0)
             # (3a.6) accelerate upon forward
             elif action == RailEnvActions.MOVE_FORWARD:

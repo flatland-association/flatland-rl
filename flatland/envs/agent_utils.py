@@ -45,9 +45,7 @@ class Agent(NamedTuple):
     # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
     target_position: Tuple[int, int] = None
     target_direction: Grid4TransitionsEnum = None
-    # the entry point the agent is already committed to (decided one cell ago) - see
-    # `EnvAgent.next_entry_point`. `None` for envs persisted before this field existed, or while the
-    # agent is off-map with nothing pending yet.
+    # design: actions applied at cell entry.
     next_position: Tuple[int, int] = None
     next_direction: Grid4TransitionsEnum = None
 
@@ -141,13 +139,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     next_entry_point = (
         agent_tuple.next_position, agent_tuple.next_direction
     ) if agent_tuple.next_position is not None and agent_tuple.next_direction is not None else None
-    # design: actions applied at cell entry -- current_entry_point/next_entry_point must always be both
-    # None (off-map/pre-departure) or both not None and different (on-map, mid-crossing) - see the
-    # invariant documented in RailEnv.step(). A pickle predating `next_entry_point` (or one capturing an
-    # agent mid-run under the old actions-applied-at-cell-exit design) can only ever satisfy this at the
-    # two trivial states (nothing started yet, or fully done and removed from the map) - reject any other
-    # de-pickled mid-run state outright instead of silently reinterpreting a decision that was never
-    # actually recorded.
+    # design: actions applied at cell entry.
     assert (current_entry_point is None and next_entry_point is None) or (
         current_entry_point is not None and next_entry_point is not None and next_entry_point != current_entry_point
     ), (
@@ -266,14 +258,7 @@ class EnvAgent(Generic[EntryPoint]):
     old_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
-    # design: actions applied at cell entry -- the entry point the agent is already committed to,
-    # decided one cell ago (when `current_entry_point` was set to the cell the agent is now standing
-    # in), and held fixed across however many `step()` calls it takes motion check to grant it. `None`
-    # while off-map with nothing pending yet. Part of `Agent`/`to_agent()`: this can span a save/load
-    # boundary mid-attempt (unlike the one-cell lookahead computed from it each step - see
-    # `AgentTransitionData.candidate_entry_point` - which never needs to survive past the step it was
-    # computed in: it's either promoted into this field on a successful entry, or discarded and
-    # recomputed fresh next call).
+    # design: actions applied at cell entry.
     next_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
                               converter=_sanitize_entry_point)
 
