@@ -132,6 +132,9 @@ def test_reward_function_conflict(rendering=False):
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     for a in env.agents:
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        a.speed_counter.step(speed=a.speed_counter.speed, crossing_completed=False)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)
@@ -224,6 +227,9 @@ def test_reward_function_waiting(rendering=False):
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     for a in env.agents:
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        a.speed_counter.step(speed=a.speed_counter.speed, crossing_completed=False)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)

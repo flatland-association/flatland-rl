@@ -124,7 +124,7 @@ class TransitionMap(Generic[UnderlyingEntryPoint, UnderlyingTransitions, Underly
         ----------
         action : [Actions]
             Action to execute
-        entry_point : EntryPoint
+        entry_point : [EntryPoint]
             position and orientation
 
         Returns

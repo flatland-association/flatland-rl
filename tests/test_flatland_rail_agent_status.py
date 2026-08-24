@@ -44,7 +44,8 @@ def test_initial_status():
             Replay(  # 2
                 position=(3, 9),
                 direction=Grid4TransitionsEnum.EAST,
-                distance=0.0,
+                # design: map entry sets distance to 0 exactly when position enters the map
+                distance=0,
                 state=TrainState.MOVING,
 
                 action=RailEnvActions.MOVE_LEFT,

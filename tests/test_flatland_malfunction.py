@@ -80,6 +80,9 @@ def test_malfunction_process():
         env_agent = env.agents[a_idx]
         env_agent.current_entry_point = env_agent.initial_entry_point
         env_agent.state = TrainState.MOVING
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
@@ -600,7 +603,8 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=None,
                 malfunction=0,
-                distance=0,
+                # design: distance is None when off map
+                distance=None,
                 speed=1,  # irrelevant
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
@@ -728,6 +732,9 @@ def test_last_malfunction_step():
         env_agent = env.agents[a_idx]
         env_agent.current_entry_point = env_agent.initial_entry_point
         env_agent.state = TrainState.MOVING
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
