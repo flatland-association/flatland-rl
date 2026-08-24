@@ -13,6 +13,5 @@ class AgentTransitionData:
     state_transition_signal: StateTransitionSignals
     candidate_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_next_entry_point: Tuple[Tuple[int, int], int] = None
-    crossing_denied: bool = False
     action_valid: bool = False
     resource_check: bool = False
