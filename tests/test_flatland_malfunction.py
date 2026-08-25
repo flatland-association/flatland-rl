@@ -449,7 +449,7 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     distance/position update should be identical regardless of which action is given - only the speed
     that applies from the NEXT tick onward should differ. It isn't:
     TrainStateMachine.can_get_moving_independent() treats "stop action given and resulting speed == 0"
-    so STOP_MOVING blocks the crossing outright this tick (new_configuration is never
+    so STOP_MOVING blocks the crossing outright this tick (new_entry_point is never
     even set to the next cell), while DO_NOTHING - sharing the exact same pre-step speed - completes
     the same crossing normally in the same tick.
     """
@@ -462,7 +462,7 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         env.reset(False, False, random_seed=10)
         env._max_episode_steps = 1000
         agent = env.agents[0]
-        agent.current_configuration = agent.initial_configuration
+        agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
         # warm up to a tick where the agent's pre-step speed alone reaches the cell boundary
         for _ in range(3):
@@ -473,11 +473,11 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     env_nothing, agent_nothing = build_env_at_critical_step()
 
     # identical starting point for both branches
-    pre_configuration = agent_stop.current_configuration
+    pre_entry_point = agent_stop.current_entry_point
     pre_speed = agent_stop.speed_counter.speed
     pre_distance = agent_stop.speed_counter.distance
-    assert (agent_nothing.current_configuration, agent_nothing.speed_counter.speed, agent_nothing.speed_counter.distance) == \
-           (pre_configuration, pre_speed, pre_distance)
+    assert (agent_nothing.current_entry_point, agent_nothing.speed_counter.speed, agent_nothing.speed_counter.distance) == \
+           (pre_entry_point, pre_speed, pre_distance)
     assert pre_distance + pre_speed >= 1  # pre-step speed alone would reach/cross the boundary this tick
 
     env_stop.step({0: RailEnvActions.STOP_MOVING})
@@ -486,11 +486,11 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     # same pre-step speed, same distance, same intended movement - yet STOP_MOVING blocks the
     # crossing outright (distance capped, position unchanged) while DO_NOTHING completes it normally
     assert agent_stop.state == TrainState.STOPPED
-    assert agent_stop.current_configuration == pre_configuration
+    assert agent_stop.current_entry_point == pre_entry_point
     assert agent_stop.speed_counter.distance == 1
 
     assert agent_nothing.state == TrainState.MOVING
-    assert agent_nothing.current_configuration != pre_configuration
+    assert agent_nothing.current_entry_point != pre_entry_point
     assert agent_nothing.speed_counter.distance == 0
 
 
@@ -513,7 +513,7 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     env.acceleration_delta = Fraction(1, 2)
     env.braking_delta = -Fraction(1)  # full stop in one step, regardless of current speed
     agent = env.agents[0]
-    agent.current_configuration = agent.initial_configuration
+    agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
 
@@ -522,14 +522,14 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     pre_distance = agent.speed_counter.distance
     assert (pre_speed, pre_distance) == (Fraction(1), Fraction(1, 2))
     assert pre_distance + pre_speed == Fraction(3, 2)  # well past the boundary, not just reaching it
-    pre_configuration = agent.current_configuration
+    pre_entry_point = agent.current_entry_point
 
     env.step({0: RailEnvActions.STOP_MOVING})
 
     # capped at exactly the boundary, not at the 1/2 remainder `(distance+pre_speed) mod 1` would give,
     # and not at 3/2 either - the 1/2 of overshoot is simply gone
     assert agent.state == TrainState.STOPPED
-    assert agent.current_configuration == pre_configuration
+    assert agent.current_entry_point == pre_entry_point
     assert agent.speed_counter.distance == 1
 
 
