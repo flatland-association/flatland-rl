@@ -695,6 +695,70 @@ def test_symmetric_switch_move_forward_action():
     assert agent.speed_counter.distance == Fraction(0)
 
 
+def test_blocked_agent_cannot_redirect_via_later_action():
+    """
+    Document a real behavioural consequence of "actions applied at cell entry": once an agent's
+    next_entry_point (pending target B) is decided - one cell before it is even reached - it is
+    held fixed across however many retries it takes to actually be granted, no matter what action
+    is given on those retries. Before this design, B was recomputed fresh from the agent's current
+    cell on every retry, so giving a turn action while blocked could redirect the agent onto a
+    different cell and break e.g. a symmetric head-on deadlock (see the two_trains_on_same_cell-
+    style scenarios). Now it can't: a later action only ever affects the *next* look-ahead beyond
+    B, which is discarded unless/until B is actually entered.
+
+    Rail: `make_simple_rail()`'s row 3 corridor, agent 0 heading west from (3, 8) through the
+    switch at (3, 6) (which also has a valid southward branch) towards (3, 5) - blocked there for
+    several steps by agent 1 parked at (3, 5). While blocked, agent 0 is repeatedly given
+    MOVE_LEFT, which *would* redirect it onto the southward branch at (4, 6) if evaluated fresh
+    from its current cell (3, 6) - but does not, since it is evaluated from the already-pending
+    target (3, 5) instead (a plain straight cell, so MOVE_LEFT there just corrects to (3, 4)).
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
+                  obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
+                  random_seed=1)
+    env.reset()
+    agent0, agent1 = env.agents[0], env.agents[1]
+    agent0.initial_entry_point = ((3, 8), 3)
+    agent1.initial_entry_point = ((3, 5), 3)
+    agent0.earliest_departure = 0
+    agent1.earliest_departure = 0
+
+    # MOVE_LEFT from the switch at (3, 6) is a genuine, valid redirect onto the southward branch -
+    # confirms the escape route agent 0 will be denied further down is real, not just invalid input.
+    assert env.rail.apply_action_independent(RailEnvActions.MOVE_LEFT, ((3, 6), 3)) == ((4, 6), 2)
+
+    while agent0.state != TrainState.READY_TO_DEPART:
+        env.step({})
+
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})  # depart both
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING})  # agent 0 -> (3, 7), pending (3, 6)
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING})  # agent 0 -> (3, 6), pending (3, 5)
+
+    # agent 0 attempts to enter (3, 5), denied - agent 1 is parked there.
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING})
+    assert agent0.current_entry_point == ((3, 6), 3)
+    assert agent0.next_entry_point == ((3, 5), 3)
+    assert agent0.state == TrainState.STOPPED
+
+    # giving MOVE_LEFT while blocked does NOT redirect the pending target onto the southward
+    # branch at (4, 6) - it stays locked onto (3, 5), retried for as long as agent 1 blocks it.
+    for _ in range(2):
+        env.step({0: RailEnvActions.MOVE_LEFT, 1: RailEnvActions.STOP_MOVING})
+        assert agent0.current_entry_point == ((3, 6), 3)
+        assert agent0.next_entry_point == ((3, 5), 3)
+        assert agent0.state == TrainState.STOPPED
+
+    # once agent 1 vacates (3, 5), agent 0 enters it and continues straight to (3, 4) - even though
+    # it is still being given MOVE_LEFT - confirming the earlier MOVE_LEFTs were never consulted
+    # for the (3, 6) -> (3, 5) crossing itself, only (uselessly) for the look-ahead beyond it.
+    env.step({0: RailEnvActions.MOVE_LEFT, 1: RailEnvActions.MOVE_FORWARD})
+    assert agent0.current_entry_point == ((3, 5), 3)
+    assert agent0.next_entry_point == ((3, 4), 3)
+    assert agent0.state == TrainState.MOVING
+
+
 def test_earliest_departure_state_transitions_initial_speed_zero():
     """
     Document state transitions WAITING -> READY_TO_DEPART -> MOVING for a single agent starting
