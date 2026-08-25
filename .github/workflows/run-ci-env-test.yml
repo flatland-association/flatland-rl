@@ -22,7 +22,7 @@ on:
                 default: ""
 
 env:
-    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v5.zip"
+    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-3/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v6.zip"
 
 jobs:
     # requirements-dev.txt (incl. scipy, already built from source) is baked into the image by build-ci-env.yml
@@ -49,7 +49,7 @@ jobs:
                     ref: ${{ inputs.ref || github.ref }}
                     fetch-depth: 0
                     fetch-tags: true
-            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely - no
+            # The archive is versioned in its URL, so a plain URL-keyed cache is safe indefinitely - no
             # invalidation is needed until this workflow itself is updated to a new URL.
             -   name: Restore cached episodes
                 id: cache-episodes

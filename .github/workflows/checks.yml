@@ -141,7 +141,7 @@ jobs:
                 password: ${{ secrets.GITHUB_TOKEN }}
         steps:
             -   uses: actions/checkout@v6
-            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # The archive is versioned in its URL, so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
                 id: cache-episodes
@@ -493,7 +493,7 @@ jobs:
                 uses: actions/setup-python@v6
                 with:
                     python-version: ${{ matrix.python-version }}
-            # The archive is versioned in its URL (v5), so a plain URL-keyed cache is safe indefinitely -
+            # The archive is versioned in its URL, so a plain URL-keyed cache is safe indefinitely -
             # no invalidation is needed until the workflow itself is updated to a new URL.
             -   name: Restore cached episodes
                 id: cache-episodes
