@@ -6,7 +6,7 @@ import random
 import warnings
 from fractions import Fraction
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar
+from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar, NamedTuple
 
 import numpy as np
 
@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import cached_cap_speed
+from flatland.envs.step_utils.speed_counter import _cap_speed
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
@@ -39,6 +39,14 @@ from flatland.utils import seeding
 UnderlyingTransitionMapType = TypeVar('UnderlyingTransitionMapType', bound=TransitionMap)
 UnderlyingResourceMapType = TypeVar('UnderlyingResourceMapType', bound=ResourceMap)
 ConfigurationType = TypeVar('ConfigurationType')
+
+
+class SpeedInvariantPreStepSnapshot(NamedTuple):
+    """ Per-agent state captured before `step()` runs, for `AbstractRailEnv._assert_speed_invariants()`
+    to verify the post-step speed update against. """
+    pre_speeds: Dict[int, Fraction]
+    pre_configurations: Dict[int, Optional[Any]]
+    pre_dones: Dict[int, bool]
 
 
 class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, UnderlyingResourceMapType, ConfigurationType]):
@@ -119,6 +127,8 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
     braking_delta : float
         Determines how much speed is decreased by STOP_MOVING action.
         As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
+    check_step_pre_post_conditions : bool
+        Set to False to skip checking step() pre- and postconditions, e.g. in performance-sensitive production use.
     rewards : DefaultRewards
         The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
     effects_generator : Optional[EffectsGenerator["RailEnv"]]
@@ -139,6 +149,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                  timetable_generator=ttg.timetable_generator,
                  acceleration_delta: Fraction = Fraction(1),
                  braking_delta: Fraction = -Fraction(1),
+                 check_step_pre_post_conditions: bool = True,
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None,
                  distance_map: AgentSourceTargetDistanceMap = None,
@@ -205,6 +216,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
 
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
+        self.check_step_pre_post_conditions = check_step_pre_post_conditions
 
         mf = mfg.MalfunctionEffectsGenerator(self.malfunction_generator)
         if effects_generator is None:
@@ -365,8 +377,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                     state - State from the trains's state machine
         """
         info_dict = {
-            # TODO https://github.com/flatland-association/flatland-rl/issues/149 revise action required
-            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit(agent.speed_counter.max_speed))
+            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit())
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
@@ -467,7 +478,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif stop_action_given:
                 # decelerate
                 new_speed += self.braking_delta
-            new_speed = cached_cap_speed(agent_max_speed, new_speed)
+            new_speed = _cap_speed(agent_max_speed, new_speed)
 
             # get desired new configuration independent of motion check
             if state == TrainState.READY_TO_DEPART and movement_action_given and action_valid:
@@ -479,7 +490,10 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             elif state.is_on_map_state():
                 new_configuration = current_or_initial_configuration
                 # transition to next cell: at end of cell and next state potentially MOVING
-                if (agent.speed_counter.is_cell_exit(new_speed)
+                # N.B. is_cell_exit() uses the speed the agent had at the beginning of this step (not
+                # new_speed, this step's post-acceleration/braking target) - distance/position only
+                # advance by however fast the agent already was, consistent with SpeedCounter.step().
+                if (agent.speed_counter.is_cell_exit()
                     and
                     TrainStateMachine.can_get_moving_independent(state, in_malfunction, (movement_action_given and action_valid), new_speed,
                                                                  (stop_action_given or not action_valid))
@@ -553,32 +567,40 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
             action_valid = agent_transition_data.state_transition_signal.movement_allowed  # action leading to valid next cell
 
             # Movement allowed if both
-            # - action leading to valid next cell
+            # - action leading to valid next cell (no forced stop)
             # - inside cell or at end of cell and no conflict with other trains and
-            # TODO https://github.com/flatland-association/flatland-rl/issues/175 beware: on symmetric switches, DO_NOTHING is invalid - is the setup consistent?
-            action_valid = action_valid and (
-                (agent.state.is_on_map_state() and not agent.speed_counter.is_cell_exit(agent_transition_data.new_speed)) or motion_check)
+            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
+            movement_allowed = action_valid and (
+                (agent.state.is_on_map_state() and agent.current_configuration == agent_transition_data.new_configuration) or motion_check)
 
-            agent_transition_data.state_transition_signal.movement_allowed = action_valid
+            agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
 
             # (9) STATE MACHINE STEP
             agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
             agent.state_machine.step()
 
-            # (10) POSITION AND SPEED_COUNTER UPDATE
+            # (10a) POSITION UPDATE
             if agent.state == TrainState.MOVING:
-                # only position update while MOVING and motion_check OK
                 agent.current_configuration = _sanitize_configuration(agent_transition_data.new_configuration)
-                # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
-                if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
-                        agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    agent.speed_counter.step(speed=agent_transition_data.new_speed)
                 agent.state_machine.update_if_reached(agent.current_configuration, agent.targets)
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
             elif agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP and agent.state == TrainState.STOPPED:
                 agent.current_configuration = _sanitize_configuration(initial_configuration)
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: condition could be generalized to not MOVING if we would enforce MALFUNCTION_OFF_MAP to go to READY_TO_DEPART first.
-            if agent.state.is_on_map_state() and agent.state != TrainState.MOVING:
-                agent.speed_counter.step(speed=Fraction(0))
+
+            # (10b) SPEED_COUNTER UPDATE
+            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
+            if agent.state == TrainState.MOVING or (agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING):
+                # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
+                if not (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
+                        agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
+                    crossing_completed = (current_or_initial_configuration != agent_transition_data.new_configuration) and motion_check
+                    # TODO simplify
+                    speed = agent_transition_data.new_speed if agent.state == TrainState.MOVING else Fraction(0)
+                    agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
+            elif agent.state.is_on_map_state():
+                # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2): should apply when forced stop or malfunction, check condition
+                agent.speed_counter.stop()
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent)
@@ -649,6 +671,90 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMapType, Underlyi
                         msgs += msg
             assert len(resources) == len(set(resources)), msgs
 
+    def _capture_speed_invariant_pre_step_snapshot(self) -> SpeedInvariantPreStepSnapshot:
+        """
+        Capture per-agent speed/configuration/done state before `step()` runs, for
+        `_assert_speed_invariants()` to later verify the post-step speed update against.
+        """
+        return SpeedInvariantPreStepSnapshot(
+            pre_speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
+            pre_configurations={agent.handle: agent.current_configuration for agent in self.agents},
+            pre_dones={agent.handle: self.dones[agent.handle] for agent in self.agents},
+        )
+
+    def _assert_speed_invariants(self, action_dict: Dict[int, RailEnvActions],
+                                 pre_step: SpeedInvariantPreStepSnapshot) -> None:
+        """
+        Verify, for every agent, that this step's speed update matches the expected transition given the
+        pre-step snapshot captured by `_capture_speed_invariant_pre_step_snapshot()`.
+        """
+
+        def assert_speed_matches_if_movement_allowed(actual: Fraction, expected: Fraction, movement_allowed: bool,
+                                                     agent: EnvAgent) -> None:
+            if movement_allowed:
+                assert actual == expected, agent
+            else:
+                assert actual == 0, agent
+
+        # speed update invariant
+        for h, pre_speed in pre_step.pre_speeds.items():
+            # in malfunction
+            agent = self.agents[h]
+            action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+            movement_allowed = self.temp_transition_data[h].state_transition_signal.movement_allowed
+            # done
+            if pre_step.pre_dones[h] is True:
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                assert agent.speed_counter.speed == pre_speed
+            # malfunction
+            elif agent.malfunction_handler.in_malfunction:  # N.B. in_malfunction updated
+                if agent.state in [TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    assert agent.speed_counter.speed == 0
+            # map entry
+            elif pre_step.pre_configurations[h] is None and RailEnvActions.is_moving_action(action) \
+                and pre_step.pre_dones[h] is False and self._elapsed_steps >= agent.earliest_departure:
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
+                assert agent.speed_counter.speed == pre_speed
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 invalid action check requires cleanup in grid implementation, extract "tau" cleanly, see straight condition below
+            # # invalid action
+            # elif not action_valid:
+            #     assert agent.speed_counter.speed == 0
+            # acceleration
+            # TODO https://github.com/flatland-association/flatland-rl/issues/280 what about straight condition from overleaf?
+            elif action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
+                if agent.state in [TrainState.WAITING]:
+                    assert agent.speed_counter.speed == pre_step.pre_speeds[h]
+                else:
+                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
+                    if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
+
+                        assert agent.speed_counter.speed == 0
+                    elif agent.state in [TrainState.MALFUNCTION_OFF_MAP] and not agent.malfunction_handler.in_malfunction:
+                        assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                    elif agent.state in [TrainState.DONE]:
+                        assert agent.speed_counter.speed == pre_speed
+                    else:
+                        assert_speed_matches_if_movement_allowed(
+                            agent.speed_counter.speed,
+                            min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed),
+                            movement_allowed, agent)
+            # braking
+            elif action == RailEnvActions.STOP_MOVING:
+                if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    assert_speed_matches_if_movement_allowed(
+                        agent.speed_counter.speed, max(pre_speed + self.braking_delta, 0), movement_allowed, agent)
+            # default
+            else:
+                if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
+                    assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                else:
+                    assert_speed_matches_if_movement_allowed(agent.speed_counter.speed, pre_speed,
+                                                             movement_allowed, agent)
+
     def _infrastructure_representation(self, configuration: ConfigurationType) -> str:
         raise NotImplementedError()
 
@@ -688,6 +794,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                  timetable_generator=ttg.timetable_generator,
                  acceleration_delta=1.0,
                  braking_delta=-1.0,
+                 check_step_pre_post_conditions: bool = True,
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None
                  ):
@@ -718,6 +825,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             timetable_generator=timetable_generator,
             acceleration_delta=acceleration_delta,
             braking_delta=braking_delta,
+            check_step_pre_post_conditions=check_step_pre_post_conditions,
             rewards=rewards,
             effects_generator=effects_generator,
             distance_map=DistanceMap([], height, width),
@@ -779,9 +887,13 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
+        pre_step_snapshot = self._capture_speed_invariant_pre_step_snapshot() \
+            if self.check_step_pre_post_conditions else None
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
+        if self.check_step_pre_post_conditions:
+            self._assert_speed_invariants(action_dict, pre_step_snapshot)
         return obs, rewards, dones, info
 
     def _infrastructure_representation(self, configuration: Tuple[Tuple[int, int], int]) -> str:

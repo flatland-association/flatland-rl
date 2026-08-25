@@ -140,8 +140,21 @@ input to a `Fraction` on the way in (including a "nice fraction" heuristic, e.g.
 tolerance). `RailEnv.__init__`'s `acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to
 match. Passing a plain `float` for either instead (as opposed to a `Fraction`) can silently reintroduce floats
 into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
-`Fraction`-only invariant assumed by `cached_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
+`Fraction`-only invariant assumed by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
 doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+
+### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
+
+`AbstractRailEnv._capture_speed_invariant_pre_step_snapshot()`/`_assert_speed_invariants()` (`rail_env.py`)
+implement a per-agent runtime check that each `step()` call updates `SpeedCounter.speed` to exactly the value
+the action/state-machine/motion-check outcome implies (acceleration/braking/malfunction/off-map/done, each with
+its own expected-speed branch) - a correctness net for the speed-update logic, not part of normal control flow.
+`RailEnv.step()`'s override calls the snapshot method before `super().step()` and the assertion method after;
+`GraphRailEnv` doesn't call either, since it doesn't override `step()`. Both are gated behind the
+`check_step_pre_post_conditions` constructor flag (default `True`) so the extra per-step overhead can be
+disabled where it matters - `examples/flatland_performance_profiling.py`'s `get_rail_env()` defaults it to
+`False`, since that script exists specifically to profile `step()`'s own cumulative time and the assertions
+would otherwise inflate every measurement.
 
 ### Cython-accelerated hot paths (`ext-modules`)
 
@@ -214,8 +227,27 @@ a higher-level, tabular (pandas) episode recorder: per-step actions/positions/re
 plus `RailEnvPersister`-saved env snapshots so a trajectory can be replayed/resumed from any recorded step, not
 just step 0.
 
+### Testing patterns
+
+Most state-machine/speed/malfunction behavior tests (`tests/test_multi_speed.py`, `tests/test_variable_speed.py`,
+`tests/test_flatland_malfunction.py`, etc.) drive the env through `tests/test_utils.py`'s `Replay`/`ReplayConfig`
+(attrs classes) via `run_replay_config()`, rather than asserting after ad-hoc `env.step()` calls. Each `Replay`
+entry declares the expected `position`/`direction`/`state`/`speed`/`distance`/`malfunction` to verify *before*
+that step, then the `action` to apply - so a test reads as a step-by-step table of expected states rather than
+imperative code. `skip_reward_check`/`skip_action_required_check` opt out of the (fragile) reward/action-required
+assertions when a test only cares about position/speed/state progression.
+
+For a specific env state that's tedious or fragile to reach by scripting actions from scratch (e.g. deep into a
+multi-agent malfunction/deadlock scenario), prefer capturing a one-off snapshot via `RailEnvPersister.save()` once
+and loading it in the test via `RailEnvPersister.load_new()`, rather than replaying a long action script - the
+latter is brittle against unrelated timing changes elsewhere in the env (see `tests/test_known_flatland_bugs.py`'s
+`test_two_trains_on_same_cell_bug_FIXED` and its committed `*_snapshot.pkl` fixture for the pattern).
+
 ### Other top-level dirs
 
+- `examples/` — standalone runnable scripts (custom observations, custom rail maps, training, the
+  `flatland_performance_profiling.py` script driven by `benchmarks/flatland_performance_profiling.ipynb`) - not
+  part of the installed package, not covered by the core test suite.
 - `callbacks/` — episode-lifecycle hooks (e.g. movie generation).
 - `evaluators/` — AIcrowd competition evaluation service/client + trajectory-based evaluators.
 - `integrations/interactiveai/` — REST API client for the InteractiveAI dashboard.

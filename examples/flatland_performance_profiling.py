@@ -1,4 +1,5 @@
 import cProfile
+import inspect
 import sys
 from timeit import default_timer
 from typing import Optional
@@ -33,7 +34,7 @@ class RandomAgent:
         return self.random_actions[self.rnd_cnt % self.rnd_size]
 
 
-def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
+def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300, check_step_pre_post_conditions=False):
     # Rail Generator:
 
     num_cities = 5  # Number of cities to place on the map
@@ -90,7 +91,7 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
     number_of_agents = nAgents  # Number of trains to create
     seed = 1  # Random seed
 
-    env = RailEnv(
+    rail_env_kwargs = dict(
         width=width,
         height=height,
         rail_generator=rail_generator,
@@ -98,8 +99,15 @@ def get_rail_env(nAgents=70, use_dummy_obs=False, width=300, height=300):
         number_of_agents=number_of_agents,
         random_seed=seed,
         obs_builder_object=observation_builder,
-        malfunction_generator=malfunction_generator
+        malfunction_generator=malfunction_generator,
     )
+    # this script is also run (via PYTHONPATH) against historical flatland-rl versions for profiling
+    # comparisons (see benchmarks/flatland_performance_profiling.ipynb's `loop`) - only pass
+    # check_step_pre_post_conditions if the installed RailEnv actually accepts it.
+    if "check_step_pre_post_conditions" in inspect.signature(RailEnv.__init__).parameters:
+        rail_env_kwargs["check_step_pre_post_conditions"] = check_step_pre_post_conditions
+
+    env = RailEnv(**rail_env_kwargs)
     env.reset()
     return env
 

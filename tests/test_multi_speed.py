@@ -499,8 +499,9 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
+            # design: distance update with pre-step speed.
             Replay(  # 6
-                position=(3, 7),
+                position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
 
@@ -537,8 +538,9 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
+            # design: distance update with pre-step speed.
             Replay(  # 10
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
 
@@ -546,7 +548,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.stop_penalty + env.step_penalty * 0.5  # stopping and step penalty for speed 0.5
             ),
             Replay(  # 11
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.STOPPED,
 
@@ -555,7 +557,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 while stopped
             ),
             Replay(  # 12
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.STOPPED,
 
@@ -564,7 +566,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.start_penalty + env.step_penalty * 0.5  # starting and running at speed 0.5
             ),
             Replay(  # 13
-                position=(3, 6),
+                position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
 
@@ -574,7 +576,7 @@ def test_multispeed_actions_malfunction_no_blocking():
             ),
             # DO_NOTHING keeps moving!
             Replay(  # 14
-                position=(3, 5),
+                position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
 
@@ -583,7 +585,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(  # 15
-                position=(3, 5),
+                position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
 
                 state=TrainState.MOVING,
@@ -592,7 +594,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(  # 16
-                position=(3, 4),
+                position=(3, 5),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
 
@@ -607,10 +609,10 @@ def test_multispeed_actions_malfunction_no_blocking():
         initial_position=(3, 9),  # east dead-end
         initial_direction=Grid4TransitionsEnum.EAST,
     )
-    run_replay_config(env, [test_config], skip_reward_check=True,
-                      # TODO https://github.com/flatland-association/flatland-rl/issues/175 fix action_required
-                      skip_action_required_check=True
-                      )
+    run_replay_config(env, [test_config],
+                      skip_reward_check=True,
+                      # we want to accelerate even when action not required
+                      skip_action_required_check=True)
 
 
 # TODO invalid action penalty seems only given when forward is not possible - is this the intended behaviour?

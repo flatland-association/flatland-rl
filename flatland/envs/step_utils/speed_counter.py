@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Tuple
 
 import numpy as np
 
@@ -48,7 +48,7 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
 
 
 @lru_cache()
-def cached_cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
+def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
     v = max(Fraction(0), min(agent_max_speed, new_speed))
     assert isinstance(v, Fraction)
     assert v >= 0.0
@@ -63,19 +63,23 @@ def _cached_cell_exit(_distance, speed: Fraction) -> bool:
 
 @lru_cache()
 def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
-    speed = cached_cap_speed(max_speed, speed)
+    speed = _cap_speed(max_speed, speed)
     return _cached_cell_exit(distance, speed)
 
 
 @lru_cache()
-def cached_distance_update(distance, speed):
+def _distance_update(distance: Fraction, speed: Fraction,
+                     crossing_completed: bool = True) -> Tuple[Fraction, bool]:
     distance += speed
 
-    # If trains cannot move to the next cell, they are in state stopped, so it's safe to apply modulo to reflect the distance travelled in the new cell!
-    while distance >= SEGMENT_LENGTH:
-        distance = distance - SEGMENT_LENGTH
+    if crossing_completed:
+        # check assumption
+        assert distance >= SEGMENT_LENGTH
+        distance = distance % SEGMENT_LENGTH
+        return distance, distance < speed
 
-    return distance, distance < speed
+    # move at most segment end
+    return min(distance, SEGMENT_LENGTH), False
 
 
 class SpeedCounter:
@@ -94,20 +98,30 @@ class SpeedCounter:
         assert self._speed >= 0.0
         self.reset()
 
-    def step(self, speed: Fraction = None):
+    def step(self, speed: Fraction, crossing_completed: bool) -> None:
         """
-        Step the speed counter.
+        Step the speed counter:
+        - the distance traveled this step is computed from the pre-step speed.
+        - the speed is updated to the new speed (modulo capping by max speed).
 
         Parameters
         ----------
         speed : Fraction
-            Set new speed effective immediately.
+            The new speed, effective from the next step.
+        crossing_completed : bool
+            Whether the transition into the next cell actually completed.
         """
+        self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
+        self._speed = _cap_speed(self._max_speed, _pseudo_fractional(speed))
 
-        if speed is not None:
-            self._speed = cached_cap_speed(self._max_speed, _pseudo_fractional(speed))
+    def stop(self) -> None:
+        """
+        Freeze speed at 0 without touching distance.
 
-        self._distance, self._is_cell_entry = cached_distance_update(self._distance, self._speed)
+        Use this instead of step() whenever the agent's on-map is malfunction or force stop.
+        """
+        self._speed = Fraction(0)
+        self._is_cell_entry = False
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -126,11 +140,11 @@ class SpeedCounter:
         """
         return self._is_cell_entry
 
-    def is_cell_exit(self, speed: Fraction):
+    def is_cell_exit(self) -> bool:
         """
-        With the given speed, do we exit cell at next time step?
+        At the current speed, do we exit the cell at the next time step?
         """
-        return cached_cell_exit(self._max_speed, speed, self._distance)
+        return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property
     def speed(self) -> Fraction:

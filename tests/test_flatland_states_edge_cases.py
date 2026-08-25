@@ -356,6 +356,7 @@ def test_malfunction_to_moving_instead_of_stopped():
     assert env.agents[0].state == TrainState.MALFUNCTION
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
+    # design: distance update with pre-step speed.
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
     # step 4
@@ -366,7 +367,8 @@ def test_malfunction_to_moving_instead_of_stopped():
     assert env.agents[0].current_configuration[0] == (6, 6)
     assert env.agents[0].state == TrainState.MOVING
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
-    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
+    # design: distance update with pre-step speed.
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
     # \ TEMPORARY FIX
 
 
@@ -426,7 +428,8 @@ def test_stop_and_go():
     assert env.agents[0].current_configuration[0] == (6, 6)
     assert env.agents[0].state == TrainState.STOPPED
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
-    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
+    # design: distance update with pre-step speed.
+    assert np.isclose(float(env.agents[0].speed_counter.distance), 0.4)
 
     # step 5
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})

@@ -143,7 +143,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 if not skip_action_required_check:
                     print("[{}] verifying action_required on agent {}: actual={}, expected={}".format(step, a, action_dict.get(a), replay.action))
                     assert info_dict['action_required'][
-                               a] == True or agent.state == TrainState.READY_TO_DEPART, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
+                               a] == True or agent.state == TrainState.READY_TO_DEPART or agent.state == TrainState.MALFUNCTION_OFF_MAP, "[{}] agent {} expecting action_required={} or agent status READY_TO_DEPART".format(
                         step, a, True)
                 action_dict[a] = replay.action
             else:

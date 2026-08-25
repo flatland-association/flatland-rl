@@ -15,6 +15,7 @@ from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR
 @pytest.mark.parametrize("data_sub_dir,ep_id,run_from_intermediate,skip_rewards_dones_infos,skip_rewards", [
     # trajectories do not contain rewards/dones/info: https://github.com/flatland-association/flatland-rl/pull/222 -> skip_rewards_dones_infos=True
     ("30x30 map/10_trains", "1649ef98-e3a8-4dd3-a289-bbfff12876ce", True, True, True),
+
     ("30x30 map/10_trains", "4affa89b-72f6-4305-aeca-e5182efbe467", True, True, True),
 
     ("30x30 map/15_trains", "a61843e8-b550-407b-9348-5029686cc967", True, True, True),
@@ -23,12 +24,13 @@ from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR
     ("30x30 map/20_trains", "57e1ebc5-947c-4314-83c7-0d6fd76b2bd3", True, True, True),
     ("30x30 map/20_trains", "56a78985-588b-42d0-a972-7f8f2514c665", True, True, True),
 
-    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, False),
-    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, False),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, False),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, False),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, False),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, False),
+    # TODO https://github.com/flatland-association/flatland-rl/issues/280 re-generate trajectories after design changes
+    # ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, False),
+    # ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, False),
+    # ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, False),
+    # ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, False),
+    # ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, False),
+    # ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, False),
 ])
 def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, skip_rewards_dones_infos: bool, skip_rewards: bool):
     """
