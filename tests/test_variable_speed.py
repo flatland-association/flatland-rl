@@ -63,16 +63,22 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
+            # N.B. (3, 7) is a plain straight cell, not the switch - the switch is (3, 6), one cell further
+            # west (see next entry). MOVE_LEFT has no turning effect here (there is no branch to take), so
+            # this uses MOVE_FORWARD; issuing the turn action itself has to wait until the agent is actually
+            # at the switch cell about to exit it.
             Replay(  # 4
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 speed=_pseudo_fractional(1.0),
                 distance=_pseudo_fractional(0.8),
 
-                action=RailEnvActions.MOVE_LEFT,
+                action=RailEnvActions.MOVE_FORWARD,
 
             ),
-            # design: distance update with pre-step speed.
+            # design: distance update with pre-step speed. This is the switch cell about to be exited
+            # (distance + speed = 1.8 crosses the boundary this step) - MOVE_LEFT here actually turns the
+            # agent onto the south branch.
             Replay(  # 5
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
@@ -80,38 +86,32 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 distance=_pseudo_fractional(0.8),
                 state=TrainState.MOVING,
 
-                action=RailEnvActions.STOP_MOVING,
+                action=RailEnvActions.MOVE_LEFT,
             ),
-            #
+            # turned onto the south branch; brake one time step later, now that the agent is already on the
+            # new cell.
             Replay(  # 6
-                position=(3, 5),
-                direction=Grid4TransitionsEnum.WEST,
-                speed=_pseudo_fractional(0.8),
+                position=(4, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                speed=_pseudo_fractional(1.0),
                 distance=_pseudo_fractional(0.8),
+                state=TrainState.MOVING,
 
                 action=RailEnvActions.STOP_MOVING,
             ),
             Replay(  # 7
-                position=(3, 4),
-                direction=Grid4TransitionsEnum.WEST,
-                speed=_pseudo_fractional(0.6),
-                distance=_pseudo_fractional(0.6),
+                position=(5, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                speed=_pseudo_fractional(0.8),
+                distance=_pseudo_fractional(0.8),
 
                 action=RailEnvActions.MOVE_RIGHT,  # must not accelerate/brake!
             ),
             Replay(  # 8
-                position=(3, 3),
-                direction=Grid4TransitionsEnum.WEST,
-                speed=_pseudo_fractional(0.6),
-                distance=_pseudo_fractional(0.2),
-
-                action=RailEnvActions.DO_NOTHING,
-            ),
-            Replay(  # 9
-                position=(3, 3),
-                direction=Grid4TransitionsEnum.WEST,
-                speed=_pseudo_fractional(0.6),
-                distance=_pseudo_fractional(0.8),
+                position=(6, 6),
+                direction=Grid4TransitionsEnum.SOUTH,
+                speed=_pseudo_fractional(0.8),
+                distance=_pseudo_fractional(0.6),
 
                 action=RailEnvActions.DO_NOTHING,
             ),
