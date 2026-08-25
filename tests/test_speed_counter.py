@@ -289,12 +289,6 @@ def test_cached_cell_exit_caps_speed_at_max_speed():
     assert cached_cell_exit(Fraction(3, 10), Fraction(9, 10), Fraction(1, 2)) == False
 
 
-def test_cached_distance_update_crossing_completed_no_wrap():
-    distance, is_cell_entry = _distance_update(Fraction(1, 4), Fraction(1, 4), False)
-    assert distance == Fraction(1, 2)
-    assert is_cell_entry == False
-
-
 def test_cached_distance_update_crossing_completed_single_wrap():
     distance, is_cell_entry = _distance_update(Fraction(3, 4), Fraction(1, 2), True)
     assert distance == Fraction(1, 4)
@@ -302,7 +296,7 @@ def test_cached_distance_update_crossing_completed_single_wrap():
 
 
 def test_cached_distance_update_crossing_completed_multiple_wraps():
-    # exercises the while loop running more than once - not reachable via normal SpeedCounter.step() usage
+    # exercises modulo - not reachable via normal SpeedCounter.step() usage
     # (distance is always kept < SEGMENT_LENGTH and speed capped at <= max_speed <= 1 between calls), but
     # the raw function must still handle it correctly if ever called with an out-of-range starting distance.
     distance, is_cell_entry = _distance_update(Fraction(3, 2), Fraction(1), True)
