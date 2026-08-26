@@ -5,6 +5,33 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [5.0.0](https://github.com/flatland-association/flatland-rl/compare/v4.3.0...v5.0.0) (2026-08-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496))
+* D1 revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) (#504)
+
+### Bug Fixes
+
+* **ci:** guard docker-publish against transitive skip poisoning from publish-test-pypi ([d2d607b](https://github.com/flatland-association/flatland-rl/commit/d2d607bc2d431e5400c83f5ae40a236c37212d82))
+* **ci:** push docker images tagged with release version. ([#495](https://github.com/flatland-association/flatland-rl/issues/495)) ([d2d607b](https://github.com/flatland-association/flatland-rl/commit/d2d607bc2d431e5400c83f5ae40a236c37212d82))
+* correct WAITING speed invariant and rename distribute() to assert_speed_matches_if_movement_allowed(). ([104f288](https://github.com/flatland-association/flatland-rl/commit/104f288bea2f643ab4fbc809e3ea0848ce026841))
+* make check_step_pre_post_conditions backward-compatible in the profiling script. ([5364bdd](https://github.com/flatland-association/flatland-rl/commit/5364bddf99caae4692b86a1032283831d2a2c730))
+* use pre-step speed for distance/exit-readiness, fix malfunction-interruption distance wrap ([def0a90](https://github.com/flatland-association/flatland-rl/commit/def0a900ebd287ba339be6bbadc6fcd8b1599f43))
+
+
+### Performance Improvements
+
+* disable RailEnv's step-invariant assertions by default in the performance-profiling script. ([bed60b7](https://github.com/flatland-association/flatland-rl/commit/bed60b7bc399a6c28ee4a0481b5fbeaa37ecb494))
+
+
+### Code Refactoring
+
+* D1 revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) ([#504](https://github.com/flatland-association/flatland-rl/issues/504)) ([925b147](https://github.com/flatland-association/flatland-rl/commit/925b147853f667a8de44d25e0ea9f3c875ddae7f))
+* revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) ([925b147](https://github.com/flatland-association/flatland-rl/commit/925b147853f667a8de44d25e0ea9f3c875ddae7f))
+
 ## [4.3.0](https://github.com/flatland-association/flatland-rl/compare/v4.2.6...v4.3.0) (2026-08-10)
 
 
