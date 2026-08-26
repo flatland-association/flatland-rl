@@ -3,6 +3,7 @@ from fractions import Fraction
 from typing import Dict, List
 
 import numpy as np
+import pytest
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -16,6 +17,8 @@ from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail2
 from tests.test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
+
+pytestmark = pytest.mark.cython_ext
 
 
 class SingleAgentNavigationObs(ObservationBuilder):
