@@ -36,12 +36,15 @@ def test_evaluator_callbacks():
         trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42, )[0], policy=RandomPolicy(), data_dir=data_dir,
                                                      tqdm_kwargs={"disable": True})
         print(trajectory.trains_arrived)
-        assert trajectory.trains_arrived.iloc[0]["normalized_reward"] == 0.4582954200788596
+        # design: actions applied at cell entry
+        assert trajectory.trains_arrived.iloc[0]["normalized_reward"] == 0.47710039429784656
         assert trajectory.trains_arrived.iloc[0]["success_rate"] == 0
-        assert trajectory.trains_rewards_dones_infos["reward"].sum() == -1786
+        # design: actions applied at cell entry
+        assert trajectory.trains_rewards_dones_infos["reward"].sum() == -1724
         cb = FlatlandEvaluatorCallbacks()
         TrajectoryEvaluator(trajectory, cb).evaluate(tqdm_kwargs={"disable": True})
-        assert cb.get_evaluation() == {'normalized_reward': -0.5417045799211404 + 1,
+        # design: actions applied at cell entry
+        assert cb.get_evaluation() == {'normalized_reward': 0.47710039429784656,
                                        'percentage_complete': 0.0,
-                                       'reward': -1786,
+                                       'reward': -1724,
                                        'termination_cause': None}

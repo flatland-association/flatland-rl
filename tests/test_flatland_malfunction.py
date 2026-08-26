@@ -7,7 +7,7 @@ import numpy as np
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import virtual_entry_point
+from flatland.envs.agent_utils import _sanitize_entry_point, virtual_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -77,8 +77,14 @@ def test_malfunction_process():
                   )
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
-        env.agents[a_idx].state = TrainState.MOVING
+        env_agent = env.agents[a_idx]
+        env_agent.current_entry_point = env_agent.initial_entry_point
+        env_agent.state = TrainState.MOVING
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness setup.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
+        assert transition is not None
+        env_agent.next_entry_point = _sanitize_entry_point(transition)
 
     agent_halts = 0
     total_down_time = 0
@@ -464,6 +470,10 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         agent = env.agents[0]
         agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+        assert transition is not None
+        agent.next_entry_point = _sanitize_entry_point(transition)
         # warm up to a tick where the agent's pre-step speed alone reaches the cell boundary
         for _ in range(3):
             env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -515,6 +525,10 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     agent = env.agents[0]
     agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry
+    transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+    assert transition is not None
+    agent.next_entry_point = _sanitize_entry_point(transition)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
 
     env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -711,8 +725,14 @@ def test_last_malfunction_step():
     env.reset(False, False, random_seed=10)
     assert len(set([a.initial_entry_point[0] for a in env.agents])) == 1
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
-        env.agents[a_idx].state = TrainState.MOVING
+        env_agent = env.agents[a_idx]
+        env_agent.current_entry_point = env_agent.initial_entry_point
+        env_agent.state = TrainState.MOVING
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness setup.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
+        assert transition is not None
+        env_agent.next_entry_point = _sanitize_entry_point(transition)
     env.agents[0].malfunction_handler.malfunction_down_counter = 0
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART

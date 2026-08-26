@@ -6,7 +6,7 @@ from attr import attrs, attrib
 
 from flatland.core.effects_generator import find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, _sanitize_entry_point
 from flatland.envs.line_generators import LineGenerator
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.persistence import RailEnvPersister
@@ -111,9 +111,28 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             elif activate_agents:
                 assert len(set([a.initial_entry_point[0] for a in env.agents])) == len(env.agents)
-                for a_idx in range(len(env.agents)):
-                    env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
-                    env.agents[a_idx]._set_state(TrainState.MOVING)
+                for a_idx, test_config in enumerate(test_configs):
+                    agent: EnvAgent = env.agents[a_idx]
+                    agent.current_entry_point = agent.initial_entry_point
+                    agent._set_state(TrainState.MOVING)
+                    # design: actions applied at cell entry -- keep the current_entry_point/
+                    # next_entry_point invariant (both set and different while on-map, see the
+                    # invariant documented in RailEnv.step()) even for this test-harness shortcut:
+                    # derive next_entry_point from the replay's first action, exactly as a real
+                    # departure through step() would (see the READY_TO_DEPART branch in
+                    # RailEnv.step()).
+                    first_action = test_config.replay[0].action
+                    if first_action is None:
+                        first_action = RailEnvActions.DO_NOTHING
+                    transition = env.rail.apply_action_independent(first_action, agent.current_entry_point)
+                    assert transition is not None, (
+                        f"agent {a_idx}: replay[0].action={first_action} has no valid transition "
+                        f"from {agent.current_entry_point} - run_replay_config(activate_agents=True) "
+                        f"needs a first action that is actually valid from the initial position to "
+                        f"derive next_entry_point."
+                    )
+                    next_entry_point = transition
+                    agent.next_entry_point = _sanitize_entry_point(next_entry_point)
 
         def _assert(a, actual, expected, msg, close: bool = True):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))

@@ -2,6 +2,7 @@ import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
@@ -71,8 +72,14 @@ def test_multi_speed_init():
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
-        env.agents[a_idx]._set_state(TrainState.MOVING)
+        env_agent = env.agents[a_idx]
+        env_agent.current_entry_point = env_agent.initial_entry_point
+        env_agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness setup.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
+        assert transition is not None
+        env_agent.next_entry_point = _sanitize_entry_point(transition)
 
     def _position(agent):
         return agent.current_entry_point[0] if agent.current_entry_point is not None else None
@@ -107,7 +114,7 @@ def test_multi_speed_init():
 
 
 def test_multispeed_actions_no_malfunction_no_blocking():
-    """Test that actions are correctly performed on cell exit for a single agent."""
+    """Test that actions are correctly performed on cell entry for a single agent."""
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
@@ -152,7 +159,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                # design: actions applied at cell entry
+                action=RailEnvActions.MOVE_LEFT,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
@@ -388,12 +396,13 @@ def test_multispeed_actions_no_malfunction_blocking():
                     action=RailEnvActions.STOP_MOVING,
                 ),
                 # blocked although fraction >= 1.0
+                # design: actions applied at cell entry
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.STOPPED,
 
-                    action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
+                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
                 ),
 
                 Replay(  # 9
@@ -410,7 +419,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     distance=0.5,
                     speed=_pseudo_fractional(0.5),
 
-                    action=RailEnvActions.MOVE_LEFT,
+                    action=None,
                 ),
                 Replay(  # 11
                     position=(4, 6),

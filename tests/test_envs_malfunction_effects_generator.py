@@ -179,12 +179,23 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
                         agents_at[agent.handle] += 1
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
-                p = get_k_shortest_paths(env, agent.current_entry_point[0], agent.current_entry_point[1],
+                # design: actions applied at cell entry -- once next_entry_point is already
+                # pending, this step's action decides the look-ahead beyond it, not the arrival
+                # at next_waypoint_position itself, so compute it from next_entry_point instead of
+                # current_entry_point. The path below is queried fresh starting at lookahead_from
+                # itself, so its index 1 (one hop beyond the query's own start) is always the
+                # right look-ahead target, whether lookahead_from is current or next_entry_point.
+                has_pending_target = agent.next_entry_point is not None and agent.next_entry_point != agent.current_entry_point
+                lookahead_from = agent.next_entry_point if has_pending_target else agent.current_entry_point
+
+                p = get_k_shortest_paths(env, lookahead_from[0], lookahead_from[1],
                                          next_waypoint_position)
                 shortest_path = p[0]
+                if 1 >= len(shortest_path):
+                    continue
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail._check_action_on_agent(
-                        RailEnvActions.from_value(a), agent.current_entry_point)
+                        RailEnvActions.from_value(a), lookahead_from)
                     next_wp = shortest_path[1]
                     if (new_cell_valid and transition_valid
                         and new_position == next_wp.position and new_direction == next_wp.direction):

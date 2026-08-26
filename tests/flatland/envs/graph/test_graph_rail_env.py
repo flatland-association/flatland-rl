@@ -64,8 +64,8 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
                     if expected_raw is None:
                         assert actual == expected_raw
                     else:
-                        ((r2, c2), d2), transition_valid = expected_raw
-                        expected = f"{r2, c2, d2}", transition_valid
+                        (r2, c2), d2 = expected_raw
+                        expected = f"{r2, c2, d2}"
                         assert actual == expected
 
     # use Trajectory API for comparison

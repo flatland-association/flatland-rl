@@ -1,8 +1,8 @@
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_entry_points,
-                                       load_env_agent, virtual_entry_point, with_direction)
+                                       _sanitize_entry_point, load_env_agent, virtual_entry_point, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
@@ -234,6 +234,11 @@ def test_virtual_entry_point():
     # on map: current_entry_point
     agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness assignment.
+    transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+    assert transition is not None
+    agent.next_entry_point = _sanitize_entry_point(transition)
     assert virtual_entry_point(agent) == agent.current_entry_point
 
     # done, agent still has a (now stale) current_entry_point - which must actually be one of the

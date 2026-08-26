@@ -13,7 +13,7 @@ from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalt
 
 
 def test_variablespeed_actions_no_malfunction_no_blocking():
-    """Test that actions are correctly performed on cell exit for a single agent."""
+    """Test that actions are correctly performed on cell entry for a single agent."""
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
@@ -63,22 +63,20 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
-            # N.B. (3, 7) is a plain straight cell, not the switch - the switch is (3, 6), one cell further
-            # west (see next entry). MOVE_LEFT has no turning effect here (there is no branch to take), so
-            # this uses MOVE_FORWARD; issuing the turn action itself has to wait until the agent is actually
-            # at the switch cell about to exit it.
+            # design: actions applied at cell entry
             Replay(  # 4
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 speed=_pseudo_fractional(1.0),
                 distance=_pseudo_fractional(0.8),
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_LEFT,
 
             ),
             # design: distance update with pre-step speed. This is the switch cell about to be exited
-            # (distance + speed = 1.8 crosses the boundary this step) - MOVE_LEFT here actually turns the
-            # agent onto the south branch.
+            # (distance + speed = 1.8 crosses the boundary this step) - the south turn was already
+            # decided by the MOVE_LEFT given on entry into this cell (previous step), so this step's
+            # action only needs a valid look-ahead beyond the south branch.
             Replay(  # 5
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
@@ -86,7 +84,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 distance=_pseudo_fractional(0.8),
                 state=TrainState.MOVING,
 
-                action=RailEnvActions.MOVE_LEFT,
+                action=RailEnvActions.MOVE_FORWARD,
             ),
             # turned onto the south branch; brake one time step later, now that the agent is already on the
             # new cell.

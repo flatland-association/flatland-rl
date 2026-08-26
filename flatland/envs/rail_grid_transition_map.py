@@ -25,9 +25,8 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         position, direction = entry_point
         successors = OrderedSet()
         for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
-            t = self.apply_action_independent(action, (position, direction))
-            if t is not None:
-                new_entry_point, _ = t
+            new_entry_point = self.apply_action_independent(action, (position, direction))
+            if new_entry_point is not None:
                 if self.is_valid_entry_point(new_entry_point):
                     successors.add(new_entry_point)
         return successors
@@ -142,14 +141,10 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
 
     @lru_cache(maxsize=1_000_000)
     def apply_action_independent(self, action: RailEnvActions, entry_point: Tuple[Tuple[int, int], int]) -> Optional[
-        Tuple[Tuple[Tuple[int, int], int], bool]]:
-        position, direction = entry_point
+        Tuple[Tuple[int, int], int]]:
         new_cell_valid, new_entry_point, _, preprocessed_action, action_valid = self._check_action_on_agent(action, entry_point)
         if action_valid and new_cell_valid:
-            new_position, new_direction = new_entry_point
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: allow acceleration in turns? dis-allow in dead-ends?
-            straight = new_direction % 2 == direction % 2
-            return new_entry_point, straight
+            return new_entry_point
         else:
             return None
 

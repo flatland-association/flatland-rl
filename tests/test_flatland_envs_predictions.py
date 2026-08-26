@@ -5,7 +5,7 @@ import pprint
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import with_direction
+from flatland.envs.agent_utils import _sanitize_entry_point, with_direction
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
@@ -281,6 +281,12 @@ def test_shortest_path_predictor_conflicts(rendering=False):
     env.agent_positions[env.agents[1].current_entry_point[0]] = 1
     env.agents[0]._set_state(TrainState.MOVING)
     env.agents[1]._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness setup.
+    for a in env.agents:
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
+        assert transition is not None
+        a.next_entry_point = _sanitize_entry_point(transition)
 
     observations = env._get_observations()
 

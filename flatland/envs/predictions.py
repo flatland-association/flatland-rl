@@ -68,7 +68,7 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
                 for action in action_priorities:
                     result = self.env.rail.apply_action_independent(action, agent.current_entry_point)
                     if result is not None:
-                        (new_position, new_direction), _ = result
+                        new_position, new_direction = result
                         # move and change direction to face the new_direction that was
                         # performed
                         agent.current_entry_point = (new_position, new_direction)

@@ -115,7 +115,7 @@ class TransitionMap(Generic[UnderlyingEntryPoint, UnderlyingTransitions, Underly
         """
         raise NotImplementedError()
 
-    def apply_action_independent(self, action: Actions, entry_point: UnderlyingEntryPoint) -> Optional[Tuple[UnderlyingEntryPoint, bool]]:
+    def apply_action_independent(self, action: Actions, entry_point: UnderlyingEntryPoint) -> Optional[UnderlyingEntryPoint]:
         """
         Apply the action on the train regardless of locations of other agents.
         Checks for valid cells to move and valid rail transitions.
@@ -129,10 +129,8 @@ class TransitionMap(Generic[UnderlyingEntryPoint, UnderlyingTransitions, Underly
 
         Returns
         -------
-        entry_point : UnderlyingEntryPoint
-            the next entry_point (cell + entry direction)
-        straight : bool
-            whether the transition allows acceleration (only straight transitions in the grid, i.e. facing along the same axis: N->N/S, E->E/W, S->S/N, W->W/E)
+        entry_point : Optional[UnderlyingEntryPoint]
+            the next entry_point (cell + entry direction), or `None` if the action has no valid transition
         """
         raise NotImplementedError()
 
