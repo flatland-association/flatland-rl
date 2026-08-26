@@ -3,6 +3,7 @@ from fractions import Fraction
 from typing import Dict, List
 
 import numpy as np
+import pytest
 
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -16,6 +17,8 @@ from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail2
 from tests.test_utils import Replay, ReplayConfig, run_replay_config, set_penalties_for_replay
+
+pytestmark = pytest.mark.cython_ext
 
 
 class SingleAgentNavigationObs(ObservationBuilder):
@@ -80,6 +83,9 @@ def test_malfunction_process():
         env_agent = env.agents[a_idx]
         env_agent.current_entry_point = env_agent.initial_entry_point
         env_agent.state = TrainState.MOVING
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
@@ -470,6 +476,9 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         agent = env.agents[0]
         agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
         assert transition is not None
@@ -530,6 +539,9 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     assert transition is not None
     agent.next_entry_point = _sanitize_entry_point(transition)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
+    # design: distance is None when off map -- the agent is placed directly on the map here,
+    # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
 
     env.step({0: RailEnvActions.MOVE_FORWARD})
     pre_speed = agent.speed_counter.speed
@@ -600,7 +612,8 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=None,
                 malfunction=0,
-                distance=0,
+                # design: distance is None when off map
+                distance=None,
                 speed=1,  # irrelevant
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
@@ -728,6 +741,9 @@ def test_last_malfunction_step():
         env_agent = env.agents[a_idx]
         env_agent.current_entry_point = env_agent.initial_entry_point
         env_agent.state = TrainState.MOVING
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)

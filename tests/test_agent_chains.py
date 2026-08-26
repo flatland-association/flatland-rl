@@ -415,7 +415,13 @@ def test_agent_chains_new():
     for i, b in expected.items():
         if i not in agents:
             continue
-        assert mc.check_motion(i, None) == b, i
+        # white-box: exercise the raw conflict-resolution outcome directly, independent of
+        # check_resource's hold_resource/no_resource bypass (self-loops 3, 9, 18 are inspectable there).
+        assert (i not in mc.stopped) == b, i
+
+    # self-loops (voluntarily not attempting to move) are inspectable independent of check_resource
+    assert mc.hold_resource == {3, 9, 18}
+    assert mc.no_resource == set()
 
 
 def test_edge_case():

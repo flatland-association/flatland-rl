@@ -203,7 +203,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
     agent.old_entry_point = ((4, 4), 0)
     agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
-    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None), distance_map, 15) == rewards.empty()
+    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None), distance_map, 15) == rewards.empty()
 
     # end of episode reward while done
     agent.state = TrainState.DONE
@@ -230,7 +230,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
     agent.old_entry_point = ((4, 4), 0)
     agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
-    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None), distance_map, 15) == rewards.empty()
+    assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None), distance_map, 15) == rewards.empty()
 
     # end of episode reward while done
     agent.state = TrainState.DONE
@@ -365,7 +365,7 @@ def test_rewards_departed_but_never_arrived():
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, StateTransitionSignals()),
+    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, StateTransitionSignals()),
                         distance_map=distance_map,
                         elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -99 - 15
@@ -389,7 +389,7 @@ def test_rewards_departed_but_never_arrived_minimum_penalty():
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
-    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, StateTransitionSignals()),
+    rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, StateTransitionSignals()),
                         distance_map=distance_map,
                         elapsed_steps=5)
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == -1 * target_not_reached_minimum_penalty
@@ -769,7 +769,7 @@ def test_arrival_recorded_once_per_waypoint():
     agent.current_entry_point = ((5, 5), 0)
     agent.old_entry_point = ((5, 4), 0)
 
-    transition_data = AgentTransitionData(1.0, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, StateTransitionSignals())
 
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
@@ -801,7 +801,7 @@ def test_departure_only_when_moving():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, StateTransitionSignals())
 
     # agent off map
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
@@ -862,7 +862,7 @@ def test_waypoint_comparison_uses_waypoint_objects():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    transition_data = AgentTransitionData(1.0, None, None, StateTransitionSignals())
+    transition_data = AgentTransitionData(1.0, None, StateTransitionSignals())
 
     agent.current_entry_point = ((7, 8), 1)
     agent.old_entry_point = ((7, 7), 1)
@@ -920,7 +920,7 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     agent.next_entry_point = (waypoint.position, waypoint.direction)
     agent.state = state
     transition_data = AgentTransitionData(
-        speed=Fraction(0), new_speed=Fraction(0), current_resource=waypoint.position,
+        speed=Fraction(0), candidate_speed=Fraction(0),
         state_transition_signal=StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True))
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
 
@@ -1066,7 +1066,7 @@ def test_no_collision_penalty_on_voluntary_stop():
     signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True)
     _stop_moving_agent(agent, signals)
 
-    transition_data = AgentTransitionData(Fraction(1), Fraction(0), None, signals)
+    transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == 0, \
         "A controlled stop must not incur the collision penalty"
@@ -1081,7 +1081,7 @@ def test_collision_penalty_on_env_forced_stop():
     _stop_moving_agent(agent, signals)
 
     speed_at_impact = Fraction(1)
-    transition_data = AgentTransitionData(speed_at_impact, speed_at_impact, None, signals)
+    transition_data = AgentTransitionData(speed_at_impact, speed_at_impact, signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * speed_at_impact * COLLISION_FACTOR
 
@@ -1096,7 +1096,7 @@ def test_collision_penalty_when_braking_interrupted_by_conflict():
     _stop_moving_agent(agent, signals)
 
     residual_speed = Fraction(1, 4)
-    transition_data = AgentTransitionData(residual_speed, residual_speed, None, signals)
+    transition_data = AgentTransitionData(residual_speed, residual_speed, signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * residual_speed * COLLISION_FACTOR
 
@@ -1110,7 +1110,7 @@ def test_collision_penalty_on_invalid_action_stop():
     signals = StateTransitionSignals(stop_action_given=False, new_speed_zero=True, movement_allowed=False)
     _stop_moving_agent(agent, signals)
 
-    transition_data = AgentTransitionData(Fraction(1), Fraction(0), None, signals)
+    transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR
 
@@ -1125,7 +1125,7 @@ def test_collision_penalty_on_invalid_stop_action():
     signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=False)
     _stop_moving_agent(agent, signals)
 
-    transition_data = AgentTransitionData(Fraction(1), Fraction(0), None, signals)
+    transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR, \
         "An env-forced stop must be penalized even if it happens to coincide with a STOP_MOVING action"

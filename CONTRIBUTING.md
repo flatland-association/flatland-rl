@@ -191,6 +191,11 @@ and a C compiler are available - which is automatic for any build from source, s
   [pure Python mode](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd) - so if you
   need to add type declarations for further speed-ups, do so via a companion `.pxd` file rather than converting
   the module to `.pyx`, keeping it importable as ordinary Python when Cython isn't used.
+- If you touch one of these modules or its `.pxd`, mark a test that exercises the changed code path with
+  `pytest.mark.cython_ext` - the regular test suite runs against the plain-Python source and won't catch a
+  `.pxd`/`.py` mismatch that compiles cleanly but breaks at runtime (e.g. a `cdef class` field assigned in the
+  `.py` source but never declared in the `.pxd`, which only ever surfaced via the profiling notebook's
+  `LOCAL_Cython` step before this marker existed).
 
 ### Type Hints
 

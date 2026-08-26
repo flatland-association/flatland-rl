@@ -89,6 +89,10 @@ def test_multi_speed_init():
     old_pos = []
     for i_agent in range(env.get_num_agents()):
         env.agents[i_agent].speed_counter = SpeedCounter(speed=_pseudo_fractional(1.) / (i_agent + 1))
+        # design: distance is None when off map -- the agent is already on the map here, so mark
+        # the fresh speed_counter as having just entered (distance 0), not off-map (None).
+        sc = env.agents[i_agent].speed_counter
+        sc.step(speed=sc.speed, crossing_completed=False)
         old_pos.append(_position(env.agents[i_agent]))
         print(_position(env.agents[i_agent]))
     # Run episode

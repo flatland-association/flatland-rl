@@ -85,8 +85,8 @@ def _distance_update(distance: Fraction, speed: Fraction,
 class SpeedCounter:
     def __init__(self, speed: float, max_speed: float = None):
         self._speed: Fraction = _pseudo_fractional(speed)
-        self._distance: Fraction = Fraction(0)
-        self._is_cell_entry = True
+        self._distance: Optional[Fraction] = None
+        self._is_cell_entry = False
         self._max_speed: Fraction
         if max_speed is not None:
             self._max_speed = _pseudo_fractional(max_speed)
@@ -98,7 +98,7 @@ class SpeedCounter:
         assert self._speed >= 0.0
         self.reset()
 
-    def step(self, speed: Fraction, crossing_completed: bool) -> None:
+    def step(self, speed: Optional[Fraction], crossing_completed: bool) -> None:
         """
         Step the speed counter:
         - the distance traveled this step is computed from the pre-step speed.
@@ -106,12 +106,24 @@ class SpeedCounter:
 
         Parameters
         ----------
-        speed : Fraction
-            The new speed, effective from the next step.
+        speed : Optional[Fraction]
+            The new speed, effective from the next step, or None while off map (leaving the map,
+            or staying off map).
         crossing_completed : bool
             Whether the transition into the next cell actually completed.
         """
-        self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
+        if speed is None:
+            # design: distance is None when off map
+            self._distance = None
+            self._is_cell_entry = False
+            return
+        if self._distance is None:
+            # design: distance is None when off map -- entering the map: bootstrap distance to 0
+            # instead of advancing from a pre-step speed that does not reflect being on the map yet.
+            self._distance = Fraction(0)
+            self._is_cell_entry = True
+        else:
+            self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
         self._speed = _cap_speed(self._max_speed, _pseudo_fractional(speed))
 
     def stop(self) -> None:
@@ -130,8 +142,7 @@ class SpeedCounter:
                  is_cell_entry: {self.is_cell_entry}"
 
     def reset(self):
-        self._distance = 0
-        self._is_cell_entry = True
+        self.step(None, False)
 
     @property
     def is_cell_entry(self):
@@ -144,6 +155,9 @@ class SpeedCounter:
         """
         At the current speed, do we exit the cell at the next time step?
         """
+        if self._distance is None:
+            # design: distance is None when off map
+            return True
         return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property
@@ -155,9 +169,10 @@ class SpeedCounter:
         return self._max_speed
 
     @property
-    def distance(self) -> Fraction:
+    def distance(self) -> Optional[Fraction]:
         """
-        Distance travelled in current cell.
+        Distance traveled in current cell. None while off map (until step() is called with a
+        non-None speed).
         """
         return self._distance
 

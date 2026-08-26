@@ -18,6 +18,10 @@ from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
 
 
+# design: distance is None when off map - distinct sentinel so distance=None can be asserted explicitly
+_UNSET = object()
+
+
 @attrs
 class Replay(object):
     position = attrib(type=Tuple[int, int])
@@ -28,7 +32,7 @@ class Replay(object):
     reward = attrib(default=None, type=Optional[float])
     state = attrib(default=None, type=Optional[TrainState])
     speed = attrib(default=None, type=Optional[float])
-    distance = attrib(default=None, type=Optional[float])
+    distance = attrib(default=_UNSET, type=Optional[float])
 
 
 @attrs
@@ -115,6 +119,11 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                     agent: EnvAgent = env.agents[a_idx]
                     agent.current_entry_point = agent.initial_entry_point
                     agent._set_state(TrainState.MOVING)
+                    # design: distance is None when off map -- this test-harness shortcut places
+                    # the agent directly onto the map, bypassing the state machine's own departure
+                    # step (which would otherwise call speed_counter.step() with a non-None speed);
+                    # do it explicitly here so distance starts at 0 (on-map) instead of None.
+                    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
                     # design: actions applied at cell entry -- keep the current_entry_point/
                     # next_entry_point invariant (both set and different while on-map, see the
                     # invariant documented in RailEnv.step()) even for this test-harness shortcut:
@@ -137,7 +146,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
         def _assert(a, actual, expected, msg, close: bool = True):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
             _msg = "[{}] agent {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
-            assert (actual == expected) or (close and np.allclose(actual, expected)), _msg
+            assert (actual == expected) or (close and actual is not None and expected is not None and np.allclose(actual, expected)), _msg
 
         action_dict = {}
         print(f"[{step}] BEFORE stepping: verify position/direction/state/malfunction")
@@ -155,7 +164,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if replay.speed is not None:
                 _assert(a, agent.speed_counter.speed, replay.speed, "speed")
-            if replay.distance is not None:
+            if replay.distance is not _UNSET:
                 _assert(a, agent.speed_counter.distance, replay.distance, "distance")
 
             if replay.action is not None:

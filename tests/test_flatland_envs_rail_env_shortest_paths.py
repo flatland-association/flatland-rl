@@ -2,6 +2,7 @@ import sys
 from typing import List
 
 import numpy as np
+import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
@@ -13,6 +14,8 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_disconnected_simple_rail, make_simple_rail_with_alternatives
+
+pytestmark = pytest.mark.cython_ext
 
 
 def test_get_shortest_paths_unreachable():

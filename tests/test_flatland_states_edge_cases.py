@@ -1,6 +1,7 @@
 from fractions import Fraction
 
 import numpy as np
+import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
@@ -9,6 +10,8 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
+
+pytestmark = pytest.mark.cython_ext
 
 
 def test_return_to_ready_to_depart():
