@@ -473,6 +473,9 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         agent = env.agents[0]
         agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
+        # design: distance is None when off map -- the agent is placed directly on the map here,
+        # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+        agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
         # design: actions applied at cell entry
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
         assert transition is not None
@@ -533,6 +536,9 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     assert transition is not None
     agent.next_entry_point = _sanitize_entry_point(transition)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
+    # design: distance is None when off map -- the agent is placed directly on the map here,
+    # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
+    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
 
     env.step({0: RailEnvActions.MOVE_FORWARD})
     pre_speed = agent.speed_counter.speed
