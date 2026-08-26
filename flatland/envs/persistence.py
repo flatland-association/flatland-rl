@@ -42,7 +42,7 @@ def _serialize_agent(agent: EnvAgent) -> Agent:
 def _deserialize_agent_tuple(agent_tuple: Agent) -> Agent:
     """
     Undo `_serialize_agent`'s tuple encoding before handing off to `load_env_agent`, which otherwise only
-    recognizes a `set`/`frozenset` of configurations (or, for legacy pre-`targets` pickles, a bare
+    recognizes a `set`/`frozenset` of entry points (or, for legacy pre-`targets` pickles, a bare
     `(row, col)` position - left untouched here). Discriminate structurally rather than by scalar type, since
     legacy pickles hold `numpy.int32` row/col values, not plain `int`s: a bare position's first element is a
     scalar, whereas a tuple of `(position, direction)` pairs has a `tuple` as its first element.
@@ -248,7 +248,7 @@ class RailEnvPersister(object):
         env.rail = RailGridTransitionMap(height=env.height, width=env.width)
         env.rail.grid = grid
 
-        # Replace the agents tuple with EnvAgent objects. Target configurations are not serialised with rail
+        # Replace the agents tuple with EnvAgent objects. Target entry points are not serialised with rail
         # validity, so `load_env_agent`/`load_legacy_static_agent` filter them against the (now available) rail
         # grid at load time. Otherwise, done in env._agents_from_line() during reset().
         if "agents_static" in env_dict:

@@ -177,7 +177,7 @@ def condition_stopped_intermediate_and_range(start_step_incl: int, end_step_excl
     """
 
     def _condition(agent: "EnvAgent", elapsed_steps: int):
-        position = agent.current_configuration[0] if agent.current_configuration is not None else None
+        position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
         return ((position in {w.position for ws in agent.waypoints[1:-1] for w in ws})
                 and agent.state_machine.state == TrainState.STOPPED and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
 
@@ -203,7 +203,7 @@ def condition_stopped_cells_and_range(start_step_incl: int, end_step_excl: int, 
     """
 
     def _condition(agent: "EnvAgent", elapsed_steps: int):
-        position = agent.current_configuration[0] if agent.current_configuration is not None else None
+        position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
         return (position in cells and agent.state_machine.state == TrainState.STOPPED
                 and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
 
@@ -220,7 +220,7 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
         if agent.state_machine.state != TrainState.STOPPED:
             return False
         stops = {(wp.position, wp.direction) for wps in agent.waypoints for wp in wps}
-        return agent.current_configuration in stops
+        return agent.current_entry_point in stops
 
     def __init__(self,
                  malfunction_rate: float = 0,

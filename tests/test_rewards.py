@@ -30,9 +30,9 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 
 def test_rewards_late_arrival():
     rewards = DefaultRewards()
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -50,9 +50,9 @@ def test_rewards_late_arrival():
 def test_delay_rewards():
     """DelayRewards scores only TARGET_LATE_ARRIVAL; all other penalties are zeroed out."""
     def _make_agent(latest_arrival, arrival_time):
-        return EnvAgent(initial_configuration=((0, 0), 0),
+        return EnvAgent(initial_entry_point=((0, 0), 0),
                         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                        current_configuration=(None, 3),
+                        current_entry_point=(None, 3),
                         state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                         earliest_departure=3,
                         latest_arrival=latest_arrival,
@@ -84,9 +84,9 @@ def test_delay_rewards():
 
 def test_rewards_early_arrival():
     rewards = DefaultRewards()
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=14,
@@ -102,9 +102,9 @@ def test_rewards_early_arrival():
 def test_rewards_intermediate_served_and_stopped_penalty():
     intermediate_not_served_penalty = 33
     rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -115,7 +115,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     # intermediate stop evaluation when done
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
@@ -125,7 +125,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
 
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
     agent.state = TrainState.DONE
@@ -137,9 +137,9 @@ def test_rewards_intermediate_served_and_stopped_penalty():
 def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_latest_penalty():
     intermediate_not_served_penalty = 33
     rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -151,12 +151,12 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_late
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
     # intermediate stop evaluation while stopped
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
 
     # second intermediate stop evaluation while stopped
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 15) == rewards.empty()
 
@@ -165,7 +165,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_late
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == rewards.empty()
 
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 5) == rewards.empty()
     agent.state = TrainState.DONE
@@ -176,9 +176,9 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_late
 def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival_penalty():
     intermediate_not_served_penalty = 33
     rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -190,25 +190,25 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
     # intermediate stop evaluation while stopped
-    agent.current_configuration = ((2, 2), 2)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 10) == rewards.empty()
 
     # depart
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 0)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((4, 4), 0)
     assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
 
     # second intermediate stop evaluation while stopped
-    agent.old_configuration = ((4, 4), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((4, 4), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
 
     # end of episode reward while done
     agent.state = TrainState.DONE
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((3, 3), 3)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((3, 3), 3)
     # latest arrival is 7 at intermediate, but effectively at 10:
     # latest arrival is 14 at intermediate, but effectively at 15:
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == -4 * rewards.intermediate_late_arrival_penalty_factor
@@ -216,26 +216,26 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
 
     # intermediate stop evaluation while stopped
-    agent.old_configuration = None
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = None
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, None, distance_map, 10) == rewards.empty()
 
     # depart
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 0)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((4, 4), 0)
     assert rewards.step_reward(agent, None, distance_map, 11) == rewards.empty()
 
     # second intermediate stop evaluation while stopped
-    agent.old_configuration = ((4, 4), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((4, 4), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent, AgentTransitionData(Fraction(0), None, None, None, None), distance_map, 15) == rewards.empty()
 
     # end of episode reward while done
     agent.state = TrainState.DONE
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((3, 3), 3)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((3, 3), 3)
     # latest arrival is 7 at intermediate, but effectively at 10:
     # latest arrival is 14 at intermediate, but effectively at 15:
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=25) == (-4 * rewards.intermediate_late_arrival_penalty_factor, 0, 0)
@@ -244,9 +244,9 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
 def test_rewards_intermediate_served_but_not_stopped_penalty():
     intermediate_not_served_penalty = 33
     rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -274,9 +274,9 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
 def test_rewards_intermediate_not_served_penalty():
     intermediate_not_served_penalty = 33
     rewards = DefaultRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -297,9 +297,9 @@ def test_rewards_intermediate_not_served_penalty():
 def test_rewards_intermediate_intermediate_early_departure_penalty():
     intermediate_early_departure_penalty_factor = 33
     rewards = DefaultRewards(intermediate_early_departure_penalty_factor=intermediate_early_departure_penalty_factor)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=11,
@@ -309,12 +309,12 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     assert rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5) == 0
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((3, 3), 3)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((3, 3), 3)
     agent.state = TrainState.DONE
     assert rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5) == -66
     assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == 0
@@ -323,9 +323,9 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
     intermediate_late_arrival_penalty_factor = 33
     rewards = DefaultRewards(intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -335,12 +335,12 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((3, 3), 3)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((3, 3), 3)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     agent.state = TrainState.DONE
     assert rewards.step_reward(agent, None, distance_map=distance_map, elapsed_steps=25) == -99
@@ -350,9 +350,9 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
 def test_rewards_departed_but_never_arrived():
     intermediate_late_arrival_penalty_factor = 33
     rewards = DefaultRewards(intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -362,8 +362,8 @@ def test_rewards_departed_but_never_arrived():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
@@ -374,9 +374,9 @@ def test_rewards_departed_but_never_arrived():
 def test_rewards_departed_but_never_arrived_minimum_penalty():
     target_not_reached_minimum_penalty = 50  # has to be > 15 to be effective in this test
     rewards = DefaultRewards(target_not_reached_minimum_penalty=target_not_reached_minimum_penalty)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=10,
@@ -386,8 +386,8 @@ def test_rewards_departed_but_never_arrived_minimum_penalty():
                      arrival_time=10)
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     agent.state = TrainState.STOPPED
     rewards.step_reward(agent=agent, agent_transition_data=AgentTransitionData(0.5, None, None, None, StateTransitionSignals()),
                         distance_map=distance_map,
@@ -397,9 +397,9 @@ def test_rewards_departed_but_never_arrived_minimum_penalty():
 
 def test_energy_efficiency_smoothniss_in_morl():
     rewards = BasicMultiObjectiveRewards()
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.DONE),
                      earliest_departure=3,
                      latest_arrival=14,
@@ -475,9 +475,9 @@ def test_punctuality_rewards_initial():
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
         handle=0,
-        initial_configuration=((0, 0), 0),
+        initial_entry_point=((0, 0), 0),
         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-        current_configuration=(None, 3),
+        current_entry_point=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -492,8 +492,8 @@ def test_punctuality_rewards_initial():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
 
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
 
@@ -515,9 +515,9 @@ def test_punctuality_rewards_intermediate():
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
         handle=0,
-        initial_configuration=((0, 0), 0),
+        initial_entry_point=((0, 0), 0),
         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-        current_configuration=(None, 3),
+        current_entry_point=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -532,11 +532,11 @@ def test_punctuality_rewards_intermediate():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 0)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
@@ -557,9 +557,9 @@ def test_punctuality_rewards_target():
     rewards = PunctualityRewards()
     rewards.intermediate_late_arrival_penalty_factor = 33
     agent = EnvAgent(
-        handle=0, initial_configuration=((0, 0), 0),
+        handle=0, initial_entry_point=((0, 0), 0),
         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-        current_configuration=(None, 3),
+        current_entry_point=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -574,20 +574,20 @@ def test_punctuality_rewards_target():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
-    agent.old_configuration = ((2, 2), 2)
-    agent.current_configuration = ((4, 4), 0)
+    agent.old_entry_point = ((2, 2), 2)
+    agent.current_entry_point = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=4))
-    agent.old_configuration = ((4, 4), 0)
-    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_configuration from
-    # current_configuration, then clear current_configuration (remove_agents_at_target=True) - all before
+    agent.old_entry_point = ((4, 4), 0)
+    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_entry_point from
+    # current_entry_point, then clear current_entry_point (remove_agents_at_target=True) - all before
     # step_reward() runs, exercising the real default-env arrival path instead of a direct shortcut.
-    agent.current_configuration = ((3, 3), 3)
+    agent.current_entry_point = ((3, 3), 3)
     agent.state_machine.set_state(TrainState.DONE)
-    agent.target_configuration = ((3, 3), 3)
-    agent.current_configuration = None
+    agent.target_entry_point = ((3, 3), 3)
+    agent.current_entry_point = None
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
@@ -608,15 +608,15 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
     """Regression test: when an agent's last leg goes directly from an intermediate stop to its
     target and reaches TrainState.DONE with remove_agents_at_target=True (the default), the
     departure from that intermediate stop must still be recorded - AbstractRailEnv.handle_done_state()
-    clears current_configuration to None (and step_reward() only sees the target via
-    target_configuration) before step_reward() runs, so a naive current_configuration-is-not-None
+    clears current_entry_point to None (and step_reward() only sees the target via
+    target_entry_point) before step_reward() runs, so a naive current_entry_point-is-not-None
     guard would silently skip booking that departure and cause end_of_episode_reward() to
     wrongly report the intermediate stop as not served."""
     rewards = PunctualityRewards()
     agent = EnvAgent(
-        handle=0, initial_configuration=((0, 0), 0),
+        handle=0, initial_entry_point=((0, 0), 0),
         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-        current_configuration=(None, 3),
+        current_entry_point=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=5,
         latest_arrival=10,
@@ -629,18 +629,18 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2)
 
-    agent.old_configuration = ((2, 2), 2)
-    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_configuration
-    # from current_configuration, then clear current_configuration (remove_agents_at_target=True) -
+    agent.old_entry_point = ((2, 2), 2)
+    # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_entry_point
+    # from current_entry_point, then clear current_entry_point (remove_agents_at_target=True) -
     # all before step_reward() runs.
-    agent.current_configuration = ((3, 3), 3)
+    agent.current_entry_point = ((3, 3), 3)
     agent.state_machine.set_state(TrainState.DONE)
-    agent.target_configuration = ((3, 3), 3)
-    agent.current_configuration = None
+    agent.target_entry_point = ((3, 3), 3)
+    agent.current_entry_point = None
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
 
     # the previously-missing entry: departure from the last intermediate stop before the target.
@@ -658,20 +658,20 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
     (BaseDefaultRewards(), lambda rewards, result: (sum(result.values()) if isinstance(result, dict) else result) == 0),
 ])
 def test_zero_distance_target_arrival_recorded(rewards, assert_result):
-    """Regression test: an agent whose initial configuration coincides with a target reaches DONE on
-    its very first on-map step, so old_configuration/current_configuration are both None by the time
+    """Regression test: an agent whose initial entry point coincides with a target reaches DONE on
+    its very first on-map step, so old_entry_point/current_entry_point are both None by the time
     step_reward() runs (the agent was never on the map before, and has already been removed from it).
     TrainState.DONE is only reachable via TrainStateMachine.update_if_reached(), which requires the
-    agent to actually be at a target configuration - so this arrival must still be recorded/rewarded,
-    independent of any internal arrival bookkeeping keyed off old_configuration/current_configuration."""
+    agent to actually be at a target entry point - so this arrival must still be recorded/rewarded,
+    independent of any internal arrival bookkeeping keyed off old_entry_point/current_entry_point."""
     agent = EnvAgent(
         handle=0,
-        initial_configuration=((3, 3), 3),
+        initial_entry_point=((3, 3), 3),
         targets={((3, 3), 3)},
-        current_configuration=None,
-        old_configuration=None,
-        # mirrors what AbstractRailEnv.handle_done_state() sets before current_configuration is cleared
-        target_configuration=((3, 3), 3),
+        current_entry_point=None,
+        old_entry_point=None,
+        # mirrors what AbstractRailEnv.handle_done_state() sets before current_entry_point is cleared
+        target_entry_point=((3, 3), 3),
         state_machine=TrainStateMachine(initial_state=TrainState.DONE),
         earliest_departure=0,
         latest_arrival=10,
@@ -687,19 +687,19 @@ def test_zero_distance_target_arrival_recorded(rewards, assert_result):
 
 def test_punctuality_rewards_single_direction_target_does_not_crash():
     """Regression test: agent.targets can be filtered down to a single (position, direction)
-    configuration (e.g. a dead-end target reachable from only one direction) - step_reward must
+    entry point (e.g. a dead-end target reachable from only one direction) - step_reward must
     not crash indexing this as if it were a subscriptable sequence. Also covers a real
-    DONE-with-removal arrival: the departure from the agent's last stop (old_configuration) must
-    still be recorded even though current_configuration is already None by the time step_reward runs."""
+    DONE-with-removal arrival: the departure from the agent's last stop (old_entry_point) must
+    still be recorded even though current_entry_point is already None by the time step_reward runs."""
     rewards = PunctualityRewards()
     agent = EnvAgent(
         handle=0,
-        initial_configuration=((0, 0), 0),
+        initial_entry_point=((0, 0), 0),
         targets={((3, 3), 3)},
-        current_configuration=((3, 3), 3),
-        old_configuration=((2, 2), 2),
-        # mirrors what AbstractRailEnv.handle_done_state() sets before current_configuration is cleared
-        target_configuration=((3, 3), 3),
+        current_entry_point=((3, 3), 3),
+        old_entry_point=((2, 2), 2),
+        # mirrors what AbstractRailEnv.handle_done_state() sets before current_entry_point is cleared
+        target_entry_point=((3, 3), 3),
         state_machine=TrainStateMachine(initial_state=TrainState.DONE),
         earliest_departure=3,
         latest_arrival=10,
@@ -707,7 +707,7 @@ def test_punctuality_rewards_single_direction_target_does_not_crash():
     )
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
-    agent.current_configuration = None
+    agent.current_entry_point = None
 
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10)
 
@@ -715,15 +715,15 @@ def test_punctuality_rewards_single_direction_target_does_not_crash():
     assert rewards.departures[0][((2, 2), 2)] == [10]
 
 
-def test_punctuality_rewards_arrival_recorded_once_per_configuration():
-    """Regression test: dwelling at the same configuration for several steps must not append
+def test_punctuality_rewards_arrival_recorded_once_per_entry_point():
+    """Regression test: dwelling at the same entry point for several steps must not append
     duplicate arrival/departure entries."""
     rewards = PunctualityRewards()
     agent = EnvAgent(
         handle=0,
-        initial_configuration=((0, 0), 0),
+        initial_entry_point=((0, 0), 0),
         targets={((3, 3), d) for d in Grid4TransitionsEnum},
-        current_configuration=(None, 3),
+        current_entry_point=(None, 3),
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=3,
         latest_arrival=10,
@@ -732,12 +732,12 @@ def test_punctuality_rewards_arrival_recorded_once_per_configuration():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
-    agent.old_configuration = ((0, 0), 0)
-    agent.current_configuration = ((2, 2), 2)
+    agent.old_entry_point = ((0, 0), 0)
+    agent.current_entry_point = ((2, 2), 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
 
-    # agent dwells at the same configuration for further steps
-    agent.old_configuration = ((2, 2), 2)
+    # agent dwells at the same entry point for further steps
+    agent.old_entry_point = ((2, 2), 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=6)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=7)
 
@@ -749,8 +749,8 @@ def test_arrival_recorded_once_per_waypoint():
     """Test that arrivals are only recorded once per waypoint, not every step (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_configuration=((5, 5), 0),
-        current_configuration=(None, None),
+        initial_entry_point=((5, 5), 0),
+        current_entry_point=(None, None),
         targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
@@ -760,8 +760,8 @@ def test_arrival_recorded_once_per_waypoint():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
     # Move agent to position (5, 5) facing North (direction 0)
-    agent.current_configuration = ((5, 5), 0)
-    agent.old_configuration = ((5, 4), 0)
+    agent.current_entry_point = ((5, 5), 0)
+    agent.old_entry_point = ((5, 4), 0)
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
@@ -771,7 +771,7 @@ def test_arrival_recorded_once_per_waypoint():
     assert rewards._proxy.arrivals[agent.handle][wp] == [10]
 
     # Agent dwells at same position for several steps
-    agent.old_configuration = agent.current_configuration
+    agent.old_entry_point = agent.current_entry_point
 
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=11)
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=12)
@@ -785,8 +785,8 @@ def test_departure_only_when_moving():
     """Test that departure is only recorded when agent actually moves to new waypoint (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_configuration=((5, 5), 0),
-        current_configuration=(None, None),
+        initial_entry_point=((5, 5), 0),
+        current_entry_point=(None, None),
         targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
@@ -804,8 +804,8 @@ def test_departure_only_when_moving():
     assert off_wp not in rewards._proxy.departures[agent.handle]
 
     # Agent at initial position
-    agent.current_configuration = ((5, 5), 0)
-    agent.old_configuration = None
+    agent.current_entry_point = ((5, 5), 0)
+    agent.old_entry_point = None
 
     # First step - arrival recorded, but no departure (agent hasn't left yet)
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
@@ -817,8 +817,8 @@ def test_departure_only_when_moving():
     assert wp not in rewards._proxy.departures[agent.handle], "Should not record departure when agent hasn't moved"
 
     # Agent moves to new position
-    agent.old_configuration = ((5, 5), 0)
-    agent.current_configuration = ((5, 6), 0)
+    agent.old_entry_point = ((5, 5), 0)
+    agent.current_entry_point = ((5, 6), 0)
 
     # Now departure from old position should be recorded
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=3)
@@ -831,8 +831,8 @@ def test_departure_only_when_moving():
     assert rewards._proxy.arrivals[agent.handle][wp] == [3]
 
     # Agent arrives at target
-    agent.old_configuration = ((5, 6), 0)
-    agent.current_configuration = None
+    agent.old_entry_point = ((5, 6), 0)
+    agent.current_entry_point = None
 
     # Now departure from old position should be recorded, but no arrival for None
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=4)
@@ -846,8 +846,8 @@ def test_waypoint_comparison_uses_waypoint_objects():
     """Test that waypoint tracking correctly uses Waypoint objects, not tuples (Bug #327)."""
     rewards = DefaultRewards()
     agent = EnvAgent(
-        initial_configuration=((7, 8), 1),
-        current_configuration=(None, None),
+        initial_entry_point=((7, 8), 1),
+        current_entry_point=(None, None),
         targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
@@ -858,8 +858,8 @@ def test_waypoint_comparison_uses_waypoint_objects():
 
     transition_data = AgentTransitionData(1.0, None, None, None, StateTransitionSignals())
 
-    agent.current_configuration = ((7, 8), 1)
-    agent.old_configuration = ((7, 7), 1)
+    agent.current_entry_point = ((7, 8), 1)
+    agent.old_entry_point = ((7, 7), 1)
 
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
 
@@ -893,9 +893,9 @@ STATION_CELL_B = Waypoint((2, 3), 2)
 def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int = 11, earliest_departure_intermediate: int = 7) -> Tuple[BaseDefaultRewards, EnvAgent, DistanceMap]:
     rewards = BaseDefaultRewards(intermediate_not_served_penalty=INTERMEDIATE_NOT_SERVED_PENALTY,
                                  intermediate_late_arrival_penalty_factor=LATE_ARRIVAL_FACTOR)
-    agent = EnvAgent(initial_configuration=((0, 0), 0),
+    agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
-                     current_configuration=(None, 3),
+                     current_entry_point=(None, 3),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=30,
@@ -909,11 +909,11 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
 
 
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    agent.old_configuration = (old.position, old.direction)
-    agent.current_configuration = (waypoint.position, waypoint.direction)
+    agent.old_entry_point = (old.position, old.direction)
+    agent.current_entry_point = (waypoint.position, waypoint.direction)
     agent.state = state
     transition_data = AgentTransitionData(
-        speed=Fraction(0), new_configuration=(waypoint.position, waypoint.direction),
+        speed=Fraction(0), new_entry_point=(waypoint.position, waypoint.direction),
         new_speed=Fraction(0), current_resource=waypoint.position,
         state_transition_signal=StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True))
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
@@ -1031,9 +1031,9 @@ COLLISION_FACTOR = 250.0
 
 def _moving_agent():
     agent = EnvAgent(
-        initial_configuration=((5, 5), 0),
-        current_configuration=((5, 6), 0),
-        old_configuration=((5, 6), 0),  # dwelling, no arrival/departure side effects
+        initial_entry_point=((5, 5), 0),
+        current_entry_point=((5, 6), 0),
+        old_entry_point=((5, 6), 0),  # dwelling, no arrival/departure side effects
         targets={((10, 10), d) for d in Grid4TransitionsEnum},
         state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
         earliest_departure=0,
@@ -1141,9 +1141,9 @@ def _make_simple_env(n_agents: int) -> RailEnv:
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
     env.reset(random_seed=42)
     placements = [(((3, 1), Grid4TransitionsEnum.EAST), (3, 9)), (((3, 5), Grid4TransitionsEnum.WEST), (3, 0))]
-    for agent, (initial_configuration, target) in zip(env.agents, placements):
-        agent.initial_configuration = initial_configuration
-        agent.current_configuration = None
+    for agent, (initial_entry_point, target) in zip(env.agents, placements):
+        agent.initial_entry_point = initial_entry_point
+        agent.current_entry_point = None
         agent.earliest_departure = 0
         agent.latest_arrival = 50
         agent.targets = {(target, d) for d in Grid4TransitionsEnum}
@@ -1184,9 +1184,9 @@ def test_env_collision_penalty_on_head_on_conflict():
         assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
     # before 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them
-    assert agent_0.current_configuration == ((3, 2), Grid4TransitionsEnum.EAST)
+    assert agent_0.current_entry_point == ((3, 2), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
-    assert agent_1.current_configuration == ((3, 4), Grid4TransitionsEnum.WEST)
+    assert agent_1.current_entry_point == ((3, 4), Grid4TransitionsEnum.WEST)
     assert agent_1.speed_counter.distance == 0
 
     # 4th step: both request entry into (3,3) -> motion check awards the cell to agent 0 and force-stops agent 1
@@ -1199,9 +1199,9 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert agent_0.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     # after 4th step: agent 0 has moved into the contested cell, agent 1 stayed put (force-stopped)
-    assert agent_0.current_configuration == ((3, 3), Grid4TransitionsEnum.EAST)
+    assert agent_0.current_entry_point == ((3, 3), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
-    assert agent_1.current_configuration == ((3, 4), Grid4TransitionsEnum.WEST)
+    assert agent_1.current_entry_point == ((3, 4), Grid4TransitionsEnum.WEST)
     assert agent_1.speed_counter.distance == 1
 
     # 5th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
@@ -1216,13 +1216,13 @@ def test_env_collision_penalty_on_head_on_conflict():
 
     # deadlock persists: no positions change, no further collision penalties accrue
     _, rewards, _, _ = env.step(forward)
-    assert (agent_0.current_configuration[0], agent_1.current_configuration[0]) == ((3, 3), (3, 4))
+    assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
     # deadlock persists: no positions change, no further collision penalties accrue
     _, rewards, _, _ = env.step(forward)
-    assert (agent_0.current_configuration[0], agent_1.current_configuration[0]) == ((3, 3), (3, 4))
+    assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
 
@@ -1294,8 +1294,8 @@ def _make_platoon_env(n_agents: int, start_columns, lead_max_speed: float = 1.0)
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
     env.reset(random_seed=42)
     for i, agent in enumerate(env.agents):
-        agent.initial_configuration = ((3, start_columns[i]), Grid4TransitionsEnum.EAST)
-        agent.current_configuration = None
+        agent.initial_entry_point = ((3, start_columns[i]), Grid4TransitionsEnum.EAST)
+        agent.current_entry_point = None
         agent.earliest_departure = 0
         agent.latest_arrival = 50
         agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}
@@ -1399,8 +1399,8 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     env._max_episode_steps = 100
 
     agent = env.agents[0]
-    agent.initial_configuration = ((2, 3), Grid4TransitionsEnum.WEST)
-    agent.current_configuration = None
+    agent.initial_entry_point = ((2, 3), Grid4TransitionsEnum.WEST)
+    agent.current_entry_point = None
     agent.earliest_departure = 0
     agent.latest_arrival = 50
     agent.targets = {((0, 1), d) for d in Grid4TransitionsEnum}
@@ -1417,10 +1417,11 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
         if agent.state == TrainState.STOPPED:
             break
 
-    assert agent.current_configuration[0] == (2, 1), "train should be stopped on the switch cell"
+    assert agent.current_entry_point[0] == (2, 1), "train should be stopped on the switch cell"
     assert agent.state_machine.previous_state == TrainState.MOVING
     assert agent.state == TrainState.STOPPED
     assert penalties[-1] == -1 * 1 * COLLISION_FACTOR, \
         "MOVE_FORWARD into a symmetric switch is invalid -> env-forced stop -> collision penalty"
     # no penalty accrued while the train was still approaching at full speed
     assert penalties[:-1] == [0] * (len(penalties) - 1)
+

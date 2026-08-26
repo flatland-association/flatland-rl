@@ -7,7 +7,7 @@ import numpy as np
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.envs.agent_utils import virtual_configuration
+from flatland.envs.agent_utils import virtual_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
@@ -29,10 +29,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        configuration = virtual_configuration(agent)
-        if configuration is None:
+        entry_point = virtual_entry_point(agent)
+        if entry_point is None:
             return None
-        agent_virtual_position, agent_virtual_direction = configuration
+        agent_virtual_position, agent_virtual_direction = entry_point
 
         possible_transitions = self.env.rail.get_transitions((agent_virtual_position, agent_virtual_direction))
         num_transitions = np.count_nonzero(possible_transitions)
@@ -77,12 +77,12 @@ def test_malfunction_process():
                   )
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
+        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
         env.agents[a_idx].state = TrainState.MOVING
 
     agent_halts = 0
     total_down_time = 0
-    agent_old_position = env.agents[0].current_configuration[0]
+    agent_old_position = env.agents[0].current_entry_point[0]
 
     # Move target to unreachable position in order to not interfere with test
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
@@ -106,9 +106,9 @@ def test_malfunction_process():
 
         if agent_malfunctioning:
             # Check that agent is not moving while malfunctioning
-            assert agent_old_position == env.agents[0].current_configuration[0]
+            assert agent_old_position == env.agents[0].current_entry_point[0]
 
-        agent_old_position = env.agents[0].current_configuration[0]
+        agent_old_position = env.agents[0].current_entry_point[0]
         total_down_time += env.agents[0].malfunction_handler.malfunction_down_counter
     # Check that the appropriate number of malfunctions is achieved
     # Dipam: The number of malfunctions varies by seed
@@ -331,9 +331,9 @@ def test_initial_malfunction_stop_moving():
 
     env._max_episode_steps = 1000
 
-    position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    print(env.agents[0].initial_configuration[0], direction, position, env.agents[0].state)
+    position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    print(env.agents[0].initial_entry_point[0], direction, position, env.agents[0].state)
 
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
@@ -449,7 +449,7 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     distance/position update should be identical regardless of which action is given - only the speed
     that applies from the NEXT tick onward should differ. It isn't:
     TrainStateMachine.can_get_moving_independent() treats "stop action given and resulting speed == 0"
-    so STOP_MOVING blocks the crossing outright this tick (new_configuration is never
+    so STOP_MOVING blocks the crossing outright this tick (new_entry_point is never
     even set to the next cell), while DO_NOTHING - sharing the exact same pre-step speed - completes
     the same crossing normally in the same tick.
     """
@@ -462,7 +462,7 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         env.reset(False, False, random_seed=10)
         env._max_episode_steps = 1000
         agent = env.agents[0]
-        agent.current_configuration = agent.initial_configuration
+        agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
         # warm up to a tick where the agent's pre-step speed alone reaches the cell boundary
         for _ in range(3):
@@ -473,11 +473,11 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     env_nothing, agent_nothing = build_env_at_critical_step()
 
     # identical starting point for both branches
-    pre_configuration = agent_stop.current_configuration
+    pre_entry_point = agent_stop.current_entry_point
     pre_speed = agent_stop.speed_counter.speed
     pre_distance = agent_stop.speed_counter.distance
-    assert (agent_nothing.current_configuration, agent_nothing.speed_counter.speed, agent_nothing.speed_counter.distance) == \
-           (pre_configuration, pre_speed, pre_distance)
+    assert (agent_nothing.current_entry_point, agent_nothing.speed_counter.speed, agent_nothing.speed_counter.distance) == \
+           (pre_entry_point, pre_speed, pre_distance)
     assert pre_distance + pre_speed >= 1  # pre-step speed alone would reach/cross the boundary this tick
 
     env_stop.step({0: RailEnvActions.STOP_MOVING})
@@ -486,11 +486,11 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     # same pre-step speed, same distance, same intended movement - yet STOP_MOVING blocks the
     # crossing outright (distance capped, position unchanged) while DO_NOTHING completes it normally
     assert agent_stop.state == TrainState.STOPPED
-    assert agent_stop.current_configuration == pre_configuration
+    assert agent_stop.current_entry_point == pre_entry_point
     assert agent_stop.speed_counter.distance == 1
 
     assert agent_nothing.state == TrainState.MOVING
-    assert agent_nothing.current_configuration != pre_configuration
+    assert agent_nothing.current_entry_point != pre_entry_point
     assert agent_nothing.speed_counter.distance == 0
 
 
@@ -513,7 +513,7 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     env.acceleration_delta = Fraction(1, 2)
     env.braking_delta = -Fraction(1)  # full stop in one step, regardless of current speed
     agent = env.agents[0]
-    agent.current_configuration = agent.initial_configuration
+    agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
 
@@ -522,14 +522,14 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     pre_distance = agent.speed_counter.distance
     assert (pre_speed, pre_distance) == (Fraction(1), Fraction(1, 2))
     assert pre_distance + pre_speed == Fraction(3, 2)  # well past the boundary, not just reaching it
-    pre_configuration = agent.current_configuration
+    pre_entry_point = agent.current_entry_point
 
     env.step({0: RailEnvActions.STOP_MOVING})
 
     # capped at exactly the boundary, not at the 1/2 remainder `(distance+pre_speed) mod 1` would give,
     # and not at 3/2 either - the 1/2 of overshoot is simply gone
     assert agent.state == TrainState.STOPPED
-    assert agent.current_configuration == pre_configuration
+    assert agent.current_entry_point == pre_entry_point
     assert agent.speed_counter.distance == 1
 
 
@@ -652,7 +652,7 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         # Append the rewards of the first trial
-        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
         env_data.append((reward[0], position))
         assert reward[0] == env_data[step][0]
         assert position == env_data[step][1]
@@ -683,7 +683,7 @@ def tests_random_interference_from_outside():
 
         _, reward, dones, _ = env.step(action_dict)
         assert reward[0] == env_data[step][0]
-        position = env.agents[0].current_configuration[0] if env.agents[0].current_configuration is not None else None
+        position = env.agents[0].current_entry_point[0] if env.agents[0].current_entry_point is not None else None
         assert position == env_data[step][1]
         if dones['__all__']:
             break
@@ -703,15 +703,15 @@ def test_last_malfunction_step():
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
-    env.agents[0].initial_configuration = ((6, 6), 2)
+    env.agents[0].initial_entry_point = ((6, 6), 2)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
     env._max_episode_steps = 1000
 
     env.reset(False, False, random_seed=10)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == 1
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == 1
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
+        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
         env.agents[a_idx].state = TrainState.MOVING
     env.agents[0].malfunction_handler.malfunction_down_counter = 0
 

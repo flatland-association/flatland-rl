@@ -67,15 +67,15 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == 3
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == 3
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
+        env.agents[a_idx].current_entry_point = env.agents[a_idx].initial_entry_point
         env.agents[a_idx]._set_state(TrainState.MOVING)
 
     def _position(agent):
-        return agent.current_configuration[0] if agent.current_configuration is not None else None
+        return agent.current_entry_point[0] if agent.current_entry_point is not None else None
 
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository

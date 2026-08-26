@@ -17,20 +17,20 @@ from numpy.random import RandomState
 
 from flatland.core.env import Environment
 
-EnvType = TypeVar('EnvType')
-ObservationType = TypeVar('ObservationType')
+Env = TypeVar('Env')
+Observation = TypeVar('Observation')
 AgentHandle = int
 
 
-class ObservationBuilder(Generic[EnvType, ObservationType]):
+class ObservationBuilder(Generic[Env, Observation]):
     """
     ObservationBuilder base class.
     """
 
     def __init__(self):
-        self.env: Optional[EnvType] = None
+        self.env: Optional[Env] = None
 
-    def reset(self, env: EnvType):
+    def reset(self, env: Env):
         """
         Called after each environment reset, to allow for pre-computing relevant data. Receives the
         (possibly newly generated) env instance, so any instantiations depending on env parameters
@@ -41,12 +41,12 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
 
         Parameters
         ----------
-        env : EnvType
+        env : Env
             the (possibly newly generated) environment instance
         """
-        self.env: EnvType = env
+        self.env: Env = env
 
-    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, ObservationType]:
+    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Observation]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -69,7 +69,7 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: AgentHandle = 0) -> ObservationType:
+    def get(self, handle: AgentHandle = 0) -> Observation:
         """
         Called whenever an observation has to be computed for the `env` environment, possibly
         for each agent independently (agent id `handle`).
@@ -89,7 +89,7 @@ class ObservationBuilder(Generic[EnvType, ObservationType]):
     def _get_one_hot_for_agent_direction(self, agent) -> np.ndarray:
         """Returns the agent's direction to one-hot encoding."""
         direction = np.zeros(4)
-        direction[agent.current_configuration[1]] = 1
+        direction[agent.current_entry_point[1]] = 1
         return direction
 
 

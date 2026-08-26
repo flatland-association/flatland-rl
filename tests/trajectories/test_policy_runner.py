@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
-from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, ObservationType
+from flatland.core.env_observation_builder import ObservationBuilder, AgentHandle, Observation
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.RailEnvPolicy import RailEnvPolicy
 from flatland.envs.persistence import RailEnvPersister
@@ -47,7 +47,7 @@ class RandomPolicy(RailEnvPolicy):
 class EnvStepObservationBuilder(ObservationBuilder[RailEnv, int]):
     """Returns elapsed steps as observation."""
 
-    def get(self, handle: AgentHandle = 0) -> ObservationType:
+    def get(self, handle: AgentHandle = 0) -> Observation:
         return self.env._elapsed_steps
 
 

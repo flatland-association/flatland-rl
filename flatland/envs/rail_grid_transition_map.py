@@ -21,20 +21,20 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         super().__init__(width=width, height=height, transitions=transitions, grid=grid)
 
     @lru_cache(maxsize=4_000_000)
-    def get_successor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
-        position, direction = configuration
+    def get_successor_entry_points(self, entry_point: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
+        position, direction = entry_point
         successors = OrderedSet()
         for action in [RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT]:
             t = self.apply_action_independent(action, (position, direction))
             if t is not None:
-                new_configuration, _ = t
-                if self.is_valid_configuration(new_configuration):
-                    successors.add(new_configuration)
+                new_entry_point, _ = t
+                if self.is_valid_entry_point(new_entry_point):
+                    successors.add(new_entry_point)
         return successors
 
     @lru_cache(maxsize=4_000_000)
-    def get_predecessor_configurations(self, configuration: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
-        position, direction = configuration
+    def get_predecessor_entry_points(self, entry_point: Tuple[Tuple[int, int], int]) -> Set[Tuple[Tuple[int, int], int]]:
+        position, direction = entry_point
 
         previous_cell = get_new_position(position, (direction + 2) % 4)
         if self.check_bounds(previous_cell):
@@ -100,7 +100,7 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         return direction, False, RailEnvActions.STOP_MOVING, False
 
     @lru_cache(maxsize=1_000_000)
-    def _check_action_on_agent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Tuple[
+    def _check_action_on_agent(self, action: RailEnvActions, entry_point: Tuple[Tuple[int, int], int]) -> Tuple[
         bool, Tuple[Tuple[int, int], int], bool, RailEnvActions, bool]:
         """
 
@@ -108,14 +108,14 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
         ----------
         action : RailEnvActions
             Action to execute
-        configuration : Tuple[Tuple[int, int], int]
-            current configuration, e.g. position and orientation or current edge
+        entry_point : Tuple[Tuple[int, int], int]
+            current entry_point, i.e. cell position and entry direction (the direction the agent is facing)
 
         Returns
         -------
         new_cell_valid: bool
             is the new position and direction valid (i.e. is it within bounds and does it have > 0 outgoing transitions)
-        new_position: [ConfigurationType]
+        new_position: [EntryPoint]
             New position after applying the action
         transition_valid: bool
             Whether the transition from old and direction is defined in the grid.
@@ -134,22 +134,22 @@ class RailGridTransitionMap(GridTransitionMap[RailEnvActions]):
             Whether the action is valid at all - irrespective of transition_valid (action_valid=False implies transition_valid=False, but not inversely).
             Happens only on symmetric switches.
         """
-        position, direction = configuration
+        position, direction = entry_point
         new_direction, transition_valid, preprocessed_action, action_valid = self._check_action_new(action, position, direction)
         new_position = get_new_position(position, new_direction)
-        new_cell_valid = self.is_valid_configuration((new_position, new_direction))
+        new_cell_valid = self.is_valid_entry_point((new_position, new_direction))
         return new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, action_valid
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, configuration: Tuple[Tuple[int, int], int]) -> Optional[
+    def apply_action_independent(self, action: RailEnvActions, entry_point: Tuple[Tuple[int, int], int]) -> Optional[
         Tuple[Tuple[Tuple[int, int], int], bool]]:
-        position, direction = configuration
-        new_cell_valid, new_configuration, _, preprocessed_action, action_valid = self._check_action_on_agent(action, configuration)
+        position, direction = entry_point
+        new_cell_valid, new_entry_point, _, preprocessed_action, action_valid = self._check_action_on_agent(action, entry_point)
         if action_valid and new_cell_valid:
-            new_position, new_direction = new_configuration
+            new_position, new_direction = new_entry_point
             # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: allow acceleration in turns? dis-allow in dead-ends?
             straight = new_direction % 2 == direction % 2
-            return new_configuration, straight
+            return new_entry_point, straight
         else:
             return None
 

@@ -32,12 +32,12 @@ def test_rail_from_grid_transition_map():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == n_agents
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == n_agents
 
     for a_idx in range(len(env.agents)):
         agent = env.agents[a_idx]
-        direction = agent.current_configuration[1] if agent.current_configuration is not None else None
-        agent.current_configuration = (agent.initial_configuration[0], direction)
+        direction = agent.current_entry_point[1] if agent.current_entry_point is not None else None
+        agent.current_entry_point = (agent.initial_entry_point[0], direction)
         agent._set_state(TrainState.MOVING)
 
     nr_rail_elements = np.count_nonzero(env.rail.grid)
@@ -47,7 +47,7 @@ def test_rail_from_grid_transition_map():
 
     # Check that agents are placed on a rail
     for a in env.agents:
-        assert env.rail.grid[a.current_configuration[0]] != 0
+        assert env.rail.grid[a.current_entry_point[0]] != 0
 
     assert env.get_num_agents() == n_agents
 

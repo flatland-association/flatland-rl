@@ -1,14 +1,14 @@
 from typing import Generic, TypeVar, Optional
 
-ConfigurationType = TypeVar('ConfigurationType')
-ResourceType = TypeVar('ResourceType')
+EntryPoint = TypeVar('EntryPoint')
+Resource = TypeVar('Resource')
 
 
-class ResourceMap(Generic[ConfigurationType, ResourceType]):
+class ResourceMap(Generic[EntryPoint, Resource]):
     """
-    Resource Map stores the single resource required to be in the configuration
-    (i.e. to be in the cell or level-free crossing cell in grid world, resp. on the edge in graph world).
+    Resource Map stores the single resource required to be at the entry point
+    (i.e. to be in the cell or level-free crossing cell in grid world, resp. at the node in graph world).
     """
 
-    def get_resource(self, configuration: Optional[ConfigurationType]) -> Optional[ResourceType]:
+    def get_resource(self, entry_point: Optional[EntryPoint]) -> Optional[Resource]:
         raise NotImplementedError()

@@ -377,7 +377,7 @@ def test_set_full_state_legacy_flat_waypoints():
     target_wps = agent.waypoints[-1]
     assert len(target_wps) == len(set(target_wps)), f"expected distinct target waypoints, got {target_wps}"
     assert all(wp.direction is not None for wp in target_wps)
-    assert all(env_loaded.rail.is_valid_configuration((wp.position, wp.direction)) for wp in target_wps)
+    assert all(env_loaded.rail.is_valid_entry_point((wp.position, wp.direction)) for wp in target_wps)
 
     # must not raise - Rewards._sanitize_waypoints() assumes every waypoints entry is a list.
     Rewards._sanitize_waypoints(agent.waypoints)
@@ -390,7 +390,7 @@ def test_get_full_state_targets_hashable_for_legacy_readers():
     `load_env_agent` unconditionally does `{(agent_tuple.target, d) for d in Grid4TransitionsEnum}`, assuming
     that slot is always a bare, hashable `(row, col)` position. `_serialize_agent` must keep it hashable (a
     tuple, not a `set`) so that exact expression - the old reader's code, verbatim - does not raise, even
-    though the slot's meaning has changed to a full configuration set.
+    though the slot's meaning has changed to a full entry point set.
     """
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),

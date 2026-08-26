@@ -73,30 +73,30 @@ flags it as unused.
 `flatland/core/` defines the rail network purely in terms of generic abstractions, each with two independent
 concrete implementations — grid-based (`flatland/envs/grid/`) and graph-based (`flatland/envs/graph/`). Neither
 is a layer on top of the other; they're alternative representations selected at env-construction time. A
-**configuration** is each representation's network-position primitive: `((row, col), direction)` for grid,
+**entry point** is each representation's network-position primitive: `((row, col), direction)` for grid,
 a node-id string for graph.
 
 - **`TransitionMap`** (`core/transition_map.py`) — the rail topology: `get_transitions`/`set_transitions`,
-  `get_successor_configurations`/`get_predecessor_configurations`/`is_valid_configuration`. Grid impl:
+  `get_successor_entry_points`/`get_predecessor_entry_points`/`is_valid_entry_point`. Grid impl:
   `GridTransitionMap` → `RailGridTransitionMap`. Graph impl: `GraphTransitionMap`.
-- **`ResourceMap`** (`core/resource_map.py`) — maps a configuration to the "resource" (occupancy unit) used for
+- **`ResourceMap`** (`core/resource_map.py`) — maps an entry point to the "resource" (occupancy unit) used for
   conflict detection. Grid's `GridResourceMap` normally resolves to `(row, col)`, but for level-free crossings
   returns `(position, direction % 2)` so the two crossing axes count as distinct resources. Graph's
   `GraphResourceMap` is identity on the node id.
-- **Distance-map subsystem** (`core/configuration_distance_map.py`, `core/distance_map.py`,
-  `core/distance_map_walker.py`) — `ConfigurationDistanceMap` (agent-agnostic, keyed by
+- **Distance-map subsystem** (`core/entry_point_distance_map.py`, `core/distance_map.py`,
+  `core/distance_map_walker.py`) — `EntryPointDistanceMap` (agent-agnostic, keyed by
   `(source_config, target_config)`) → `AgentSourceTargetDistanceMap` (agent-handle-aware, shared template-method
   `_compute()`) → concrete `DistanceMap` (grid, numpy array) / `GraphDistanceMap` (graph, nested dict).
-  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target configuration
+  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target entry point
   (a shared visited set across targets silently breaks on cyclic/looped layouts). `RailEnv` keeps one
   `distance_map` instance alive across `reset()` calls rather than reconstructing it per episode.
 
 ### `flatland/envs/` — env control flow
 
 `RailEnv`/`AbstractRailEnv` (`rail_env.py`) is the env facade, generic over `(TransitionMap, ResourceMap,
-ConfigurationType)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
+EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
 assignment), `timetable_generators.py` (departure/arrival windows). Per `step()`, for each agent: derive the
-desired next configuration from the action via the `step_utils` state machine (`TrainState`/
+desired next entry point from the action via the `step_utils` state machine (`TrainState`/
 `TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
 `(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
 conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
@@ -104,12 +104,12 @@ state/position, then `handle_done_state()`, then rewards, per agent, in that ord
 holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
 via the distance map's shortest paths.
 
-`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_configuration`
-and, if `remove_agents_at_target` (the default), clears `agent.current_configuration` to `None` — so on the
+`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_entry_point`
+and, if `remove_agents_at_target` (the default), clears `agent.current_entry_point` to `None` — so on the
 exact step an agent reaches `TrainState.DONE`, a `Rewards.step_reward()` implementation already sees
-`current_configuration is None`. A reward implementation that needs "where is this agent right now" must key
-off `target_configuration` (or `agent_utils.virtual_configuration()`) for a `DONE` agent, not
-`current_configuration` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
+`current_entry_point is None`. A reward implementation that needs "where is this agent right now" must key
+off `target_entry_point` (or `agent_utils.virtual_entry_point()`) for a `DONE` agent, not
+`current_entry_point` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
 departure booking as a result.
 
 `flatland/envs/graph_rail_env.py`'s `GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str])`
@@ -118,18 +118,18 @@ is a full graph-native sibling to `RailEnv`, not just an implementation detail o
 `GraphTransitionMap.grid_to_digraph`), while `GraphRailEnv.from_graph()` builds one directly from an
 `nx.DiGraph` plus string-node-id `agent_waypoints` — no grid tuples or `Waypoint` objects involved at all. Both
 envs share `AbstractRailEnv.step()`/`handle_done_state()` verbatim (a single shared definition), so behavior
-differences between the two are almost entirely about topology/configuration representation, not control flow.
+differences between the two are almost entirely about topology/entry-point representation, not control flow.
 
-### Configuration values are sanitized against numpy-dtype taint
+### Entry point values are sanitized against numpy-dtype taint
 
-`agent_utils.py`'s `_sanitize_configuration()` coerces a grid `(position, direction)` configuration's numpy
+`agent_utils.py`'s `_sanitize_entry_point()` coerces a grid `(position, direction)` entry point's numpy
 scalar elements (e.g. `np.int64` from rail/line generation) to plain `int` — left untouched, this numpy-ness
 can later break tuple equality (e.g. `agent_chains.py`'s level-free-crossing resource comparisons raising "the
 truth value of an array with more than one element is ambiguous"). It's wired in as an attrs `converter=` on
-`EnvAgent`'s four configuration attribs (`initial_configuration`/`current_configuration`/`old_configuration`/
-`target_configuration`), but attrs converters only run in `__init__` — any direct assignment after construction
-(e.g. `agent.current_configuration = ...` in `rail_env.py`'s `step()`) must call `_sanitize_configuration()`
-explicitly itself, unless the assigned value is already a known-sanitized configuration copied from elsewhere
+`EnvAgent`'s four entry-point attribs (`initial_entry_point`/`current_entry_point`/`old_entry_point`/
+`target_entry_point`), but attrs converters only run in `__init__` — any direct assignment after construction
+(e.g. `agent.current_entry_point = ...` in `rail_env.py`'s `step()`) must call `_sanitize_entry_point()`
+explicitly itself, unless the assigned value is already a known-sanitized entry point copied from elsewhere
 on the same agent.
 
 ### Speed is always a `Fraction` internally

@@ -27,11 +27,11 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
     for _ in range(150):
         env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
 
-    initial_positions = {agent.initial_configuration[0] for agent in env.agents}
+    initial_positions = {agent.initial_entry_point[0] for agent in env.agents}
     in_malfunction = dict()
     for agent in env.agents:
         if agent.malfunction_handler.in_malfunction:
-            in_malfunction[agent.current_configuration[0]] = agent
+            in_malfunction[agent.current_entry_point[0]] = agent
 
     # there is an agent stopped by the conditional malfunction generator at each initial position
     assert len(in_malfunction) == len(initial_positions)
@@ -81,7 +81,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
     in_malfunction = dict()
     for agent in env.agents:
         if agent.malfunction_handler.in_malfunction:
-            in_malfunction[agent.current_configuration[0]] = agent
+            in_malfunction[agent.current_entry_point[0]] = agent
 
     # there is an agent stopped by the conditional malfunction generator at each waypoint
     assert len(intermediate_waypoints) == 3
@@ -105,18 +105,18 @@ def test_make_multi_malfunction_condition():
 
     cond = make_multi_malfunction_condition(
         [condition_stopped_intermediate_and_range(44, 99),
-         condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_configuration[0]])])
+         condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_entry_point[0]])])
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], direction)
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    env.agents[0].current_entry_point = (env.agents[0].initial_entry_point[0], direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
 
     env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, direction)
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    env.agents[0].current_entry_point = (env.agents[0].waypoints[1][0].position, direction)
     assert cond(env.agents[0], 55)
     assert not cond(env.agents[0], 33)
     assert not cond(env.agents[0], 100)
@@ -164,14 +164,14 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
             break
         actions = dict()
         for agent in env.agents:
-            if agent.current_configuration is None:
+            if agent.current_entry_point is None:
                 actions[agent.handle] = RailEnvActions.MOVE_FORWARD
             elif agent.state == TrainState.DONE:
                 continue
             else:
 
                 next_waypoint_position = agent.waypoints[agents_at[agent.handle] + 1][0].position
-                if agent.current_configuration[0] == next_waypoint_position:
+                if agent.current_entry_point[0] == next_waypoint_position:
                     if stop_at_first_intermediate:
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
@@ -179,12 +179,12 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
                         agents_at[agent.handle] += 1
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
-                p = get_k_shortest_paths(env, agent.current_configuration[0], agent.current_configuration[1],
+                p = get_k_shortest_paths(env, agent.current_entry_point[0], agent.current_entry_point[1],
                                          next_waypoint_position)
                 shortest_path = p[0]
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail._check_action_on_agent(
-                        RailEnvActions.from_value(a), agent.current_configuration)
+                        RailEnvActions.from_value(a), agent.current_entry_point)
                     next_wp = shortest_path[1]
                     if (new_cell_valid and transition_valid
                         and new_position == next_wp.position and new_direction == next_wp.direction):

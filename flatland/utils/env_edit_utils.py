@@ -22,7 +22,7 @@ class SchedGen2(BaseLineGen):
     def generate(self, rail: GridTransitionMap, num_agents: int, hints: dict = None, num_resets: int = None,
                  np_random: RandomState = None) -> Line:
         return Line(agent_waypoints={i: [[Waypoint(self.rcStart, self.iDir)],
-                                         [Waypoint(self.rcEnd, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((self.rcEnd, d))]] for i in
+                                         [Waypoint(self.rcEnd, d) for d in Grid4TransitionsEnum if rail.is_valid_entry_point((self.rcEnd, d))]] for i in
                                      range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
@@ -38,7 +38,7 @@ class SchedGen3(BaseLineGen):
                  np_random: RandomState = None) -> Line:
         return Line(agent_waypoints={i: [[Waypoint(self.lrcStarts[i % len(self.lrcStarts)], self.liDirs[i % len(self.liDirs)])],
                                          [Waypoint(self.lrcTargs[i % len(self.lrcTargs)], d) for d in Grid4TransitionsEnum
-                                          if rail.is_valid_configuration((self.lrcTargs[i % len(self.lrcTargs)], d))]] for i in range(num_agents)},
+                                          if rail.is_valid_entry_point((self.lrcTargs[i % len(self.lrcTargs)], d))]] for i in range(num_agents)},
                     agent_speeds=[1.0] * num_agents)
 
 
@@ -164,5 +164,5 @@ def makeTestEnv(sName="single_alternative", nAg=2, remove_agents_at_target=True)
 def getAgentState(env):
     dAgState = {}
     for iAg, ag in enumerate(env.agents):
-        dAgState[iAg] = (*ag.current_configuration[0], ag.current_configuration[1])
+        dAgState[iAg] = (*ag.current_entry_point[0], ag.current_entry_point[1])
     return dAgState

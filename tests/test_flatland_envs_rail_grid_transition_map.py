@@ -1,6 +1,8 @@
+import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum, RailEnvTransitions
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -580,7 +582,7 @@ def test_get_valid_directions_on_grid(elem, expected):
 
 
 @pytest.mark.parametrize(
-    "configuration, expected",
+    "entry_point, expected",
     [
         pytest.param(((0, 0), Grid4TransitionsEnum.EAST), True, id="in_bounds_valid_transition"),
         pytest.param(((0, 0), Grid4TransitionsEnum.NORTH), False, id="in_bounds_no_transition"),
@@ -590,9 +592,73 @@ def test_get_valid_directions_on_grid(elem, expected):
         pytest.param(((0, 3), Grid4TransitionsEnum.EAST), False, id="out_of_bounds_column_at_width"),
     ]
 )
-def test_is_valid_configuration_out_of_bounds(configuration, expected):
-    """Regression test: is_valid_configuration must reject configurations whose position falls
+def test_is_valid_entry_point_out_of_bounds(entry_point, expected):
+    """Regression test: is_valid_entry_point must reject entry_points whose position falls
     outside the grid, not just cells with no outgoing transitions."""
     rail = RailGridTransitionMap(3, 3, RailEnvTransitions())
     rail.set_transitions((0, 0), RailEnvTransitionsEnum.horizontal_straight)
-    assert rail.is_valid_configuration(configuration) == expected
+    assert rail.is_valid_entry_point(entry_point) == expected
+
+
+_NON_EMPTY_RAIL_ENV_TRANSITIONS = [t for t in RailEnvTransitionsEnum if t != RailEnvTransitionsEnum.empty]
+
+# at a symmetric switch, entering head-on (facing the fork) makes MOVE_FORWARD invalid by design -- only
+# MOVE_LEFT/MOVE_RIGHT are valid there (see test_apply_action_independent_only_left_right_valid_at_symmetric_switch).
+_SYMMETRIC_SWITCH_FACING_ENTRIES = {
+    (RailEnvTransitionsEnum.symmetric_switch_from_east, Grid4TransitionsEnum.WEST),
+    (RailEnvTransitionsEnum.symmetric_switch_from_south, Grid4TransitionsEnum.NORTH),
+    (RailEnvTransitionsEnum.symmetric_switch_from_west, Grid4TransitionsEnum.EAST),
+    (RailEnvTransitionsEnum.symmetric_switch_from_north, Grid4TransitionsEnum.SOUTH),
+}
+
+
+@pytest.mark.parametrize("rail_env_transition", _NON_EMPTY_RAIL_ENV_TRANSITIONS,
+                         ids=[t.name for t in _NON_EMPTY_RAIL_ENV_TRANSITIONS])
+@pytest.mark.parametrize("direction", list(Grid4TransitionsEnum), ids=[d.name for d in Grid4TransitionsEnum])
+def test_apply_action_independent_not_none_for_every_entry_side(rail_env_transition, direction):
+    """Show that all actions are valid except for L/R on symmetric switches facing."""
+    if (rail_env_transition, direction) in _SYMMETRIC_SWITCH_FACING_ENTRIES:
+        pytest.skip(f"{rail_env_transition.name} facing {direction.name} disallows MOVE_FORWARD by design")
+
+    transitions = RailEnvTransitions()
+    center = (1, 1)
+    grid = np.zeros((3, 3), dtype=np.uint16)
+    grid[center] = rail_env_transition
+    for d in Grid4TransitionsEnum:
+        if not any(transitions.get_transitions(int(rail_env_transition), d)):
+            continue  # element has no transition for this incoming orientation -- no neighbor to connect
+        previous_cell = get_new_position(center, (d + 2) % 4)
+        is_vertical = d in (Grid4TransitionsEnum.NORTH, Grid4TransitionsEnum.SOUTH)
+        sender = RailEnvTransitionsEnum.vertical_straight if is_vertical else RailEnvTransitionsEnum.horizontal_straight
+        grid[previous_cell] = sender
+
+    rail = RailGridTransitionMap(width=3, height=3, transitions=transitions)
+    rail.grid = grid
+
+    entry_point = (center, direction)
+    if not rail.get_predecessor_entry_points(entry_point):
+        pytest.skip(f"{rail_env_transition.name} has no valid entry from {direction.name}")
+
+    assert all(rail.apply_action_independent(action, entry_point) is not None
+               for action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_RIGHT))
+
+
+@pytest.mark.parametrize("action", list(RailEnvActions), ids=[a.name for a in RailEnvActions])
+def test_apply_action_independent_only_left_right_valid_at_symmetric_switch(action):
+    """Document invalid actions L/R for symmetric switch explicitly."""
+    transitions = RailEnvTransitions()
+    center = (1, 1)
+    grid = np.zeros((3, 3), dtype=np.uint16)
+    grid[center] = RailEnvTransitionsEnum.symmetric_switch_from_east  # heading west forks N/S
+    grid[0, 1] = RailEnvTransitionsEnum.vertical_straight
+    grid[2, 1] = RailEnvTransitionsEnum.vertical_straight
+
+    rail = RailGridTransitionMap(width=3, height=3, transitions=transitions)
+    rail.grid = grid
+
+    entry_point = (center, Grid4TransitionsEnum.WEST)
+    result = rail.apply_action_independent(action, entry_point)
+    if action in (RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT):
+        assert result is not None
+    else:
+        assert result is None

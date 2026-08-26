@@ -6,12 +6,12 @@ possible transitions over a 2D grid.
 from enum import IntEnum
 from typing import TypeVar, Generic, Tuple
 
-TransitionsDataType = TypeVar('TransitionsDataType')
-TransitionsOrientationType = TypeVar('TransitionsOrientationType')
-TransitionsValidityType = TypeVar('TransitionsValidityType')
+TransitionsData = TypeVar('TransitionsData')
+TransitionsOrientation = TypeVar('TransitionsOrientation')
+TransitionsValidity = TypeVar('TransitionsValidity')
 
 
-class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, TransitionsValidityType]):
+class Transitions(Generic[TransitionsData, TransitionsOrientation, TransitionsValidity]):
     """
     Base Transitions class.
 
@@ -23,7 +23,7 @@ class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, Trans
     def get_type(self):
         raise NotImplementedError()
 
-    def get_transitions(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType) -> Tuple[TransitionsValidityType]:
+    def get_transitions(self, cell_transition: TransitionsData, orientation: TransitionsOrientation) -> Tuple[TransitionsValidity]:
         """
         Return a tuple of transitions available in a cell specified by
         `cell_transition' for an agent facing direction `orientation`
@@ -48,7 +48,7 @@ class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, Trans
         """
         raise NotImplementedError()
 
-    def set_transitions(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, new_transitions: Tuple[TransitionsValidityType]):
+    def set_transitions(self, cell_transition: TransitionsData, orientation: TransitionsOrientation, new_transitions: Tuple[TransitionsValidity]):
         """
         Return a `cell_transition` specification where the transitions
         available for an agent facing direction `orientation` are replaced
@@ -76,7 +76,7 @@ class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, Trans
         """
         raise NotImplementedError()
 
-    def get_transition(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, direction: TransitionsOrientationType):
+    def get_transition(self, cell_transition: TransitionsData, orientation: TransitionsOrientation, direction: TransitionsOrientation):
         """
         Return the status of whether an agent oriented in directions
         `orientation' and inside a cell with transitions `cell_transition`
@@ -103,8 +103,8 @@ class Transitions(Generic[TransitionsDataType, TransitionsOrientationType, Trans
         """
         raise NotImplementedError()
 
-    def set_transition(self, cell_transition: TransitionsDataType, orientation: TransitionsOrientationType, direction: TransitionsOrientationType,
-                       new_transition: TransitionsValidityType):
+    def set_transition(self, cell_transition: TransitionsData, orientation: TransitionsOrientation, direction: TransitionsOrientation,
+                       new_transition: TransitionsValidity):
         """
         Return a `cell_transition` specification where the status of
         whether an agent oriented in direction `orientation` and inside
