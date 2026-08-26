@@ -470,6 +470,10 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
         agent = env.agents[0]
         agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+        assert transition is not None
+        agent.next_entry_point = _sanitize_entry_point(transition)
         # warm up to a tick where the agent's pre-step speed alone reaches the cell boundary
         for _ in range(3):
             env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -521,6 +525,10 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
     agent = env.agents[0]
     agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
+    # design: actions applied at cell entry
+    transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+    assert transition is not None
+    agent.next_entry_point = _sanitize_entry_point(transition)
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
 
     env.step({0: RailEnvActions.MOVE_FORWARD})

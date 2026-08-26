@@ -70,12 +70,13 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 speed=_pseudo_fractional(1.0),
                 distance=_pseudo_fractional(0.8),
 
-                action=RailEnvActions.MOVE_FORWARD,
+                action=RailEnvActions.MOVE_LEFT,
 
             ),
             # design: distance update with pre-step speed. This is the switch cell about to be exited
-            # (distance + speed = 1.8 crosses the boundary this step) - MOVE_LEFT here actually turns the
-            # agent onto the south branch.
+            # (distance + speed = 1.8 crosses the boundary this step) - the south turn was already
+            # decided by the MOVE_LEFT given on entry into this cell (previous step), so this step's
+            # action only needs a valid look-ahead beyond the south branch.
             Replay(  # 5
                 position=(3, 6),
                 direction=Grid4TransitionsEnum.WEST,
@@ -83,7 +84,7 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
                 distance=_pseudo_fractional(0.8),
                 state=TrainState.MOVING,
 
-                action=RailEnvActions.MOVE_LEFT,
+                action=RailEnvActions.MOVE_FORWARD,
             ),
             # turned onto the south branch; brake one time step later, now that the agent is already on the
             # new cell.
