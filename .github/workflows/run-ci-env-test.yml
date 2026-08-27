@@ -62,7 +62,7 @@ jobs:
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                    unzip -o FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Save cached episodes
                 if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
                 uses: actions/cache/save@v5
