@@ -1022,14 +1022,17 @@ def test_multicell_station_on_time_halt_forgives_later_revisit(revisit_cell, rev
 
 
 """
-Tests for the COLLISION penalty semantics (see docstring of `BaseDefaultRewards`):
+Tests for the COLLISION/INVALID_ACTION penalty semantics (see docstring of `BaseDefaultRewards`):
 
-    "Safety measures are implemented as penalties for collisions which are directly
+    "Safety measures are implemented as penalties for env-forced stops which are directly
      proportional to the train's speed at impact"
 
 A controlled stop (STOP_MOVING issued by the policy, braking to zero) is not an
-impact and must not be penalized. Only stops imposed by the env (motion check
-conflict or invalid action) are collisions.
+impact and must not be penalized. Every other env-forced stop is penalized under one of
+two mutually exclusive keys, both using the same `collision_factor`: COLLISION (motion
+check conflict with another agent, i.e. `resource_check == False`) or INVALID_ACTION
+(the action itself was invalid - today, only possible at a symmetric switch, i.e.
+`action_valid == False`).
 """
 
 COLLISION_FACTOR = 250.0
@@ -1063,13 +1066,16 @@ def test_no_collision_penalty_on_voluntary_stop():
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
-    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True)
+    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=True,
+                                     action_valid=True)
     _stop_moving_agent(agent, signals)
 
-    transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
+    transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals, resource_check=True)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == 0, \
         "A controlled stop must not incur the collision penalty"
+    assert d[DefaultPenalties.INVALID_ACTION.value] == 0, \
+        "A controlled stop must not incur the invalid-action penalty"
 
 
 def test_collision_penalty_on_env_forced_stop():
@@ -1077,13 +1083,15 @@ def test_collision_penalty_on_env_forced_stop():
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
-    signals = StateTransitionSignals(movement_action_given=True, movement_allowed=False)
+    signals = StateTransitionSignals(movement_action_given=True, movement_allowed=False, action_valid=True)
     _stop_moving_agent(agent, signals)
 
     speed_at_impact = Fraction(1)
-    transition_data = AgentTransitionData(speed_at_impact, speed_at_impact, signals)
+    transition_data = AgentTransitionData(speed_at_impact, speed_at_impact, signals, resource_check=False)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * speed_at_impact * COLLISION_FACTOR
+    assert d[DefaultPenalties.INVALID_ACTION.value] == 0, \
+        "A motion-check conflict is a collision, not an invalid action"
 
 
 def test_collision_penalty_when_braking_interrupted_by_conflict():
@@ -1092,43 +1100,52 @@ def test_collision_penalty_when_braking_interrupted_by_conflict():
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
-    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=False, movement_allowed=False)
+    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=False, movement_allowed=False,
+                                     action_valid=True)
     _stop_moving_agent(agent, signals)
 
     residual_speed = Fraction(1, 4)
-    transition_data = AgentTransitionData(residual_speed, residual_speed, signals)
+    transition_data = AgentTransitionData(residual_speed, residual_speed, signals, resource_check=False)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
     assert d[DefaultPenalties.COLLISION.value] == -1 * residual_speed * COLLISION_FACTOR
+    assert d[DefaultPenalties.INVALID_ACTION.value] == 0, \
+        "A motion-check conflict is a collision, not an invalid action"
 
 
-def test_collision_penalty_on_invalid_action_stop():
+def test_invalid_action_penalty_on_invalid_action_stop():
     """Invalid action (e.g. DO_NOTHING on symmetric switch) -> env intervenes -> penalized.
     See https://github.com/flatland-association/flatland-rl/issues/280 for the open design question."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
-    signals = StateTransitionSignals(stop_action_given=False, new_speed_zero=True, movement_allowed=False)
+    signals = StateTransitionSignals(stop_action_given=False, new_speed_zero=True, movement_allowed=False,
+                                     action_valid=False)
     _stop_moving_agent(agent, signals)
 
     transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
-    assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR
+    assert d[DefaultPenalties.INVALID_ACTION.value] == -1 * Fraction(1) * COLLISION_FACTOR
+    assert d[DefaultPenalties.COLLISION.value] == 0, \
+        "An invalid action is not a collision with another agent"
 
 
-def test_collision_penalty_on_invalid_stop_action():
+def test_invalid_action_penalty_on_invalid_stop_action():
     """STOP_MOVING itself evaluates as invalid (e.g. facing a symmetric switch, which has no straight-through
     transition -- see RailGridTransitionMap._check_action_new) -> env intervenes -> penalized, not "voluntary",
     even though stop_action_given and new_speed_zero are both true, same as a genuinely voluntary stop."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
-    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=False)
+    signals = StateTransitionSignals(stop_action_given=True, new_speed_zero=True, movement_allowed=False,
+                                     action_valid=False)
     _stop_moving_agent(agent, signals)
 
     transition_data = AgentTransitionData(Fraction(1), Fraction(0), signals)
     d = rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=5)
-    assert d[DefaultPenalties.COLLISION.value] == -1 * Fraction(1) * COLLISION_FACTOR, \
+    assert d[DefaultPenalties.INVALID_ACTION.value] == -1 * Fraction(1) * COLLISION_FACTOR, \
         "An env-forced stop must be penalized even if it happens to coincide with a STOP_MOVING action"
+    assert d[DefaultPenalties.COLLISION.value] == 0, \
+        "An invalid action is not a collision with another agent"
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1171,11 +1188,13 @@ def test_env_no_collision_penalty_on_voluntary_stop():
     assert agent.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0, \
         "A controlled stop must not incur the collision penalty"
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # resuming from the controlled stop works and is not penalized either
     _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
 def test_env_collision_penalty_on_head_on_conflict():
@@ -1188,6 +1207,8 @@ def test_env_collision_penalty_on_head_on_conflict():
         _, rewards, _, _ = env.step(forward)
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
         assert rewards[1][DefaultPenalties.COLLISION.value] == 0
+        assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
+        assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # before 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them
     assert agent_0.current_entry_point == ((3, 2), Grid4TransitionsEnum.EAST)
@@ -1201,9 +1222,12 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert agent_1.state == TrainState.STOPPED
     assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR, \
         "An env-forced stop (head-on conflict) must incur the collision penalty proportional to speed"
+    assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0, \
+        "A motion-check conflict is a collision, not an invalid action"
     # the agent winning the conflict resolution keeps moving unpenalized
     assert agent_0.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     # after 4th step: agent 0 has moved into the contested cell, agent 1 stayed put (force-stopped)
     assert agent_0.current_entry_point == ((3, 3), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
@@ -1217,6 +1241,8 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert agent_0.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR, \
         "An env-forced stop (swap prevention) must incur the collision penalty proportional to speed"
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0, \
+        "A motion-check conflict is a collision, not an invalid action"
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0, \
         "The penalty fires once on the MOVING -> STOPPED transition, not per deadlocked step"
 
@@ -1225,12 +1251,16 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
+    assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # deadlock persists: no positions change, no further collision penalties accrue
     _, rewards, _, _ = env.step(forward)
     assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
+    assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
 def _env_after_malfunction():
@@ -1268,9 +1298,11 @@ def test_env_no_collision_penalty_for_dwell_after_malfunction():
         _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.STOPPED
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+        assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # strategy 2 (stop-and-go): restart immediately, then brake voluntarily -- also free since fix #452
     env = _env_after_malfunction()
@@ -1278,10 +1310,12 @@ def test_env_no_collision_penalty_for_dwell_after_malfunction():
     _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     _, rewards, _, _ = env.step({0: RailEnvActions.STOP_MOVING})
     assert agent.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0, \
         "Braking a restarted train must cost the same as holding it stopped: nothing"
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -1329,6 +1363,7 @@ def test_platoon_same_speed_no_collision_penalty(start_columns):
         for i in range(3):
             assert env.agents[i].state == TrainState.MOVING
             assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+            assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
 def test_platoon_slow_leader_periodic_collision_penalty():
@@ -1352,12 +1387,15 @@ def test_platoon_slow_leader_periodic_collision_penalty():
     assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0  # leader itself moves freely
+    for i in range(3):
+        assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # steps 1..4: leader vacates a cell each tick, platoon moves in step -> no penalty for anyone
     for _ in range(4):
         _, rewards, _, _ = env.step(forward)
         for i in range(3):
             assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+            assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # step 5: one full period later, the leader again fails to vacate its cell -> followers blocked again
     _, rewards, _, _ = env.step(forward)
@@ -1365,14 +1403,17 @@ def test_platoon_slow_leader_periodic_collision_penalty():
     assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    for i in range(3):
+        assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
-def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
+def test_env_invalid_action_penalty_on_invalid_forward_at_symmetric_switch():
     """A train arriving at a symmetric switch must choose left or right; MOVE_FORWARD (going straight)
     is invalid. design: actions applied at cell entry -- entry point and next entry point must always
     advance together (see the invariant documented in RailEnv.step()), so the crossing into the switch
-    is denied and the train is force-stopped one cell short of it, at (2,2); like any env-imposed stop,
-    this incurs the collision penalty proportional to speed.
+    is denied and the train is force-stopped one cell short of it, at (2,2); this incurs the
+    invalid-action penalty proportional to speed - not the collision penalty, since no other agent is
+    involved.
 
     Layout (train departs at (2,3) heading WEST, rolls towards the symmetric switch at (2,1) whose only
     valid exits are north and south -- continuing west is invalid):
@@ -1418,10 +1459,12 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     assert (north, east, south, west) == (1, 0, 1, 0)
 
     # drive forward until the train reaches the switch and is force-stopped
-    penalties = []
+    invalid_action_penalties = []
+    collision_penalties = []
     for _ in range(6):
         _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD})
-        penalties.append(rewards[0][DefaultPenalties.COLLISION.value])
+        invalid_action_penalties.append(rewards[0][DefaultPenalties.INVALID_ACTION.value])
+        collision_penalties.append(rewards[0][DefaultPenalties.COLLISION.value])
         if agent.state == TrainState.STOPPED:
             break
 
@@ -1431,8 +1474,10 @@ def test_env_collision_penalty_on_invalid_forward_at_symmetric_switch():
     assert agent.next_entry_point[0] == (2, 1)
     assert agent.state_machine.previous_state == TrainState.MOVING
     assert agent.state == TrainState.STOPPED
-    assert penalties[-1] == -1 * 1 * COLLISION_FACTOR, \
-        "MOVE_FORWARD into a symmetric switch is invalid -> env-forced stop -> collision penalty"
+    assert invalid_action_penalties[-1] == -1 * 1 * COLLISION_FACTOR, \
+        "MOVE_FORWARD into a symmetric switch is invalid -> env-forced stop -> invalid-action penalty"
     # no penalty accrued while the train was still approaching at full speed
-    assert penalties[:-1] == [0] * (len(penalties) - 1)
+    assert invalid_action_penalties[:-1] == [0] * (len(invalid_action_penalties) - 1)
+    # single-agent scenario: never a collision, only ever (at most) an invalid action
+    assert collision_penalties == [0] * len(collision_penalties)
 
