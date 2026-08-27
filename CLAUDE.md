@@ -61,6 +61,12 @@ flags it as unused.
   plain-Python fallback instead (e.g. to reproduce
   `verify-build-no-gcc`'s behavior), fake a missing compiler: `CC=/nonexistent-cc CXX=/nonexistent-cxx python -c
   "from setuptools import setup; setup()" build_ext --inplace`.
+- **Run tests against the compiled Cython build** (catches a `.pxd`/`.py` mismatch that compiles cleanly but
+  breaks at runtime, e.g. a `cdef class` field only ever assigned in the `.py` source): build in place per
+  above, then `python -m pytest --ignore=tests/ml -m cython_ext` - a fast, targeted subset (not the full suite)
+  of tests marked `pytest.mark.cython_ext` for exercising `state_machine.py`/`states.py`/
+  `rail_env_shortest_paths.py`. Wired into `tox -e py3.13-verify-cython-build-no-isolation`. Mark any new test
+  that exercises these modules the same way - see `CONTRIBUTING.md`'s Cython section.
 - **Profiling notebooks** (`benchmarks/flatland_performance_profiling.ipynb`,
   `benchmarks/benchmark_k_shortest_paths_profiling.ipynb`): `tox -e py3.13-profiling` /
   `tox -e py3.13-profiling-get-k-shortest-paths` — use Python 3.13, not 3.12 (see the Cython section below for
@@ -204,6 +210,15 @@ sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's 
 compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
 by construction, but guards against e.g. stray `.c`/`.so` files accidentally being packaged).
 
+**None of the above actually execute the compiled code** - they only check that a `.so`/`.pyd` artifact exists
+(or doesn't). A `.pxd`/`.py` mismatch that compiles cleanly but breaks at runtime (e.g. a `cdef class` field
+assigned in the `.py` source but never declared in the `.pxd` - Cython's `cdef class` has no `__dict__`
+fallback for undeclared attributes, unlike a plain Python object) previously only surfaced via the profiling
+notebook's `LOCAL_Cython` step, since that's the only path that both compiles in-place and actually runs
+`env.step()` against the result. `py{...}-verify-cython-build-no-isolation` now also builds in-place and runs
+the tests marked `pytest.mark.cython_ext` against it for exactly this reason - see the `Commands` section above
+and `CONTRIBUTING.md`'s Cython section.
+
 **Known gap: `cProfile` can't see calls into compiled Cython functions on Python 3.12.** Python 3.12's `cProfile`
 registers itself via PEP 669's `sys.monitoring` instead of the legacy `PyEval_SetProfile` hook, and Cython's own
 `sys.monitoring` bridge (`CYTHON_USE_SYS_MONITORING`) is gated to Python ≥3.13 — confirmed independent of the
@@ -294,3 +309,19 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   hot paths" above.
 - Read packaged resource files (e.g. rail data shipped inside a subpackage) via `importlib_resources`
   (`path`/`read_binary`), not a raw path relative to the module.
+- `TypeVar` names are always `T`-suffixed (`EntryPointT = TypeVar('EntryPointT')`, `DistanceMapT =
+  TypeVar('DistanceMapT')`, etc., down to `ObsT`/`ActT`) - matches pylint's default `typevar-rgx`, which rejects
+  a bare `T`/`T1`. The string passed to `TypeVar()` must match the variable name exactly. This also sidesteps a
+  real footgun: several of these names (`TransitionMapT`, `ResourceMapT`, `TransitionsT`) would otherwise
+  collide with an imported class of the same bare name used elsewhere in that same file (e.g. `rail_env.py`
+  imports both `TransitionMap` and `ResourceMap` as classes) - a bare-named TypeVar declaration there would
+  silently shadow the import for every reference below it in the file.
+- When a `TypeVar` has a `bound=`, its name must be exactly `<BoundClassName>T` (e.g. `policy.py`'s
+  `EnvironmentT = TypeVar('EnvironmentT', bound=Environment)`, `rail_env_policy.py`'s `RailEnvT`/
+  `RailEnvActionsT` bound to `RailEnv`/`RailEnvActions`, `distance_map_walker.py`'s `EntryPointDistanceMapT`
+  bound to `EntryPointDistanceMap`) - an abbreviated or generic name (e.g. a bare `EnvT` bound to `Environment`)
+  is disallowed even though it's still `T`-suffixed, since the point is that the name alone should tell you the
+  bound without checking the declaration. An *unbound* `TypeVar` has no such constraint and can stay generic
+  (e.g. `env_observation_builder.py`'s unbound `EnvT`, `entry_point_distance_map.py`'s unbound `DistanceMapT`) -
+  don't confuse the two: the same base name can be legitimately unbound-and-generic in one file and
+  bound-and-specific in another.

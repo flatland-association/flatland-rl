@@ -4,12 +4,12 @@ from typing import List, Generic, Set, TypeVar
 from flatland.core.entry_point_distance_map import EntryPointDistanceMap
 from flatland.core.transition_map import TransitionMap
 
-UnderlyingDistanceMap = TypeVar('UnderlyingDistanceMap', bound=EntryPointDistanceMap)
-UnderlyingTransitionMap = TypeVar('UnderlyingTransitionMap', bound=TransitionMap)
-UnderlyingEntryPoint = TypeVar('UnderlyingEntryPoint')
+EntryPointDistanceMapT = TypeVar('EntryPointDistanceMapT', bound=EntryPointDistanceMap)
+TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
+EntryPointT = TypeVar('EntryPointT')
 
 
-class DistanceMapWalker(Generic[UnderlyingDistanceMap, UnderlyingTransitionMap, UnderlyingEntryPoint]):
+class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPointT]):
     """
     "All-to-any-one-in-cluster": utility class to compute distance maps from each entry point in the rail network (cell and each possible orientation within it in grid case)
      to any one in the set of target entry points using backwards BFS. Agnostic of any agent/target_nr - operates
@@ -20,9 +20,9 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMap, UnderlyingTransitionMap, 
         self.distance_map = distance_map
 
     def _distance_map_walker(self,
-                             rail: UnderlyingTransitionMap,
-                             target_entry_points: List[UnderlyingEntryPoint]
-                             ) -> Set[UnderlyingEntryPoint]:
+                             rail: TransitionMapT,
+                             target_entry_points: List[EntryPointT]
+                             ) -> Set[EntryPointT]:
         """
         Utility function to compute distance maps from each cell in the rail network (and each possible
         orientation within it) to each of the target entry points. Each target entry point is walked
@@ -39,7 +39,7 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMap, UnderlyingTransitionMap, 
 
         Returns
         -------
-        Set[UnderlyingEntryPoint]
+        Set[EntryPointT]
             the set of all entry points backwards-reachable from any of the target entry points (i.e.
             those a distance was filled in for).
         """
@@ -48,8 +48,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMap, UnderlyingTransitionMap, 
             reachable_entry_points |= self._walk_to_target(rail, target_entry_point)
         return reachable_entry_points
 
-    def _walk_to_target(self, rail: UnderlyingTransitionMap, target_entry_point: UnderlyingEntryPoint
-                        ) -> Set[UnderlyingEntryPoint]:
+    def _walk_to_target(self, rail: TransitionMapT, target_entry_point: EntryPointT
+                        ) -> Set[EntryPointT]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
         the minimum distances.
@@ -80,8 +80,8 @@ class DistanceMapWalker(Generic[UnderlyingDistanceMap, UnderlyingTransitionMap, 
 
         return visited
 
-    def _get_and_update_neighbors(self, rail: UnderlyingTransitionMap, entry_point: UnderlyingEntryPoint,
-                                  current_distance: int, target_entry_point: UnderlyingEntryPoint):
+    def _get_and_update_neighbors(self, rail: TransitionMapT, entry_point: EntryPointT,
+                                  current_distance: int, target_entry_point: EntryPointT):
         """
         Utility function used by _walk_to_target to perform a BFS walk over the rail, filling in the
         minimum distances to a single target entry point.

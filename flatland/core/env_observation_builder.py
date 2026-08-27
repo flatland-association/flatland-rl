@@ -17,20 +17,20 @@ from numpy.random import RandomState
 
 from flatland.core.env import Environment
 
-Env = TypeVar('Env')
-Observation = TypeVar('Observation')
+EnvT = TypeVar('EnvT')
+ObservationT = TypeVar('ObservationT')
 AgentHandle = int
 
 
-class ObservationBuilder(Generic[Env, Observation]):
+class ObservationBuilder(Generic[EnvT, ObservationT]):
     """
     ObservationBuilder base class.
     """
 
     def __init__(self):
-        self.env: Optional[Env] = None
+        self.env: Optional[EnvT] = None
 
-    def reset(self, env: Env):
+    def reset(self, env: EnvT):
         """
         Called after each environment reset, to allow for pre-computing relevant data. Receives the
         (possibly newly generated) env instance, so any instantiations depending on env parameters
@@ -41,12 +41,12 @@ class ObservationBuilder(Generic[Env, Observation]):
 
         Parameters
         ----------
-        env : Env
+        env : EnvT
             the (possibly newly generated) environment instance
         """
-        self.env: Env = env
+        self.env: EnvT = env
 
-    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Observation]:
+    def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, ObservationT]:
         """
         Called whenever an observation has to be computed for the `env` environment, for each agent with handle
         in the `handles` list.
@@ -69,7 +69,7 @@ class ObservationBuilder(Generic[Env, Observation]):
             observations[h] = self.get(h)
         return observations
 
-    def get(self, handle: AgentHandle = 0) -> Observation:
+    def get(self, handle: AgentHandle = 0) -> ObservationT:
         """
         Called whenever an observation has to be computed for the `env` environment, possibly
         for each agent independently (agent id `handle`).

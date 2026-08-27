@@ -3,10 +3,10 @@ from typing import Callable, Dict, List, Optional, Set
 
 from flatland.core.entry_point_distance_map import (
     EntryPointDistanceMap,
-    UnderlyingEntryPoint,
-    UnderlyingDistanceMap,
-    UnderlyingTransitionMap,
-    UnderlyingWaypoint,
+    EntryPointT,
+    DistanceMapT,
+    TransitionMapT,
+    WaypointT,
 )
 from flatland.core.distance_map_walker import DistanceMapWalker
 from flatland.envs.agent_utils import EnvAgent
@@ -14,8 +14,8 @@ from flatland.envs.step_utils.states import TrainState
 
 
 class AgentSourceTargetDistanceMap(
-    EntryPointDistanceMap[UnderlyingTransitionMap, UnderlyingDistanceMap, UnderlyingEntryPoint,
-    UnderlyingWaypoint]
+    EntryPointDistanceMap[TransitionMapT, DistanceMapT, EntryPointT,
+    WaypointT]
 ):
     """
     Adds agent-handle (target_nr) aware querying on top of `EntryPointDistanceMap`. `get_agent_distance`
@@ -23,19 +23,19 @@ class AgentSourceTargetDistanceMap(
     concrete subclasses provide the underlying per-agent storage via `_set_agent_distance`.
     """
 
-    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[UnderlyingEntryPoint], UnderlyingWaypoint]):
+    def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[EntryPointT], WaypointT]):
         super().__init__(agents=agents, waypoint_init=waypoint_init)
         self.distance_map = None
         self.agents_previous_computation = None
         self.reset_was_called = False
 
-    def set(self, distance_map: UnderlyingDistanceMap):
+    def set(self, distance_map: DistanceMapT):
         """
         Set the distance map
         """
         self.distance_map = distance_map
 
-    def get(self) -> UnderlyingDistanceMap:
+    def get(self) -> DistanceMapT:
         """
         Get the distance map
         """
@@ -55,14 +55,14 @@ class AgentSourceTargetDistanceMap(
 
         return self.distance_map
 
-    def reset(self, agents: List[EnvAgent], rail: UnderlyingTransitionMap):
+    def reset(self, agents: List[EnvAgent], rail: TransitionMapT):
         """
         Reset the distance map
         """
         super().reset(agents=agents, rail=rail)
         self.reset_was_called = True
 
-    def _compute(self, agents: List[EnvAgent], rail: UnderlyingTransitionMap):
+    def _compute(self, agents: List[EnvAgent], rail: TransitionMapT):
         """
         Computes the distance maps for each unique target. Thus, if several targets are the same we only
         compute the distance for them once and copy to all agents with the same target.
@@ -86,20 +86,20 @@ class AgentSourceTargetDistanceMap(
                 self._copy_agent_distance(i, computed_targets.index(targets))
             computed_targets.append(targets)
 
-    def _new_distance_map(self, num_agents: int) -> UnderlyingDistanceMap:
+    def _new_distance_map(self, num_agents: int) -> DistanceMapT:
         raise NotImplementedError()
 
-    def _valid_targets(self, agent: EnvAgent, rail: UnderlyingTransitionMap) -> List[UnderlyingEntryPoint]:
+    def _valid_targets(self, agent: EnvAgent, rail: TransitionMapT) -> List[EntryPointT]:
         raise NotImplementedError()
 
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         raise NotImplementedError()
 
     # N.B. get_shortest_paths is not part of distance_map since it refers to RailEnvActions (would lead to circularity!)
-    def get_shortest_paths(self, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) -> Dict[int, Optional[List[UnderlyingWaypoint]]]:
+    def get_shortest_paths(self, max_depth: Optional[int] = None, agent_handle: Optional[int] = None) -> Dict[int, Optional[List[WaypointT]]]:
         """
         Computes the shortest path for each agent to its target and the action to be taken to do so.
-        The paths are derived from a `DistanceMap`.
+        The paths are derived from a `DistanceMapT`.
 
         If there is no path (rail disconnected), the path is given as None.
         The agent state (moving or not) and its speed are not taken into account
@@ -116,7 +116,7 @@ class AgentSourceTargetDistanceMap(
 
         Returns
         -------
-            Dict[int, Optional[List[UnderlyingWaypoint]]]
+            Dict[int, Optional[List[WaypointT]]]
 
         """
 
@@ -147,11 +147,11 @@ class AgentSourceTargetDistanceMap(
 
     def _reconstruct_shortest_path(
         self,
-        source: UnderlyingEntryPoint,
+        source: EntryPointT,
         handle,
         max_depth: Optional[int],
-        targets: Set[UnderlyingEntryPoint]
-    ) -> List[UnderlyingWaypoint]:
+        targets: Set[EntryPointT]
+    ) -> List[WaypointT]:
         """
         Reconstruct shortest path from distance map going forward from source to any of targets.
         """
@@ -181,12 +181,12 @@ class AgentSourceTargetDistanceMap(
             agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
 
-    def get_agent_distance(self, source_entry_point: UnderlyingEntryPoint, target_nr: int):
+    def get_agent_distance(self, source_entry_point: EntryPointT, target_nr: int):
         self.get()
         return self._get_agent_distance(source_entry_point, target_nr)
 
-    def _set_agent_distance(self, source_entry_point: UnderlyingEntryPoint, target_nr: int, new_distance: int):
+    def _set_agent_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: int):
         raise NotImplementedError()
 
-    def _get_agent_distance(self, source_entry_point: UnderlyingEntryPoint, target_nr: int):
+    def _get_agent_distance(self, source_entry_point: EntryPointT, target_nr: int):
         raise NotImplementedError()
