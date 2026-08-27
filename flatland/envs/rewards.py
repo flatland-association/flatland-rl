@@ -11,16 +11,16 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.states import TrainState
 
-Reward = TypeVar('Reward')
-EntryPoint = TypeVar('EntryPoint')
+RewardT = TypeVar('RewardT')
+EntryPointT = TypeVar('EntryPointT')
 
 
-class Rewards(Generic[Reward]):
+class Rewards(Generic[RewardT]):
     """
-    Reward Function Interface.
+    RewardT Function Interface.
     """
 
-    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Reward:
+    def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> RewardT:
         """
         Handles end-of-step-reward for a particular agent.
 
@@ -33,7 +33,7 @@ class Rewards(Generic[Reward]):
         """
         raise NotImplementedError()
 
-    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Reward:
+    def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> RewardT:
         """
         Handles end-of-episode reward for a particular agent.
 
@@ -45,7 +45,7 @@ class Rewards(Generic[Reward]):
         """
         raise NotImplementedError()
 
-    def cumulate(self, *rewards: Reward) -> Reward:
+    def cumulate(self, *rewards: RewardT) -> RewardT:
         """
         Cumulate multiple rewards to one.
 
@@ -60,19 +60,19 @@ class Rewards(Generic[Reward]):
         """
         raise NotImplementedError()
 
-    def empty(self) -> Reward:
+    def empty(self) -> RewardT:
         """
         Return empty initial value neutral for the cumulation.
         """
         raise NotImplementedError()
 
-    def normalize(self, *rewards: Reward, num_agents: int, max_episode_steps: int) -> Optional[float]:
+    def normalize(self, *rewards: RewardT, num_agents: int, max_episode_steps: int) -> Optional[float]:
         """
         Return normalized cumulated rewards. Can be `None` for some rewards.
 
         Parameters
         ----------
-        rewards : List[Reward]
+        rewards : List[RewardT]
         num_agents : int
         max_episode_steps : int
 
@@ -82,19 +82,19 @@ class Rewards(Generic[Reward]):
         """
         return None
 
-    # TODO we should drop these methods once EnvAgent.waypoints is also of EntryPoint instead of Waypoint.
+    # TODO we should drop these methods once EnvAgent.waypoints is also of EntryPointT instead of Waypoint.
     @staticmethod
-    def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[EntryPoint]]:
+    def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[EntryPointT]]:
         agent_waypoints = [[(Rewards._sanitize_waypoint(wp)) for wp in wps] for wps in agent_waypoints]
         return agent_waypoints
 
     @staticmethod
-    def _sanitize_waypoint(wp: Waypoint) -> EntryPoint:
+    def _sanitize_waypoint(wp: Waypoint) -> EntryPointT:
         return wp._to_tuple() if isinstance(wp, Waypoint) else wp
 
     @staticmethod
-    def _intermediate_waypoints(agent_waypoints: List[List[EntryPoint]],
-                                agent: EnvAgent) -> Iterator[Tuple[List[EntryPoint], int, int]]:
+    def _intermediate_waypoints(agent_waypoints: List[List[EntryPointT]],
+                                agent: EnvAgent) -> Iterator[Tuple[List[EntryPointT], int, int]]:
         """
         Zips an agent's intermediate waypoint alternatives (i.e. excluding the initial and target stops)
         with their corresponding earliest-departure/latest-arrival time windows.
@@ -121,9 +121,9 @@ class DefaultPenalties(fastenum.Enum):
     INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
 
 
-class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPoint]):
+class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     r"""
-    Reward Function.
+    RewardT Function.
 
     This scoring function is designed to capture key operational metrics such as punctuality, efficiency in responding to disruptions, and safety.
 
@@ -176,9 +176,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPoint]):
         assert self.cancellation_factor >= 0
         assert self.target_not_reached_minimum_penalty >= 0
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals: Dict[AgentHandle, Dict[EntryPoint, List[int]]] = defaultdict(defaultdict_list)
-        self.departures: Dict[AgentHandle, Dict[EntryPoint, List[int]]] = defaultdict(defaultdict_list)
-        self.states: Dict[AgentHandle, Dict[EntryPoint, Set[TrainState]]] = defaultdict(defaultdict_set)
+        self.arrivals: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
+        self.departures: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
+        self.states: Dict[AgentHandle, Dict[EntryPointT, Set[TrainState]]] = defaultdict(defaultdict_set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
@@ -254,12 +254,12 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPoint]):
                                                                    agent.get_current_delay(elapsed_steps, distance_map))
         agent_waypoints = self._sanitize_waypoints(agent.waypoints)
         for intermediate_alternatives, la, ed in self._intermediate_waypoints(agent_waypoints, agent):
-            agent_arrivals: Set[EntryPoint] = set(self.arrivals[agent.handle])
-            intermediate_alternatives: Set[EntryPoint] = set(intermediate_alternatives)
-            wps_intersection: Set[EntryPoint] = intermediate_alternatives.intersection(agent_arrivals)
+            agent_arrivals: Set[EntryPointT] = set(self.arrivals[agent.handle])
+            intermediate_alternatives: Set[EntryPointT] = set(intermediate_alternatives)
+            wps_intersection: Set[EntryPointT] = intermediate_alternatives.intersection(agent_arrivals)
             # a station may consist of several halting cells (alternative waypoints);
             # the stop is served iff the train stopped at any of them
-            stopped_wps: Set[EntryPoint] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
+            stopped_wps: Set[EntryPointT] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
             if len(stopped_wps) == 0:
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty

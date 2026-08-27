@@ -35,9 +35,9 @@ from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 
-UnderlyingTransitionMap = TypeVar('UnderlyingTransitionMap', bound=TransitionMap)
-UnderlyingResourceMap = TypeVar('UnderlyingResourceMap', bound=ResourceMap)
-EntryPoint = TypeVar('EntryPoint')
+TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
+ResourceMapT = TypeVar('ResourceMapT', bound=ResourceMap)
+EntryPointT = TypeVar('EntryPointT')
 
 
 class PreStepSnapshot(NamedTuple):
@@ -51,7 +51,7 @@ class PreStepSnapshot(NamedTuple):
     pre_offsets: Dict[int, Fraction]
 
 
-class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingResourceMap, EntryPoint]):
+class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPointT]):
     """
     AbstractRailEnv environment class.
 
@@ -182,7 +182,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         self.line_generator: "LineGenerator" = line_generator
         self.timetable_generator = timetable_generator
 
-        self.rail: Optional[UnderlyingTransitionMap] = None
+        self.rail: Optional[TransitionMapT] = None
         self.stations_links = None
 
         self.remove_agents_at_target = remove_agents_at_target
@@ -197,7 +197,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         self.dev_obs_dict = {}
         self.dev_pred_dict = {}
 
-        self.agents: List[EnvAgent[EntryPoint]] = []
+        self.agents: List[EnvAgent[EntryPointT]] = []
         self.num_resets = 0
 
         self.dones = None
@@ -209,7 +209,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         self.resource_check = ac.MotionCheck()
 
         # TODO https://github.com/flatland-association/flatland-rl/issues/242 bad design smell - resource map is not persisted, in particular level_free_positions is not persisted, only rail!
-        self.resource_map: UnderlyingResourceMap = self._extract_resource_map_from_optionals({})
+        self.resource_map: ResourceMapT = self._extract_resource_map_from_optionals({})
 
         if rewards is None:
             self.rewards = DefaultRewards()
@@ -363,7 +363,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         observation_dict: Dict = self._get_observations()
         return observation_dict, info_dict
 
-    def _extract_resource_map_from_optionals(self, optionals: dict) -> UnderlyingResourceMap:
+    def _extract_resource_map_from_optionals(self, optionals: dict) -> ResourceMapT:
         raise NotImplementedError()
 
     def clear_rewards_dict(self):
@@ -918,7 +918,7 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
                     assert_speed_matches_if_movement_allowed(agent.speed_counter.speed, pre_speed,
                                                              movement_allowed, agent)
 
-    def _infrastructure_representation(self, entry_point: EntryPoint) -> str:
+    def _infrastructure_representation(self, entry_point: EntryPointT) -> str:
         raise NotImplementedError()
 
     def _get_observations(self):
@@ -929,15 +929,15 @@ class AbstractRailEnv(Environment, Generic[UnderlyingTransitionMap, UnderlyingRe
         self.obs_dict = self.obs_builder.get_many(list(range(self.get_num_agents())))
         return self.obs_dict
 
-    def _call_rail_generator(self, optionals) -> Tuple[dict, UnderlyingTransitionMap]:
+    def _call_rail_generator(self, optionals) -> Tuple[dict, TransitionMapT]:
 
         # TODO https://github.com/flatland-association/flatland-rl/issues/242 fix signature
         return self.rail_generator(self.number_of_agents, self.num_resets, self.np_random)
 
-    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[EntryPoint]]:
+    def _apply_timetable_to_agents(self, agents, timetable: "Timetable") -> List[EnvAgent[EntryPointT]]:
         return EnvAgent.apply_timetable(agents, timetable)
 
-    def _agents_from_line(self, line: "Line") -> List[EnvAgent[EntryPoint]]:
+    def _agents_from_line(self, line: "Line") -> List[EnvAgent[EntryPointT]]:
         raise NotImplementedError()
 
 

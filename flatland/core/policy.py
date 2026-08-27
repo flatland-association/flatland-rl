@@ -3,19 +3,19 @@ from typing import List, Dict, TypeVar, Generic
 
 from flatland.core.env import Environment
 
-T_env = TypeVar('T_env', bound=Environment)
-T_obs = TypeVar('T_obs', covariant=True)
-T_act = TypeVar('T_act', covariant=True)
+EnvironmentT = TypeVar('EnvironmentT', bound=Environment)
+ObsT = TypeVar('ObsT', covariant=True)
+ActT = TypeVar('ActT', covariant=True)
 
 
-class Policy(ABC, Generic[T_env, T_obs, T_act]):
+class Policy(ABC, Generic[EnvironmentT, ObsT, ActT]):
     """
     Abstract base class for Flatland policies. Used for evaluation.
 
     Loosely corresponding to https://github.com/ray-project/ray/blob/master/rllib/core/rl_module/rl_module.py, but much simpler.
     """
 
-    def act(self, observation: T_obs, **kwargs) -> T_act:
+    def act(self, observation: ObsT, **kwargs) -> ActT:
         """
         Get action for agent. Called by `act_many()` for each agent.
 
@@ -33,7 +33,7 @@ class Policy(ABC, Generic[T_env, T_obs, T_act]):
         """
         raise NotImplementedError()
 
-    def act_many(self, handles: List[int], observations: List[T_obs], **kwargs) -> Dict[int, T_act]:
+    def act_many(self, handles: List[int], observations: List[ObsT], **kwargs) -> Dict[int, ActT]:
         """
         Get action_dict for all agents. Default implementation calls `act()` for each handle in the list.
 

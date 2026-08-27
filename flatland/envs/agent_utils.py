@@ -176,7 +176,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     )
 
 
-EntryPoint = TypeVar('EntryPoint')
+EntryPointT = TypeVar('EntryPointT')
 
 
 def _sanitize_entry_point(entry_point):
@@ -191,7 +191,7 @@ def _sanitize_entry_point(entry_point):
     attribute assignment, so this has to be called explicitly at every write site instead.
 
     A no-op for graph entry points (or anything else that doesn't look like a grid
-    ((row, col), direction) tuple), since EntryPoint is generic across grid and graph envs.
+    ((row, col), direction) tuple), since EntryPointT is generic across grid and graph envs.
     """
     if entry_point is None:
         return None
@@ -208,7 +208,7 @@ def _sanitize_entry_point(entry_point):
 
 
 @attrs
-class EnvAgent(Generic[EntryPoint]):
+class EnvAgent(Generic[EntryPointT]):
     # INIT FROM HERE IN _from_line()
     # converter=_sanitize_entry_point: covers construction (e.g. from rail/line generation code, which is
     # exactly where the numpy-dtype taint described on _sanitize_entry_point has been observed entering) -
@@ -216,17 +216,17 @@ class EnvAgent(Generic[EntryPoint]):
     # agent.current_entry_point = ..., agent.old_entry_point = ..., agent.target_entry_point = ...)
     # still need to call _sanitize_entry_point explicitly themselves, unless the assigned value is already
     # known-sanitized (e.g. copied from another already-sanitized entry point attrib on the same agent).
-    initial_entry_point = attrib(type=EntryPoint, converter=_sanitize_entry_point)
+    initial_entry_point = attrib(type=EntryPointT, converter=_sanitize_entry_point)
 
-    current_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
+    current_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                                  converter=_sanitize_entry_point)
-    targets = attrib(type=Set[EntryPoint], default=Factory(lambda: set()))
+    targets = attrib(type=Set[EntryPointT], default=Factory(lambda: set()))
     # the specific entry point (a member of `targets`) the agent actually arrived at, once
     # `state == TrainState.DONE` - set exactly once, by `AbstractRailEnv.handle_done_state()`, before
     # `current_entry_point` is possibly cleared to `None` (`remove_agents_at_target`). `None` until
     # the agent reaches DONE. Unlike `next(iter(targets))`, this is deterministic: `targets` may hold
     # several direction alternatives at the same position, only one of which was actually reached.
-    target_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
+    target_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                                 converter=_sanitize_entry_point)
 
     moving = attrib(default=False, type=bool)
@@ -255,11 +255,11 @@ class EnvAgent(Generic[EntryPoint]):
     # NEW : EnvAgent Reward Handling
     arrival_time = attrib(default=None, type=int)
 
-    old_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
+    old_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
     # design: actions applied at cell entry.
-    next_entry_point = attrib(type=Optional[EntryPoint], default=Factory(lambda: None),
+    next_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                               converter=_sanitize_entry_point)
 
     def reset(self):
