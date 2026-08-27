@@ -572,8 +572,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # (4) MOTION/RESOURCE CHECK
             # only conflict if the level-free cell is traversed through the same axis (horizontally (0 north or 2 south), or vertically (1 east or 3 west)
-            current_resource = self.resource_map.get_resource(agent.current_entry_point)
-            new_resource = self.resource_map.get_resource(candidate_entry_point)
+            current_resource = self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point)
+            new_resource = self.resource_map.get_resource(candidate_entry_point, candidate_next_entry_point)
 
             # (5) GATHER STATE TRANSITION SIGNALS
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
@@ -734,7 +734,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         return True
 
     def _verify_mutually_exclusive_resource_allocation(self):
-        resources = [self.resource_map.get_resource(agent.current_entry_point) for agent in self.agents if agent.current_entry_point is not None]
+        resources = [self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point)
+                     for agent in self.agents if agent.current_entry_point is not None]
         if len(resources) != len(set(resources)):
             msgs = f"Found two agents occupying same resource (cell or level-free cell) in step {self._elapsed_steps}: {resources}\n"
             msgs += f"- motion check: {list(self.resource_check.stopped)}"
@@ -743,7 +744,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             dup_resources = [res for res, count in counts.items() if count > 1]
             for dup in dup_resources:
                 for agent in self.agents:
-                    if self.resource_map.get_resource(agent.current_entry_point) == dup:
+                    if self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point) == dup:
                         msg = (f"\n================== BAD AGENT ==================================\n\n\n\n\n"
                                f"- agent:\t{agent} \n"
                                f"- state_machine:\t{agent.state_machine}\n"

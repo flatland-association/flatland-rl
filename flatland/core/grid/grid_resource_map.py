@@ -10,10 +10,11 @@ class GridResourceMap(ResourceMap[Tuple[Tuple[int, int], int], Union[Tuple[Tuple
         if self.level_free_positions is None:
             self.level_free_positions = set()
 
-    def get_resource(self, entry_point: Optional[Tuple[Tuple[int, int], int]]) -> Optional[Tuple[int, int]]:
-        if entry_point is None:
+    def get_resource(self, from_entry_point: Optional[Tuple[Tuple[int, int], int]],
+                      to_entry_point: Optional[Tuple[Tuple[int, int], int]]) -> Optional[Tuple[int, int]]:
+        if from_entry_point is None:
             return None
-        position, direction = entry_point
+        position, direction = from_entry_point
         if position in self.level_free_positions:
             return position, direction % 2
         return position
