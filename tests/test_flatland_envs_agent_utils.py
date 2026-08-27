@@ -6,7 +6,6 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
-from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -158,7 +157,7 @@ def test_load_env_agent_fallback_waypoints():
         old_direction=None,
         old_position=None,
         speed_counter=SpeedCounter(1.0),
-        action_saver=ActionSaver(),
+        action_saver=None,
         state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
         malfunction_handler=MalfunctionHandler(),
     )
@@ -198,7 +197,7 @@ def test_agent_tuple_targets():
             initial_position=(0, 0), initial_direction=Grid4TransitionsEnum(0), direction=Grid4TransitionsEnum(0),
             targets=targets, moving=False, earliest_departure=0, latest_arrival=100, handle=0, position=None,
             arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(1.0),
-            action_saver=ActionSaver(), state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+            action_saver=None, state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
             malfunction_handler=MalfunctionHandler(),
         )
 
