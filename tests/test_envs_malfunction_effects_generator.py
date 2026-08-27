@@ -28,14 +28,16 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
         env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
 
     initial_positions = {agent.initial_entry_point[0] for agent in env.agents}
-    in_malfunction = dict()
-    for agent in env.agents:
-        if agent.malfunction_handler.in_malfunction:
-            in_malfunction[agent.current_entry_point[0]] = agent
+    in_malfunction = [agent for agent in env.agents if agent.malfunction_handler.in_malfunction]
 
     # there is an agent stopped by the conditional malfunction generator at each initial position
-    assert len(in_malfunction) == len(initial_positions)
-    for _, agents in in_malfunction.items():
+    assert {agent.initial_entry_point[0] for agent in in_malfunction} == initial_positions
+    for agent in in_malfunction:
+        # a STOP_MOVING may complete an in-flight crossing before halting (pre-step momentum already
+        # past the cell boundary), so the agent may be stopped one cell into the successor entry point
+        # reached by that crossing rather than exactly at its initial entry point
+        assert agent.current_entry_point == agent.initial_entry_point or agent.current_entry_point in env.rail.get_successor_entry_points(
+            agent.initial_entry_point)
         assert agent.malfunction_handler.malfunction_down_counter > 700
 
 
@@ -179,6 +181,17 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
                         agents_at[agent.handle] += 1
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
+                # design: actions applied at cell entry -- once the agent's pre-step momentum is
+                # about to carry it across the cell boundary into next_entry_point this step
+                # (is_cell_exit), that crossing happens regardless of the action given, so if the
+                # already-locked-in target is next_waypoint_position, STOP_MOVING must be given NOW,
+                # one step before arrival is observable via current_entry_point - otherwise the
+                # agent's pre-step momentum carries it one cell past the waypoint before halting.
+                target_locked_in = agent.next_entry_point is not None \
+                    and agent.next_entry_point[0] == next_waypoint_position
+                if target_locked_in and agent.speed_counter.is_cell_exit():
+                    actions[agent.handle] = RailEnvActions.STOP_MOVING
+                    continue
                 # design: actions applied at cell entry -- once next_entry_point is already
                 # pending, this step's action decides the look-ahead beyond it, not the arrival
                 # at next_waypoint_position itself, so compute it from next_entry_point instead of

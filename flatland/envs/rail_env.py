@@ -541,7 +541,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (3b.5) cell transition - attempt granted (is_cell_exit reached, allowed to get moving
             # independently, and a valid look-ahead exists beyond the already-decided target)
             elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None and (
-                (state == TrainState.MOVING and not (stop_action_given and candidate_speed == 0))
+                state == TrainState.MOVING
                 or (state != TrainState.MOVING and movement_action_given)
             ):
                 assert agent.current_entry_point is not None
@@ -644,7 +644,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # beyond it (see (3b) above, where the crossing itself is only attempted if that candidate
             # exists - so candidate_entry_point below is guaranteed non-None whenever entering_new_cell
             # is True).
-            if agent.state == TrainState.MOVING:
+            if agent.state == TrainState.MOVING or (
+                agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING
+                and resource_check
+            ):
                 entering_new_cell = agent.current_entry_point != candidate_entry_point
                 agent.current_entry_point = _sanitize_entry_point(candidate_entry_point)
                 if entering_new_cell:

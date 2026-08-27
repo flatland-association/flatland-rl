@@ -22,7 +22,7 @@ on:
                 default: ""
 
 env:
-    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-3/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v6.zip"
+    flatland-benchmarks-episodes-url: "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-9/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip"
 
 jobs:
     # requirements-dev.txt (incl. scipy, already built from source) is baked into the image by build-ci-env.yml

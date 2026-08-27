@@ -175,7 +175,10 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     # step 3
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.STOP_MOVING})
 
-    assert env.agents[0].current_entry_point[0] == (6, 6)
+    # agent 0's pre-step momentum (speed 1, distance 0 at fresh departure) already reaches the cell
+    # boundary this step, so STOP_MOVING completes the in-flight crossing before halting - same as
+    # DO_NOTHING/MOVE_FORWARD would - landing one cell past (6, 6) rather than blocking in place.
+    assert env.agents[0].current_entry_point[0] == (5, 6)
     assert env.agents[0].state == TrainState.STOPPED
 
     # design: disallow entering the map stopped

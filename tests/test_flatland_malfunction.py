@@ -409,7 +409,7 @@ def test_initial_malfunction_stop_moving():
 
             ),
             Replay(  # 5
-                position=(3, 2),
+                position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.STOPPED,
 
@@ -419,8 +419,6 @@ def test_initial_malfunction_stop_moving():
                 reward=env.step_penalty * 1.0,  # full step penalty while stopped
 
             ),
-            # TODO bug: braking (STOP_MOVING) reaching speed 0 does not go over the boundary (stays at distance 1.0) event if no conflict!
-            #  Inconsistent with DO_NOTHING also has the same pre_step speed but goes over the boundary if there is no conflict.
             Replay(  # 6
                 position=(3, 3),
                 direction=Grid4TransitionsEnum.EAST,
@@ -433,7 +431,7 @@ def test_initial_malfunction_stop_moving():
 
             ),
             Replay(  # 7
-                position=(3, 3),
+                position=(3, 4),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.STOPPED,
 
@@ -453,17 +451,18 @@ def test_initial_malfunction_stop_moving():
                       skip_reward_check=True, set_ready_to_depart=True, skip_action_required_check=True)
 
 
-def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
+def test_stop_moving_crossing_completion_consistent_with_do_nothing():
     """
-    Documents a known inconsistency (tracked as issue #178, design D2a): STOP_MOVING and DO_NOTHING
-    have the identical pre-step speed at the moment the agent's accumulated distance reaches the cell
-    boundary, so per the "distance always advances by pre-step speed" design this tick's
-    distance/position update should be identical regardless of which action is given - only the speed
-    that applies from the NEXT tick onward should differ. It isn't:
-    TrainStateMachine.can_get_moving_independent() treats "stop action given and resulting speed == 0"
-    so STOP_MOVING blocks the crossing outright this tick (new_entry_point is never
-    even set to the next cell), while DO_NOTHING - sharing the exact same pre-step speed - completes
-    the same crossing normally in the same tick.
+    STOP_MOVING and DO_NOTHING have the identical pre-step speed at the moment the agent's accumulated
+    distance reaches the cell boundary, so per the "distance always advances by pre-step speed" design
+    this tick's distance/position update is identical regardless of which action is given - only the
+    speed that applies from the NEXT tick onward differs (fixed: issue #178, design D2a). The gating
+    condition in rail_env.py step()'s (3b.5) POSITION UPDATE used to special-case
+    `stop_action_given and candidate_speed == 0` and block the crossing outright for STOP_MOVING
+    (candidate_entry_point was never even set to the next cell); it's now gated purely on
+    `is_cell_exit`/`candidate_entry_point_independent`, same as every other action, so STOP_MOVING
+    completes the crossing exactly like DO_NOTHING does - it just ends the tick STOPPED (already inside
+    the newly-entered cell) rather than blocked short of it.
     """
 
     def build_env_at_critical_step():
@@ -502,26 +501,25 @@ def test_stop_moving_vs_do_nothing_crossing_completion_inconsistency():
     env_stop.step({0: RailEnvActions.STOP_MOVING})
     env_nothing.step({0: RailEnvActions.DO_NOTHING})
 
-    # same pre-step speed, same distance, same intended movement - yet STOP_MOVING blocks the
-    # crossing outright (distance capped, position unchanged) while DO_NOTHING completes it normally
+    # same pre-step speed, same distance, same intended movement - STOP_MOVING now completes the
+    # crossing exactly like DO_NOTHING does; only the resulting state differs (braking vs continuing)
     assert agent_stop.state == TrainState.STOPPED
-    assert agent_stop.current_entry_point == pre_entry_point
-    assert agent_stop.speed_counter.distance == 1
+    assert agent_stop.current_entry_point == agent_nothing.current_entry_point
+    assert agent_stop.current_entry_point != pre_entry_point
+    assert agent_stop.speed_counter.distance == agent_nothing.speed_counter.distance
 
     assert agent_nothing.state == TrainState.MOVING
     assert agent_nothing.current_entry_point != pre_entry_point
     assert agent_nothing.speed_counter.distance == 0
 
 
-def test_stop_moving_discards_overshoot_beyond_boundary():
+def test_stop_moving_wraps_overshoot_beyond_boundary():
     """
-    Documents a further consequence of STOP_MOVING blocking the crossing (see
-    test_stop_moving_vs_do_nothing_crossing_completion_inconsistency): capping distance at the cell
-    boundary doesn't just stop it there - it silently discards however far past the boundary the
-    agent's pre-step speed would have carried it. `distance + pre_speed` reaching exactly `1` and
-    reaching e.g. `3/2` produce the identical capped result (`distance == 1`), even though the agent's
-    momentum - and thus how much of the next cell it should already have entered once unblocked -
-    was very different in each case.
+    Further consequence of the fix in test_stop_moving_crossing_completion_consistent_with_do_nothing:
+    once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
+    boundary is preserved (wrapped via `SpeedCounter._distance_update`'s `distance % SEGMENT_LENGTH`),
+    not discarded - `distance + pre_speed` reaching `3/2` lands the agent `1/2` into the new cell, not
+    capped at exactly the boundary.
     """
     rail, rail_map, optionals = make_simple_rail2()
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -552,11 +550,11 @@ def test_stop_moving_discards_overshoot_beyond_boundary():
 
     env.step({0: RailEnvActions.STOP_MOVING})
 
-    # capped at exactly the boundary, not at the 1/2 remainder `(distance+pre_speed) mod 1` would give,
-    # and not at 3/2 either - the 1/2 of overshoot is simply gone
+    # wrapped to the 1/2 remainder `(distance+pre_speed) mod 1`, not capped at exactly the boundary
+    # and not left at 3/2 either - the crossing completes and the overshoot carries over
     assert agent.state == TrainState.STOPPED
-    assert agent.current_entry_point == pre_entry_point
-    assert agent.speed_counter.distance == 1
+    assert agent.current_entry_point != pre_entry_point
+    assert agent.speed_counter.distance == Fraction(1, 2)
 
 
 def test_initial_malfunction_do_nothing():
