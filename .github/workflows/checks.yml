@@ -154,7 +154,7 @@ jobs:
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                    unzip -o FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
             -   name: Save cached episodes
                 if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}
                 uses: actions/cache/save@v5
@@ -290,7 +290,7 @@ jobs:
                 run: |
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
+                    unzip -o OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             # Runs tox.ini's own [testenv:py{...}-examples] against this image's already-installed packages:
             # --current-env skips venv creation/dependency reinstall (which would rebuild scipy from source
             # again, defeating the point of this image) but still applies tox.ini's set_env (including
@@ -371,7 +371,7 @@ jobs:
                 run: |
                     wget "${{ env.flatland-scenarios-olten-partially-closed-url }}" -O OLTEN_PARTIALLY_CLOSED_v2.zip
                     mkdir -p scenarios/scenario_olten/data
-                    unzip OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
+                    unzip -o OLTEN_PARTIALLY_CLOSED_v2 -d scenarios/scenario_olten/data
             -   name: Install tox
                 run: |
                     python -m pip install --upgrade pip
@@ -506,7 +506,7 @@ jobs:
                 run: |
                     wget "${{ env.flatland-benchmarks-episodes-url }}" -O FLATLAND_BENCHMARK_EPISODES_FOLDER.zip
                     mkdir -p episodes
-                    unzip FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
+                    unzip -o FLATLAND_BENCHMARK_EPISODES_FOLDER -d episodes
                 working-directory: ${{ github.workspace }}
             -   name: Save cached episodes
                 if: ${{ always() && steps.cache-episodes.outputs.cache-hit != 'true' }}

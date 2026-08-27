@@ -1,3 +1,4 @@
+import io
 import pickle
 from pathlib import Path
 from typing import Tuple, Dict, Optional, Union, Any
@@ -26,6 +27,28 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
 from flatland.envs import malfunction_effects_generators as mal_eff_gen
+
+
+class _LegacyActionSaver:
+    """
+    Stand-in for `flatland.envs.step_utils.action_saver.ActionSaver`, removed from the live codebase.
+    Every persisted `Agent.action_saver` slot up to that point pickled a real `ActionSaver` instance by
+    class reference - without this stand-in, `_LegacyCompatUnpickler` would still resolve, but a plain
+    `pickle.load`/`pickle.loads` on such a file fails outright with `ModuleNotFoundError` before
+    `load_env_agent` ever gets a chance to discard the (already-unused) value.
+    """
+
+
+class _LegacyCompatUnpickler(pickle.Unpickler):
+    _LEGACY_STUBS = {
+        ("flatland.envs.step_utils.action_saver", "ActionSaver"): _LegacyActionSaver,
+    }
+
+    def find_class(self, module, name):
+        stub = self._LEGACY_STUBS.get((module, name))
+        if stub is not None:
+            return stub
+        return super().find_class(module, name)
 
 
 def _serialize_agent(agent: EnvAgent) -> Agent:
@@ -206,7 +229,7 @@ class RailEnvPersister(object):
             env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)
         elif filename.endswith("pkl"):
             try:
-                env_dict = pickle.loads(load_data)
+                env_dict = _LegacyCompatUnpickler(io.BytesIO(load_data)).load()
             except ValueError:
                 print("pickle failed to load file:", filename, " trying msgpack (deprecated)...")
                 env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)

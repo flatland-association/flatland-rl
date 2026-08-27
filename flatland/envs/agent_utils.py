@@ -8,7 +8,6 @@ from attr import attrs, attrib, Factory
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import TransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
-from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -35,7 +34,11 @@ class Agent(NamedTuple):
     old_direction: Grid4TransitionsEnum
     old_position: Tuple[int, int]
     speed_counter: SpeedCounter
-    action_saver: ActionSaver
+    # dead field, always None - kept only so envs pickled while `ActionSaver` still existed keep landing
+    # their (now-discarded) value in this tuple slot instead of shifting every field after it out of
+    # position (`Agent`/`EnvAgent` pickling is purely positional, see `load_env_agent`'s
+    # `RailEnvPersister`-registered legacy unpickler for `ActionSaver` itself).
+    action_saver: object
     state_machine: TrainStateMachine
     malfunction_handler: MalfunctionHandler
     waypoints: List[List[Waypoint]] = None
@@ -165,7 +168,6 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         handle=agent_tuple.handle,
         arrival_time=agent_tuple.arrival_time,
         speed_counter=agent_tuple.speed_counter,
-        action_saver=agent_tuple.action_saver,
         state_machine=agent_tuple.state_machine,
         malfunction_handler=agent_tuple.malfunction_handler,
         waypoints=waypoints,
@@ -247,7 +249,6 @@ class EnvAgent(Generic[EntryPointT]):
 
     # Env step facelift
     speed_counter = attrib(default=Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
-    action_saver = attrib(default=Factory(lambda: ActionSaver()), type=ActionSaver)
     state_machine = attrib(default=Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)),
                            type=TrainStateMachine)
     malfunction_handler = attrib(default=Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
@@ -275,7 +276,6 @@ class EnvAgent(Generic[EntryPointT]):
 
         self.malfunction_handler.reset()
 
-        self.action_saver.clear_saved_action()
         self.speed_counter.reset()
         self.state_machine.reset()
 
@@ -294,7 +294,7 @@ class EnvAgent(Generic[EntryPointT]):
                      old_direction=self.old_entry_point[1] if self.old_entry_point is not None else None,
                      old_position=self.old_entry_point[0] if self.old_entry_point is not None else None,
                      speed_counter=self.speed_counter,
-                     action_saver=self.action_saver,
+                     action_saver=None,
                      arrival_time=self.arrival_time,
                      state_machine=self.state_machine,
                      malfunction_handler=self.malfunction_handler,
