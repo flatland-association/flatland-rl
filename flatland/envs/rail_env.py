@@ -430,6 +430,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if self.dones["__all__"]:
             raise Exception("Episode is done, cannot call step()")
 
+        pre_step_snapshot = self._check_pre_step_invariants_and_capture_snapshot() \
+            if self.check_step_pre_post_conditions else None
+
         self.clear_rewards_dict()
 
         self.resource_check = ac.MotionCheck()  # reset the motion check
@@ -721,7 +724,24 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         self.effects_generator.on_episode_step_end(self, action_dict=action_dict)
 
+        if self.check_step_pre_post_conditions:
+            self._check_malfunction_state_invariant()
+            self._verify_mutually_exclusive_resource_allocation()
+            self._check_post_speed_distance_invariants(action_dict, pre_step_snapshot)
+            self._check_post_position_invariants(action_dict, pre_step_snapshot)
+
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
+
+    def _check_malfunction_state_invariant(self):
+        """
+        Guards against the malfunction_down_counter reaching 0 (in_malfunction False) one step before
+        the state machine has transitioned agent.state off MALFUNCTION/MALFUNCTION_OFF_MAP - eliminated
+        by decrementing the counter at the start of step(), before state_machine.step() runs.
+        """
+        for agent in self.agents:
+            if agent.state == TrainState.DONE:
+                continue
+            assert (agent.state in (TrainState.MALFUNCTION, TrainState.MALFUNCTION_OFF_MAP)) == agent.malfunction_handler.in_malfunction
 
     @lru_cache()
     def _is_speed_zero(self, candidate_speed: Fraction) -> bool:
@@ -1115,29 +1135,10 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         RailEnvPersister.load(self, env_dict=env_dict, obs_builder=obs_builder)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
-        # TODO move up to AbstractRailEnv, invariants should independent of graph/grid implementation.
-        pre_step_snapshot = self._check_pre_step_invariants_and_capture_snapshot() \
-            if self.check_step_pre_post_conditions else None
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
-        self._check_malfunction_state_invariant()
-        if self.check_step_pre_post_conditions:
-            self._verify_mutually_exclusive_resource_allocation()
-            self._check_post_speed_distance_invariants(action_dict, pre_step_snapshot)
-            self._check_post_position_invariants(action_dict, pre_step_snapshot)
         return obs, rewards, dones, info
-
-    def _check_malfunction_state_invariant(self):
-        """
-        Guards against the malfunction_down_counter reaching 0 (in_malfunction False) one step before
-        the state machine has transitioned agent.state off MALFUNCTION/MALFUNCTION_OFF_MAP - eliminated
-        by decrementing the counter at the start of step(), before state_machine.step() runs.
-        """
-        for agent in self.agents:
-            if agent.state == TrainState.DONE:
-                continue
-            assert (agent.state in (TrainState.MALFUNCTION, TrainState.MALFUNCTION_OFF_MAP)) == agent.malfunction_handler.in_malfunction
 
     def _infrastructure_representation(self, entry_point: Tuple[Tuple[int, int], int]) -> str:
         return RailEnvTransitionsEnum(self.rail.get_full_transitions(*entry_point[0])).name
