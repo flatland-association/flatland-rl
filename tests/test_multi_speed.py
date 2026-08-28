@@ -481,13 +481,16 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             # add additional step in the cell
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+            # values shift by 1 while the malfunction is active)
             Replay(  # 3
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=None,
-                set_malfunction=2,  # recovers in two steps from now!,
-                malfunction=2,
+                set_malfunction=3,  # recovers in two steps from now! (duration bumped +1 from 2; observed recovery timing unchanged)
+                malfunction=3,
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
 
@@ -495,7 +498,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=1,
+                malfunction=2,
 
                 action=None,
 
@@ -506,7 +509,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=0,
+                malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
@@ -522,20 +525,23 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+            # values shift by 1 while the malfunction is active)
             Replay(  # 7
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=None,
-                set_malfunction=2,  # recovers in two steps from now!
-                malfunction=2,
+                set_malfunction=3,  # recovers in two steps from now! (duration bumped +1 from 2; observed recovery timing unchanged)
+                malfunction=3,
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
             Replay(  # 8
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=1,
+                malfunction=2,
 
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
@@ -545,7 +551,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 direction=Grid4TransitionsEnum.WEST,
                 # end of malfunction
                 state=TrainState.MALFUNCTION,
-                malfunction=0,
+                malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,  # need move action after malfunction according to SM
 

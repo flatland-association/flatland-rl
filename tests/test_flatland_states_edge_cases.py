@@ -150,7 +150,10 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[1].earliest_departure = 0
-    env.agents[1].malfunction_handler._set_malfunction_down_counter(2)
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+    # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+    # values shift by 1 while the malfunction is active)
+    env.agents[1].malfunction_handler._set_malfunction_down_counter(3)
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
@@ -160,7 +163,7 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
 
-    assert env.agents[1].malfunction_handler.malfunction_down_counter == 1
+    assert env.agents[1].malfunction_handler.malfunction_down_counter == 2
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
@@ -170,7 +173,7 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
 
     assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
-    assert env.agents[1].malfunction_handler.malfunction_down_counter == 0
+    assert env.agents[1].malfunction_handler.malfunction_down_counter == 1
 
     # step 3
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.STOP_MOVING})
@@ -210,7 +213,10 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 55
-    env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+    # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+    # values shift by 1 while the malfunction is active)
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
 
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
@@ -221,7 +227,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
 
     assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
-    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
 
     assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.WAITING
@@ -273,7 +279,10 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 3
-    env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+    # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+    # values shift by 1 while the malfunction is active)
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
 
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
@@ -284,7 +293,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
 
     assert env.agents[0].current_entry_point is None
     assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
-    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
 
     assert env.agents[1].current_entry_point is None
     assert env.agents[1].state == TrainState.WAITING
@@ -355,11 +364,14 @@ def test_malfunction_to_moving_instead_of_stopped():
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
     # step 3
-    env.agents[0].malfunction_handler._set_malfunction_down_counter(1)
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+    # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+    # values shift by 1 while the malfunction is active)
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert env.agents[0].current_entry_point[0] == (6, 6)
     assert env.agents[0].state == TrainState.MALFUNCTION
-    assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
     # design: distance update with pre-step speed.
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)

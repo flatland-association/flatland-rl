@@ -1273,7 +1273,10 @@ def _env_after_malfunction():
     assert agent.state == TrainState.MOVING
 
     # malfunction hits while moving; waiting it out is not a collision
-    agent.malfunction_handler.malfunction_down_counter = 3
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+    # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+    # values shift by 1 while the malfunction is active)
+    agent.malfunction_handler.malfunction_down_counter = 4
     for _ in range(3):
         _, rewards, _, _ = env.step({0: RailEnvActions.DO_NOTHING})
         assert agent.state == TrainState.MALFUNCTION
