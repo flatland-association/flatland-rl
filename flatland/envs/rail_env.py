@@ -784,8 +784,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
     def _check_configuration_invariant(self, current_entry_point: Any, next_entry_point: Any):
         assert (current_entry_point is None) == (next_entry_point is None)
-        # TODO replace by is successor?
-        assert current_entry_point is None or current_entry_point != next_entry_point
+        assert current_entry_point is None or self.rail.is_successor(current_entry_point, next_entry_point)
 
     def _check_post_position_invariants(self, action_dict: Dict[int, RailEnvActions],
                                         pre_step: PreStepSnapshot) -> None:

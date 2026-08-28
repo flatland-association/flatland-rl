@@ -140,6 +140,13 @@ class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, Act
     def get_predecessor_entry_points(self, entry_point: EntryPointT) -> Set[EntryPointT]:
         raise NotImplementedError()
 
+    def is_successor(self, entry_point: EntryPointT, successor_entry_point: EntryPointT) -> bool:
+        """
+        Whether successor_entry_point is reachable from entry_point by exactly one action, i.e. is a
+        member of get_successor_entry_points(entry_point).
+        """
+        return successor_entry_point in self.get_successor_entry_points(entry_point)
+
     def is_valid_entry_point(self, entry_point: EntryPointT) -> bool:
         """
         Whether the map contains the entry_point (a cell plus entry direction - a position+direction tuple
