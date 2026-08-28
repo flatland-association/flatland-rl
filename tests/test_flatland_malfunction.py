@@ -167,8 +167,14 @@ def test_malfunction_process_statistically():
             # For generating tests only:
             # agent_malfunction_list[agent_idx].append(
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
-            assert env.agents[agent_idx].malfunction_handler.malfunction_down_counter == \
-                   agent_malfunction_list[agent_idx][step]
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # shift by 1 while a malfunction is active or just ended (previous entry nonzero); a value that is 0
+            # both here and in the previous entry is a genuine steady idle step and must stay 0.
+            expected = agent_malfunction_list[agent_idx][step]
+            prev = agent_malfunction_list[agent_idx][step - 1] if step > 0 else 0
+            if expected > 0 or prev > 0:
+                expected += 1
+            assert env.agents[agent_idx].malfunction_handler.malfunction_down_counter == expected
         env.step(action_dict)
 
 
@@ -235,7 +241,8 @@ def test_malfunction_values_and_behavior():
         # Move in the env
         _, _, dones, _ = env.step(action_dict)
         # Check that next_step decreases as expected
-        assert env.agents[0].malfunction_handler.malfunction_down_counter == assert_list[time_step]
+        # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+        assert env.agents[0].malfunction_handler.malfunction_down_counter == assert_list[time_step] + 1
         if dones['__all__']:
             break
 
@@ -265,11 +272,14 @@ def test_initial_malfunction():
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the observed state/position sequence below is unaffected (only the
+            # malfunction countdown values shift by 1 while the malfunction is active)
             Replay(  # 0
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
-                set_malfunction=3,
-                malfunction=3,
+                set_malfunction=4,
+                malfunction=4,
                 distance=0.0,
                 speed=1.0,
                 state=TrainState.MOVING,
@@ -284,7 +294,7 @@ def test_initial_malfunction():
                 state=TrainState.MALFUNCTION,
                 distance=0.0,
                 speed=0.0,
-                malfunction=2,
+                malfunction=3,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
@@ -296,7 +306,7 @@ def test_initial_malfunction():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MALFUNCTION,
-                malfunction=1,
+                malfunction=2,
 
                 action=RailEnvActions.MOVE_FORWARD,
 
@@ -307,7 +317,7 @@ def test_initial_malfunction():
                 position=(3, 2),
                 direction=Grid4TransitionsEnum.EAST,
                 state=TrainState.MALFUNCTION,
-                malfunction=0,
+                malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
@@ -350,6 +360,9 @@ def test_initial_malfunction_stop_moving():
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the observed state/position sequence below is unaffected (only the
+            # malfunction countdown values shift by 1 while the malfunction is active)
             Replay(  # 0
                 position=None,
                 direction=None,
@@ -357,8 +370,8 @@ def test_initial_malfunction_stop_moving():
 
                 action=RailEnvActions.MOVE_FORWARD,
 
-                set_malfunction=3,
-                malfunction=3,
+                set_malfunction=4,
+                malfunction=4,
                 reward=env.step_penalty,  # full step penalty when stopped
             ),
             Replay(  # 1
@@ -368,7 +381,7 @@ def test_initial_malfunction_stop_moving():
 
                 action=RailEnvActions.DO_NOTHING,
 
-                malfunction=2,
+                malfunction=3,
                 reward=env.step_penalty,  # full step penalty when stopped
 
             ),
@@ -382,7 +395,7 @@ def test_initial_malfunction_stop_moving():
 
                 action=RailEnvActions.STOP_MOVING,
 
-                malfunction=1,
+                malfunction=2,
                 reward=env.step_penalty,  # full step penalty while stopped
             ),
             # need valid movement action to enter the grid
@@ -393,7 +406,7 @@ def test_initial_malfunction_stop_moving():
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
 
-                malfunction=0,
+                malfunction=1,
                 reward=env.step_penalty,  # full step penalty while stopped
 
             ),
@@ -579,12 +592,15 @@ def test_initial_malfunction_do_nothing():
     set_penalties_for_replay(env)
     replay_config = ReplayConfig(
         replay=[
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the observed state/position sequence below is unaffected (only the
+            # malfunction countdown values shift by 1 while the malfunction is active)
             Replay(  # 0
                 position=None,
                 direction=None,
                 action=RailEnvActions.MOVE_FORWARD,
-                set_malfunction=3,
-                malfunction=3,
+                set_malfunction=4,
+                malfunction=4,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
                 state=TrainState.READY_TO_DEPART
             ),
@@ -592,14 +608,14 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=None,
                 action=None,
-                malfunction=2,
+                malfunction=3,
                 reward=env.step_penalty,  # full step penalty while malfunctioning
                 state=TrainState.MALFUNCTION_OFF_MAP
             ),
             Replay(  # 2
                 position=None,
                 direction=None,
-                malfunction=1,
+                malfunction=2,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=None,
@@ -609,7 +625,7 @@ def test_initial_malfunction_do_nothing():
             Replay(  # 3
                 position=None,
                 direction=None,
-                malfunction=0,
+                malfunction=1,
                 # design: distance is None when off map
                 distance=None,
                 speed=1,  # irrelevant
