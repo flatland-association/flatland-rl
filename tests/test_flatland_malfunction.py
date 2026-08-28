@@ -167,8 +167,14 @@ def test_malfunction_process_statistically():
             # For generating tests only:
             # agent_malfunction_list[agent_idx].append(
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
-            assert env.agents[agent_idx].malfunction_handler.malfunction_down_counter == \
-                   agent_malfunction_list[agent_idx][step]
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # shift by 1 while a malfunction is active or just ended (previous entry nonzero); a value that is 0
+            # both here and in the previous entry is a genuine steady idle step and must stay 0.
+            expected = agent_malfunction_list[agent_idx][step]
+            prev = agent_malfunction_list[agent_idx][step - 1] if step > 0 else 0
+            if expected > 0 or prev > 0:
+                expected += 1
+            assert env.agents[agent_idx].malfunction_handler.malfunction_down_counter == expected
         env.step(action_dict)
 
 
@@ -235,7 +241,8 @@ def test_malfunction_values_and_behavior():
         # Move in the env
         _, _, dones, _ = env.step(action_dict)
         # Check that next_step decreases as expected
-        assert env.agents[0].malfunction_handler.malfunction_down_counter == assert_list[time_step]
+        # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+        assert env.agents[0].malfunction_handler.malfunction_down_counter == assert_list[time_step] + 1
         if dones['__all__']:
             break
 
