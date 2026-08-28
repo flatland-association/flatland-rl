@@ -33,6 +33,7 @@ class TrajectoryEvaluator:
         rewards: Rewards = None,
         obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+        shifted_malfunction: bool = False,
     ) -> RailEnv:
         """
          Parameters
@@ -53,6 +54,11 @@ class TrajectoryEvaluator:
             obs builder for the restored env, forwarded to `Trajectory.load_env`. If not provided, defaults to `DummyObservationBuilder`.
         effects_generator : EffectsGenerator
             if given, forwarded to `Trajectory.load_env` and replaces the restored env's persisted effects generator instead of being discarded.
+        shifted_malfunction : bool
+            # TODO remove this option once the malfunction episodes are regenerated
+            recorded episodes predate decrementing the malfunction counter at the start of step() -
+            while an actual malfunction is active, expect the recorded info's `malfunction` one lower
+            than freshly computed.
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -109,6 +115,9 @@ class TrajectoryEvaluator:
                     actual_done = dones[agent_id]
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
                     expected_reward, expected_done, expected_info = trains_rewards_dones_infos_cache[elapsed_after_step][agent_id]
+                    if shifted_malfunction and actual_info.get("malfunction", 0) > 0:
+                        # TODO remove this option once the malfunction episodes are regenerated
+                        expected_info = {**expected_info, "malfunction": expected_info["malfunction"] + 1}
                     if not skip_rewards:
                         assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
