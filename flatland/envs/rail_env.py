@@ -434,6 +434,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         self.resource_check = ac.MotionCheck()  # reset the motion check
 
+        for agent in self.agents:
+            # (0a) UPDATE MALFUNCTION COUNTER
+            # N.B. in order to keep malfunction counter and agent state in sync
+            agent.malfunction_handler.update_counter()
+
+        # (0b) GENERATE NEW MALFUNCTIONS AND OTHER RANDOM EFFECTS
         self.effects_generator.on_episode_step_start(self)
 
         for agent in self.agents:
@@ -705,10 +711,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     elapsed_steps=self._elapsed_steps
                 )
             )
-
-            # (13) UPDATE MALFUNCTION COUNTER
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
-            agent.malfunction_handler.update_counter()
 
             # Off map or on map state and position should match
             if not self._fast_state_position_sync_check(agent.state, agent.current_entry_point, self.remove_agents_at_target):
@@ -1119,11 +1121,23 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         obs, rewards, dones, info = super().step(action_dict=action_dict)
         # TODO https://github.com/flatland-association/flatland-rl/issues/195 add idiomatic wrapper instead of override
         self._update_agent_positions_map()
+        self._check_malfunction_state_invariant()
         if self.check_step_pre_post_conditions:
             self._verify_mutually_exclusive_resource_allocation()
             self._check_post_speed_distance_invariants(action_dict, pre_step_snapshot)
             self._check_post_position_invariants(action_dict, pre_step_snapshot)
         return obs, rewards, dones, info
+
+    def _check_malfunction_state_invariant(self):
+        """
+        Guards against the malfunction_down_counter reaching 0 (in_malfunction False) one step before
+        the state machine has transitioned agent.state off MALFUNCTION/MALFUNCTION_OFF_MAP - eliminated
+        by decrementing the counter at the start of step(), before state_machine.step() runs.
+        """
+        for agent in self.agents:
+            if agent.state == TrainState.DONE:
+                continue
+            assert (agent.state in (TrainState.MALFUNCTION, TrainState.MALFUNCTION_OFF_MAP)) == agent.malfunction_handler.in_malfunction
 
     def _infrastructure_representation(self, entry_point: Tuple[Tuple[int, int], int]) -> str:
         return RailEnvTransitionsEnum(self.rail.get_full_transitions(*entry_point[0])).name
