@@ -112,6 +112,7 @@ def defaultdict_list():
 
 class DefaultPenalties(fastenum.Enum):
     COLLISION = "COLLISION"
+    INVALID_ACTION = "INVALID_ACTION"
     TARGET_LATE_ARRIVAL = "TARGET_LATE_ARRIVAL"
     CANCELLATION = "CANCELLATION"
     TARGET_NOT_REACHED = "TARGET_NOT_REACHED"
@@ -130,7 +131,10 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     Punctuality and schedule adherence are rewarded based on the difference between actual and target arrival and departure times at each stop respectively,
     as well as penalties for intermediate stops not served or even journeys not started.
 
-    Safety measures are implemented as penalties for collisions which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
+    Safety measures are implemented as penalties for env-forced stops which are directly proportional to the train’s speed at impact, ensuring that high-speed operations are managed with extra caution.
+    Tracked separately as :attr:`DefaultPenalties.COLLISION` (motion-check conflict with another agent)
+    and :attr:`DefaultPenalties.INVALID_ACTION` (invalid action, today only possible at a symmetric
+    switch) - both use the same ``collision_factor``, only the attributed category differs.
 
     Parameters
     ----------
@@ -147,7 +151,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     intermediate_early_departure_penalty_factor : float
         Intermediate early departure penalty factor :math:`\delta \geq 0`. Defaults to 0.5.
     collision_factor : float
-        Crash penalty factor :math:`\kappa \geq 0`. Defaults to 0.0.
+        Crash penalty factor :math:`\kappa \geq 0`. Shared by both the collision and invalid-action
+        penalties (see class docstring). Defaults to 0.0.
     """
     # cache enumeration
     _cached_default_penalty_values = tuple(p.value for p in DefaultPenalties)
@@ -211,9 +216,18 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
                 # - if braking, reduced speed
                 # - if not braking, still full speed
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
                 # - if invalid action, speed set to 0
-                d[DefaultPenalties.COLLISION.value] = -1 * agent_transition_data.speed * self.collision_factor
+                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
+                # Reaching here guarantees movement_allowed was False (see comment above), and
+                # movement_allowed = action_valid and resource_check (rail_env.py) - so exactly one of
+                # the two branches below applies. Same penalty value for both, tracked under different
+                # keys so an invalid action (today, only possible at a symmetric switch) can be told
+                # apart from an actual conflict with another agent.
+                penalty = -1 * agent_transition_data.speed * self.collision_factor
+                if not sts.action_valid:
+                    d[DefaultPenalties.INVALID_ACTION.value] = penalty
+                elif not agent_transition_data.resource_check:
+                    d[DefaultPenalties.COLLISION.value] = penalty
 
         if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
             self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
