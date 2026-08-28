@@ -434,11 +434,11 @@ def test_energy_efficiency_smoothniss_in_morl():
         # design: actions applied at cell entry
         (BaseDefaultRewards(), (-1724.0,)),
         # design: actions applied at cell entry
-        (BasicMultiObjectiveRewards(), (-1724.0, -637.0, -182.625)),
+        (BasicMultiObjectiveRewards(), (-1724.0, -629.0, -172.375)),
         # design: actions applied at cell entry
-        (ECML2026Rewards(), (-15786.5,)),
+        (ECML2026Rewards(), (-18786.5,)),
         # design: actions applied at cell entry
-        (BaseECML2026Rewards(), (-15786.5,)),
+        (BaseECML2026Rewards(), (-18786.5,)),
     ],
 )
 def test_rewards_via_policy_runner(rewards, expected_sums):

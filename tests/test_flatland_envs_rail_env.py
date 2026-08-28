@@ -728,6 +728,13 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     agent1.initial_entry_point = ((3, 5), 3)
     agent0.earliest_departure = 0
     agent1.earliest_departure = 0
+    # agent 1 must genuinely stay parked at (3, 5) to block agent 0: at max_speed 1, its pre-step
+    # momentum on departure (distance 0, speed 1) would already reach the cell boundary on the very
+    # next step, so STOP_MOVING would complete an in-flight crossing out of (3, 5) instead of
+    # holding it there (see the STOP_MOVING boundary-crossing fix, issue #178 design D2a). A slower
+    # max_speed keeps it mid-cell (is_cell_exit false) when STOP_MOVING brakes it to 0.
+    agent1.speed_counter._max_speed = Fraction(1, 2)
+    agent1.speed_counter._speed = Fraction(1, 2)
 
     # MOVE_LEFT from the switch at (3, 6) is a genuine, valid redirect onto the southward branch -
     # confirms the escape route agent 0 will be denied further down is real, not just invalid input.
@@ -756,9 +763,11 @@ def test_blocked_agent_cannot_redirect_via_later_action():
 
     # once agent 1 vacates (3, 5), agent 0 enters it and continues straight to (3, 4) - even though
     # it is still being given MOVE_LEFT - confirming the earlier MOVE_LEFTs were never consulted
-    # for the (3, 6) -> (3, 5) crossing itself, only (uselessly) for the look-ahead beyond it.
-    env.step({0: RailEnvActions.MOVE_LEFT, 1: RailEnvActions.MOVE_FORWARD})
-    assert agent0.current_entry_point == ((3, 5), 3)
+    # for the (3, 6) -> (3, 5) crossing itself, only (uselessly) for the look-ahead beyond it. Agent
+    # 1 was braked to a stop at its reduced max_speed, so it needs a few steps of MOVE_FORWARD to
+    # regain enough momentum before it actually crosses out of (3, 5).
+    while agent0.current_entry_point != ((3, 5), 3):
+        env.step({0: RailEnvActions.MOVE_LEFT, 1: RailEnvActions.MOVE_FORWARD})
     assert agent0.next_entry_point == ((3, 4), 3)
     assert agent0.state == TrainState.MOVING
 
