@@ -152,10 +152,8 @@ def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     # Thus we showed that train 0 could be dispatched at it's earliest departure and train 1 could not
 
 
-def test_train_can_move_when_malfunction_counter_is_0_off_map_BYDESIGN():
+def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
     """
-    TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
-
     When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
     but the state is still saying the agent is in a malfunction."""
@@ -179,26 +177,29 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_BYDESIGN():
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.DO_NOTHING})
     assert agent.state == TrainState.MALFUNCTION_OFF_MAP
-    assert agent.malfunction_handler.malfunction_down_counter == 5
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
 
     for _ in range(5):
-        rail_env.step({0: RailEnvActions.DO_NOTHING})
+        rail_env.step({0: RailEnvActions.MOVE_FORWARD})
 
-    # Here we can see the contradiction
+    # Here we can see the bug is fixed
     assert agent.state == TrainState.MALFUNCTION_OFF_MAP
-    assert not agent.malfunction_handler.in_malfunction
-    assert agent.malfunction_handler.malfunction_down_counter == 0
+    assert agent.malfunction_handler.in_malfunction
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
+    # Train is not dispatched during malfunction
+    assert agent.current_entry_point is None
 
-    # Even though the train is in a malfunction state we can dispatch it.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
+    assert not agent.malfunction_handler.in_malfunction
+    # Train is dispatched in the step the malfunction terminates
     assert agent.current_entry_point is not None
 
 
-def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
+def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
     """
-    TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: updating the malfunction counter after the state transition leaves ugly situation that malfunction_counter == 0 but state is in malfunction - move to begining of step function?
-
     When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
     but the state is still saying the agent is in a malfunction."""
@@ -222,29 +223,35 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_BYDESIGN():
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MALFUNCTION
-    assert agent.malfunction_handler.malfunction_down_counter == 5
-    org_pos = agent.current_entry_point[0]
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
+    old_pos = agent.current_entry_point[0]
+    old_entry_point = agent.current_entry_point
 
     for _ in range(5):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
 
-    # Here we can see the contradiction
+    # Here we can see the bug is fixed
     assert agent.state == TrainState.MALFUNCTION
-    assert not agent.malfunction_handler.in_malfunction
-    assert agent.malfunction_handler.malfunction_down_counter == 0
+    assert agent.malfunction_handler.in_malfunction
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
+    # Train is not moved during malfunction
+    assert agent.current_entry_point == old_entry_point
 
-    # Even though the train is in a malfunction state we can dispatch it
-    # design: distance update with pre-step speed.
+    assert agent.speed_counter.speed == 0
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point[0] == (org_pos[0], org_pos[1])
+    assert agent.current_entry_point[0] == (old_pos[0], old_pos[1])
     assert agent.speed_counter.speed == 1
+    # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == 0
 
-    #
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point[0] == (org_pos[0] + 1, org_pos[1])
+    # Train is moved in the step after the step where the malfunction terminates
+    assert agent.current_entry_point != old_entry_point
+    assert agent.current_entry_point[0] == (old_pos[0] + 1, old_pos[1])
     assert agent.speed_counter.speed == 1
     assert agent.speed_counter.distance == 0
 
@@ -272,7 +279,8 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
     assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
     assert rail_env.agents[3].state == TrainState.MALFUNCTION_OFF_MAP
-    assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5 + 1
 
     assert rail_env.agents[0].state == TrainState.READY_TO_DEPART
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -301,7 +309,8 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED():
     assert rail_env.agents[1].state == TrainState.READY_TO_DEPART
     rail_env.step({1: RailEnvActions.MOVE_FORWARD})
     assert rail_env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
-    assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+    assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5 + 1
 
     assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
@@ -309,7 +318,6 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED():
     # FIXED: the train with higher ID can move:
     assert rail_env.agents[3].state == TrainState.MOVING
     assert rail_env.agents[3].state.is_on_map_state()
-
 
 
 def test_two_trains_on_same_cell_bug_FIXED():
