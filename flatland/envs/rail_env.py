@@ -567,7 +567,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_next_entry_point = agent.next_entry_point
                 assert agent.current_entry_point is not None
 
-            self._check_configuration_invariant(candidate_entry_point, candidate_next_entry_point)
+            if self.check_step_pre_post_conditions:
+                self._check_off_on_map_invariant(candidate_entry_point, candidate_next_entry_point)
 
             if candidate_entry_point is not None:
                 valid_position_direction = any(self.rail.get_transitions(candidate_entry_point))
@@ -811,9 +812,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # invariant: current_entry_point/next_entry_point are either both None (off-map) or
             # both set and different (on-map, next_entry_point strictly ahead of current_entry_point)
             # - see the design note in step()'s (2) POSITION UPDATE for what this invariant is for.
+            # speed/distance are checked too here (unlike the (3b) candidate-configuration call
+            # below) since agent.current_entry_point/agent.speed_counter are a consistent snapshot of
+            # the same moment in time - candidate_entry_point there is the not-yet-committed *next*
+            # position, so pairing it with the *pre-step* speed_counter would be comparing different
+            # points in time (e.g. on map entry, candidate_entry_point is already set while
+            # speed_counter is still None from before this step).
             current_entry_point = agent.current_entry_point
             next_entry_point = agent.next_entry_point
-            self._check_configuration_invariant(current_entry_point, next_entry_point)
+            self._check_off_on_map_invariant(current_entry_point, next_entry_point,
+                                             speed=agent.speed_counter.speed, distance=agent.speed_counter.distance,
+                                             check_speed_distance=True)
 
         return PreStepSnapshot(
             pre_speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
@@ -824,10 +833,23 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             pre_offsets={agent.handle: agent.speed_counter.distance for agent in self.agents},
         )
 
-    def _check_configuration_invariant(self, current_entry_point: Any, next_entry_point: Any):
+    def _check_off_on_map_invariant(self, current_entry_point: Any, next_entry_point: Any,
+                                    speed: Optional[Fraction] = None, distance: Optional[Fraction] = None,
+                                    check_speed_distance: bool = False):
+        """
+        Verify current_entry_point/next_entry_point are either both None (off map) or both set (on
+        map, next_entry_point the successor of current_entry_point). If check_speed_distance, also
+        verify speed/distance are None exactly when off map (the SpeedCounter contract - see "Speed/
+        distance are Fractions, and None while off map" in CLAUDE.md) - opt-in since a *candidate*
+        configuration (not yet committed) paired with the agent's *pre-step* speed_counter would
+        otherwise compare two different points in time (see the call site in
+        `_check_pre_step_invariants_and_capture_snapshot` vs. the one in step()'s (3b) POSITION UPDATE).
+        """
         assert (current_entry_point is None) == (next_entry_point is None)
         if current_entry_point is not None:
             assert self.rail.is_successor(current_entry_point, next_entry_point)
+        if check_speed_distance:
+            assert (current_entry_point is None) == (speed is None) == (distance is None)
 
     def _check_post_position_invariants(self, action_dict: Dict[int, RailEnvActions],
                                         pre_step: PreStepSnapshot) -> None:
