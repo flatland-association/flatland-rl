@@ -529,10 +529,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # both its current and candidate resource
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
-            # (3b.2) malfunction
+            # (3b.2) malfunction (continued)
             elif in_malfunction:
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
+            # (3b.2bis) start moving: from STOPPED (or a just-recovered MALFUNCTION)
+            elif agent.speed_counter.speed == 0 and candidate_speed > 0:
+                candidate_entry_point = agent.current_entry_point
+                candidate_next_entry_point = agent.next_entry_point
+                assert agent.current_entry_point is not None
             #  (3b.3) map entry
             elif action_valid and (
                 (state == TrainState.READY_TO_DEPART and movement_action_given)
@@ -547,19 +552,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # current_entry_point candidate_next_entry_point both None off map - a no-op.
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
-            # (3b.5) cell transition - attempt granted (is_cell_exit reached, allowed to get moving
-            # independently, and a valid look-ahead exists beyond the already-decided target)
-            elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None and (
-                state == TrainState.MOVING
-                or (state != TrainState.MOVING and movement_action_given)
-            ):
+            # (3b.5) cell transition
+            elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None and state == TrainState.MOVING:
                 assert agent.current_entry_point is not None
                 # design: actions applied at cell entry -- attempt the already-decided target
                 # (guaranteed by the assert above); this step's action instead decides the
                 # look-ahead beyond it (candidate_entry_point_independent, computed above in (2)).
                 candidate_entry_point = agent.next_entry_point
                 candidate_next_entry_point = candidate_entry_point_independent
-            # (3b.6) cell stay: mid-cell (not attempting this step), or attempted but denied -
+            # (3b.6) cell stay: mid-cell (not attempting this step), attempted but denied, or a
+            # STOPPED agent not (yet) given a movement action (candidate_speed stays 0, see (3b.2bis)
+            # above for the case where it does) -
             else:
                 # design: self-loop default - see (3b.1) above for why candidate_next_entry_point
                 # mirroring agent.next_entry_point unchanged is safe (never read as entering_new_cell).
@@ -633,10 +636,19 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             resource_check = self.resource_check.check_resource(i_agent)
 
-            # TODO agents off map may not have cell_exit if speed is < 1! -> rename to action_required make distance off map None and update cell_exit?
             if not agent.speed_counter.is_cell_exit() and agent.state.is_on_map_state():
                 assert resource_check == True
 
+            # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
+            # MotionCheck (see (3b.2bis)/(3b.5)/(3b.6)), so resource_check here is trivially granted
+            # regardless of whether its target is actually free - movement_allowed (and so the state
+            # machine's STOPPED/MALFUNCTION->MOVING promotion) is granted optimistically on the
+            # operator's request. Position/distance stay deferred either way (see (10a)/(10b)'s
+            # speed==0 handling) - if the target is genuinely still occupied, the *next* step (now
+            # pre-speed > 0) attempts the crossing for real via (3b.5), gets denied by MotionCheck's
+            # real (non-self-loop) resolution, and the state machine demotes back to STOPPED then
+            # (see _handle_moving's `not movement_allowed` branch in state_machine.py) - one step of
+            # MOVING with no actual progress, rather than never promoting at all.
             movement_allowed = agent_transition_data.state_transition_signal.action_valid and resource_check
             agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
             agent_transition_data.resource_check = resource_check
@@ -654,7 +666,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # beyond it (see (3b) above, where the crossing itself is only attempted if that candidate
             # exists - so candidate_entry_point below is guaranteed non-None whenever entering_new_cell
             # is True).
-            if agent.state == TrainState.MOVING or (
+            if agent.state == TrainState.MOVING and agent_transition_data.speed == 0:
+                # design (D1): pre-step speed 0 (STOPPED/MALFUNCTION promoted to MOVING this step) -
+                # this step only grants permission to move; it contributes zero speed/distance itself,
+                # so no crossing may be committed yet. Position/next_entry_point stay exactly as they
+                # were, deferred to the following (genuinely pre-speed>0) step. See (10b) below for the
+                # matching distance/speed treatment.
+                pass
+            elif agent.state == TrainState.MOVING or (
                 agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING
                 and resource_check
             ):
@@ -666,7 +685,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 agent.state_machine.update_if_reached(agent.current_entry_point, agent.targets)
 
             # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE)
-            if agent.state == TrainState.MOVING:
+            if agent.state == TrainState.MOVING and agent_transition_data.speed == 0:
+                # design (D1): pre-step speed 0 -> distance held unchanged this step
+                # (SpeedCounter.step() with crossing_completed=False and old self._speed==0 is a no-op
+                # on distance); speed ramps from rest via this step's candidate_speed
+                # (acceleration_delta). The following step, now genuinely pre-speed>0, is the one that
+                # actually completes the crossing (see (3b.5)/(10a) above).
+                agent.speed_counter.step(speed=agent_transition_data.candidate_speed, crossing_completed=False)
+            elif agent.state == TrainState.MOVING:
                 crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
                 # N.B. map entry (previous state READY_TO_DEPART/MALFUNCTION_OFF_MAP) also flows through
                 # here: candidate_speed is already acceleration_delta (see (3a.3)), and speed_counter.step()
@@ -684,20 +710,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
                 speed = Fraction(0)
                 if not agent_transition_data.state_transition_signal.action_valid or not resource_check:
-                    # MOVING -> STOPPED via invalid action at the cell boundary, or resource_check denying
-                    # the crossing: distance still advances by the pre-step speed (SpeedCounter.step() ->
-                    # _distance_update() adds pre-step speed unconditionally) but is clamped at the cell
-                    # boundary (min(pre_distance + pre_speed, SEGMENT_LENGTH)) instead of wrapping into the
-                    # new cell - the agent travels up to the boundary this step, it just isn't credited
-                    # with crossing it. See _check_post_speed_distance_invariants's "candidates
-                    # discarded"/"invalid action" branches, which assert this formula and run on every step
-                    # by default (check_step_pre_post_conditions=True).
-                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
-                    # the movement attempt this step was denied. Unlike those two spots (pre_speed == 0
-                    # there, a STOPPED-previously agent, so the advance is a no-op), pre_speed is always > 0
-                    # here (a MOVING agent's pre-step speed can never be 0 - see (10b)'s first branch design
-                    # comment above), so the advance is real, not a no-op: needs the same revisiting -
-                    # should a denied crossing attempt consume distance up to the boundary at all?
+                    # MOVING -> STOPPED via invalid action at the cell boundary, or resource_check
+                    # denying the crossing to another agent: distance still advances by the pre-step
+                    # speed (SpeedCounter.step() -> _distance_update() adds pre-step speed
+                    # unconditionally) but is clamped at the cell boundary (min(pre_distance +
+                    # pre_speed, SEGMENT_LENGTH)) instead of wrapping into the new cell - the agent
+                    # travels up to the boundary this step, it just isn't credited with crossing it.
+                    # This banking is intentional, not a (D1) violation, in both cases: pre_speed is
+                    # always > 0 here (a MOVING agent's pre-step speed can never be 0), so the advance
+                    # is real. What (D1) rules out is a *later*, pre-speed-0 STOPPED->MOVING step
+                    # consuming this banked distance for a free crossing - prevented by (10a)/(10b)'s
+                    # pre-speed-0 deferral above.
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
                 else:
                     # MOVING -> STOPPED via an explicit STOP_MOVING action that braked candidate_speed to
@@ -902,8 +925,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
                     assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
                 # target reached
+                # design (D1): pre_speeds[h] > 0 required - a pre-speed-0 (STOPPED/MALFUNCTION) agent
+                # must never be read as completing a transition here, even if banked pre_offsets[h]
+                # alone would satisfy the boundary check (see (10a)/(10b)'s matching deferral in step()).
                 elif self.temp_transition_data[h].candidate_entry_point in agent.targets and (
-                    pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
+                    pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
                     assert agent.target_entry_point == self.temp_transition_data[h].candidate_entry_point
                     if self.remove_agents_at_target:
                         assert agent.current_entry_point is None
@@ -914,7 +940,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
                         assert agent.current_entry_point == agent.target_entry_point
                 # on-map cell transition
-                elif agent.current_entry_point is not None and (pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
+                # design (D1): pre_speeds[h] > 0 required, same reasoning as "target reached" above.
+                elif agent.current_entry_point is not None and (
+                    pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
                     assert agent.current_entry_point is not None
                     assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
                     assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
@@ -970,18 +998,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 # invalid action
                 elif not action_valid:
-                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
-                    # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
+                    # design: an invalid action denies the crossing attempt at the cell boundary, same
+                    # consequence as a resource_check denial (see the top-level "candidates discarded"
+                    # branch above, and (10b)'s matching MOVING->STOPPED branch in step()) - distance
+                    # banks up to the boundary, it just isn't credited with crossing it. pre_speed is
+                    # always > 0 here (a MOVING agent's pre-step speed can never be 0).
                     assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
                         pre_step.pre_offsets[h], pre_speed)
-                # stopped
-                elif pre_speed == 0 and agent.speed_counter.speed == 0:
+                # stopped, or stopped -> moving (or malfunction recovering)
+                # (D1): pre-step speed 0 must never advance distance this step, whether the agent
+                # stays STOPPED (a plain no-op) or is promoted to MOVING - (10a)/(10b)'s pre-speed-0
+                # deferral in step() defers any crossing to the following (genuinely positive-pre-speed)
+                # step.
+                elif pre_speed == 0:
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
-                elif pre_speed == 0 and agent.speed_counter.speed > 0:
-                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), it can even do cell transition
-                    # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
-                    assert agent.speed_counter.distance == SpeedCounter.distance_after_crossing(
-                        pre_step.pre_offsets[h], pre_speed)
                 else:
                     assert agent.speed_counter.distance == SpeedCounter.distance_after_crossing(
                         pre_step.pre_offsets[h], pre_speed)
