@@ -23,17 +23,25 @@ extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently
 `tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
 flags it as unused.
 
-- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
-  and `benchmarks/benchmark_episodes.py`'s fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a
-  `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
-  `flatland-benchmarks-episodes-url` in `checks.yml`):
-  ```
+- **Run the core test suite** (matches CI's `test` job): needs `tests/test_flatland_regression_episodes.py`'s and
+  `tests/test_flatland_evaluators_trajectory_analysis.py`'s fixture — a `flatland-baselines` checkout on
+  `PYTHONPATH` and a `BENCHMARK_EPISODES_FOLDER` populated from the
+  `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see `flatland-benchmarks-episodes-url` in `checks.yml`, also
+  duplicated in `benchmarks/benchmark_episodes.py`'s `DOWNLOAD_INSTRUCTIONS` — keep both in sync if the URL ever
+  bumps to a new version). Download and point the env var at the extracted folder (any location works, it's
+  read purely via `BENCHMARK_EPISODES_FOLDER`, nothing hardcodes a path):
+  ```bash
+  curl -sSL -o FLATLAND_BENCHMARK_EPISODES_FOLDER.zip "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-9/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip"
+  unzip -o -q FLATLAND_BENCHMARK_EPISODES_FOLDER.zip -d /path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
+  export BENCHMARK_EPISODES_FOLDER=/path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
-  Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
-  `python -m pytest tests/envs/test_foo.py`. If the `flatland-baselines` checkout lives inside this repo's own
-  tree (as CI's `test` job does it, and as needed to put it on `PYTHONPATH` without an absolute path), add
-  `--ignore=flatland-baselines` — otherwise pytest's default recursive collection picks up its test suite too.
+  Without that fixture set up, the affected tests fail outright with an `AssertionError` naming
+  `DOWNLOAD_INSTRUCTIONS` (not a skip) — so a run without it set looks like real regressions. Either set up the
+  fixture, or drop the affected tests / run a narrower path, e.g. `python -m pytest tests/envs/test_foo.py`. If
+  the `flatland-baselines` checkout lives inside this repo's own tree (as CI's `test` job does it, and as needed
+  to put it on `PYTHONPATH` without an absolute path), add `--ignore=flatland-baselines` — otherwise pytest's
+  default recursive collection picks up its test suite too.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`
   since training runs are inherently non-deterministic:
