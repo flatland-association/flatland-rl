@@ -146,29 +146,39 @@ truth value of an array with more than one element is ambiguous"). It's wired in
 explicitly itself, unless the assigned value is already a known-sanitized entry point copied from elsewhere
 on the same agent.
 
-### Speed is always a `Fraction` internally
+### Speed/distance are `Fraction`s, and `None` while off map
 
-`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `speed`/`max_speed`/`distance` as `Fraction`
-unconditionally, regardless of what type callers pass in: `_pseudo_fractional()` snaps any `int`/`float`/`Decimal`
-input to a `Fraction` on the way in (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within
-tolerance). `RailEnv.__init__`'s `acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to
-match. Passing a plain `float` for either instead (as opposed to a `Fraction`) can silently reintroduce floats
-into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
-`Fraction`-only invariant assumed by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
-doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `max_speed` as a `Fraction` unconditionally, but
+`speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
+(`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
+`None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.step()` call as
+every other step - `rail_env.py`'s "(10b) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
+from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
+`max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
+(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
+`acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to match. Passing a plain `float`
+for either instead (as opposed to a `Fraction`) can silently reintroduce floats into `new_speed` mid-`step()`,
+since `Fraction + float` coerces to `float` in Python — this can violate the `Fraction`-only invariant assumed
+by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that doesn't saturate to a speed boundary (0
+or `max_speed`) in one step.
+
+A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -
+`agent_utils.py`'s `load_env_agent()` normalizes a loaded agent's `speed_counter` against its `TrainState` on
+load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance left untouched) to guard against this.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
-`AbstractRailEnv._capture_speed_invariant_pre_step_snapshot()`/`_assert_speed_invariants()` (`rail_env.py`)
-implement a per-agent runtime check that each `step()` call updates `SpeedCounter.speed` to exactly the value
-the action/state-machine/motion-check outcome implies (acceleration/braking/malfunction/off-map/done, each with
-its own expected-speed branch) - a correctness net for the speed-update logic, not part of normal control flow.
-`RailEnv.step()`'s override calls the snapshot method before `super().step()` and the assertion method after;
-`GraphRailEnv` doesn't call either, since it doesn't override `step()`. Both are gated behind the
-`check_step_pre_post_conditions` constructor flag (default `True`) so the extra per-step overhead can be
-disabled where it matters - `examples/flatland_performance_profiling.py`'s `get_rail_env()` defaults it to
-`False`, since that script exists specifically to profile `step()`'s own cumulative time and the assertions
-would otherwise inflate every measurement.
+`AbstractRailEnv.step()` itself calls `_check_pre_step_invariants_and_capture_snapshot()` up front, and
+`_check_malfunction_state_invariant()` / `_verify_mutually_exclusive_resource_allocation()` /
+`_check_post_speed_distance_invariants()` / `_check_post_position_invariants()` (`rail_env.py`) at the end - a
+correctness net verifying every per-agent speed/distance/position update and resource allocation this step
+matches exactly what the action/state-machine/motion-check outcome implies, not part of normal control flow.
+Since these live in `AbstractRailEnv` itself (not a subclass override), `RailEnv` and `GraphRailEnv` both run
+them identically - `RailEnv.step()`'s own override only adds `_update_agent_positions_map()` after calling
+`super().step()`. All are gated behind the `check_step_pre_post_conditions` constructor flag (default `True`)
+so the extra per-step overhead can be disabled where it matters - `examples/flatland_performance_profiling.py`'s
+`get_rail_env()` defaults it to `False`, since that script exists specifically to profile `step()`'s own
+cumulative time and the assertions would otherwise inflate every measurement.
 
 ### Cython-accelerated hot paths (`ext-modules`)
 
