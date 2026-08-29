@@ -85,7 +85,7 @@ def test_malfunction_process():
         env_agent.state = TrainState.MOVING
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.max_speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
@@ -335,7 +335,7 @@ def test_initial_malfunction():
                 reward=env.step_penalty  # running at speed 1.0
             )
         ],
-        speed=env.agents[0].speed_counter.speed,
+        speed=env.agents[0].speed_counter.max_speed,
         target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -454,7 +454,7 @@ def test_initial_malfunction_stop_moving():
                 reward=env.step_penalty * 1.0,  # full step penalty while stopped
             )
         ],
-        speed=env.agents[0].speed_counter.speed,
+        speed=env.agents[0].speed_counter.max_speed,
         target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -490,7 +490,7 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
         agent._set_state(TrainState.MOVING)
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
+        agent.speed_counter.step(speed=agent.speed_counter.max_speed, crossing_completed=False)
         # design: actions applied at cell entry
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
         assert transition is not None
@@ -626,9 +626,9 @@ def test_initial_malfunction_do_nothing():
                 position=None,
                 direction=None,
                 malfunction=1,
-                # design: distance is None when off map
+                # design: speed and distance are None when off map
                 distance=None,
-                speed=1,  # irrelevant
+                speed=None,
                 state=TrainState.MALFUNCTION_OFF_MAP,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION_OFF_MAP -> MOVING needs move action
@@ -662,7 +662,7 @@ def test_initial_malfunction_do_nothing():
 
             )
         ],
-        speed=env.agents[0].speed_counter.speed,
+        speed=env.agents[0].speed_counter.max_speed,
         target=next(iter(env.agents[0].targets))[0],
         initial_position=(3, 2),
         initial_direction=Grid4TransitionsEnum.EAST,
@@ -681,7 +681,7 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_counter = SpeedCounter(speed=0.33)
+    env.agents[0].speed_counter = SpeedCounter(max_speed=0.33)
     env.reset(False, False, random_seed=10)
     env_data = []
 
@@ -708,7 +708,7 @@ def tests_random_interference_from_outside():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_counter = SpeedCounter(speed=0.33)
+    env.agents[0].speed_counter = SpeedCounter(max_speed=0.33)
     env.reset(False, False, random_seed=10)
 
     dummy_list = [1, 2, 6, 7, 8, 9, 4, 5, 4]
@@ -743,7 +743,7 @@ def test_last_malfunction_step():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
     env.reset()
-    env.agents[0].speed_counter = SpeedCounter(speed=1. / 3.)
+    env.agents[0].speed_counter = SpeedCounter(max_speed=1. / 3.)
     env.agents[0].initial_entry_point = ((6, 6), 2)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
 
@@ -757,7 +757,7 @@ def test_last_malfunction_step():
         env_agent.state = TrainState.MOVING
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        env_agent.speed_counter.step(speed=env_agent.speed_counter.speed, crossing_completed=False)
+        env_agent.speed_counter.step(speed=env_agent.speed_counter.max_speed, crossing_completed=False)
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)

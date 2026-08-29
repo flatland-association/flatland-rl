@@ -264,6 +264,9 @@ def test_rewards_intermediate_served_but_not_stopped_penalty():
     assert rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == 0
 
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
+    # design: speed is None until the agent enters the map - give it a real on-map speed here since
+    # BasicMultiObjectiveRewards' energy-efficiency term reads agent.speed_counter.speed for a MOVING agent.
+    agent.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(1))
     agent.state = TrainState.MOVING
     rewards.step_reward(agent, None, distance_map, 5)
     agent.state = TrainState.DONE

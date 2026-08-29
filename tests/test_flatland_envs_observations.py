@@ -134,7 +134,7 @@ def test_reward_function_conflict(rendering=False):
     for a in env.agents:
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        a.speed_counter.step(speed=a.speed_counter.speed, crossing_completed=False)
+        a.speed_counter.step(speed=a.speed_counter.max_speed, crossing_completed=False)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)
@@ -229,7 +229,7 @@ def test_reward_function_waiting(rendering=False):
     for a in env.agents:
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        a.speed_counter.step(speed=a.speed_counter.speed, crossing_completed=False)
+        a.speed_counter.step(speed=a.speed_counter.max_speed, crossing_completed=False)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)
