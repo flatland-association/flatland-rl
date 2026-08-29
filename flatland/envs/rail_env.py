@@ -43,12 +43,12 @@ EntryPointT = TypeVar('EntryPointT')
 class PreStepSnapshot(NamedTuple):
     """ Per-agent state captured before `step()` runs, for `AbstractRailEnv._check_post_speed_invariants()`
     to verify the post-step speed update against. """
-    pre_speeds: Dict[int, Fraction]
+    pre_speeds: Dict[int, Optional[Fraction]]
     pre_current_entry_points: Dict[int, Optional[Any]]
     pre_next_entry_points: Dict[int, Optional[Any]]
     pre_dones: Dict[int, bool]
     pre_in_malfunctions: Dict[int, bool]
-    pre_offsets: Dict[int, Fraction]
+    pre_offsets: Dict[int, Optional[Fraction]]
 
 
 class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPointT]):
@@ -500,7 +500,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             elif not is_on_map and movement_action_given and earliest_departure_reached:
                 candidate_speed = self.acceleration_delta
             # (3a.4) stay off map
-            elif not action_valid and not is_on_map:
+            elif not is_on_map:
                 candidate_speed = Fraction(0)
             # (3a.5) invalid action
             elif is_on_map and candidate_entry_point_independent is None and is_cell_exit:
@@ -664,32 +664,52 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     agent.next_entry_point = _sanitize_entry_point(agent_transition_data.candidate_next_entry_point)
                 agent.state_machine.update_if_reached(agent.current_entry_point, agent.targets)
 
-            # (10b) SPEED_COUNTER UPDATE
-            # TODO https://github.com/flatland-association/flatland-rl/issues/178 revise design (D2a): distinguish forced stop (motion check or invalid action)
-            # else: DONE and about to be removed - handle_done_state() below clears the position
-            if agent.state == TrainState.MOVING or (agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING):
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3) speed off map is 0 (changes behaviour when not full acceleration delta)
-                if (agent.state_machine.previous_state == TrainState.READY_TO_DEPART or
-                    agent.state_machine.previous_state == TrainState.MALFUNCTION_OFF_MAP):
-                    # design: distance is None when off map -- map entry sets distance to 0 exactly
-                    # on the step the agent's position enters the map. Pass the pre-step speed
-                    # itself (a no-op) rather than the newly computed candidate: applying the
-                    # candidate here would make acceleration take effect one step earlier than
-                    # today's behaviour - an intentional, separately tracked change (see TODO #280
-                    # above), not something this distance-focused refactor should incidentally cause.
-                    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
+            # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE)
+            if agent.state == TrainState.MOVING:
+                crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
+                # N.B. map entry (previous state READY_TO_DEPART/MALFUNCTION_OFF_MAP) also flows through
+                # here: candidate_speed is already acceleration_delta (see (3a.3)), and speed_counter.step()
+                # bootstraps distance to 0 for an off-map -> on-map transition regardless of crossing_completed.
+                speed = agent_transition_data.candidate_speed
+                # design: reaching or remaining in MOVING requires movement_allowed (see (9), state_machine's
+                # _handle_moving/_handle_stopped/_handle_ready_to_depart/_handle_malfunction_off_map/
+                # _handle_malfunction all gate a transition into MOVING on movement_action_given and
+                # movement_allowed) - so action_valid and resource_check are always True here; distance
+                # advances by the pre-step speed and, if the crossing genuinely completed
+                # (agent.old_entry_point != candidate_entry_point), wraps into the new cell
+                # (distance % SEGMENT_LENGTH) - otherwise it's a normal within-cell advance.
+                agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
+            elif agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING:
+                crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
+                speed = Fraction(0)
+                if not agent_transition_data.state_transition_signal.action_valid or not resource_check:
+                    # MOVING -> STOPPED via invalid action at the cell boundary, or resource_check denying
+                    # the crossing: distance still advances by the pre-step speed (SpeedCounter.step() ->
+                    # _distance_update() adds pre-step speed unconditionally) but is clamped at the cell
+                    # boundary (min(pre_distance + pre_speed, SEGMENT_LENGTH)) instead of wrapping into the
+                    # new cell - the agent travels up to the boundary this step, it just isn't credited
+                    # with crossing it. See _check_post_speed_distance_invariants's "candidates
+                    # discarded"/"invalid action" branches, which assert this formula and run on every step
+                    # by default (check_step_pre_post_conditions=True).
+                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
+                    # the movement attempt this step was denied. Unlike those two spots (pre_speed == 0
+                    # there, a STOPPED-previously agent, so the advance is a no-op), pre_speed is always > 0
+                    # here (a MOVING agent's pre-step speed can never be 0 - see (10b)'s first branch design
+                    # comment above), so the advance is real, not a no-op: needs the same revisiting -
+                    # should a denied crossing attempt consume distance up to the boundary at all?
+                    agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
                 else:
-                    crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
-                    # MOVING -> STOPPED: we continue with pre-step as far as possible but set speed to 0,
-                    # irrespective of whether STOP action was issued or STOP comes from invalid action or resource_check.?
-                    speed = agent_transition_data.candidate_speed if agent.state == TrainState.MOVING else Fraction(0)
+                    # MOVING -> STOPPED via an explicit STOP_MOVING action that braked candidate_speed to
+                    # exactly 0 this step, action valid and resource_check granted: distance advances by
+                    # the pre-step speed and, if the crossing genuinely completed, wraps into the new cell
+                    # (distance % SEGMENT_LENGTH) - the agent can still complete an already-in-flight cell
+                    # crossing on the very step it comes to a stop.
                     agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
             elif agent.state.is_on_map_state():
                 # TODO harmonize condition with overleaf - force stop or malfunction
                 agent.speed_counter.stop()
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
             elif agent.state.is_off_map_state():
-                # design: distance is None when off map
+                # design: speed and distance are None while off map
                 agent.speed_counter.step(speed=None, crossing_completed=False)
             elif not self.remove_agents_at_target:
                 # design: DONE but not removed is neither on-map nor off-map (see
@@ -876,9 +896,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             if not self.temp_transition_data[h].resource_check:
-                if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
-                    # TODO (D3) initialize speed and distance to None instead of max_speed
-                    assert agent.speed_counter.distance is None or agent.speed_counter.distance == 0
+                # map entry failed
+                if pre_step.pre_current_entry_points[h] is None:
+                    assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 else:
                     assert agent.speed_counter.distance == min((pre_step.pre_offsets[h] + pre_speed), SEGMENT_LENGTH)
 
@@ -897,29 +917,27 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 elif pre_step.pre_offsets[h] is None:
                     if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
                         assert agent.speed_counter.distance is None
-                    # TODO is this map entry?
+                    # map entry
                     elif agent.state in [TrainState.MOVING]:
-                        # TODO (D3) initialize speed to 0 instead of max_speed, then should be in-line with  with pre-speed invariant
                         assert agent.speed_counter.distance == 0
                     else:
                         raise
                 # off map 2
                 elif agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
-                    # TODO (D3) initialize speed and distance to None instead of max_speed
                     assert agent.speed_counter.distance is None or agent.speed_counter.distance == 0
                 # malfunction
                 elif agent.malfunction_handler.in_malfunction:
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 # invalid action
                 elif not action_valid:
-                    # TODO ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
+                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
                     # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                     assert agent.speed_counter.distance == min((pre_step.pre_offsets[h] + pre_speed), SEGMENT_LENGTH)
                 # stopped
                 elif pre_speed == 0 and agent.speed_counter.speed == 0:
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 elif pre_speed == 0 and agent.speed_counter.speed > 0:
-                    # TODO ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), it can even do cell transition
+                    # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), it can even do cell transition
                     # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                     assert agent.speed_counter.distance == ((pre_step.pre_offsets[h] + pre_speed) % SEGMENT_LENGTH)
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
@@ -936,11 +954,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             if not self.temp_transition_data[h].resource_check:
-                # TODO (D3) initialize speed and distance to None instead of max_speed
-                if agent.state not in [TrainState.READY_TO_DEPART]:
-                    assert agent.speed_counter.speed == 0
+                if agent.state in [TrainState.READY_TO_DEPART]:
+                    # rejected map entry - agent stays off map, speed stays None
+                    assert agent.speed_counter.speed is None
                 else:
-                    assert agent.speed_counter.speed == pre_speed
+                    assert agent.speed_counter.speed == 0
             # candidates accepted in distribute phase
             else:
                 action_valid = self.temp_transition_data[h].state_transition_signal.action_valid
@@ -949,26 +967,24 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.target_entry_point is not None
                     assert agent.target_entry_point in agent.targets
                     if self.remove_agents_at_target:
-                        # TODO cleanup? Make speed None off map?
-                        assert agent.speed_counter.speed == pre_speed
+                        # handle_done_state() clears position and nulls speed_counter (speed/distance
+                        # both None) on the exact step the agent reaches DONE and gets removed.
+                        assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == Fraction(0)
                 # malfunction
                 elif agent.malfunction_handler.in_malfunction:
                     if agent.state in [TrainState.MALFUNCTION_OFF_MAP]:
-                        # TODO (D3) initialize speed to 0 instead of max_speed
-                        assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                        assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == 0
-                # map entry
-                elif pre_step.pre_current_entry_points[h] is None and RailEnvActions.is_moving_action(action) \
-                    and pre_step.pre_dones[h] is False and self._elapsed_steps >= agent.earliest_departure:
-                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design (D3): set speed 0 off map (changes behaviour when not full acceleration delta)
-                    assert agent.speed_counter.speed == pre_speed
+                # map entry - position observably moved from off map to on map this step
+                elif pre_step.pre_current_entry_points[h] is None and agent.current_entry_point is not None:
+                    assert agent.speed_counter.speed == _cap_speed(agent.speed_counter.max_speed,
+                                                                    self.acceleration_delta)
                 # stay off map
                 elif pre_step.pre_current_entry_points[h] is None:
-                    # TODO (D3) initialize speed to 0 instead of max_speed
-                    assert agent.speed_counter.speed == pre_speed
+                    assert agent.speed_counter.speed is None
                     assert agent.speed_counter.distance is None
                 # invalid action
                 elif not action_valid:
@@ -985,21 +1001,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
                             assert agent.speed_counter.speed == 0
                         elif agent.state in [TrainState.MALFUNCTION_OFF_MAP] and not agent.malfunction_handler.in_malfunction:
-                            assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                            assert agent.speed_counter.speed is None
                         else:
                             assert agent.speed_counter.speed == min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed)
 
                 # braking
                 elif action == RailEnvActions.STOP_MOVING:
-                    # TODO (D3) initialize speed to 0 instead of max_speed
                     if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
-                        assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                        assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == max(pre_speed + self.braking_delta, 0)
                 # default
                 else:
                     if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
-                        assert agent.speed_counter.speed == agent.speed_counter.max_speed
+                        assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == pre_speed
 

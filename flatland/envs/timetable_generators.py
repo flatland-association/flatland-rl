@@ -87,7 +87,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         shortest_path_segment_lengths = [[l] for l in shortest_paths_lengths]
 
     # Find mean_shortest_path_time
-    agent_speeds = [agent.speed_counter.speed for agent in agents]
+    agent_speeds = [agent.speed_counter.max_speed for agent in agents]
     agent_shortest_path_times = np.array(shortest_paths_lengths) / np.array(agent_speeds)
     mean_shortest_path_time = np.mean(agent_shortest_path_times)
 

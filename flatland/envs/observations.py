@@ -211,13 +211,15 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         # Here information about the agent itself is stored
         distance_map = self.env.distance_map.get()
 
+        # design: speed is None while off map
+        speed_min_fractional = agent.speed_counter.speed if agent.speed_counter.speed is not None else 0
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                      dist_other_agent_encountered=0, dist_potential_conflict=0,
                                      dist_unusable_switch=0, dist_to_next_branch=0,
                                      dist_min_to_target=distance_map[(handle, *agent_virtual_position, agent_virtual_direction)],
                                      num_agents_same_direction=0, num_agents_opposite_direction=0,
                                      num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
-                                     speed_min_fractional=agent.speed_counter.speed,
+                                     speed_min_fractional=speed_min_fractional,
                                      num_agents_ready_to_depart=0,
                                      childs={})
         # print("root node type:", type(root_node_observation))

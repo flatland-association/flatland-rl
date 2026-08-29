@@ -83,20 +83,16 @@ def _distance_update(distance: Fraction, speed: Fraction,
 
 
 class SpeedCounter:
-    def __init__(self, speed: float, max_speed: float = None):
-        self._speed: Fraction = _pseudo_fractional(speed)
+    def __init__(self, max_speed: float, speed: Optional[float] = None):
+        self._max_speed: Fraction = _pseudo_fractional(max_speed)
+        assert self._max_speed <= 1.0
+        # design: speed is None until the agent enters the map (see step())
+        self._speed: Optional[Fraction] = _pseudo_fractional(speed) if speed is not None else None
+        if self._speed is not None:
+            assert self._speed <= self._max_speed
+            assert self._speed >= 0.0
         self._distance: Optional[Fraction] = None
         self._is_cell_entry = False
-        self._max_speed: Fraction
-        if max_speed is not None:
-            self._max_speed = _pseudo_fractional(max_speed)
-        else:
-            # old constant speed behaviour
-            self._max_speed = self._speed
-        assert self._max_speed <= 1.0
-        assert self._speed <= self._max_speed
-        assert self._speed >= 0.0
-        self.reset()
 
     def step(self, speed: Optional[Fraction], crossing_completed: bool) -> None:
         """
@@ -113,8 +109,9 @@ class SpeedCounter:
             Whether the transition into the next cell actually completed.
         """
         if speed is None:
-            # design: distance is None when off map
+            # design: speed and distance are None when off map
             self._distance = None
+            self._speed = None
             self._is_cell_entry = False
             return
         if self._distance is None:
@@ -161,7 +158,10 @@ class SpeedCounter:
         return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property
-    def speed(self) -> Fraction:
+    def speed(self) -> Optional[Fraction]:
+        """
+        Current speed. None while off map (until step() is called with a non-None speed).
+        """
         return self._speed
 
     @property
