@@ -70,19 +70,38 @@ def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -
 @lru_cache()
 def _distance_update(distance: Fraction, speed: Fraction,
                      crossing_completed: bool = True) -> Tuple[Fraction, bool]:
-    distance += speed
-
     if crossing_completed:
         # check assumption
-        assert distance >= SEGMENT_LENGTH
-        distance = distance % SEGMENT_LENGTH
-        return distance, distance < speed
+        assert distance + speed >= SEGMENT_LENGTH
+        new_distance = SpeedCounter.distance_after_crossing(distance, speed)
+        return new_distance, new_distance < speed
 
     # move at most segment end
-    return min(distance, SEGMENT_LENGTH), False
+    return SpeedCounter.distance_without_crossing(distance, speed), False
 
 
 class SpeedCounter:
+    """
+    Tracks an agent's speed and within-cell distance as Fractions of SEGMENT_LENGTH. speed/distance are
+    None while off map (see step()) and become concrete Fractions once the agent enters the map.
+
+    Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
+    pre-step inputs - used internally (e.g. _distance_update()) as well as by RailEnv.step() to compute
+    candidate speed/distance, and again by its post-step invariant checks
+    (_check_post_speed_distance_invariants) to verify the actual post-step values match. They are static
+    rather than instance methods since they compute a *candidate* value from explicit pre-step inputs,
+    not the counter's own (post-step) state; acceleration_delta/braking_delta are env-level parameters,
+    not SpeedCounter state, so are passed in explicitly rather than read off self. All four are None
+    (off map) in, None out.
+
+    | Method | Formula | Situation |
+    |---|---|---|
+    | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
+    | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
+    | `distance_after_crossing` | `(pre_offset + pre_speed) % SEGMENT_LENGTH` | cell boundary crossed |
+    | `distance_without_crossing` | `min(pre_offset + pre_speed, SEGMENT_LENGTH)` | cell boundary not crossed |
+    """
+
     def __init__(self, max_speed: float, speed: Optional[float] = None):
         self._max_speed: Fraction = _pseudo_fractional(max_speed)
         assert self._max_speed <= 1.0
@@ -131,6 +150,53 @@ class SpeedCounter:
         """
         self._speed = Fraction(0)
         self._is_cell_entry = False
+
+    @staticmethod
+    @lru_cache()
+    def speed_after_acceleration(pre_speed: Optional[Fraction], max_speed: Fraction,
+                                 acceleration_delta: Fraction) -> Optional[Fraction]:
+        """
+        Expected speed after a MOVE_FORWARD action, or a movement action starting an agent moving from
+        rest: pre-step speed plus acceleration_delta, capped at max_speed. None (off map) in, None out.
+        """
+        if pre_speed is None:
+            return None
+        return min(pre_speed + acceleration_delta, max_speed)
+
+    @staticmethod
+    @lru_cache()
+    def speed_after_braking(pre_speed: Optional[Fraction], braking_delta: Fraction) -> Optional[Fraction]:
+        """
+        Expected speed after a STOP_MOVING action: pre-step speed plus (negative) braking_delta,
+        floored at 0. None (off map) in, None out.
+        """
+        if pre_speed is None:
+            return None
+        return max(pre_speed + braking_delta, 0)
+
+    @staticmethod
+    @lru_cache()
+    def distance_after_crossing(pre_offset: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+        """
+        Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
+        pre-step speed, wrapped into the newly-entered cell. None (off map) in, None out.
+        """
+        if pre_offset is None:
+            return None
+        return (pre_offset + pre_speed) % SEGMENT_LENGTH
+
+    @staticmethod
+    @lru_cache()
+    def distance_without_crossing(pre_offset: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+        """
+        Expected distance when this step's cell-boundary crossing did not complete (denied by an
+        invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
+        plus pre-step speed, capped at the cell boundary rather than wrapping into a new cell. None (off
+        map) in, None out.
+        """
+        if pre_offset is None:
+            return None
+        return min(pre_offset + pre_speed, SEGMENT_LENGTH)
 
     def __repr__(self):
         return f"speed: {self.speed} \

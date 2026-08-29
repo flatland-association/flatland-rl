@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH
+from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH, SpeedCounter
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
 from flatland.utils import seeding
 
@@ -917,24 +917,31 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             agent = self.agents[h]
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
+            # (distance_without_crossing(None, None) == None covers the off-map map-entry-failed case
+            # the same way as the on-map case, since pre_offsets[h] is None exactly when the agent was
+            # off map pre-step)
             if not self.temp_transition_data[h].resource_check:
-                # map entry failed
-                if pre_step.pre_current_entry_points[h] is None:
-                    assert agent.speed_counter.distance == pre_step.pre_offsets[h]
-                else:
-                    assert agent.speed_counter.distance == min((pre_step.pre_offsets[h] + pre_speed), SEGMENT_LENGTH)
+                assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
+                    pre_step.pre_offsets[h], pre_speed)
 
             # candidates accepted in distribute phase
             else:
                 action_valid = self.temp_transition_data[h].state_transition_signal.action_valid
-                # done or target reached
-                if pre_step.pre_dones[h] or self.temp_transition_data[h].candidate_entry_point in agent.targets:
+                # done
+                if pre_step.pre_dones[h]:
+                    assert agent.target_entry_point is not None
+                    assert agent.target_entry_point in agent.targets
+                    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
+                        pre_step.pre_offsets[h], pre_speed)
+                # target reached
+                elif self.temp_transition_data[h].candidate_entry_point in agent.targets:
                     assert agent.target_entry_point is not None
                     assert agent.target_entry_point in agent.targets
                     if self.remove_agents_at_target:
                         assert agent.speed_counter.distance is None
                     else:
-                        assert agent.speed_counter.distance == min((pre_step.pre_offsets[h] + pre_speed), SEGMENT_LENGTH)
+                        assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
+                            pre_step.pre_offsets[h], pre_speed)
                 # off map
                 elif pre_step.pre_offsets[h] is None:
                     if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
@@ -954,20 +961,23 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 elif not action_valid:
                     # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), however it seems not to do cell transition
                     # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
-                    assert agent.speed_counter.distance == min((pre_step.pre_offsets[h] + pre_speed), SEGMENT_LENGTH)
+                    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
+                        pre_step.pre_offsets[h], pre_speed)
                 # stopped
                 elif pre_speed == 0 and agent.speed_counter.speed == 0:
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 elif pre_speed == 0 and agent.speed_counter.speed > 0:
                     # TODO (D1*) ouch! STOPPED->MOVING should never accumulate distance, violating pre-speed invariant of (D1), it can even do cell transition
                     # assert agent.speed_counter.distance == pre_step.pre_offsets[h]
-                    assert agent.speed_counter.distance == ((pre_step.pre_offsets[h] + pre_speed) % SEGMENT_LENGTH)
+                    assert agent.speed_counter.distance == SpeedCounter.distance_after_crossing(
+                        pre_step.pre_offsets[h], pre_speed)
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
                 elif agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
                     assert pre_step.pre_in_malfunctions[h]
                     assert agent.speed_counter.distance == pre_step.pre_offsets[h]
                 else:
-                    assert agent.speed_counter.distance == ((pre_step.pre_offsets[h] + pre_speed) % SEGMENT_LENGTH)
+                    assert agent.speed_counter.distance == SpeedCounter.distance_after_crossing(
+                        pre_step.pre_offsets[h], pre_speed)
 
         # speed update invariant
         for h, pre_speed in pre_step.pre_speeds.items():
@@ -1016,23 +1026,22 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.speed_counter.speed == 0
                 # acceleration or start moving
                 elif action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
-                    if agent.state in [TrainState.WAITING]:
-                        assert agent.speed_counter.speed == pre_step.pre_speeds[h]
+                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
+                    if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
+                        assert agent.speed_counter.speed == 0
+                    elif agent.state in [TrainState.MALFUNCTION_OFF_MAP] and not agent.malfunction_handler.in_malfunction:
+                        assert agent.speed_counter.speed is None
                     else:
-                        # TODO https://github.com/flatland-association/flatland-rl/issues/280 very dodgy - when does this happen? This seems a bug: when the malfunction stops (done before/beginning step), agent be allowed to accelerate? Or is the step when it reaches 0 the last in malfunction?
-                        if agent.state in [TrainState.MALFUNCTION] and not agent.malfunction_handler.in_malfunction:
-                            assert agent.speed_counter.speed == 0
-                        elif agent.state in [TrainState.MALFUNCTION_OFF_MAP] and not agent.malfunction_handler.in_malfunction:
-                            assert agent.speed_counter.speed is None
-                        else:
-                            assert agent.speed_counter.speed == min(pre_speed + self.acceleration_delta, agent.speed_counter.max_speed)
+                        # pre_speed is None while WAITING (not yet departing this step) -
+                        # speed_after_acceleration(None, ...) == None matches that case too.
+                        assert agent.speed_counter.speed == SpeedCounter.speed_after_acceleration(
+                            pre_speed, agent.speed_counter.max_speed, self.acceleration_delta)
 
                 # braking
                 elif action == RailEnvActions.STOP_MOVING:
-                    if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
-                        assert agent.speed_counter.speed is None
-                    else:
-                        assert agent.speed_counter.speed == max(pre_speed + self.braking_delta, 0)
+                    # pre_speed is None for WAITING/READY_TO_DEPART/MALFUNCTION_OFF_MAP -
+                    # speed_after_braking(None, ...) == None matches that case too.
+                    assert agent.speed_counter.speed == SpeedCounter.speed_after_braking(pre_speed, self.braking_delta)
                 # default
                 else:
                     if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
