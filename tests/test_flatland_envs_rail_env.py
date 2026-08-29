@@ -606,7 +606,9 @@ def test_symmetric_switch_stop_action():
     assert agent.next_entry_point == ((15, 15), 1)
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
-    # design: distance update with pre-step speed
+    # design: an invalid action denies the crossing at the cell boundary, same consequence as a
+    # resource_check denial - distance still banks up to the boundary (real physical momentum, not
+    # credited with the crossing), it just doesn't coast past it.
     assert agent.speed_counter.distance == Fraction(1, 1)
 
     # retrying the same invalid action leaves the agent parked in exactly the same state.
@@ -617,13 +619,21 @@ def test_symmetric_switch_stop_action():
     assert agent.speed_counter.speed == Fraction(0)
     assert agent.speed_counter.distance == Fraction(1, 1)
 
-    # only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
+    # design: stopped->moving with pre-speed 0, travelling no distance.
+    env.step({agent.handle: RailEnvActions.MOVE_RIGHT})
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # now genuinely moving (pre-step speed > 0) - this step actually completes the crossing.
     env.step({agent.handle: RailEnvActions.MOVE_RIGHT})
     assert agent.current_entry_point == ((15, 15), 1)
     assert agent.next_entry_point == ((16, 15), 2)
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    assert agent.speed_counter.distance == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 2)
 
 
 def test_symmetric_switch_move_forward_action():
@@ -672,21 +682,25 @@ def test_symmetric_switch_move_forward_action():
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
 
+    # STOP_MOVING resolves (via apply_action_independent, no direction preference) to the same
+    # straight-through look-ahead as MOVE_FORWARD from the pending target (15,15),1 - invalid at
+    # this symmetric switch, so this is an invalid action, not an intentional stop: distance banks
+    # up to the boundary (same consequence as a resource_check denial), it doesn't stay at its
+    # pre-step value.
     env.step({agent.handle: RailEnvActions.STOP_MOVING})
     assert agent.current_entry_point[0] == (15, 14)
     assert agent.current_entry_point[1] == 1
     assert agent.state == TrainState.STOPPED
     assert agent.speed_counter.speed == Fraction(0)
-    # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == Fraction(1, 1)
     assert agent.current_entry_point == ((15, 14), 1)
     assert agent.next_entry_point == ((15, 15), 1)
 
-    # design: entry point and next entry point always advance together (see the invariant in
-    # RailEnv.step()) -- MOVE_FORWARD has no valid transition from the pending target (15,15),1 (a
-    # symmetric switch has no straight-through option), so the crossing itself is denied: the agent
-    # stays parked at (15,14),1, still pending (15,15),1, forced to a stop exactly like an ordinary
-    # invalid action would (crossing_denied), even though a movement action was given.
+    # design: distance is already banked at the boundary, so is_cell_exit() is true even at speed 0
+    # - MOVE_FORWARD's straight-through look-ahead is invalid here too, so action_valid is False
+    # regardless of promotion: movement_allowed stays False and the state machine never promotes
+    # STOPPED->MOVING at all (unlike an ordinary movement action at a non-switch cell boundary).
+    # distance stays banked at the boundary, unchanged.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.current_entry_point == ((15, 14), 1)
     assert agent.next_entry_point == ((15, 15), 1)
@@ -703,12 +717,21 @@ def test_symmetric_switch_move_forward_action():
     assert agent.speed_counter.distance == Fraction(1, 1)
 
     # only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
+    # design: stopped->moving with pre-speed 0, travelling no distance.
+    env.step({agent.handle: RailEnvActions.MOVE_LEFT})
+    assert agent.current_entry_point == ((15, 14), 1)
+    assert agent.next_entry_point == ((15, 15), 1)
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.speed == Fraction(1, 2)
+    assert agent.speed_counter.distance == Fraction(1, 1)
+
+    # now genuinely moving (pre-step speed > 0) - this step actually completes the crossing.
     env.step({agent.handle: RailEnvActions.MOVE_LEFT})
     assert agent.current_entry_point == ((15, 15), 1)
     assert agent.next_entry_point == ((14, 15), 0)
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    assert agent.speed_counter.distance == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1, 2)
 
 
 def test_blocked_agent_cannot_redirect_via_later_action():
@@ -769,11 +792,17 @@ def test_blocked_agent_cannot_redirect_via_later_action():
 
     # giving MOVE_LEFT while blocked does NOT redirect the pending target onto the southward
     # branch at (4, 6) - it stays locked onto (3, 5), retried for as long as agent 1 blocks it.
-    for _ in range(2):
+    # design (D1/D2): a STOPPED agent given a movement action is optimistically promoted to MOVING
+    # on the operator's request (see rail_env.py's (3b.2bis)/movement_allowed design note) even
+    # though its target is still occupied - position/distance stay unchanged either way (D1). The
+    # *following* step then genuinely attempts the crossing for real, is denied again by MotionCheck
+    # (agent 1 still parked at (3, 5)), and the state machine demotes back to STOPPED - so the state
+    # alternates MOVING/STOPPED every retry for as long as agent 1 blocks it, never actually moving.
+    for expected_state in [TrainState.MOVING, TrainState.STOPPED, TrainState.MOVING, TrainState.STOPPED]:
         env.step({0: RailEnvActions.MOVE_LEFT, 1: RailEnvActions.STOP_MOVING})
         assert agent0.current_entry_point == ((3, 6), 3)
         assert agent0.next_entry_point == ((3, 5), 3)
-        assert agent0.state == TrainState.STOPPED
+        assert agent0.state == expected_state
 
     # once agent 1 vacates (3, 5), agent 0 enters it and continues straight to (3, 4) - even though
     # it is still being given MOVE_LEFT - confirming the earlier MOVE_LEFTs were never consulted

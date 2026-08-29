@@ -88,10 +88,14 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
         [Waypoint(position=(3, 1), direction=1), Waypoint(position=(2, 2), direction=2)],
         # agent 1 waits until agent 0 has passed the diamond crossing at (3,2)
         [Waypoint(position=(3, 2), direction=1), Waypoint(position=(2, 2), direction=2)],
-        [Waypoint(position=(3, 3), direction=1), Waypoint(position=(3, 2), direction=2)],
-        [Waypoint(position=(3, 4), direction=1), Waypoint(position=(4, 2), direction=2)],
-        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(5, 2), direction=2)],
-        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(None, None), direction=None)],
+        # design (D1/D2): agent 1's STOPPED->MOVING promotion here is one settling step (distance
+        # unchanged) before it actually enters (3,2) below - see rail_env.py's (3b.5)/(10a)/(10b)/
+        # movement_allowed design note. Promotion itself is granted optimistically as soon as a
+        # movement action is given, regardless of whether (3,2) is still occupied.
+        [Waypoint(position=(3, 3), direction=1), Waypoint(position=(2, 2), direction=2)],
+        [Waypoint(position=(3, 4), direction=1), Waypoint(position=(3, 2), direction=2)],
+        [Waypoint(position=(3, 5), direction=1), Waypoint(position=(4, 2), direction=2)],
+        [Waypoint(position=(3, 6), direction=1), Waypoint(position=(5, 2), direction=2)],
         [Waypoint(position=(3, 7), direction=1), Waypoint(position=(None, None), direction=None)],
         [Waypoint(position=(3, 8), direction=1), Waypoint(position=(None, None), direction=None)],
         [Waypoint(position=(None, None), direction=None), Waypoint(position=(None, None), direction=None)]
