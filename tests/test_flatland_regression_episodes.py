@@ -15,32 +15,33 @@ from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.trajectories.trajectories import EVENT_LOGS_SUBDIR, OUTPUTS_SUBDIR, Trajectory
 
 
-@pytest.mark.parametrize("data_sub_dir,ep_id,run_from_intermediate,skip_rewards_dones_infos,skip_rewards,shifted_malfunction", [
+@pytest.mark.parametrize(
+    "data_sub_dir,ep_id,run_from_intermediate,skip_rewards_dones_infos,skip_rewards,shifted_malfunction,shifted_off_map_speed", [
     # trajectories do not contain rewards/dones/info: https://github.com/flatland-association/flatland-rl/pull/222 -> skip_rewards_dones_infos=True
 
-    ("30x30 map/10_trains", "1649ef98-e3a8-4dd3-a289-bbfff12876ce", True, True, True, False),
-    ("30x30 map/10_trains", "4affa89b-72f6-4305-aeca-e5182efbe467", True, True, True, False),
+    ("30x30 map/10_trains", "1649ef98-e3a8-4dd3-a289-bbfff12876ce", True, True, True, False, False),
+    ("30x30 map/10_trains", "4affa89b-72f6-4305-aeca-e5182efbe467", True, True, True, False, False),
 
-    ("30x30 map/15_trains", "a61843e8-b550-407b-9348-5029686cc967", True, True, True, False),
-    ("30x30 map/15_trains", "9845da2f-2366-44f6-8b25-beca522495b4", True, True, True, False),
+    ("30x30 map/15_trains", "a61843e8-b550-407b-9348-5029686cc967", True, True, True, False, False),
+    ("30x30 map/15_trains", "9845da2f-2366-44f6-8b25-beca522495b4", True, True, True, False, False),
 
-    ("30x30 map/20_trains", "57e1ebc5-947c-4314-83c7-0d6fd76b2bd3", True, True, True, False),
-    ("30x30 map/20_trains", "56a78985-588b-42d0-a972-7f8f2514c665", True, True, True, False),
+    ("30x30 map/20_trains", "57e1ebc5-947c-4314-83c7-0d6fd76b2bd3", True, True, True, False, False),
+    ("30x30 map/20_trains", "56a78985-588b-42d0-a972-7f8f2514c665", True, True, True, False, False),
 
     # remaining 30x30 map episodes do not verify cleanly under the shift-and-replay transform (see
     # regenerate_30x30_scenarios_with_shift below) - regenerating those would need to actually resolve
     # the new emergent deadlocks, not just retime actions, so they stay unregenerated for now.
 
-    # shifted_malfunction=True: TODO remove once these episodes are regenerated
-    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, False, True),
-    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, False, True),
+    # shifted_malfunction=True, shifted_off_map_speed=True: TODO remove once these episodes are regenerated
+    ("malfunction_deadlock_avoidance_heuristics/Test_00/Level_8", "Test_00_Level_8", True, False, False, True, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_01/Level_3", "Test_01_Level_3", True, False, False, True, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_6", "Test_02_Level_6", True, False, False, True, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_02/Level_8", "Test_02_Level_8", False, False, False, True, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_1", "Test_03_Level_1", False, False, False, True, True),
+    ("malfunction_deadlock_avoidance_heuristics/Test_03/Level_2", "Test_03_Level_2", False, False, False, True, True),
 ])
 def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, skip_rewards_dones_infos: bool, skip_rewards: bool,
-                 shifted_malfunction: bool):
+                 shifted_malfunction: bool, shifted_off_map_speed: bool):
     """
     Run a subset of episodes for regression in unit testing, comparing only positions.
     Protects against breaking changes in flatland-rl.
@@ -57,7 +58,8 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, ski
         run_episode(Path(tmpdirname), ep_id, snapshot_interval=1 if run_from_intermediate else 0,
                     skip_rewards_dones_infos=skip_rewards_dones_infos,
                     skip_rewards=skip_rewards,
-                    shifted_malfunction=shifted_malfunction)
+                    shifted_malfunction=shifted_malfunction,
+                    shifted_off_map_speed=shifted_off_map_speed)
 
         if run_from_intermediate:
             # copy actions etc. to outputs subfolder, so outputs subfolder becomes a proper trajectory data dir.
@@ -67,7 +69,8 @@ def test_episode(data_sub_dir: str, ep_id: str, run_from_intermediate: bool, ski
             run_episode(Path(tmpdirname) / OUTPUTS_SUBDIR, ep_id, start_step=np.random.randint(0, 50),
                         skip_rewards_dones_infos=skip_rewards_dones_infos,
                         skip_rewards=skip_rewards,
-                        shifted_malfunction=shifted_malfunction)
+                        shifted_malfunction=shifted_malfunction,
+                        shifted_off_map_speed=shifted_off_map_speed)
 
 
 def test_restore_episode():

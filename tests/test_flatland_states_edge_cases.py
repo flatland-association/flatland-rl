@@ -345,7 +345,8 @@ def test_malfunction_to_moving_instead_of_stopped():
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
-    env.agents[0].speed_counter._speed = Fraction(1, 5)
+    # design: speed is None while off map (agent hasn't departed yet) - only _max_speed applies here,
+    # departure always (re-)accelerates from 0 regardless of any pre-set speed (see design D3).
     env.agents[0].speed_counter._max_speed = Fraction(1, 5)
 
     # step 1
@@ -413,7 +414,8 @@ def test_stop_and_go():
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     env.agents[0].earliest_departure = 0
-    env.agents[0].speed_counter._speed = Fraction(1, 5)
+    # design: speed is None while off map (agent hasn't departed yet) - only _max_speed applies here,
+    # departure always (re-)accelerates from 0 regardless of any pre-set speed (see design D3).
     env.agents[0].speed_counter._max_speed = Fraction(1, 5)
 
     # step 1

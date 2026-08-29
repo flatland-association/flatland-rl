@@ -238,7 +238,7 @@ def line_from_file(filename: Union[str, Path] = None, load_from_package=None, en
         # setup with loaded data
         # N.B. Line generator currently has no routing flexibility!
         agent_waypoints = {i: a.waypoints for i, a in enumerate(agents)}
-        agents_speed = [a.speed_counter.speed for a in agents]
+        agents_speed = [a.speed_counter.max_speed for a in agents]
 
         return Line(agent_waypoints=agent_waypoints, agent_speeds=agents_speed)
 

@@ -103,9 +103,16 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                 # set the initial position
                 agent.initial_entry_point = (test_config.initial_position, test_config.initial_direction)
                 agent.targets = {(test_config.target, d) for d in Grid4TransitionsEnum}
-                agent.speed_counter = SpeedCounter(speed=test_config.speed,
-                                                   max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed)
             env.reset(False, False)
+            for a, test_config in enumerate(test_configs):
+                agent: EnvAgent = env.agents[a]
+                # N.B. must be set after reset() - reset() puts every agent's speed_counter back off
+                # map (speed/distance None), which would otherwise immediately wipe this out. Keep it
+                # off map (speed=None) when set_ready_to_depart will force the state back to
+                # READY_TO_DEPART below - that call doesn't touch speed_counter, so a real speed here
+                # would otherwise leave it inconsistent with the (still None) position.
+                agent.speed_counter = SpeedCounter(max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed,
+                                                   speed=None if set_ready_to_depart else test_config.speed)
 
             if set_ready_to_depart:
                 # Set all agents to ready to depart

@@ -152,6 +152,20 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         f"`next_entry_point` resumed mid-run is not supported."
     )
 
+    # design: normalize a persisted speed_counter to the current SpeedCounter contract. A pickle predating
+    # the "speed/distance are None while off map" design can carry a stale off-map speed pinned at
+    # max_speed (with distance 0) instead of None, or a stale nonzero speed while in MALFUNCTION - live
+    # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
+    # old pickle in line here rather than let a stale value violate _check_post_speed_distance_invariants
+    # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
+    # genuine mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
+    # entirely.
+    state = agent_tuple.state_machine.state
+    if state.is_off_map_state():
+        agent_tuple.speed_counter.reset()
+    elif state == TrainState.MALFUNCTION:
+        agent_tuple.speed_counter.stop()
+
     return EnvAgent(
         initial_entry_point=(agent_tuple.initial_position, agent_tuple.initial_direction),
         current_entry_point=current_entry_point,
@@ -248,7 +262,7 @@ class EnvAgent(Generic[EntryPointT]):
     # INIT TILL HERE IN _from_line()
 
     # Env step facelift
-    speed_counter = attrib(default=Factory(lambda: SpeedCounter(1.0)), type=SpeedCounter)
+    speed_counter = attrib(default=Factory(lambda: SpeedCounter(max_speed=1.0)), type=SpeedCounter)
     state_machine = attrib(default=Factory(lambda: TrainStateMachine(initial_state=TrainState.WAITING)),
                            type=TrainStateMachine)
     malfunction_handler = attrib(default=Factory(lambda: MalfunctionHandler()), type=MalfunctionHandler)
@@ -353,7 +367,7 @@ class EnvAgent(Generic[EntryPointT]):
                 waypoints_earliest_departure=None,
                 waypoints_latest_arrival=None,
                 handle=i_agent,
-                speed_counter=SpeedCounter(speed=speed))
+                speed_counter=SpeedCounter(max_speed=speed))
             agent_list.append(agent)
 
         return agent_list
@@ -382,7 +396,7 @@ class EnvAgent(Generic[EntryPointT]):
                     # N.B. valid targets cleaned in _agents_from_line
                     targets=targets,
                     moving=static_agent[3],
-                    speed_counter=SpeedCounter(speed), handle=i,
+                    speed_counter=SpeedCounter(max_speed=speed), handle=i,
                     waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,
                     waypoints_earliest_departure=[0, None],
@@ -397,7 +411,7 @@ class EnvAgent(Generic[EntryPointT]):
                     # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
-                    speed_counter=SpeedCounter(1.0),
+                    speed_counter=SpeedCounter(max_speed=1.0),
                     handle=i,
                     waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,

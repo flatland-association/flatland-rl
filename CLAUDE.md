@@ -23,17 +23,25 @@ extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently
 `tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
 flags it as unused.
 
-- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
-  and `benchmarks/benchmark_episodes.py`'s fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a
-  `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
-  `flatland-benchmarks-episodes-url` in `checks.yml`):
-  ```
+- **Run the core test suite** (matches CI's `test` job): needs `tests/test_flatland_regression_episodes.py`'s and
+  `tests/test_flatland_evaluators_trajectory_analysis.py`'s fixture — a `flatland-baselines` checkout on
+  `PYTHONPATH` and a `BENCHMARK_EPISODES_FOLDER` populated from the
+  `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see `flatland-benchmarks-episodes-url` in `checks.yml`, also
+  duplicated in `benchmarks/benchmark_episodes.py`'s `DOWNLOAD_INSTRUCTIONS` — keep both in sync if the URL ever
+  bumps to a new version). Download and point the env var at the extracted folder (any location works, it's
+  read purely via `BENCHMARK_EPISODES_FOLDER`, nothing hardcodes a path):
+  ```bash
+  curl -sSL -o FLATLAND_BENCHMARK_EPISODES_FOLDER.zip "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-9/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip"
+  unzip -o -q FLATLAND_BENCHMARK_EPISODES_FOLDER.zip -d /path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
+  export BENCHMARK_EPISODES_FOLDER=/path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
-  Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
-  `python -m pytest tests/envs/test_foo.py`. If the `flatland-baselines` checkout lives inside this repo's own
-  tree (as CI's `test` job does it, and as needed to put it on `PYTHONPATH` without an absolute path), add
-  `--ignore=flatland-baselines` — otherwise pytest's default recursive collection picks up its test suite too.
+  Without that fixture set up, the affected tests fail outright with an `AssertionError` naming
+  `DOWNLOAD_INSTRUCTIONS` (not a skip) — so a run without it set looks like real regressions. Either set up the
+  fixture, or drop the affected tests / run a narrower path, e.g. `python -m pytest tests/envs/test_foo.py`. If
+  the `flatland-baselines` checkout lives inside this repo's own tree (as CI's `test` job does it, and as needed
+  to put it on `PYTHONPATH` without an absolute path), add `--ignore=flatland-baselines` — otherwise pytest's
+  default recursive collection picks up its test suite too.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`
   since training runs are inherently non-deterministic:
@@ -138,29 +146,52 @@ truth value of an array with more than one element is ambiguous"). It's wired in
 explicitly itself, unless the assigned value is already a known-sanitized entry point copied from elsewhere
 on the same agent.
 
-### Speed is always a `Fraction` internally
+### Speed/distance are `Fraction`s, and `None` while off map
 
-`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `speed`/`max_speed`/`distance` as `Fraction`
-unconditionally, regardless of what type callers pass in: `_pseudo_fractional()` snaps any `int`/`float`/`Decimal`
-input to a `Fraction` on the way in (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within
-tolerance). `RailEnv.__init__`'s `acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to
-match. Passing a plain `float` for either instead (as opposed to a `Fraction`) can silently reintroduce floats
-into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
-`Fraction`-only invariant assumed by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
-doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `max_speed` as a `Fraction` unconditionally, but
+`speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
+(`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
+`None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.step()` call as
+every other step - `rail_env.py`'s "(10b) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
+from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
+`max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
+(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
+`acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to match. Passing a plain `float`
+for either instead (as opposed to a `Fraction`) can silently reintroduce floats into `new_speed` mid-`step()`,
+since `Fraction + float` coerces to `float` in Python — this can violate the `Fraction`-only invariant assumed
+by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that doesn't saturate to a speed boundary (0
+or `max_speed`) in one step.
+
+A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -
+`agent_utils.py`'s `load_env_agent()` normalizes a loaded agent's `speed_counter` against its `TrainState` on
+load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance left untouched) to guard against this.
+
+`SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
+`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
+truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
+itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step invariant checks to verify the actual
+post-step value against the same formula. Change the math in one place, not independently in `step()` and in
+the invariant that checks it.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
-`AbstractRailEnv._capture_speed_invariant_pre_step_snapshot()`/`_assert_speed_invariants()` (`rail_env.py`)
-implement a per-agent runtime check that each `step()` call updates `SpeedCounter.speed` to exactly the value
-the action/state-machine/motion-check outcome implies (acceleration/braking/malfunction/off-map/done, each with
-its own expected-speed branch) - a correctness net for the speed-update logic, not part of normal control flow.
-`RailEnv.step()`'s override calls the snapshot method before `super().step()` and the assertion method after;
-`GraphRailEnv` doesn't call either, since it doesn't override `step()`. Both are gated behind the
-`check_step_pre_post_conditions` constructor flag (default `True`) so the extra per-step overhead can be
-disabled where it matters - `examples/flatland_performance_profiling.py`'s `get_rail_env()` defaults it to
-`False`, since that script exists specifically to profile `step()`'s own cumulative time and the assertions
-would otherwise inflate every measurement.
+`AbstractRailEnv.step()` itself calls `_check_pre_step_invariants_and_capture_snapshot()` up front, and
+`_check_malfunction_state_invariant()` / `_verify_mutually_exclusive_resource_allocation()` /
+`_check_post_speed_distance_invariants()` / `_check_post_position_invariants()` (`rail_env.py`) at the end - a
+correctness net verifying every per-agent speed/distance/position update and resource allocation this step
+matches exactly what the action/state-machine/motion-check outcome implies, not part of normal control flow.
+Since these live in `AbstractRailEnv` itself (not a subclass override), `RailEnv` and `GraphRailEnv` both run
+them identically - `RailEnv.step()`'s own override only adds `_update_agent_positions_map()` after calling
+`super().step()`. All are gated behind the `check_step_pre_post_conditions` constructor flag (default `True`)
+so the extra per-step overhead can be disabled where it matters - `examples/flatland_performance_profiling.py`'s
+`get_rail_env()` defaults it to `False`, since that script exists specifically to profile `step()`'s own
+cumulative time and the assertions would otherwise inflate every measurement.
+
+`_check_post_position_invariants`/`_check_post_speed_distance_invariants` branch purely on position
+(`current_entry_point is None`) and resource/malfunction/action outcomes, never on `agent.state` - the
+off/on-map position signal is the invariant these checks themselves help enforce, so re-deriving branches from
+`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_invariant`
+is the one exception, since it specifically checks state/malfunction-counter consistency.
 
 ### Cython-accelerated hot paths (`ext-modules`)
 

@@ -250,5 +250,5 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
                 waypoints_earliest_departure=None,
                 waypoints_latest_arrival=None,
                 handle=handle,
-                speed_counter=SpeedCounter(speed=speed)))
+                speed_counter=SpeedCounter(max_speed=speed)))
         return agents

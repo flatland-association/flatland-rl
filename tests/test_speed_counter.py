@@ -11,7 +11,7 @@ from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractio
 
 # design: distance update with pre-step speed.
 def test_step_counter_speed025():
-    sc = SpeedCounter(speed=0.25)
+    sc = SpeedCounter(max_speed=0.25, speed=0.25)
     # design: distance is None when off map
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
@@ -51,7 +51,7 @@ def test_step_counter_speed025():
 
 # design: distance update with pre-step speed.
 def test_step_counter_speed05():
-    sc = SpeedCounter(speed=0.5)
+    sc = SpeedCounter(max_speed=0.5, speed=0.5)
     # design: distance is None when off map
     assert sc.is_cell_entry == False
     assert sc.is_cell_exit() == True
@@ -319,7 +319,7 @@ def test_cached_distance_update_crossing_not_completed_capped_at_boundary():
 def test_step_crossing_not_completed_caps_at_boundary():
     """A MOVING agent whose transition into the next cell is blocked by a resource conflict this step:
     distance must be capped at the cell boundary, not wrapped into the next cell as if it had moved."""
-    sc = SpeedCounter(speed=0.5)
+    sc = SpeedCounter(max_speed=0.5, speed=0.5)
     sc.step(sc.speed, False)  # design: distance is None when off map
     sc.step(sc.speed, False)  # distance -> 1/2 (from the pre-step speed 1/2); speed stays 1/2 for the next call
     sc.step(speed=0.5, crossing_completed=False)
@@ -329,7 +329,7 @@ def test_step_crossing_not_completed_caps_at_boundary():
 
 
 def test_step_crossing_not_completed_under_boundary_behaves_like_normal_step():
-    sc = SpeedCounter(speed=0.25)
+    sc = SpeedCounter(max_speed=0.25, speed=0.25)
     sc.step(sc.speed, False)  # design: distance is None when off map
     sc.step(speed=0.25, crossing_completed=False)
     assert sc.distance == Fraction(1, 4)
@@ -339,7 +339,7 @@ def test_step_crossing_not_completed_under_boundary_behaves_like_normal_step():
 def test_stop_freezes_speed_without_touching_distance():
     """design: distance update with pre-step speed - stop() must leave already-accumulated in-cell
     distance untouched (e.g. a malfunction interrupting a MOVING agent mid-cell)."""
-    sc = SpeedCounter(speed=0.5)
+    sc = SpeedCounter(max_speed=0.5, speed=0.5)
     sc.step(sc.speed, False)  # design: distance is None when off map
     sc.step(sc.speed, False)  # distance -> 1/2
     sc.stop()
@@ -352,7 +352,7 @@ def test_stop_vs_step_speed_zero_regression():
     """The pre-fix equivalent step(speed=0) (crossing_completed defaults True) wrongly wraps the same
     in-cell progress to 0 and flags a false cell entry, since it still runs distance through
     cached_distance_update using the old (pre-step) speed. This is exactly the bug stop() fixes."""
-    sc = SpeedCounter(speed=0.5)
+    sc = SpeedCounter(max_speed=0.5, speed=0.5)
     sc.step(sc.speed, False)  # design: distance is None when off map
     sc.step(sc.speed, False)  # distance -> 1/2
     sc.step(Fraction(0), True)
@@ -360,18 +360,18 @@ def test_stop_vs_step_speed_zero_regression():
     assert sc.is_cell_entry
 
 
-def test_reset_clears_distance_and_cell_entry_but_not_speed():
+def test_reset_clears_distance_speed_and_cell_entry():
     sc = SpeedCounter(speed=0.5, max_speed=1.0)
     sc.step(sc.speed, False)  # design: distance is None when off map
     sc.step(sc.speed, False)
     assert sc.distance != 0
     assert not sc.is_cell_entry
     sc.reset()
-    # design: distance is None when off map
+    # design: speed and distance are None when off map - reset() puts the counter back off map
     assert sc.distance is None
+    assert sc.speed is None
     assert not sc.is_cell_entry
-    # reset() only clears distance/is_cell_entry - speed/max_speed are untouched
-    assert sc.speed == Fraction(1, 2)
+    # max_speed is untouched by reset()
     assert sc.max_speed == Fraction(1)
 
 
@@ -385,16 +385,16 @@ def test_repr_contains_state():
 
 
 def test_eq_against_non_speed_counter_returns_false():
-    sc = SpeedCounter(speed=0.5)
+    sc = SpeedCounter(max_speed=0.5, speed=0.5)
     assert sc != "not a speed counter"
     assert sc.__eq__(5) is False
 
 
 def test_eq_between_speed_counters_with_different_state():
-    assert SpeedCounter(speed=0.5) != SpeedCounter(speed=0.25)
+    assert SpeedCounter(max_speed=0.5, speed=0.5) != SpeedCounter(max_speed=0.25, speed=0.25)
 
-    sc1 = SpeedCounter(speed=0.5)
-    sc2 = SpeedCounter(speed=0.5)
+    sc1 = SpeedCounter(max_speed=0.5, speed=0.5)
+    sc2 = SpeedCounter(max_speed=0.5, speed=0.5)
     sc2.step(sc2.speed, False)
     assert sc1 != sc2  # differs in distance now
 
@@ -403,9 +403,9 @@ def test_eq_between_independently_constructed_identical_speed_counters():
     assert SpeedCounter(speed=0.5, max_speed=1.0) == SpeedCounter(speed=0.5, max_speed=1.0)
 
 
-def test_init_rejects_speed_above_one_when_no_max_speed_given():
+def test_init_rejects_max_speed_above_one():
     with pytest.raises(AssertionError):
-        SpeedCounter(speed=1.5)
+        SpeedCounter(max_speed=1.5)
 
 
 def test_init_rejects_speed_above_max_speed():
