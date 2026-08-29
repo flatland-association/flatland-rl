@@ -34,6 +34,7 @@ class TrajectoryEvaluator:
         obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
         shifted_malfunction: bool = False,
+        shifted_off_map_speed: bool = False,
     ) -> RailEnv:
         """
          Parameters
@@ -59,6 +60,11 @@ class TrajectoryEvaluator:
             recorded episodes predate decrementing the malfunction counter at the start of step() -
             while an actual malfunction is active, expect the recorded info's `malfunction` one lower
             than freshly computed.
+        shifted_off_map_speed : bool
+            # TODO remove this option once the malfunction episodes are regenerated
+            recorded episodes predate `SpeedCounter` speed being None while off map - while an agent is
+            off map (freshly computed info's `speed` is None), ignore the recorded info's `speed`
+            (pinned at the agent's max_speed under the old convention).
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -118,6 +124,9 @@ class TrajectoryEvaluator:
                     if shifted_malfunction and actual_info.get("malfunction", 0) > 0:
                         # TODO remove this option once the malfunction episodes are regenerated
                         expected_info = {**expected_info, "malfunction": expected_info["malfunction"] + 1}
+                    if shifted_off_map_speed and actual_info.get("speed") is None:
+                        # TODO remove this option once the malfunction episodes are regenerated
+                        expected_info = {**expected_info, "speed": None}
                     if not skip_rewards:
                         assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
