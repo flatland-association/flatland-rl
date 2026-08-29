@@ -152,6 +152,20 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
         f"`next_entry_point` resumed mid-run is not supported."
     )
 
+    # design: normalize a persisted speed_counter to the current SpeedCounter contract. A pickle predating
+    # the "speed/distance are None while off map" design can carry a stale off-map speed pinned at
+    # max_speed (with distance 0) instead of None, or a stale nonzero speed while in MALFUNCTION - live
+    # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
+    # old pickle in line here rather than let a stale value violate _check_post_speed_distance_invariants
+    # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
+    # genuine mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
+    # entirely.
+    state = agent_tuple.state_machine.state
+    if state.is_off_map_state():
+        agent_tuple.speed_counter.reset()
+    elif state == TrainState.MALFUNCTION:
+        agent_tuple.speed_counter.stop()
+
     return EnvAgent(
         initial_entry_point=(agent_tuple.initial_position, agent_tuple.initial_direction),
         current_entry_point=current_entry_point,
