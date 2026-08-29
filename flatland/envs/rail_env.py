@@ -44,8 +44,8 @@ class PreStepSnapshot(NamedTuple):
     """ Per-agent state captured before `step()` runs, for `AbstractRailEnv._check_post_speed_invariants()`
     to verify the post-step speed update against. """
     pre_speeds: Dict[int, Optional[Fraction]]
-    pre_current_entry_points: Dict[int, Optional[Any]]
-    pre_next_entry_points: Dict[int, Optional[Any]]
+    pre_current_entry_points: Dict[int, Optional[EntryPointT]]
+    pre_next_entry_points: Dict[int, Optional[EntryPointT]]
     pre_dones: Dict[int, bool]
     pre_in_malfunctions: Dict[int, bool]
     pre_offsets: Dict[int, Optional[Fraction]]
@@ -820,9 +820,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # speed_counter is still None from before this step).
             current_entry_point = agent.current_entry_point
             next_entry_point = agent.next_entry_point
-            self._check_off_on_map_invariant(current_entry_point, next_entry_point,
-                                             speed=agent.speed_counter.speed, distance=agent.speed_counter.distance,
-                                             check_speed_distance=True)
+            self._check_off_on_map_invariant(current_entry_point, next_entry_point)
+            assert agent.state is not None
+            self._check_state_off_on_map_invariant(current_entry_point, agent.speed_counter.speed,
+                                                   agent.speed_counter.distance, agent.state, agent.target_entry_point)
 
         return PreStepSnapshot(
             pre_speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
@@ -833,23 +834,39 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             pre_offsets={agent.handle: agent.speed_counter.distance for agent in self.agents},
         )
 
-    def _check_off_on_map_invariant(self, current_entry_point: Any, next_entry_point: Any,
-                                    speed: Optional[Fraction] = None, distance: Optional[Fraction] = None,
-                                    check_speed_distance: bool = False):
+    def _check_off_on_map_invariant(self, current_entry_point: EntryPointT, next_entry_point: EntryPointT):
         """
         Verify current_entry_point/next_entry_point are either both None (off map) or both set (on
-        map, next_entry_point the successor of current_entry_point). If check_speed_distance, also
-        verify speed/distance are None exactly when off map (the SpeedCounter contract - see "Speed/
-        distance are Fractions, and None while off map" in CLAUDE.md) - opt-in since a *candidate*
-        configuration (not yet committed) paired with the agent's *pre-step* speed_counter would
-        otherwise compare two different points in time (see the call site in
-        `_check_pre_step_invariants_and_capture_snapshot` vs. the one in step()'s (3b) POSITION UPDATE).
+        map, next_entry_point the successor of current_entry_point).
         """
         assert (current_entry_point is None) == (next_entry_point is None)
         if current_entry_point is not None:
             assert self.rail.is_successor(current_entry_point, next_entry_point)
-        if check_speed_distance:
-            assert (current_entry_point is None) == (speed is None) == (distance is None)
+
+    def _check_state_off_on_map_invariant(self, current_entry_point: EntryPointT, speed: Optional[Fraction],
+                                          distance: Optional[Fraction], state: TrainState,
+                                          target_entry_point: EntryPointT):
+        """
+        Verify speed/distance are None exactly when off map (the SpeedCounter contract - see "Speed/
+        distance are Fractions, and None while off map" in CLAUDE.md), and that position matches the
+        agent's state: DONE is neither an off-map nor an on-map TrainState, so a DONE agent (identified
+        via target_entry_point, set exactly once and permanently on reaching target) is checked
+        separately, branching on remove_agents_at_target (parked at target vs. removed); every other
+        state must have current_entry_point is None exactly when state.is_off_map_state(). Only
+        meaningful paired with a real (not candidate) configuration - a *candidate* configuration (not
+        yet committed) paired with the agent's *pre-step* speed_counter/state would compare two
+        different points in time, so this is called only from
+        `_check_pre_step_invariants_and_capture_snapshot`, never from step()'s (3b) POSITION UPDATE
+        (which calls only `_check_off_on_map_invariant`).
+        """
+        assert (current_entry_point is None) == (speed is None) == (distance is None)
+        if target_entry_point is not None:
+            if self.remove_agents_at_target:
+                assert current_entry_point is None
+            else:
+                assert current_entry_point is not None
+        else:
+            assert (current_entry_point is None) == state.is_off_map_state()
 
     def _check_post_position_invariants(self, action_dict: Dict[int, RailEnvActions],
                                         pre_step: PreStepSnapshot) -> None:
@@ -944,7 +961,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             pre_step.pre_offsets[h], pre_speed)
                 # off map
                 elif pre_step.pre_offsets[h] is None:
-                    if agent.state in [TrainState.WAITING, TrainState.READY_TO_DEPART, TrainState.MALFUNCTION_OFF_MAP]:
+                    if agent.current_entry_point is None:
                         assert agent.speed_counter.distance is None
                     # map entry
                     elif agent.state in [TrainState.MOVING]:
@@ -986,7 +1003,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             if not self.temp_transition_data[h].resource_check:
-                if agent.state in [TrainState.READY_TO_DEPART]:
+                if agent.current_entry_point is None:
                     # rejected map entry - agent stays off map, speed stays None
                     assert agent.speed_counter.speed is None
                 else:
@@ -1006,7 +1023,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.speed_counter.speed == Fraction(0)
                 # malfunction
                 elif agent.malfunction_handler.in_malfunction:
-                    if agent.state in [TrainState.MALFUNCTION_OFF_MAP]:
+                    if agent.current_entry_point is None:
                         assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == 0
