@@ -744,9 +744,11 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     # momentum on departure (distance 0, speed 1) would already reach the cell boundary on the very
     # next step, so STOP_MOVING would complete an in-flight crossing out of (3, 5) instead of
     # holding it there (see the STOP_MOVING boundary-crossing fix, issue #178 design D2a). A slower
-    # max_speed keeps it mid-cell (is_cell_exit false) when STOP_MOVING brakes it to 0.
+    # max_speed keeps it mid-cell (is_cell_exit false) when STOP_MOVING brakes it to 0. Only
+    # _max_speed needs overriding here - agent1 hasn't departed yet, so _speed must stay None (off
+    # map); departure (see (3a.3)) computes candidate_speed from acceleration_delta/_max_speed
+    # regardless of any pre-existing _speed, so it was never read anyway.
     agent1.speed_counter._max_speed = Fraction(1, 2)
-    agent1.speed_counter._speed = Fraction(1, 2)
 
     # MOVE_LEFT from the switch at (3, 6) is a genuine, valid redirect onto the southward branch -
     # confirms the escape route agent 0 will be denied further down is real, not just invalid input.
@@ -851,67 +853,17 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     assert agent.speed_counter.distance == Fraction(1, 2)
 
 
-def test_earliest_departure_state_transitions_initial_speed_equals_max_speed():
-    """
-    Same as test_earliest_departure_state_transitions_initial_speed_zero. The `speed=` passed to
-    SpeedCounter here is discarded on the very next step regardless (off map, speed is always
-    None until departure - see SpeedCounter.step()), so this produces the exact same trajectory:
-    departure always (re-)accelerates from 0 by acceleration_delta, irrespective of whatever
-    `speed` a SpeedCounter was constructed with beforehand.
-    """
-    env, _, _ = env_generator(seed=42, n_agents=1)
-    env.acceleration_delta = Fraction(1, 2)
-    agent = env.agents[0]
-    agent.speed_counter = SpeedCounter(speed=Fraction(1), max_speed=Fraction(1))
-    agent.earliest_departure = 3
-
-    # WAITING: off map, earliest departure not yet reached - no speed/distance progress.
-    while agent.state == TrainState.WAITING:
-        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-        assert agent.current_entry_point is None
-        assert agent.speed_counter.speed is None
-        assert agent.speed_counter.distance is None
-
-    # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
-    assert agent.state == TrainState.READY_TO_DEPART
-    assert agent.current_entry_point is None
-
-    # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step, distance
-    # resets to 0 and speed reaches the acceleration delta immediately.
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == agent.initial_entry_point
-    assert agent.speed_counter.speed == Fraction(1, 2)
-    assert agent.speed_counter.distance == Fraction(0)
-
-    first_entry_point = agent.current_entry_point
-    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
-    third_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, second_entry_point)
-    fourth_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, third_entry_point)
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == first_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(1, 2)
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == second_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(1, 2)
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == third_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(1, 2)
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == fourth_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(1, 2)
+# N.B. test_earliest_departure_state_transitions_initial_speed_equals_max_speed used to live here,
+# comparing initial_speed=0 vs. initial_speed=max_speed at construction for an off-map agent, to prove
+# departure always (re-)accelerates from 0 regardless of whatever speed a SpeedCounter was constructed
+# with beforehand. Design D3 (branch 178-agents-living-on-the-edge-11) made that comparison impossible
+# to even construct: a SpeedCounter with a non-None speed for an off-map agent (current_entry_point is
+# None) now violates the off/on-map invariant (see "Speed/distance are Fractions, and None while off map"
+# in CLAUDE.md) and is rejected by _check_off_on_map_invariant on the very next step(), rather than being
+# silently discarded on departure. The analogous on-map scenario (agent constructed directly on the map
+# with speed == max_speed, then stepped) is already covered by test_multi_speed.py's
+# test_multi_speed_init and test_multispeed_actions_no_malfunction_no_blocking, so this test was
+# removed rather than repurposed to avoid duplicating that coverage.
 
 
 def test_earliest_departure_state_transitions_full_acceleration():
