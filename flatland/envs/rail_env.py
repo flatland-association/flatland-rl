@@ -905,13 +905,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
             # candidates accepted in distribute phase
             else:
-                # re-derive step()'s (3b.3)/(3b.5) candidate_entry_point/candidate_next_entry_point from
-                # the pre-step snapshot + action alone, instead of reading temp_transition_data. A genuine
-                # crossing (map entry, or an on-map cell transition) requires pre_speed > 0 and the
-                # boundary already reached (same (D1) test as below), plus - on-map - a valid action
-                # (candidate_entry_point_independent is not None); an invalid action at the boundary is
-                # denied by (3b.6), same as not having reached the boundary at all, so the candidate is
-                # just the unchanged pre-step position in every other case.
                 action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
                 pre_current_entry_point = pre_step.pre_current_entry_points[h]
                 pre_next_entry_point = pre_step.pre_next_entry_points[h]
@@ -927,8 +920,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     # (3b.3) map entry
                     candidate_entry_point = agent.initial_entry_point
                     candidate_next_entry_point = candidate_entry_point_independent
-                elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
-                    # (3b.5) on-map cell transition
+                elif is_on_map and is_cell_exit:
+                    # (3b.5) on-map cell transition - candidate_next_entry_point stays None here exactly
+                    # when the action was invalid at the boundary (denied by (3b.6)); guarded for below.
                     candidate_entry_point = pre_next_entry_point
                     candidate_next_entry_point = candidate_entry_point_independent
                 else:
@@ -956,9 +950,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.current_entry_point == candidate_entry_point
                     assert agent.next_entry_point == candidate_next_entry_point
                 # target reached
-                # design (D1): pre_speeds[h] > 0 required - a pre-speed-0 (STOPPED/MALFUNCTION) agent
-                # must never be read as completing a transition here, even if banked pre_offsets[h]
-                # alone would satisfy the boundary check (see (10a)/(10b)'s matching deferral in step()).
                 elif candidate_entry_point in agent.targets and (
                     pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
                     assert agent.target_entry_point == candidate_entry_point
@@ -971,8 +962,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.next_entry_point == candidate_next_entry_point
                         assert agent.current_entry_point == agent.target_entry_point
                 # on-map cell transition
-                # design (D1): pre_speeds[h] > 0 required, same reasoning as "target reached" above.
-                elif agent.current_entry_point is not None and (
+                elif candidate_next_entry_point is not None and (
                     pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
                     assert agent.current_entry_point is not None
                     assert agent.current_entry_point == candidate_entry_point
