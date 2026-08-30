@@ -520,7 +520,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_speed = agent.speed_counter.speed
             candidate_speed = _cap_speed(agent_max_speed, candidate_speed)
 
-            # (3b) POSITION UPDATE
+            # (3b) POSITION UPDATE - mirrors _check_post_position_invariants's "candidates accepted"
+            # derivation: done/malfunction/map-entry/on-map-transition/stay.
             # (3b.1) done
             if state == TrainState.DONE:
                 # design: for remove_agents_at_target=True, agent.current_entry_point is already
@@ -529,15 +530,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # both its current and candidate resource
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
-            # (3b.2) malfunction (continued)
+            # (3b.2) malfunction - takes priority over (3b.3)/(3b.5) below: in_malfunction is resolved
+            # before this loop runs (see (0a)/(0b)), so it can be True while `state` (read above, still
+            # the pre-transition value) hasn't caught up to MALFUNCTION/MALFUNCTION_OFF_MAP yet -
+            # without this priority, a same-step malfunction onset could let a genuine crossing through.
             elif in_malfunction:
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
-            # (3b.2bis) start moving: from STOPPED (or a just-recovered MALFUNCTION)
-            elif agent.speed_counter.speed == 0 and candidate_speed > 0:
-                candidate_entry_point = agent.current_entry_point
-                candidate_next_entry_point = agent.next_entry_point
-                assert agent.current_entry_point is not None
             #  (3b.3) map entry
             elif action_valid and (
                 (state == TrainState.READY_TO_DEPART and movement_action_given)
@@ -547,28 +546,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ):
                 candidate_entry_point = initial_entry_point
                 candidate_next_entry_point = candidate_entry_point_independent
-            # (3b.4) off map
-            elif not is_on_map:
-                # current_entry_point candidate_next_entry_point both None off map - a no-op.
-                candidate_entry_point = agent.current_entry_point
-                candidate_next_entry_point = agent.next_entry_point
-            # (3b.5) cell transition
+            # (3b.5) on-map cell transition
             elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None and state == TrainState.MOVING:
-                assert agent.current_entry_point is not None
                 # design: actions applied at cell entry -- attempt the already-decided target
-                # (guaranteed by the assert above); this step's action instead decides the
+                # (guaranteed on-map by is_on_map above); this step's action instead decides the
                 # look-ahead beyond it (candidate_entry_point_independent, computed above in (2)).
                 candidate_entry_point = agent.next_entry_point
                 candidate_next_entry_point = candidate_entry_point_independent
-            # (3b.6) cell stay: mid-cell (not attempting this step), attempted but denied, or a
-            # STOPPED agent not (yet) given a movement action (candidate_speed stays 0, see (3b.2bis)
-            # above for the case where it does) -
+            # (3b.2bis/3b.4/3b.6) unchanged - start-moving-from-stop, off-map-stay, and cell-stay
+            # (mid-cell / attempted-but-denied) all set the identical "keep current" candidate - a
+            # pure identity copy of already-valid current/next_entry_point, so it can't violate the
+            # off/on-map invariant that already held.
             else:
-                # design: self-loop default - see (3b.1) above for why candidate_next_entry_point
-                # mirroring agent.next_entry_point unchanged is safe (never read as entering_new_cell).
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
-                assert agent.current_entry_point is not None
 
             if self.check_step_pre_post_conditions:
                 self._check_off_on_map_invariant(candidate_entry_point, candidate_next_entry_point)
