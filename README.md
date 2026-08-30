@@ -83,6 +83,35 @@ version or OS gets no matching wheel at all. Building from source sidesteps that
 Python's standard packaging tools, and failing outright in environments that categorically refuse to build from
 source (e.g. `pip install --only-binary=:all:`, some locked-down/air-gapped setups).
 
+### Known issue: architecture-mismatched Cython extensions on Apple Silicon
+
+**Symptoms:** on some x86_64-conda-on-Apple-Silicon setups (Python running under Rosetta 2), importing
+flatland-rl raises something like:
+
+```
+ImportError: dlopen(.../flatland/envs/step_utils/states.cpython-312-darwin.so, ...):
+tried: '...states.cpython-312-darwin.so' (mach-o file, but is an incompatible architecture (have 'arm64', need 'x86_64'))
+```
+
+even though `pip install` itself reports success.
+
+**Diagnosis:** one or more of the Cython-accelerated modules (`flatland.envs.step_utils.states`,
+`.state_machine`, `flatland.envs.rail_env_shortest_paths`) got compiled for the host chip's native
+architecture (arm64) instead of the target Python's architecture (x86_64), so it fails to load.
+
+```shell
+conda info | grep platform                                    # installed conda platform (can be in mismatch with host arch): osx-64/osx-arm64
+python -c "import platform; print(platform.machine())"        # arch of python on $PATH: x86_64/arm64
+file "$(which python)"                                        # arch of python binary on $PATH: x86_64/arm64
+uname -m                                                      # host arch (can be in mismatch with installed conda platform): arm64/x86_64
+```
+
+**Known workarounds:**
+
+* [flatland-rl#121](https://github.com/flatland-association/flatland-rl/pull/121)
+* Install an arm64-native Miniconda distribution instead of an x86_64 one - see
+  [Miniconda's install guide](https://www.anaconda.com/docs/getting-started/miniconda/install).
+
 
 🚀 Releases
 ---
