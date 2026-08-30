@@ -945,7 +945,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                     assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
                 # map entry
-                elif pre_step.pre_current_entry_points[h] is None and agent.current_entry_point is not None:
+                elif pre_step.pre_current_entry_points[h] is None and candidate_entry_point is not None:
                     assert agent.current_entry_point == agent.initial_entry_point
                     assert agent.current_entry_point == candidate_entry_point
                     assert agent.next_entry_point == candidate_next_entry_point
