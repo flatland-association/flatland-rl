@@ -905,6 +905,37 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
             # candidates accepted in distribute phase
             else:
+                # re-derive step()'s (3b.3)/(3b.5) candidate_entry_point/candidate_next_entry_point from
+                # the pre-step snapshot + action alone, instead of reading temp_transition_data. A genuine
+                # crossing (map entry, or an on-map cell transition) requires pre_speed > 0 and the
+                # boundary already reached (same (D1) test as below), plus - on-map - a valid action
+                # (candidate_entry_point_independent is not None); an invalid action at the boundary is
+                # denied by (3b.6), same as not having reached the boundary at all, so the candidate is
+                # just the unchanged pre-step position in every other case.
+                action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+                pre_current_entry_point = pre_step.pre_current_entry_points[h]
+                pre_next_entry_point = pre_step.pre_next_entry_points[h]
+                pre_speed = pre_step.pre_speeds[h]
+                is_on_map = pre_next_entry_point is not None
+                is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_step.pre_offsets[h] + pre_speed >= SEGMENT_LENGTH
+                if is_on_map:
+                    candidate_entry_point_independent = self.rail.apply_action_independent(action, pre_next_entry_point)
+                else:
+                    candidate_entry_point_independent = self.rail.apply_action_independent(action, agent.initial_entry_point)
+
+                if not is_on_map and agent.current_entry_point is not None:
+                    # (3b.3) map entry
+                    candidate_entry_point = agent.initial_entry_point
+                    candidate_next_entry_point = candidate_entry_point_independent
+                elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
+                    # (3b.5) on-map cell transition
+                    candidate_entry_point = pre_next_entry_point
+                    candidate_next_entry_point = candidate_entry_point_independent
+                else:
+                    # (3b.1/3b.2/3b.2bis/3b.4/3b.6) unchanged
+                    candidate_entry_point = pre_current_entry_point
+                    candidate_next_entry_point = pre_next_entry_point
+
                 # done
                 if pre_step.pre_dones[h]:
                     if self.remove_agents_at_target:
@@ -922,30 +953,30 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # map entry
                 elif pre_step.pre_current_entry_points[h] is None and agent.current_entry_point is not None:
                     assert agent.current_entry_point == agent.initial_entry_point
-                    assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
-                    assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                    assert agent.current_entry_point == candidate_entry_point
+                    assert agent.next_entry_point == candidate_next_entry_point
                 # target reached
                 # design (D1): pre_speeds[h] > 0 required - a pre-speed-0 (STOPPED/MALFUNCTION) agent
                 # must never be read as completing a transition here, even if banked pre_offsets[h]
                 # alone would satisfy the boundary check (see (10a)/(10b)'s matching deferral in step()).
-                elif self.temp_transition_data[h].candidate_entry_point in agent.targets and (
+                elif candidate_entry_point in agent.targets and (
                     pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
-                    assert agent.target_entry_point == self.temp_transition_data[h].candidate_entry_point
+                    assert agent.target_entry_point == candidate_entry_point
                     if self.remove_agents_at_target:
                         assert agent.current_entry_point is None
                         assert agent.next_entry_point is None
                     else:
                         assert agent.current_entry_point is not None
-                        assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
-                        assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                        assert agent.current_entry_point == candidate_entry_point
+                        assert agent.next_entry_point == candidate_next_entry_point
                         assert agent.current_entry_point == agent.target_entry_point
                 # on-map cell transition
                 # design (D1): pre_speeds[h] > 0 required, same reasoning as "target reached" above.
                 elif agent.current_entry_point is not None and (
                     pre_step.pre_speeds[h] > 0 and pre_step.pre_offsets[h] + pre_step.pre_speeds[h] >= SEGMENT_LENGTH):
                     assert agent.current_entry_point is not None
-                    assert agent.current_entry_point == self.temp_transition_data[h].candidate_entry_point
-                    assert agent.next_entry_point == self.temp_transition_data[h].candidate_next_entry_point
+                    assert agent.current_entry_point == candidate_entry_point
+                    assert agent.next_entry_point == candidate_next_entry_point
                 # stay
                 else:
                     assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
