@@ -999,10 +999,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     else:
                         assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
                             pre_step.pre_offsets[h], pre_speed)
-                # off map (stayed off map)
+                # off map (stayed off map) / map entry - genuinely post-hoc: whether map entry actually
+                # happened isn't decided by resource_check/in_malfunction alone, it also needs the state
+                # machine to have promoted to MOVING (e.g. a MALFUNCTION_OFF_MAP/READY_TO_DEPART agent
+                # given STOP_MOVING can get an optimistic non-None candidate_entry_point from loop 1's
+                # (3b.3) yet never be promoted - see issue #280) - so this can't be dedup'd against
+                # self.temp_transition_data[h].candidate_entry_point the way the discarded/malfunction
+                # branches above/below are.
                 elif pre_step.pre_offsets[h] is None and agent.current_entry_point is None:
                     assert agent.speed_counter.distance is None
-                # map entry
                 elif pre_step.pre_offsets[h] is None and agent.current_entry_point is not None:
                     assert agent.speed_counter.distance == 0
                 # malfunction
@@ -1035,7 +1040,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             if not self.temp_transition_data[h].resource_check:
-                if agent.current_entry_point is None:
+                if pre_step.pre_current_entry_points[h] is None:
                     # rejected map entry - agent stays off map, speed stays None
                     assert agent.speed_counter.speed is None
                 else:
@@ -1055,11 +1060,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.speed_counter.speed == Fraction(0)
                 # malfunction
                 elif agent.malfunction_handler.in_malfunction:
-                    if agent.current_entry_point is None:
+                    if pre_step.pre_current_entry_points[h] is None:
                         assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == 0
-                # map entry
+                # map entry - genuinely post-hoc, same reason as the distance-update loop's "map entry"
+                # branch above: can't be dedup'd against self.temp_transition_data[h].candidate_entry_point,
+                # since that candidate can be optimistically non-None (loop 1's (3b.3)) without the state
+                # machine ever actually promoting to MOVING this step (see issue #280).
                 elif pre_step.pre_current_entry_points[h] is None and agent.current_entry_point is not None:
                     assert agent.speed_counter.speed == _cap_speed(agent.speed_counter.max_speed,
                                                                     self.acceleration_delta)
