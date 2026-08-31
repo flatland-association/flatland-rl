@@ -41,6 +41,18 @@ class TrainStateMachine:
             self.next_state = TrainState.READY_TO_DEPART
 
     def _handle_malfunction_off_map(self):
+        """
+        Off-map counterpart to MALFUNCTION. Malfunctions are rolled for every agent every step
+        regardless of on/off-map status (see MalfunctionEffectsGenerator.on_episode_step_start,
+        which iterates all agents unconditionally) - design: if malfunctions were only rolled for
+        agents already on-map (MOVING/STOPPED/MALFUNCTION), the malfunction_rate an operator
+        configures would understate the rate actually experienced once on-map, since off-map
+        steps - WAITING for earliest_departure, or already READY_TO_DEPART but not yet moving
+        (no movement action given, or the entry cell contested by another agent) - would never
+        count against it. MALFUNCTION_OFF_MAP exists so an off-map agent can absorb that same
+        roll (with no position/speed/distance to freeze - see TrainState.is_off_map_state())
+        instead of being exempt from it.
+        """
         if not self.st_signals.in_malfunction:
             if self.st_signals.earliest_departure_reached:
                 # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we not go to the READY_TO_DEPART first instead of directly to MOVING?
@@ -83,7 +95,20 @@ class TrainStateMachine:
             self.next_state = TrainState.MALFUNCTION
 
     def _handle_done(self):
-        """" Done state is terminal """
+        """"
+        Done state is terminal - unlike _handle_waiting/_handle_ready_to_depart above, this ignores
+        st_signals.in_malfunction entirely: a DONE agent can still roll a malfunction (rolled
+        unconditionally for every agent, see _handle_malfunction_off_map's docstring) and have
+        malfunction_handler.in_malfunction read True, but it never transitions to
+        MALFUNCTION/MALFUNCTION_OFF_MAP for it - the roll is silently absorbed with no state
+        consequence, since DONE is terminal. See rail_env.py's _check_malfunction_state_invariant,
+        which excludes DONE agents from its state/in_malfunction consistency check for this reason.
+
+        This holds independently of remove_agents_at_target, which only decides what DONE's position
+        looks like (current_entry_point cleared to None if True, left at the target cell if False -
+        neither is_on_map_state() nor is_off_map_state() count DONE either way, see
+        handle_done_state()) - not whether a DONE agent can still malfunction.
+        """
         self.next_state = TrainState.DONE
 
     def calculate_next_state(self, current_state):
