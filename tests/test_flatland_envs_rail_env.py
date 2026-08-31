@@ -13,7 +13,7 @@ import pytest
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
-from flatland.envs.agent_utils import EnvAgent, with_direction
+from flatland.envs.agent_utils import EnvAgent, with_direction, _sanitize_entry_point
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
@@ -22,6 +22,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _cap_speed
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
@@ -1364,4 +1365,524 @@ def test_malfunction_state_transitions_to_stopped_do_nothing():
         assert agent.state == TrainState.STOPPED
         assert agent.current_entry_point == malfunction_entry_point
         assert agent.speed_counter.speed == Fraction(0)
+
+
+COLLISION_FACTOR = 250.0
+
+
+def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor():
+    """
+    Agent A on L=(3,8), agent B on R=(3,7) - adjacent cells of make_simple_rail's row-3 corridor, both
+    heading west, max speed 1.
+
+    - Setup: A departs onto L, B departs onto R, both at distance 0, speed 1. B is then braked to a
+      stop before it can leave R, parking it there at distance 1/2, speed 0.
+    - A reaches the L->R boundary and tries to cross into R: denied, since B still occupies it. A's
+      position stays on L, its distance pins at the boundary (1.0), its speed is forced back to 0, and
+      the attempt is charged the full collision penalty (pre-attempt speed 1 times the collision
+      factor).
+    - Retrying MOVE_FORWARD from there: position never leaves L, distance stays pinned at 1.0. A retry
+      that only optimistically resumes MOVING (not yet re-contesting the boundary) costs nothing; a
+      retry that genuinely re-contests the boundary is denied again and charged the full collision
+      penalty again.
+    - B's position, speed and distance on R stay untouched throughout.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    env.braking_delta = Fraction(-1)
+    agent_a, agent_b = env.agents[0], env.agents[1]
+    L = ((3, 8), Grid4TransitionsEnum.WEST)
+    R = ((3, 7), Grid4TransitionsEnum.WEST)
+    agent_a.initial_entry_point = L
+    agent_b.initial_entry_point = R
+    agent_a.earliest_departure = 0
+    agent_b.earliest_departure = 0
+    # B's own max speed is lower than A's (still off map, so only _max_speed needs overriding - see
+    # test_blocked_agent_cannot_redirect_via_later_action for why _speed must stay None here): this
+    # keeps it mid-cell (distance < 1) rather than already at the cell boundary when it is braked
+    # below, so STOP_MOVING genuinely parks it on R instead of letting an already-banked crossing
+    # complete first.
+    agent_b.speed_counter._max_speed = Fraction(1, 2)
+
+    # WAITING -> READY_TO_DEPART -> MOVING: two steps of MOVE_FORWARD to get both agents onto the map.
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+    assert agent_a.current_entry_point == L
+    assert agent_a.speed_counter.speed == Fraction(1)
+    assert agent_a.speed_counter.distance == Fraction(0)
+    assert agent_b.current_entry_point == R
+    assert agent_b.speed_counter.speed == Fraction(1, 2)
+    assert agent_b.speed_counter.distance == Fraction(0)
+
+    # B brakes to a stop on R (still mid-cell, so it doesn't cross first); A, at speed 1, reaches the
+    # L->R boundary and tries to cross - denied, since B is still occupying R.
+    _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.STOP_MOVING})
+    assert agent_b.current_entry_point == R
+    assert agent_b.speed_counter.speed == Fraction(0)
+    assert agent_b.speed_counter.distance == Fraction(1, 2)
+    assert agent_b.state == TrainState.STOPPED
+
+    assert agent_a.current_entry_point == L  # denied - did not enter R
+    assert agent_a.speed_counter.speed == Fraction(0)  # cannot accelerate to speed > 0 while blocked
+    assert agent_a.speed_counter.distance == Fraction(1)  # pinned at the L->R cell boundary
+    assert agent_a.state == TrainState.STOPPED
+    assert rewards[0][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR  # full collision penalty
+    # a motion-check conflict is a collision, not an invalid action
+    assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
+
+    # Retrying while B stays parked on R never gets A any further: its position never leaves L. Each
+    # retry first optimistically resumes MOVING (nothing re-contested yet -> no penalty), then genuinely
+    # re-attempts the boundary as STOPPED again (denied again -> full collision penalty again).
+    for expected_state, expected_collision in [
+        (TrainState.MOVING, 0),
+        (TrainState.STOPPED, -1 * 1 * COLLISION_FACTOR),
+        (TrainState.MOVING, 0),
+        (TrainState.STOPPED, -1 * 1 * COLLISION_FACTOR),
+    ]:
+        _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
+        assert agent_a.state == expected_state
+        assert agent_a.current_entry_point == L
+        assert agent_a.speed_counter.distance == Fraction(1)
+        assert rewards[0][DefaultPenalties.COLLISION.value] == expected_collision
+        assert agent_b.current_entry_point == R
+        assert agent_b.speed_counter.speed == Fraction(0)
+        assert agent_b.speed_counter.distance == Fraction(1, 2)
+
+
+@pytest.mark.parametrize("speed,steps_to_boundary", [
+    (Fraction(1, 5), 3),
+    (Fraction(1, 2), 1),
+    (Fraction(1), 1),
+], ids=["speed-0.2-three-steps", "speed-0.5-one-step", "speed-1.0-one-step"])
+def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(speed, steps_to_boundary):
+    """
+    Agent A on L=(3,8) of make_simple_rail's row-3 corridor, agent B parked at rest on the neighboring
+    cell R=(3,7), directly ahead of A. Parametrized over A's cruising speed: 0.2, 0.5 or 1.0 (its max
+    speed equals that speed, so MOVE_FORWARD can never push it faster).
+
+    - Setup: A already halfway across L (distance 0.5), cruising at the given constant speed.
+    - Approach: given MOVE_FORWARD every step, A's distance increases by exactly `speed` each step,
+      still short of the L->R boundary (1.0) and still at speed `speed` - 2 such steps at speed 0.2,
+      none at speed 0.5 or 1.0 (already at or past the boundary on the very first step at those
+      speeds). Reaching the boundary takes 3, 1 and 1 steps respectively.
+    - Boundary step: A tries to cross into R - denied, since B is still there. Distance clamps at
+      exactly 1.0 rather than overshooting into R, position stays on L, speed is forced back to 0, and
+      the attempt is charged a collision penalty of speed * collision_factor - the full collision
+      penalty only for the 1.0-speed variant, proportionally less for the slower ones (0.2x/0.5x
+      collision_factor).
+    - Two more retries: MOVE_FORWARD first optimistically resumes MOVING at the same constant speed
+      without yet re-contesting the boundary (no penalty), then genuinely re-attempts it as STOPPED
+      again (denied again, same speed * collision_factor penalty) - position and distance stay exactly
+      as pinned throughout.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    agent_a, agent_b = env.agents[0], env.agents[1]
+    L = ((3, 8), Grid4TransitionsEnum.WEST)
+    R = ((3, 7), Grid4TransitionsEnum.WEST)
+
+    # place A directly on L, already MOVING at a constant `speed` (max_speed == speed caps it there)
+    # with distance already banked halfway to R - bypassing the WAITING/READY_TO_DEPART/acceleration
+    # ramp-up covered by test_earliest_departure_state_transitions_* to start from this state directly.
+    agent_a.current_entry_point = L
+    agent_a._set_state(TrainState.MOVING)
+    agent_a.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
+    agent_a.speed_counter = SpeedCounter(max_speed=speed, speed=speed)
+    agent_a.speed_counter.step(speed=speed, crossing_completed=False)  # bootstrap onto the map at distance 0
+    agent_a.speed_counter._distance = Fraction(1, 2)
+
+    # place B directly on R, at rest - a stopped, blocking neighbor.
+    agent_b.current_entry_point = R
+    agent_b._set_state(TrainState.STOPPED)
+    agent_b.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, R))
+    agent_b.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(0))
+    agent_b.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+    agent_b.speed_counter._distance = Fraction(1, 2)
+
+    for step in range(1, steps_to_boundary):
+        _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
+        assert agent_a.state == TrainState.MOVING
+        assert agent_a.current_entry_point == L
+        assert agent_a.speed_counter.speed == speed
+        assert agent_a.speed_counter.distance == Fraction(1, 2) + step * speed
+        assert rewards[0][DefaultPenalties.COLLISION.value] == 0  # not at the boundary yet - no attempt
+
+    # the step that reaches (or would overshoot past) the boundary: denied entry into R since B is
+    # still there - distance clamps at the boundary instead of overshooting, position stays on L, and
+    # speed is forced back to 0. Charged a collision penalty of speed * collision_factor - full only
+    # for the speed-1.0 variant, proportionally less for the slower ones.
+    _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
+    assert agent_a.state == TrainState.STOPPED
+    assert agent_a.current_entry_point == L
+    assert agent_a.speed_counter.distance == Fraction(1)
+    assert agent_a.speed_counter.speed == Fraction(0)
+    assert rewards[0][DefaultPenalties.COLLISION.value] == -1 * speed * COLLISION_FACTOR
+
+    # two more retries at the boundary: optimistic MOVING resumption (no penalty, nothing re-contested
+    # yet) alternating with a genuine re-attempt, denied again at the same speed - position and distance
+    # never move from where they were pinned.
+    for expected_state, expected_collision in [
+        (TrainState.MOVING, 0),
+        (TrainState.STOPPED, -1 * speed * COLLISION_FACTOR),
+    ]:
+        _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
+        assert agent_a.state == expected_state
+        assert agent_a.current_entry_point == L
+        assert agent_a.speed_counter.distance == Fraction(1)
+        assert rewards[0][DefaultPenalties.COLLISION.value] == expected_collision
+
+
+def test_platoon_of_four_agents_starts_and_advances_together_without_force_stops():
+    """
+    Four agents A, B, C, D nose-to-tail on four consecutive cells C1, C2, C3, C4 of make_simple_rail's
+    row-3 corridor, all heading the same direction, shared max speed 0.5.
+
+    - Setup: each already stopped right at its own cell's exit boundary (distance 1.0, speed 0) - as if
+      each had just been denied entry into the cell ahead of it, occupied by the next agent in line (C4,
+      at the front, has open track ahead of it).
+    - Start: given MOVE_FORWARD every step, all four start moving together on the same step - each
+      reaches speed 0.5 while its position and distance stay exactly where they were.
+    - Advance: every agent reaches its own cell's boundary on the same step as every other agent (same
+      speed, same starting distance), and each time they do, they all advance into the next cell
+      together in that same step - A into C2, B into C3, C into C4, D into open track beyond C4 - since
+      the cell each of A, B and C requests is being vacated by the agent ahead of it in that very same
+      step, and D's own target is open track throughout. Nobody is ever forced back to a stop.
+    - Outcome: after three such advances, A has reached C4, B has reached C5, C has reached C6, and D
+      has reached C7 - still nose-to-tail, still all at speed 0.5.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    C1, C2, C3, C4, C5, C6, C7 = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7, 6, 5, 4, 3, 2)]
+
+    # place all four directly nose-to-tail on C1..C4, each already stopped right at its cell's boundary
+    # (distance 1.0, speed 0) - see
+    # test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor for how a single
+    # agent reaches exactly this state when denied entry into an occupied neighbor.
+    for agent, cell in zip(env.agents, [C1, C2, C3, C4]):
+        agent.current_entry_point = cell
+        agent._set_state(TrainState.STOPPED)
+        next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
+        agent.next_entry_point = _sanitize_entry_point(next_transition)
+        agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
+        agent.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+        agent.speed_counter._distance = Fraction(1)
+
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
+
+    # all four start moving together: an optimistic STOPPED -> MOVING resumption, nothing re-contested
+    # yet (each is still self-looping on its own cell) - free, no collision penalty anywhere.
+    _, rewards, _, _ = env.step(forward)
+    for agent, cell in zip(env.agents, [C1, C2, C3, C4]):
+        assert agent.state == TrainState.MOVING
+        assert agent.current_entry_point == cell
+        assert agent.speed_counter.speed == Fraction(1, 2)
+        assert agent.speed_counter.distance == Fraction(1)
+    for h in range(4):
+        assert rewards[h][DefaultPenalties.COLLISION.value] == 0
+
+    # from here, every agent is genuinely at (or, every other step, still short of) its own boundary in
+    # lockstep with the others; whenever they cross, they all cross together - nobody is ever force-
+    # stopped, and the whole platoon ends up three cells further along, on C4, C5, C6, C7.
+    for expected_distance, expected_cells in [
+        (Fraction(1, 2), [C2, C3, C4, C5]),
+        (Fraction(0), [C3, C4, C5, C6]),
+        (Fraction(1, 2), [C3, C4, C5, C6]),
+        (Fraction(0), [C4, C5, C6, C7]),
+    ]:
+        _, rewards, _, _ = env.step(forward)
+        for agent, cell in zip(env.agents, expected_cells):
+            assert agent.state == TrainState.MOVING  # never forced back to STOPPED
+            assert agent.speed_counter.speed == Fraction(1, 2)
+            assert agent.speed_counter.distance == expected_distance
+            assert agent.current_entry_point == cell
+        for h in range(4):
+            assert rewards[h][DefaultPenalties.COLLISION.value] == 0
+            assert rewards[h][DefaultPenalties.INVALID_ACTION.value] == 0
+
+    assert [a.current_entry_point for a in env.agents] == [C4, C5, C6, C7]
+
+
+@pytest.mark.parametrize("distance,expected_steps", [
+    (Fraction(1, 5), [
+        (Fraction(7, 10), 0),
+        (Fraction(1, 5), 1),
+        (Fraction(7, 10), 1),
+        (Fraction(1, 5), 2),
+    ]),
+    (Fraction(1, 2), [
+        (Fraction(0), 1),
+        (Fraction(1, 2), 1),
+        (Fraction(0), 2),
+        (Fraction(1, 2), 2),
+    ]),
+    (Fraction(4, 5), [
+        (Fraction(3, 10), 1),
+        (Fraction(4, 5), 1),
+        (Fraction(3, 10), 2),
+        (Fraction(4, 5), 2),
+    ]),
+], ids=["distance-0.2", "distance-0.5", "distance-0.8"])
+def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_force_stops(distance, expected_steps):
+    """
+    Four agents A, B, C, D nose-to-tail on four consecutive cells C1, C2, C3, C4 of make_simple_rail's
+    row-3 corridor, all heading the same direction, shared max speed 0.5. Parametrized over starting
+    distance: 0.2, 0.5 or 0.8 (all four at the same distance, in a given variant) - mid-cell this time,
+    rather than right at the boundary like test_platoon_of_four_agents_starts_and_advances_together_without_force_stops.
+
+    - Setup: each already stopped mid-cell at the given distance, speed 0.
+    - Start: given MOVE_FORWARD every step, all four start moving together on the same step - each
+      reaches speed 0.5 while its position and distance stay exactly where they were.
+    - Advance: since they all started at the same distance and share the same speed, every agent keeps
+      reaching its own cell's boundary on the same step as every other agent, and each time they do, they
+      all cross into the next cell together in that same step - the cell each of A, B and C requests is
+      being vacated by the agent ahead of it in that very same step, and D's own target is open track
+      throughout. Nobody is ever forced back to a stop, mid-cell start or not.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    cells = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7, 6, 5, 4, 3, 2)]
+
+    # place all four directly nose-to-tail on the first four cells, each already stopped mid-cell
+    # (distance `distance`, short of its own exit boundary) with speed 0.
+    for agent, cell in zip(env.agents, cells[:4]):
+        agent.current_entry_point = cell
+        agent._set_state(TrainState.STOPPED)
+        next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
+        agent.next_entry_point = _sanitize_entry_point(next_transition)
+        agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
+        agent.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+        agent.speed_counter._distance = distance
+
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
+
+    # all four start moving together: an optimistic STOPPED -> MOVING resumption, nothing re-contested
+    # yet (each is still self-looping on its own cell) - free, no collision penalty anywhere.
+    _, rewards, _, _ = env.step(forward)
+    for agent, cell in zip(env.agents, cells[:4]):
+        assert agent.state == TrainState.MOVING
+        assert agent.current_entry_point == cell
+        assert agent.speed_counter.speed == Fraction(1, 2)
         assert agent.speed_counter.distance == distance
+    for h in range(4):
+        assert rewards[h][DefaultPenalties.COLLISION.value] == 0
+
+    # from here, every agent is genuinely at (or, on the steps in between, still short of) its own
+    # boundary in lockstep with the others; whenever they cross, they all cross together - nobody is
+    # ever force-stopped.
+    for expected_distance, n_cells_advanced in expected_steps:
+        _, rewards, _, _ = env.step(forward)
+        for i, agent in enumerate(env.agents):
+            assert agent.state == TrainState.MOVING  # never forced back to STOPPED
+            assert agent.speed_counter.speed == Fraction(1, 2)
+            assert agent.speed_counter.distance == expected_distance
+            assert agent.current_entry_point == cells[i + n_cells_advanced]
+        for h in range(4):
+            assert rewards[h][DefaultPenalties.COLLISION.value] == 0
+            assert rewards[h][DefaultPenalties.INVALID_ACTION.value] == 0
+
+
+@pytest.mark.parametrize("max_speed,lockstep_steps,after_stop_offset,post_stop_distances,leader_distance", [
+    # speed 0.2: the leader (D) is safely mid-cell (not at its own boundary) on the step it is told to
+    # stop, so it simply brakes in place - no crossing that step; A/B/C then take one extra step still
+    # short of their own boundary before all three finally reach it together.
+    (Fraction(1, 5), [(Fraction(1, 5), 0), (Fraction(2, 5), 0)], 0, [Fraction(3, 5), Fraction(4, 5)], Fraction(3, 5)),
+    # speed 0.5: same, but A/B/C are already exactly one step short of their own boundary the moment the
+    # leader stops, so the very next step is already the one where all three reach it together.
+    (Fraction(1, 2), [(Fraction(1, 2), 0), (Fraction(0), 1)], 1, [Fraction(1, 2)], Fraction(1, 2)),
+    # speed 1.0: the leader is exactly at its own boundary on the step it is told to stop, so that one
+    # crossing is already in flight and still completes (see
+    # test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor's STOP_MOVING
+    # discussion) - the leader (and, moving with it in lockstep, A/B/C too) still advances one more cell
+    # on this step before the leader genuinely holds still from the next step on.
+    (Fraction(1), [(Fraction(0), 1), (Fraction(0), 2)], 3, [Fraction(0)], Fraction(0)),
+], ids=["speed-0.2", "speed-0.5", "speed-1.0"])
+def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
+        max_speed, lockstep_steps, after_stop_offset, post_stop_distances, leader_distance):
+    """
+    Four agents A, B, C, D nose-to-tail on four consecutive cells C1, C2, C3, C4 of make_simple_rail's
+    row-3 corridor, all heading the same direction, cruising together at a shared max speed (0.2, 0.5 or
+    1.0 in the three variants).
+
+    - Setup: all four already MOVING in lockstep at the shared max speed (distance 0).
+    - Lockstep steps: two steps of ordinary forward movement - everyone advances identically, nobody
+      blocked (same pattern as test_platoon_of_four_agents_starts_and_advances_together_without_force_stops).
+    - Leader stops: D is given STOP_MOVING every step from then on and never moves again; A, B and C
+      keep being told to move forward. The number of steps before A/B/C catch up to their own boundary
+      differs by speed: immediate for 0.5 and 1.0, one extra "still approaching" step first for 0.2.
+    - Speed 1.0 detail: D is exactly at its own boundary the moment it is told to stop, so that crossing
+      is already in flight and still completes that step before D genuinely holds still.
+    - Convergence: A, B and C all transition to STOPPED with distance pinned at 1.0 ("end of cell") in
+      the exact same env.step() call - not staggered - while D's own state/position/distance stay
+      unchanged, for all three speed variants.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1)
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    env.braking_delta = Fraction(-1)
+    cells = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7, 6, 5, 4, 3, 2)]
+
+    # place all four directly nose-to-tail on the first four cells, already MOVING at the shared max
+    # speed with distance 0 (freshly cruising) - see
+    # test_platoon_of_four_agents_starts_and_advances_together_without_force_stops for how a platoon
+    # reaches this state from a genuine standstill.
+    for agent, cell in zip(env.agents, cells[:4]):
+        agent.current_entry_point = cell
+        agent._set_state(TrainState.MOVING)
+        next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
+        agent.next_entry_point = _sanitize_entry_point(next_transition)
+        agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
+        agent.speed_counter.step(speed=max_speed, crossing_completed=False)  # bootstrap onto the map at distance 0
+
+    forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
+    hold_leader = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD,
+                   2: RailEnvActions.MOVE_FORWARD, 3: RailEnvActions.STOP_MOVING}
+
+    # two steps of ordinary lockstep cruising, leader included - nobody blocked yet.
+    for expected_distance, n_cells_advanced in lockstep_steps:
+        env.step(forward)
+        for i, agent in enumerate(env.agents):
+            assert agent.state == TrainState.MOVING
+            assert agent.speed_counter.speed == max_speed
+            assert agent.speed_counter.distance == expected_distance
+            assert agent.current_entry_point == cells[i + n_cells_advanced]
+
+    agent_a, agent_b, agent_c, agent_d = env.agents
+
+    # the leader is told to stop, and keeps being told to stop every step from here on; the others are
+    # still told to keep moving forward. For as long as A/B/C haven't yet reached their own cell's
+    # boundary, they are not blocked yet - the leader's position (and, once it settles, its distance) no
+    # longer changes, but A/B/C keep advancing within their own cell just like before.
+    for expected_abc_distance in post_stop_distances:
+        env.step(hold_leader)
+        for i, agent in enumerate(env.agents):
+            assert agent.current_entry_point == cells[i + after_stop_offset]
+        assert agent_d.state == TrainState.STOPPED
+        assert agent_d.speed_counter.speed == Fraction(0)
+        assert agent_d.speed_counter.distance == leader_distance
+        for agent in (agent_a, agent_b, agent_c):
+            assert agent.state == TrainState.MOVING
+            assert agent.speed_counter.speed == max_speed
+            assert agent.speed_counter.distance == expected_abc_distance
+
+    # the leader keeps being told to stay stopped; the others keep trying to move forward - denied
+    # together, in this one step, since D is no longer vacating the cell ahead of C (and, transitively,
+    # C for B, B for A): all three reach the end of their own cell (distance 1.0) and stop, in the same
+    # time step as each other - not staggered one after another.
+    env.step(hold_leader)
+    for i, agent in enumerate(env.agents):
+        assert agent.current_entry_point == cells[i + after_stop_offset]  # nobody advanced any further
+    assert agent_d.state == TrainState.STOPPED
+    assert agent_d.speed_counter.speed == Fraction(0)
+    assert agent_d.speed_counter.distance == leader_distance  # unchanged
+    for agent in (agent_a, agent_b, agent_c):
+        assert agent.state == TrainState.STOPPED  # all three, together, in this same step
+        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.speed_counter.distance == Fraction(1)  # end of cell
+
+
+@pytest.mark.parametrize("max_speed,steps", [
+    (Fraction(1), [
+        (TrainState.MOVING, 7, Fraction(4, 5), 0, 6, Fraction(1, 5)),
+        (TrainState.MOVING, 6, Fraction(4, 5), 0, 5, Fraction(1, 5)),
+        (TrainState.MOVING, 5, Fraction(4, 5), 0, 4, Fraction(1, 5)),
+        (TrainState.MOVING, 4, Fraction(4, 5), 0, 3, Fraction(1, 5)),
+    ]),
+    (Fraction(1, 2), [
+        (TrainState.STOPPED, 8, Fraction(1), -1 * Fraction(1, 2) * COLLISION_FACTOR, 7, Fraction(7, 10)),
+        (TrainState.MOVING, 8, Fraction(1), 0, 6, Fraction(1, 5)),
+        (TrainState.MOVING, 7, Fraction(1, 2), 0, 6, Fraction(7, 10)),
+        (TrainState.MOVING, 6, Fraction(0), 0, 5, Fraction(1, 5)),
+        (TrainState.MOVING, 6, Fraction(1, 2), 0, 5, Fraction(7, 10)),
+        (TrainState.MOVING, 5, Fraction(0), 0, 4, Fraction(1, 5)),
+        (TrainState.MOVING, 5, Fraction(1, 2), 0, 4, Fraction(7, 10)),
+    ]),
+    (Fraction(1, 5), [
+        (TrainState.STOPPED, 8, Fraction(1), -1 * Fraction(1, 5) * COLLISION_FACTOR, 7, Fraction(2, 5)),
+        (TrainState.MOVING, 8, Fraction(1), 0, 7, Fraction(3, 5)),
+        (TrainState.STOPPED, 8, Fraction(1), -1 * Fraction(1, 5) * COLLISION_FACTOR, 7, Fraction(4, 5)),
+        (TrainState.MOVING, 8, Fraction(1), 0, 6, Fraction(0)),
+        (TrainState.MOVING, 7, Fraction(1, 5), 0, 6, Fraction(1, 5)),
+        (TrainState.MOVING, 7, Fraction(2, 5), 0, 6, Fraction(2, 5)),
+        (TrainState.MOVING, 7, Fraction(3, 5), 0, 6, Fraction(3, 5)),
+        (TrainState.MOVING, 7, Fraction(4, 5), 0, 6, Fraction(4, 5)),
+        (TrainState.MOVING, 6, Fraction(0), 0, 5, Fraction(0)),
+    ]),
+], ids=["speed-1.0-never-stopped", "speed-0.5-one-stop", "speed-0.2-two-stops"])
+def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, steps):
+    """
+    Two agents, F and R, on adjacent cells C2 and C1 of make_simple_rail's row-3 corridor, both heading
+    the same direction and sharing the same max speed, given MOVE_FORWARD every step.
+
+    - Setup: F on C2 at distance 0.2 (freshly entered its cell), R on C1 at distance 0.8 (already close
+      to its own exit boundary), both MOVING at the shared max speed.
+    - max speed 1.0: R is at (or past) its own exit boundary on every single step regardless of its
+      starting distance, so both cross into the next cell together every step from the first one - R is
+      never force-stopped.
+    - max speed 0.5: R reaches its own boundary before F has vacated the cell ahead and is force-stopped
+      once, for one step; from the very next step on, R and F settle into a stable, repeating crossing
+      cadence (one step advancing within-cell, the next crossing together) - R is never stopped again.
+    - max speed 0.2: R is force-stopped twice, not once - F needs longer, at this slower speed, to first
+      reach its own boundary and vacate, so R's first retry after the initial stop is still too early and
+      is denied again. From the second recovery on, R and F settle into the same kind of stable, repeating
+      crossing cadence, this time with identical distance values every step - R is never stopped again.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
+                  rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    C1, C2 = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7)]
+
+    # F (front) on C2 at distance 0.2 - freshly entered its cell; R (rear) on C1 at distance 0.8 -
+    # already close to its own exit boundary. Both share max_speed.
+    agent_f, agent_r = env.agents
+    for agent, cell, distance in [(agent_f, C2, Fraction(1, 5)), (agent_r, C1, Fraction(4, 5))]:
+        agent.current_entry_point = cell
+        agent._set_state(TrainState.MOVING)
+        next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
+        agent.next_entry_point = _sanitize_entry_point(next_transition)
+        agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
+        agent.speed_counter.step(speed=max_speed, crossing_completed=False)
+        agent.speed_counter._distance = distance
+
+    forward = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}
+
+    for r_state, r_col, r_distance, r_collision, f_col, f_distance in steps:
+        _, rewards, _, _ = env.step(forward)
+        expected_r_speed = Fraction(0) if r_state == TrainState.STOPPED else max_speed
+        assert agent_r.state == r_state
+        assert agent_r.current_entry_point == ((3, r_col), Grid4TransitionsEnum.WEST)
+        assert agent_r.speed_counter.speed == expected_r_speed
+        assert agent_r.speed_counter.distance == r_distance
+        assert rewards[1][DefaultPenalties.COLLISION.value] == r_collision
+
+        assert agent_f.state == TrainState.MOVING  # F is never blocked - open track ahead of it throughout
+        assert agent_f.current_entry_point == ((3, f_col), Grid4TransitionsEnum.WEST)
+        assert agent_f.speed_counter.speed == max_speed
+        assert agent_f.speed_counter.distance == f_distance
+        assert rewards[0][DefaultPenalties.COLLISION.value] == 0
