@@ -551,10 +551,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             elif action_valid and (
                 (state == TrainState.READY_TO_DEPART and movement_action_given)
                 # design (issue #280): MALFUNCTION_OFF_MAP intentionally does not go via READY_TO_DEPART -
-                # STOP_MOVING and MOVE_* both add to map directly if possible, same as MOVING's own
-                # straight-to-MOVING shortcut in _handle_malfunction_off_map.
+                # a movement action adds it to the map directly if possible, same as MOVING's own
+                # straight-to-MOVING shortcut in _handle_malfunction_off_map. A STOP_MOVING action never
+                # promotes it (_handle_malfunction_off_map only checks movement_action_given), so it is
+                # deliberately excluded here - including it would hand loop 2 a candidate that never gets
+                # committed, an optimistic mismatch with no compensating benefit.
                 or (state == TrainState.MALFUNCTION_OFF_MAP and earliest_departure_reached
-                    and (movement_action_given or stop_action_given))
+                    and movement_action_given)
             ):
                 candidate_entry_point = initial_entry_point
                 candidate_next_entry_point = candidate_entry_point_independent
