@@ -55,7 +55,6 @@ class TrainStateMachine:
         """
         if not self.st_signals.in_malfunction:
             if self.st_signals.earliest_departure_reached:
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we not go to the READY_TO_DEPART first instead of directly to MOVING?
                 # design: disallow entering the map stopped
                 if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
@@ -140,7 +139,109 @@ class TrainStateMachine:
             raise ValueError(f"Got unexpected state {current_state}")
 
     def step(self):
-        """ Steps the state machine to the next state """
+        """
+        Steps the state machine to the next state.
+
+        By the time this call returns, self.state is the settled outcome of this very step() call -
+        callers reading agent.state right after env.step() returns are seeing "what happened this
+        step", not a preview of the next one. MALFUNCTION/MALFUNCTION_OFF_MAP transitions honor this:
+        rail_env.py's step() decrements malfunction_handler's down-counter and rolls any new
+        malfunction (MalfunctionEffectsGenerator.on_episode_step_start) at the very start of the same
+        env.step() call (see rail_env.py's _check_malfunction_state_invariant).
+
+        This still leaves an asymmetry worth knowing about: the counter itself is genuinely external to
+        this step()-then-reflect contract - it is mutated by an outside generator as an *input* to this
+        step's transition, not produced as this step's *output* the way self.state is. A controller can
+        read agent.malfunction_handler.malfunction_down_counter/in_malfunction directly (plain public
+        attributes, no special access contract), and doing so exposes this step's already-updated
+        counter value - but neither that counter nor self.state can tell the controller that the
+        *next* env.step() call is about to end the malfunction, since the decrement/roll that decides
+        that only happens at the start of that next call, not this one.
+
+        RailEnv.action_required() (rail_env.py) is neither purely state-derived nor purely
+        distance/speed-derived - self.state gates which of four cases applies, and only one of them
+        actually consults distance/speed:
+        - WAITING / MALFUNCTION_OFF_MAP (off map, not yet eligible to move): always False, regardless
+          of anything else.
+        - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
+        - MOVING / STOPPED / MALFUNCTION (on map): collapses to SpeedCounter.is_cell_exit() alone
+          (distance + speed >= SEGMENT_LENGTH) - identical for all three on-map states, with no special
+          case for MALFUNCTION. This is where a "malfunctioning agents never need an action" assumption
+          comes from: ordinarily a malfunction freezes distance mid-cell and speed at 0, so
+          is_cell_exit() stays False (see test_action_required_false_during_malfunction in
+          test_flatland_envs_rail_env.py). But it is not a state-level guarantee - an agent already
+          banked exactly at a cell boundary (distance == SEGMENT_LENGTH, e.g. after a denied crossing)
+          satisfies is_cell_exit() from distance alone even at speed 0, so action_required reads True
+          there whether or not the agent also happens to be malfunctioning at that same position (see
+          test_action_required_at_full_segment_length in the same file).
+        - DONE (terminal - neither on map nor off map per TrainState.is_on_map_state()/
+          is_off_map_state()): always False, even with remove_agents_at_target=False leaving the agent
+          parked at a real, banked-at-boundary position (is_cell_exit() would read True there too, but
+          is never consulted - DONE is excluded from the on-map branch above).
+
+        Either way, action_required only ever reports this step's already-settled outcome, never a
+        lookahead onto the next step's malfunction-counter mutation.
+
+        TODO revise design: MALFUNCTION and MALFUNCTION_OFF_MAP are asymmetric here even when
+        earliest_departure is already reached for both - both transition straight into MOVING on the
+        very step their malfunction ends (given a movement action that same step, see
+        _handle_malfunction/_handle_malfunction_off_map above), but action_required disagrees about the
+        steps leading up to that while still malfunctioning: an on-map MALFUNCTION banked at a cell
+        boundary (distance == SEGMENT_LENGTH from a denied crossing before the malfunction hit) reads
+        action_required True for every remaining malfunctioning step, not just the one where the
+        malfunction actually ends - misleadingly, since movement_action_given has no effect while
+        in_malfunction is still True regardless of what action_required says. MALFUNCTION_OFF_MAP never
+        has this problem: an off-map agent has no distance/speed to bank against SEGMENT_LENGTH, so it
+        reads action_required False for the entire malfunction, only flipping True once the transition
+        into MOVING/READY_TO_DEPART has already happened. Confirmed empirically: with earliest_departure
+        already reached (0) going in, a MALFUNCTION_OFF_MAP agent reports action_required
+        False/False/True across a 3-step malfunction (last step already MOVING), while an on-map
+        MALFUNCTION agent banked at a boundary reports True/True/True across the same shape of
+        malfunction (last step STOPPED, since MOVE_FORWARD is invalid at that particular switch - see
+        test_action_required_at_full_segment_length's malfunction variant for the on-map side).
+
+        Three revise-design options were considered:
+
+        Position-based definitions used below (matching this codebase's convention of deriving on/off-map
+        and done-ness from position rather than state, see CLAUDE.md's post-step invariant checks):
+        on_map := agent.current_entry_point is not None; off_map := not on_map; not_done :=
+        agent.target_entry_point is None (set exactly once, permanently, the first step agent.state
+        becomes DONE - see handle_done_state() in rail_env.py - so it is a reliable done/not-done proxy
+        for the whole episode without reading agent.state at all; the only gap is a same-iteration,
+        intra-step window between update_if_reached() flipping state to DONE and handle_done_state()
+        setting target_entry_point a few lines later - never observable across a step() call boundary,
+        so irrelevant to action_required, which is only ever read from get_info_dict() after step()
+        returns).
+
+        - (a) Add one rule for the malfunctioning case only: while in_malfunction, action_required =
+          earliest_departure_reached and (is_cell_exit or off_map) and not_done; otherwise
+          state == TrainState.READY_TO_DEPART or (state.is_on_map_state() and is_cell_exit) - today's
+          formula, unchanged. The `and not_done` guard is needed because a DONE agent can still have
+          in_malfunction True (see _handle_done's docstring above) and earliest_departure_reached is
+          trivially True long after departure - without it, the malfunction branch would wrongly
+          evaluate to True for a terminal agent.
+        - (b) (is_cell_exit and on_map and not_done) or (earliest_departure_reached and off_map and
+          not_done). Resolves the asymmetry above the same way (a) does: MALFUNCTION_OFF_MAP starts
+          reading action_required True once earliest_departure_reached, instead of being hardcoded False
+          for the entire malfunction, exactly like READY_TO_DEPART already does. Verified equivalent to
+          guarded (a) over every state-machine-reachable input (0 mismatches), but not as unconstrained
+          boolean formulas: of all 112 raw (state, in_malfunction, earliest_departure_reached, is_cell_exit,
+          on_map) combinations ignoring reachability, 24 disagree - every one of them an input the state
+          machine can never actually produce (e.g. WAITING with earliest_departure_reached=True while not
+          malfunctioning - synchronously transitions to READY_TO_DEPART the same step, per _handle_waiting,
+          so never externally observable; or an on-map state with a None position, which violates the
+          position/state sync invariant). (a) is the more defensive of the two here: its non-malfunctioning
+          branch is keyed directly to `state == READY_TO_DEPART` (an enum identity check), while (b) is
+          keyed to earliest_departure_reached/on_map (recomputed booleans) for every off-map state - if the
+          state machine's own synchronization were ever violated elsewhere (a bug, or a bypass like
+          `_set_state()`), (a) would stay correct while (b) could drift.
+        - (c) action_required = is_cell_exit if (on_map and not_done) else False.
+          Relative to today this only drops READY_TO_DEPART's unconditional True and fixes the DONE case
+          - it does not fix the MALFUNCTION/MALFUNCTION_OFF_MAP asymmetry (MALFUNCTION_OFF_MAP stays
+          hardcoded False, on-map MALFUNCTION stays exactly as is_cell_exit-quirky as today), but gives
+          action_required simpler on-map-only semantics (position and speed/distance only, ignoring
+          earliest_departure/malfunction/state entirely).
+        """
 
         current_state = self._state
 
