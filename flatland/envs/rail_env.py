@@ -922,7 +922,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 else:
                     candidate_entry_point_independent = self.rail.apply_action_independent(action, agent.initial_entry_point)
 
-                if not is_on_map and agent.current_entry_point is not None:
+                # loop 1's own (3b.3) candidate is exactly predictive of a real map entry here: the
+                # optimistic MALFUNCTION_OFF_MAP+STOP_MOVING mismatch that used to require a post-hoc
+                # agent.current_entry_point read instead was closed by excluding stop_action_given from
+                # (3b.3)'s condition (see step()'s own comment there).
+                if not is_on_map and self.temp_transition_data[h].candidate_entry_point is not None:
                     # (3b.3) map entry
                     candidate_entry_point = agent.initial_entry_point
                     candidate_next_entry_point = candidate_entry_point_independent
@@ -1014,16 +1018,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     else:
                         assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
                             pre_step.pre_offsets[h], pre_speed)
-                # off map (stayed off map) / map entry - genuinely post-hoc: whether map entry actually
-                # happened isn't decided by resource_check/in_malfunction alone, it also needs the state
-                # machine to have promoted to MOVING (e.g. a MALFUNCTION_OFF_MAP/READY_TO_DEPART agent
-                # given STOP_MOVING can get an optimistic non-None candidate_entry_point from loop 1's
-                # (3b.3) yet never be promoted - see issue #280) - so this can't be dedup'd against
-                # self.temp_transition_data[h].candidate_entry_point the way the discarded/malfunction
-                # branches above/below are.
-                elif pre_step.pre_offsets[h] is None and agent.current_entry_point is None:
+                # off map (stayed off map) / map entry - self.temp_transition_data[h].candidate_entry_point
+                # is exactly predictive of a real map entry here (the optimistic MALFUNCTION_OFF_MAP+
+                # STOP_MOVING mismatch was closed by excluding stop_action_given from (3b.3)'s condition).
+                elif pre_step.pre_offsets[h] is None and self.temp_transition_data[h].candidate_entry_point is None:
                     assert agent.speed_counter.distance is None
-                elif pre_step.pre_offsets[h] is None and agent.current_entry_point is not None:
+                elif pre_step.pre_offsets[h] is None and self.temp_transition_data[h].candidate_entry_point is not None:
                     assert agent.speed_counter.distance == 0
                 # malfunction
                 elif agent.malfunction_handler.in_malfunction:
@@ -1079,11 +1079,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         assert agent.speed_counter.speed is None
                     else:
                         assert agent.speed_counter.speed == 0
-                # map entry - genuinely post-hoc, same reason as the distance-update loop's "map entry"
-                # branch above: can't be dedup'd against self.temp_transition_data[h].candidate_entry_point,
-                # since that candidate can be optimistically non-None (loop 1's (3b.3)) without the state
-                # machine ever actually promoting to MOVING this step (see issue #280).
-                elif pre_step.pre_current_entry_points[h] is None and agent.current_entry_point is not None:
+                # map entry - self.temp_transition_data[h].candidate_entry_point is exactly predictive of
+                # a real map entry here, same as the distance-update loop's "map entry" branch above.
+                elif pre_step.pre_current_entry_points[h] is None and self.temp_transition_data[h].candidate_entry_point is not None:
                     assert agent.speed_counter.speed == _cap_speed(agent.speed_counter.max_speed,
                                                                     self.acceleration_delta)
                 # stay off map
