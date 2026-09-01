@@ -512,7 +512,7 @@ tomli==2.4.1
     # via deptry
 tomli-w==1.2.0
     # via tox
-tornado==6.5.7
+tornado==6.5.8
     # via
     #   ipykernel
     #   jupyter-client
