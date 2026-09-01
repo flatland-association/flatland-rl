@@ -262,26 +262,28 @@ def test_reward_function_waiting(rendering=False):
             },
             'rewards': [0, 0],
         },
-        # both can move again
+        # design (D1/D2): second agent's STOPPED->MOVING promotion here is one settling step
+        # (position unchanged) before it actually leaves (4,6) below - see rail_env.py's
+        # (3b.5)/(10a)/(10b)/movement_allowed design note.
         3: {
             'positions': {
                 0: (3, 5),
+                1: (4, 6),
+            },
+            'rewards': [0, 0],
+        },
+        # both can move again
+        4: {
+            'positions': {
+                0: (3, 4),
                 1: (3, 6),
             },
             'rewards': [0, 0],
         },
-        4: {
-            'positions': {
-                0: (3, 4),
-                1: (3, 7),
-            },
-            'rewards': [0, 0],
-        },
-        # second reached target
         5: {
             'positions': {
                 0: (3, 3),
-                1: (3, 8),
+                1: (3, 7),
             },
             'rewards': [0, 0],
         },
@@ -292,7 +294,8 @@ def test_reward_function_waiting(rendering=False):
             },
             'rewards': [0, 0],
         },
-        # first reaches, target too
+        # first reaches target too; second reaches target (not asserted -- the loop breaks on
+        # dones["__all__"] before this iteration's position check)
         7: {
             'positions': {
                 0: (3, 1),

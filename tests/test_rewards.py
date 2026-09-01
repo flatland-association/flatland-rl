@@ -437,11 +437,15 @@ def test_energy_efficiency_smoothniss_in_morl():
         # design: actions applied at cell entry
         (BaseDefaultRewards(), (-1724.0,)),
         # design: actions applied at cell entry
-        (BasicMultiObjectiveRewards(), (-1724.0, -629.0, -172.375)),
+        (BasicMultiObjectiveRewards(), (-1724.0, -1360.0, -858.1875)),
+        # design (D1/D2): STOPPED->MOVING promotion is granted optimistically (see rail_env.py's
+        # movement_allowed design note) rather than withheld until the target is free, so a
+        # persisting conflict under this seeded random policy run now accrues a fresh collision
+        # penalty roughly every other step instead of just once - substantially increasing the
+        # accumulated per-step penalty total.
+        (ECML2026Rewards(), (-119536.5,)),
         # design: actions applied at cell entry
-        (ECML2026Rewards(), (-18786.5,)),
-        # design: actions applied at cell entry
-        (BaseECML2026Rewards(), (-18786.5,)),
+        (BaseECML2026Rewards(), (-119536.5,)),
     ],
 )
 def test_rewards_via_policy_runner(rewards, expected_sums):
@@ -1249,18 +1253,34 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0, \
         "The penalty fires once on the MOVING -> STOPPED transition, not per deadlocked step"
 
-    # deadlock persists: no positions change, no further collision penalties accrue
+    # deadlock persists: positions never change again, but each agent is now alternately promoted
+    # back to MOVING optimistically (operator's request granted, self-loop, no penalty) and then
+    # denied again for real the following step (fresh collision penalty) - staggered one tick apart
+    # from each other, since they were originally force-stopped one tick apart. See rail_env.py's
+    # movement_allowed design note: unlike withholding the promotion until the target is free, a
+    # persisting deadlock now keeps accruing a collision penalty every step, alternating between the
+    # two agents, rather than just the one time each incurred above.
+
+    # 6th step: agent 1 (STOPPED since the 5th step) is promoted back to MOVING optimistically -
+    # its real attempt into (3,3) is denied for real this same step (still held by agent 0, which is
+    # itself mid-settling this step, protecting its cell via self-loop) -> a fresh penalty for agent 1.
     _, rewards, _, _ = env.step(forward)
     assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
+    assert agent_0.state == TrainState.MOVING
+    assert agent_1.state == TrainState.STOPPED
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
-    assert rewards[1][DefaultPenalties.COLLISION.value] == 0
+    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # deadlock persists: no positions change, no further collision penalties accrue
+    # 7th step: agent 0 now has genuine pre-step speed and makes its own real attempt into (3,4),
+    # denied for real (agent 1 is now mid-settling, holding (3,4) via self-loop) -> a fresh penalty
+    # for agent 0 instead - and so on, alternating forever for as long as the deadlock persists.
     _, rewards, _, _ = env.step(forward)
     assert (agent_0.current_entry_point[0], agent_1.current_entry_point[0]) == ((3, 3), (3, 4))
-    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
+    assert agent_0.state == TrainState.STOPPED
+    assert agent_1.state == TrainState.MOVING
+    assert rewards[0][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
     assert rewards[1][DefaultPenalties.COLLISION.value] == 0
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
@@ -1403,14 +1423,16 @@ def test_platoon_slow_leader_periodic_collision_penalty():
             assert rewards[i][DefaultPenalties.COLLISION.value] == 0
             assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # step 5: one full period later, the leader again fails to vacate its cell -> followers blocked again
-    _, rewards, _, _ = env.step(forward)
-    assert follower_1.state == TrainState.STOPPED and follower_2.state == TrainState.STOPPED
-    assert rewards[1][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
-    assert rewards[2][DefaultPenalties.COLLISION.value] == -1 * 1 * COLLISION_FACTOR
-    assert rewards[0][DefaultPenalties.COLLISION.value] == 0
-    for i in range(3):
-        assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
+    # design (D1): each follower's STOPPED->MOVING promotion now costs it one extra settling step
+    # (see rail_env.py's (3b.5)/(10a)/(10b)) before this fix, that extra one-tick lag happened to
+    # land the followers' cadence back in sync with the leader's periodic stall one period later;
+    # now it doesn't - no agent is blocked again for the rest of this (short) episode.
+    dones = {"__all__": False}
+    while not dones["__all__"]:
+        _, rewards, dones, _ = env.step(forward)
+        for i in range(3):
+            assert rewards[i][DefaultPenalties.COLLISION.value] == 0
+            assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
 def test_env_invalid_action_penalty_on_invalid_forward_at_symmetric_switch():

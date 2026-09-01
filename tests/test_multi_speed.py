@@ -317,7 +317,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 5),
                     direction=Grid4TransitionsEnum.WEST,
 
-                    action=RailEnvActions.MOVE_FORWARD,
+                    action=None,
                 ),
                 Replay(
                     position=(3, 5),
@@ -339,6 +339,12 @@ def test_multispeed_actions_no_malfunction_blocking():
             initial_position=(3, 8),
             initial_direction=Grid4TransitionsEnum.WEST,
         ),
+        # design (D1/D2): agent 1 (speed 0.5) is repeatedly blocked by agent 0 (speed 1/3) ahead of it -
+        # each block follows the same 3-step pattern: (a) real crossing attempt denied (agent 0 still
+        # occupies the target) -> forced STOPPED, distance banks to the boundary; (b) given a movement
+        # action again, optimistically promoted back to MOVING (self-loop, distance unchanged - see
+        # rail_env.py's movement_allowed design note); (c) now genuinely pre-speed > 0, the crossing is
+        # attempted for real again and this time succeeds (agent 0 has since vacated the target).
         ReplayConfig(
             replay=[
                 Replay(  # 0
@@ -355,7 +361,7 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=None,
                 ),
-                # blocked although fraction >= 1.0
+                # blocked although fraction >= 1.0 - agent 0 still occupies (3,8)
                 Replay(  # 2
                     position=(3, 9),
                     direction=Grid4TransitionsEnum.EAST,
@@ -363,13 +369,15 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
+                # design: stopped->moving with pre-speed 0, travelling no distance.
                 Replay(  # 3
-                    position=(3, 8),
-                    direction=Grid4TransitionsEnum.WEST,
+                    position=(3, 9),
+                    direction=Grid4TransitionsEnum.EAST,
                     state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
+                # now genuinely pre-speed > 0 - agent 0 has since vacated (3,8), crossing succeeds.
                 Replay(  # 4
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
@@ -377,7 +385,8 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # blocked although fraction >= 1.0
+                # blocked again immediately - is_cell_exit is already true this same step (banked
+                # momentum from the crossing just completed), and agent 0 still occupies (3,7).
                 Replay(  # 5
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
@@ -385,9 +394,8 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
-
                 Replay(  # 6
-                    position=(3, 7),
+                    position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
@@ -398,39 +406,36 @@ def test_multispeed_actions_no_malfunction_blocking():
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
-                    action=RailEnvActions.STOP_MOVING,
+                    action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # blocked although fraction >= 1.0
-                # design: actions applied at cell entry
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.STOPPED,
 
-                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
+                    action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
-
                 Replay(  # 9
-                    position=(3, 6),
+                    position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
-                    action=None,
+                    action=RailEnvActions.MOVE_FORWARD,
                 ),
                 Replay(  # 10
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
-                    distance=0.5,
-                    speed=_pseudo_fractional(0.5),
 
                     action=None,
                 ),
+                # blocked a third time - agent 0 still occupies (3,5).
                 Replay(  # 11
-                    position=(4, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
+                    position=(3, 6),
+                    direction=Grid4TransitionsEnum.WEST,
+                    state=TrainState.STOPPED,
 
-                    action=RailEnvActions.MOVE_FORWARD,
+                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
                 ),
             ],
             target=(3, 0),  # west dead-end

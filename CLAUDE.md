@@ -289,6 +289,36 @@ and loading it in the test via `RailEnvPersister.load_new()`, rather than replay
 latter is brittle against unrelated timing changes elsewhere in the env (see `tests/test_known_flatland_bugs.py`'s
 `test_two_trains_on_same_cell_bug_FIXED` and its committed `*_snapshot.pkl` fixture for the pattern).
 
+#### Docstrings for tests that step `RailEnv` and assert on agent state
+
+A test that drives a `RailEnv` through `step()` and asserts on `agent.state`/`agent.speed_counter`/
+`agent.current_entry_point` should have a docstring that describes the scenario purely in the domain vocabulary
+a *user* of `RailEnv` would use - agent speeds, distances, positions/cells, and states/actions - not in terms of
+how `step()`, `TrainStateMachine`, or `MotionCheck` internally arrive at that outcome. Concretely:
+
+- Open with a one- or two-sentence scenario line naming the agents, the concrete cells/positions involved (e.g.
+  "L=(3,8) and R=(3,7)"), and any shared parameter (max speed, a parametrize dimension) - not an abstract
+  description.
+- Follow with a flat bullet list, one bullet per phase of the scenario in the order it happens (a `- Setup:` bullet
+  is almost always first). State speed/distance/state values as the reader would observe them via
+  `agent.speed_counter.speed`/`.distance`/`agent.state`/`agent.current_entry_point`, not via the internal signals
+  that produce them (`candidate_speed`, `resource_check`, `movement_allowed`, `crossing_completed`, etc.) - those
+  belong in an inline comment next to the specific assertion they explain, not the docstring.
+- Each bullet states what happens and what the test expects/observes at that phase, so the docstring alone tells
+  you what the test verifies without reading the body - e.g. "A tries to cross into R - denied: position stays on
+  L, speed drops back to 0", not "we then check that A's position doesn't change".
+- Never narrate the act of writing or discovering the test itself - no "confirmed", "verified", "also caught and
+  documented", "discovered by running it", or similar. State the behavior as fact; if a value was surprising or
+  needed to be checked against a real run rather than derived by hand, that belongs in conversation with whoever
+  asked for the test, not in the docstring.
+- A non-obvious setup trick (e.g. why a blocking agent needs a reduced max speed to avoid completing an in-flight
+  crossing before it can be braked) gets its own bullet or an inline comment at the point it matters, phrased as
+  the fact itself ("the leader is exactly at its own boundary ... so that crossing is already in flight and still
+  completes"), not as a note about the test author's process.
+- See `test_platoon_all_stop_together_once_leader_stops_and_stays_stopped` and
+  `test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor` in
+  `tests/test_flatland_envs_rail_env.py` for the target shape.
+
 ### Other top-level dirs
 
 - `examples/` — standalone runnable scripts (custom observations, custom rail maps, training, the
