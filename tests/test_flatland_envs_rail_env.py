@@ -22,6 +22,7 @@ from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _cap_speed
 from flatland.envs.step_utils.states import TrainState
@@ -914,7 +915,11 @@ def test_earliest_departure_state_transitions_full_acceleration():
         assert agent.current_entry_point is None
         assert agent.speed_counter.speed is None
         assert agent.speed_counter.distance is None
-    assert env._elapsed_steps == 3  # _elapsed_steps +3 (3 WAITING steps)
+    # design (issue #280): earliest_departure_reached is signalled one step earlier than
+    # elapsed_steps itself reaches earliest_departure,
+    # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
+    # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
+    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -923,7 +928,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step. Full
     # acceleration delta reaches max speed immediately (acceleration_delta equals max_speed here).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 3  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -938,150 +943,121 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # distance resetting to 0 cleanly (unlike a fractional acceleration delta, see
     # test_earliest_departure_state_transitions_initial_speed_zero's 1/2 cruise offset).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 4  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 5  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 7  # _elapsed_steps +1
+    assert env._elapsed_steps == 6  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
 
-def test_map_entry_no_malfunction():
+@pytest.mark.parametrize("earliest_departure", [0, 1, 2, 5])
+@pytest.mark.parametrize("with_malfunction", [False, True], ids=["no_malfunction", "malfunction_off_map"])
+def test_map_entry(with_malfunction, earliest_departure):
     """
-    Single agent, no malfunction, earliest_departure=0, max speed 1, acceleration delta equal to
-    max speed. Same WAITING -> READY_TO_DEPART -> MOVING map entry as
-    test_earliest_departure_state_transitions_full_acceleration, but earliest_departure=0 means the
-    very first step already reaches READY_TO_DEPART, so no WAITING loop is needed.
+    Single agent, max speed 1, acceleration delta equal to max speed, earliest_departure parametrized
+    over 0/1/2/5. Parametrized over whether a malfunction is injected right as earliest_departure is
+    reached. Design (issue #280): both WAITING and MALFUNCTION_OFF_MAP go straight to MOVING on a
+    movement action once earliest_departure is reached, never observably visiting READY_TO_DEPART
+    first - see _handle_malfunction_off_map's docstring and rail_env.py's step() first-step
+    earliest_departure=0 tweak. Apart from the malfunction variant's extra delay, the two variants'
+    assertions are identical from the departure step onward.
 
-    - Setup: agent off map, speed and distance both None.
-    - Step 1 (elapsed_steps=1 >= earliest_departure=0): WAITING -> READY_TO_DEPART, still off map,
-      speed and distance still None.
-    - Step 2 (MOVE_FORWARD): map entry - position becomes the agent's initial entry point, state ->
-      MOVING, distance resets to 0, speed reaches max speed immediately.
-    - Step 3 (MOVE_FORWARD): already at max speed, so the agent crosses into the next entry point,
-      distance wraps back to 0 completing the crossing, speed stays at max speed.
-    """
-    env, _, _ = env_generator(seed=42, n_agents=1)
-    env.acceleration_delta = Fraction(1)
-    agent = env.agents[0]
-    agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
-    agent.earliest_departure = 0
-
-    assert agent.state == TrainState.WAITING
-    assert agent.current_entry_point is None
-    assert agent.speed_counter.speed is None
-    assert agent.speed_counter.distance is None
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 1
-    assert agent.state == TrainState.READY_TO_DEPART
-    assert agent.current_entry_point is None
-    assert agent.speed_counter.speed is None
-    assert agent.speed_counter.distance is None
-
-
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    # on-map after step 2, although elapased_steps says 0! TODO #280 revise design twirk: agent enters map only at earliest_depature+1 (in step earliest_departure + 1 + 1).
-    assert env._elapsed_steps == 2
-    assert agent.state == TrainState.MOVING
-    first_entry_point = agent.current_entry_point
-    assert first_entry_point == agent.initial_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(0)
-
-    second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3
-    assert agent.state == TrainState.MOVING
-    assert agent.current_entry_point == second_entry_point
-    assert agent.speed_counter.speed == Fraction(1)
-    assert agent.speed_counter.distance == Fraction(0)
-
-
-def test_map_entry_with_malfunction():
-    """
-    Same setup as test_map_entry_no_malfunction (earliest_departure=0, max speed 1, acceleration
-    delta equal to max speed), but with a malfunction injected before the agent ever reaches
-    READY_TO_DEPART: malfunction_down_counter starts at 3. The state machine decrements it on the
-    same step it reads in_malfunction (see TrainStateMachine's handlers), so it is observed True for
-    2 steps and reaches 0 on the 3rd. MOVE_FORWARD is given from the very first step, so on that 3rd
-    step the agent enters the map directly from MALFUNCTION_OFF_MAP, never visiting READY_TO_DEPART
-    (design quirk tracked as issue #280: MALFUNCTION_OFF_MAP goes straight to MOVING on a movement
-    action once earliest_departure is reached and the malfunction has just ended, rather than via
-    READY_TO_DEPART - see _handle_malfunction_off_map's docstring).
-
-    - Setup: agent off map, WAITING, malfunction_down_counter set to 3. malfunction_interval=0
-      disables env_generator's own random malfunction generation, so only this injected malfunction
-      is in play.
-    - Step 1 (elapsed_steps=1 >= earliest_departure=0, but in_malfunction after this step's
-      decrement): WAITING -> MALFUNCTION_OFF_MAP, still off map, speed/distance None,
+    - Setup: agent off map, WAITING, speed and distance both None. Stepped earliest_departure times
+      with DO_NOTHING first - this withholds the movement action so the agent cannot depart yet, but
+      still lets the earliest_departure-driven WAITING -> READY_TO_DEPART transition happen on
+      schedule, landing the agent exactly at the point earliest_departure is considered reached: for
+      earliest_departure == 0 this is zero steps (still WAITING, _elapsed_steps == 0); for
+      earliest_departure >= 1 the agent is already READY_TO_DEPART after those steps, at
+      _elapsed_steps == earliest_departure (the earliest_departure_reached signal fires one step ahead
+      of when it becomes externally visible, so earliest_departure 1 and 2 both resolve to
+      READY_TO_DEPART already by _elapsed_steps == 1 - see state_machine.py's step() docstring).
+    - With malfunction: malfunction_down_counter is set to 3 right at this point (malfunction_interval=0
+      disables env_generator's own random malfunction generation, so only this injected malfunction is
+      in play) - i.e. triggered exactly as earliest_departure is reached, not before. The state machine
+      decrements the counter on the same step it reads in_malfunction, so it is observed True for 2
+      steps and reaches 0 on the 3rd, from whichever state (WAITING or READY_TO_DEPART) the agent was
+      in at injection time.
+    - [malfunction only] First MOVE_FORWARD step after injection (in_malfunction after this step's
+      decrement): WAITING or READY_TO_DEPART -> MALFUNCTION_OFF_MAP, still off map,
       malfunction_down_counter == 2.
-    - Step 2 (still in_malfunction): stays MALFUNCTION_OFF_MAP, still off map,
-      malfunction_down_counter == 1.
-    - Step 3 (malfunction_down_counter decrements to 0, in_malfunction False, earliest_departure
-      already reached, MOVE_FORWARD given): map entry directly from MALFUNCTION_OFF_MAP - position
-      becomes the agent's initial entry point, state -> MOVING, distance resets to 0, speed reaches
-      max speed immediately, malfunction_down_counter == 0.
-    - Step 4: already at max speed, so the agent crosses into the next entry point, distance wraps
-      back to 0 completing the crossing, speed stays at max speed.
+    - [malfunction only] Second MOVE_FORWARD step (still in_malfunction): stays MALFUNCTION_OFF_MAP,
+      still off map, malfunction_down_counter == 1.
+    - Departure step (MOVE_FORWARD; the 1st post-injection step without malfunction, the 3rd with): map
+      entry directly into MOVING - position becomes the agent's initial entry point, distance resets to
+      0, speed reaches max speed immediately (with malfunction: malfunction_down_counter == 0). This
+      lands at _elapsed_steps == earliest_departure + 1 without malfunction, or
+      earliest_departure + 3 with malfunction (the 3-step malfunction length contributing 2 extra steps
+      beyond the no-malfunction departure step).
+    - Final step (MOVE_FORWARD): already at max speed, so the agent crosses into the next entry
+      point, distance wraps back to 0 completing the crossing, speed stays at max speed.
     """
     env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0)
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
-    agent.earliest_departure = 0
-    agent.malfunction_handler._set_malfunction_down_counter(3)
+    agent.earliest_departure = earliest_departure
 
     assert agent.state == TrainState.WAITING
     assert agent.current_entry_point is None
     assert agent.speed_counter.speed is None
     assert agent.speed_counter.distance is None
-    # 2 malfunction steps, but make it 2+1 as decremented at start of step(), right after malfunction generators are called.
-    assert agent.malfunction_handler.malfunction_down_counter == 3
 
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 1
-    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+    for _ in range(earliest_departure):
+        env.step({agent.handle: RailEnvActions.DO_NOTHING})
+    assert env._elapsed_steps == earliest_departure  # N
+    assert agent.state == (TrainState.WAITING if earliest_departure == 0 else TrainState.READY_TO_DEPART)
     assert agent.current_entry_point is None
     assert agent.speed_counter.speed is None
     assert agent.speed_counter.distance is None
-    assert agent.malfunction_handler.malfunction_down_counter == 2
+
+    MALFUNCTION_DURATION = 0
+    if with_malfunction:
+        MALFUNCTION_DURATION = 2  # M
+        agent.malfunction_handler._set_malfunction_down_counter(MALFUNCTION_DURATION + 1)  # as decrement in step after malfunction generator runs!
+
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert env._elapsed_steps == earliest_departure + 1
+        assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+        assert agent.current_entry_point is None
+        assert agent.speed_counter.speed is None
+        assert agent.speed_counter.distance is None
+        assert agent.malfunction_handler.malfunction_down_counter == 2
+
+        env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert env._elapsed_steps == earliest_departure + 2
+        assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+        assert agent.current_entry_point is None
+        assert agent.speed_counter.speed is None
+        assert agent.speed_counter.distance is None
+        assert agent.malfunction_handler.malfunction_down_counter == 1
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 2
-    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
-    assert agent.current_entry_point is None
-    assert agent.speed_counter.speed is None
-    assert agent.speed_counter.distance is None
-    assert agent.malfunction_handler.malfunction_down_counter == 1
-
-    # malfunction terminates at start of this next step()
-    # on-map after step 3, although 2 malfunction steps, not at 2+2 (2 as without malfunction + 2 malfunction steps), highlighting  TODO #280 revise design twirk: #280 WAITING bypass with malfunction_off_map
-    env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3
+    assert env._elapsed_steps == earliest_departure + 1 + MALFUNCTION_DURATION  # w/o malfunction: N+1 / w malfunction (N+1) + M
     assert agent.state == TrainState.MOVING
     first_entry_point = agent.current_entry_point
     assert first_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
-    assert agent.malfunction_handler.malfunction_down_counter == 0
+    if with_malfunction:
+        assert agent.malfunction_handler.malfunction_down_counter == 0
 
     second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4
+    assert env._elapsed_steps == earliest_departure + (4 if with_malfunction else 2)
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1107,7 +1083,11 @@ def test_earliest_departure_state_transitions_partial_acceleration():
         assert agent.current_entry_point is None
         assert agent.speed_counter.speed is None
         assert agent.speed_counter.distance is None
-    assert env._elapsed_steps == 3  # _elapsed_steps +3 (3 WAITING steps)
+    # design (issue #280): earliest_departure_reached is signalled one step earlier than
+    # elapsed_steps itself reaches earliest_departure,
+    # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
+    # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
+    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -1116,7 +1096,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step, distance
     # resets to 0 and speed reaches the acceleration delta immediately.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 3  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(3, 10)
@@ -1130,14 +1110,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # design: distance update with pre-step speed. Ramping 0.3 -> 0.6 -> 0.9, distance
     # accumulating the pre-step speed each time, staying in the initial entry point throughout.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 4  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(6, 10)
     assert agent.speed_counter.distance == Fraction(3, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 5  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(9, 10)
@@ -1146,7 +1126,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # distance(0.9) + speed(0.9) = 1.8 >= 1: crosses into the second entry point, wraps to 0.8, and
     # speed finally saturates at max speed (0.9 + 0.3 capped at 1).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 7  # _elapsed_steps +1
+    assert env._elapsed_steps == 6  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1155,14 +1135,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # At max speed, the agent advances exactly one entry point per step from here on, cruising at
     # a steady 0.8 offset (0.8 + 1 = 1.8, wraps to 0.8 again).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 8  # _elapsed_steps +1
+    assert env._elapsed_steps == 7  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(8, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 9  # _elapsed_steps +1
+    assert env._elapsed_steps == 8  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1241,6 +1221,175 @@ def test_malfunction_off_map_state_transitions_to_moving():
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(1, 2)
+
+
+def test_action_required_false_during_malfunction():
+    """
+    Single agent, max speed 1/2, acceleration delta equal to max speed, earliest_departure=0. Design:
+    info['action_required'] (RailEnv.action_required()) is False for a malfunctioning agent, both off
+    map (MALFUNCTION_OFF_MAP) and on map (MALFUNCTION) - contrasted here against the same agent's
+    action_required alternating True/False while genuinely MOVING, to show the malfunction periods
+    aren't just incidentally False for some unrelated reason (e.g. always being mid-cell).
+
+    - Setup: malfunction_down_counter=3 injected before the very first step - the agent malfunctions
+      off map before it ever gets a chance to depart.
+    - Steps 1-2 (MOVE_FORWARD, in_malfunction): MALFUNCTION_OFF_MAP, still off map, action_required False.
+    - Step 3 (malfunction clears): dispatches straight into MOVING at distance 0 - at half max speed,
+      distance 0 does not yet reach the cell boundary, so action_required is False here too (not yet
+      due to malfunction - genuinely not at a cell exit).
+    - Step 4 (MOVE_FORWARD): distance reaches 1/2, the cell boundary - action_required True, contrasting
+      with the malfunction periods above and below.
+    - A second malfunction (down_counter=3) is injected right at this boundary (distance 1/2).
+    - Steps 5-6 (MOVE_FORWARD, in_malfunction): MALFUNCTION, distance frozen at 1/2 with speed forced to
+      0 - is_cell_exit() no longer holds (1/2 + 0 < 1), so action_required is False throughout, even
+      though the agent was sitting exactly at the boundary the instant the malfunction hit.
+    - Step 7 (malfunction clears): resumes MOVING from the frozen distance 1/2 at half speed again -
+      distance + speed reaches the boundary again this same step, action_required True.
+    - Step 8 (MOVE_FORWARD): crosses into the next cell, distance wraps to 0, action_required False again.
+    """
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0)
+    env.acceleration_delta = Fraction(1)
+    agent = env.agents[0]
+    agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2))
+    agent.earliest_departure = 0
+    agent.malfunction_handler._set_malfunction_down_counter(3)
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+    assert info['action_required'][agent.handle] is False
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+    assert info['action_required'][agent.handle] is False
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.distance == Fraction(0)
+    assert agent.speed_counter.is_cell_exit() is False
+    assert info['action_required'][agent.handle] is False
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.distance == Fraction(1, 2)
+    assert agent.speed_counter.is_cell_exit() is True
+    assert info['action_required'][agent.handle] is True
+
+    agent.malfunction_handler._set_malfunction_down_counter(3)
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MALFUNCTION
+    assert agent.speed_counter.distance == Fraction(1, 2)
+    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.is_cell_exit() is False
+    assert info['action_required'][agent.handle] is False
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MALFUNCTION
+    assert agent.speed_counter.is_cell_exit() is False
+    assert info['action_required'][agent.handle] is False
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.distance == Fraction(1, 2)
+    assert agent.speed_counter.is_cell_exit() is True
+    assert info['action_required'][agent.handle] is True
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.MOVING
+    assert agent.speed_counter.distance == Fraction(0)
+    assert info['action_required'][agent.handle] is False
+
+
+@pytest.mark.parametrize("with_malfunction", [False, True], ids=["stopped_only", "malfunction_while_stopped"])
+def test_action_required_at_full_segment_length(with_malfunction):
+    """
+    Single agent departs at (2,3) heading WEST towards a symmetric switch at (2,1) whose only valid
+    exits are north/south - continuing MOVE_FORWARD (straight through) is invalid there, so the agent
+    is force-stopped one cell short, banked exactly at the (2,2) cell boundary: distance ==
+    SEGMENT_LENGTH (1), speed == 0. Design: for an on-map state, info['action_required'] depends purely
+    on SpeedCounter.is_cell_exit() (distance + speed >= SEGMENT_LENGTH), not on which on-map state
+    (MOVING/STOPPED/MALFUNCTION) the agent is actually in - distance alone already satisfies that
+    threshold here, so action_required reads True even at speed 0, and stays True whether or not the
+    agent also happens to be malfunctioning at that same banked position - contradicting a naive
+    "malfunctioning agents never need an action" assumption.
+
+    Layout (train departs at (2,3) heading WEST, rolls towards the symmetric switch at (2,1) whose only
+    valid exits are north and south -- continuing west is invalid):
+
+        (0,1) dead-end
+              |
+        (2,1) switch <- (2,2) <- (2,3) start
+              |
+        (4,1) dead-end
+
+    - Steps 1-2 (MOVE_FORWARD): departs and crosses one full cell at max speed - MOVING, is_cell_exit
+      True every step (a fresh cell's full speed always reaches the boundary the same step),
+      action_required True.
+    - Step 3 (MOVE_FORWARD, invalid at the symmetric switch): force-stopped at the (2,2) boundary - STOPPED,
+      distance == 1, speed == 0, is_cell_exit still True purely from distance, action_required True.
+    - [malfunction_while_stopped only] malfunction_down_counter=3 injected right at this banked
+      position; steps 4-5 (still MOVE_FORWARD, in_malfunction): MALFUNCTION, distance/speed unchanged,
+      is_cell_exit and action_required both remain True.
+    - Final step (MOVE_FORWARD): [malfunction_while_stopped] malfunction clears back to STOPPED (the
+      action is still invalid at the switch); [stopped_only] still STOPPED as before either way -
+      distance/speed unchanged, is_cell_exit and action_required remain True throughout.
+    """
+    transitions = RailEnvTransitions()
+    grid = np.zeros((5, 6), dtype=np.uint16)
+    grid[2, 1] = RailEnvTransitionsEnum.symmetric_switch_from_east  # heading west forks N/S
+    grid[2, 2] = RailEnvTransitionsEnum.horizontal_straight
+    grid[2, 3] = RailEnvTransitionsEnum.horizontal_straight
+    grid[2, 4] = RailEnvTransitionsEnum.dead_end_from_east
+    grid[1, 1] = RailEnvTransitionsEnum.vertical_straight
+    grid[0, 1] = RailEnvTransitionsEnum.dead_end_from_north
+    grid[3, 1] = RailEnvTransitionsEnum.vertical_straight
+    grid[4, 1] = RailEnvTransitionsEnum.dead_end_from_south
+
+    rail = RailGridTransitionMap(width=6, height=5, transitions=transitions)
+    rail.grid = grid
+    optionals = {'agents_hints': {'city_positions': [(2, 4), (0, 1)],
+                                  'train_stations': [[((2, 4), 0)], [((0, 1), 0)]],
+                                  'city_orientations': [3, 0]}}
+    env = RailEnv(width=6, height=5,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset(random_seed=42)
+    env._max_episode_steps = 100
+
+    agent = env.agents[0]
+    agent.initial_entry_point = ((2, 3), Grid4TransitionsEnum.WEST)
+    agent.current_entry_point = None
+    agent.earliest_departure = 0
+    agent.latest_arrival = 50
+    agent.targets = {((0, 1), d) for d in Grid4TransitionsEnum}
+
+    for _ in range(2):
+        _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+        assert agent.state == TrainState.MOVING
+        assert agent.speed_counter.is_cell_exit() is True
+        assert info['action_required'][agent.handle] is True
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.distance == Fraction(1)
+    assert agent.speed_counter.speed == 0
+    assert agent.speed_counter.is_cell_exit() is True
+    assert info['action_required'][agent.handle] is True
+
+    if with_malfunction:
+        agent.malfunction_handler._set_malfunction_down_counter(3)
+        for _ in range(2):
+            _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+            assert agent.state == TrainState.MALFUNCTION
+            assert agent.speed_counter.distance == Fraction(1)
+            assert agent.speed_counter.is_cell_exit() is True
+            assert info['action_required'][agent.handle] is True
+
+    _, _, _, info = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
+    assert agent.state == TrainState.STOPPED
+    assert agent.speed_counter.distance == Fraction(1)
+    assert agent.speed_counter.is_cell_exit() is True
+    assert info['action_required'][agent.handle] is True
 
 
 def test_malfunction_off_map_state_transitions_to_ready_to_depart():
@@ -1529,8 +1678,11 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     R = ((3, 7), Grid4TransitionsEnum.WEST)
     agent_a.initial_entry_point = L
     agent_b.initial_entry_point = R
-    agent_a.earliest_departure = 0
-    agent_b.earliest_departure = 0
+    # design (issue #280): earliest_departure=1, not 0 - an earliest_departure=0 agent now dispatches
+    # directly on the very first movement action (see rail_env.py's step()), which would make the "two
+    # steps of MOVE_FORWARD to get onto the map" below only one; =1 keeps the original timing.
+    agent_a.earliest_departure = 1
+    agent_b.earliest_departure = 1
     # B's own max speed is lower than A's (still off map, so only _max_speed needs overriding - see
     # test_blocked_agent_cannot_redirect_via_later_action for why _speed must stay None here): this
     # keeps it mid-cell (distance < 1) rather than already at the cell boundary when it is braked
@@ -1846,7 +1998,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
     (Fraction(1), [(Fraction(0), 1), (Fraction(0), 2)], 3, [Fraction(0)], Fraction(0)),
 ], ids=["speed-0.2", "speed-0.5", "speed-1.0"])
 def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
-        max_speed, lockstep_steps, after_stop_offset, post_stop_distances, leader_distance):
+    max_speed, lockstep_steps, after_stop_offset, post_stop_distances, leader_distance):
     """
     Four agents A, B, C, D nose-to-tail on four consecutive cells C1, C2, C3, C4 of make_simple_rail's
     row-3 corridor, all heading the same direction, cruising together at a shared max speed (0.2, 0.5 or

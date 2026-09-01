@@ -1210,20 +1210,22 @@ def test_env_collision_penalty_on_head_on_conflict():
     agent_0, agent_1 = env.agents
 
     forward = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}
-    for _ in range(3):
+    # design (issue #280): earliest_departure=0 agents now dispatch one step earlier (straight into
+    # MOVING on the very first step), so only 2 warm-up steps are needed here instead of 3.
+    for _ in range(2):
         _, rewards, _, _ = env.step(forward)
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
         assert rewards[1][DefaultPenalties.COLLISION.value] == 0
         assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
         assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # before 4th step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them
+    # before 3rd step: agent 0 at (3,2) east, agent 1 at (3,4) west, one free cell (3,3) between them
     assert agent_0.current_entry_point == ((3, 2), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
     assert agent_1.current_entry_point == ((3, 4), Grid4TransitionsEnum.WEST)
     assert agent_1.speed_counter.distance == 0
 
-    # 4th step: both request entry into (3,3) -> motion check awards the cell to agent 0 and force-stops agent 1
+    # 3rd step: both request entry into (3,3) -> motion check awards the cell to agent 0 and force-stops agent 1
     _, rewards, _, _ = env.step(forward)
     assert agent_1.state_machine.previous_state == TrainState.MOVING
     assert agent_1.state == TrainState.STOPPED
@@ -1235,13 +1237,13 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert agent_0.state == TrainState.MOVING
     assert rewards[0][DefaultPenalties.COLLISION.value] == 0
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
-    # after 4th step: agent 0 has moved into the contested cell, agent 1 stayed put (force-stopped)
+    # after 3rd step: agent 0 has moved into the contested cell, agent 1 stayed put (force-stopped)
     assert agent_0.current_entry_point == ((3, 3), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
     assert agent_1.current_entry_point == ((3, 4), Grid4TransitionsEnum.WEST)
     assert agent_1.speed_counter.distance == 1
 
-    # 5th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
+    # 4th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
     # make it collide with agent 1, which the motion check forbids -> agent 0 force-stopped
     _, rewards, _, _ = env.step(forward)
     assert agent_0.state_machine.previous_state == TrainState.MOVING
@@ -1261,7 +1263,7 @@ def test_env_collision_penalty_on_head_on_conflict():
     # persisting deadlock now keeps accruing a collision penalty every step, alternating between the
     # two agents, rather than just the one time each incurred above.
 
-    # 6th step: agent 1 (STOPPED since the 5th step) is promoted back to MOVING optimistically -
+    # 5th step: agent 1 (STOPPED since the 4th step) is promoted back to MOVING optimistically -
     # its real attempt into (3,3) is denied for real this same step (still held by agent 0, which is
     # itself mid-settling this step, protecting its cell via self-loop) -> a fresh penalty for agent 1.
     _, rewards, _, _ = env.step(forward)
@@ -1273,7 +1275,7 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # 7th step: agent 0 now has genuine pre-step speed and makes its own real attempt into (3,4),
+    # 6th step: agent 0 now has genuine pre-step speed and makes its own real attempt into (3,4),
     # denied for real (agent 1 is now mid-settling, holding (3,4) via self-loop) -> a fresh penalty
     # for agent 0 instead - and so on, alternating forever for as long as the deadlock persists.
     _, rewards, _, _ = env.step(forward)
@@ -1370,10 +1372,9 @@ def _make_platoon_env(n_agents: int, start_columns, lead_max_speed: float = 1.0)
 
 
 def _depart(env):
-    """Two steps to move all agents from WAITING through READY_TO_DEPART onto the rail."""
+    """One step to move all earliest_departure=0 agents from WAITING straight onto the rail."""
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(len(env.agents))}
-    for _ in range(2):
-        env.step(forward)
+    env.step(forward)
 
 
 @pytest.mark.parametrize("start_columns", [(3, 2, 1), (1, 2, 3)], ids=["front-is-agent-0", "front-is-agent-2"])

@@ -159,8 +159,8 @@ def test_legacy_envs():
     [
         ("env_data.tests.service_test.Test_0", "Level_0.pkl", -593),
         ("env_data.tests.service_test.Test_1", "Level_0.pkl", -593),
-        ("env_data.tests.service_test.Test_0", "Level_1.pkl", -561.0),
-        ("env_data.tests.service_test.Test_1", "Level_1.pkl", -561.0),
+        ("env_data.tests.service_test.Test_0", "Level_1.pkl", -555.0),
+        ("env_data.tests.service_test.Test_1", "Level_1.pkl", -555.0),
     ])
 def test_regression_forward(package, resource, expected):
     env, _ = RailEnvPersister.load_new(resource, load_from_package=package)
