@@ -819,6 +819,32 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def _is_speed_zero(self, candidate_speed: Fraction) -> bool:
         return candidate_speed == 0.0
 
+    def _action_valid(self, action: RailEnvActions, agent: EnvAgent,
+                      pre_next_entry_point: Optional[EntryPointT],
+                      pre_speed: Optional[Fraction], pre_offset: Optional[Fraction]) -> bool:
+        """
+        Whether `action` leads to a valid transition, derived from pre-step values/action alone -
+        verbatim-adapted from the same is_cell_exit/candidate_entry_point_independent/action_valid
+        derivation as step()'s own (2) CANDIDATE ENTRY POINT block and _candidate_entry_points' internal
+        computation (kept separate from the latter since _candidate_entry_points doesn't expose
+        candidate_entry_point_independent, and needs its own copy for the map-entry/on-map-transition
+        candidates regardless).
+        """
+        is_on_map = pre_next_entry_point is not None
+        if is_on_map:
+            candidate_entry_point_independent = self.rail.apply_action_independent(action, pre_next_entry_point)
+        else:
+            candidate_entry_point_independent = self.rail.apply_action_independent(action, agent.initial_entry_point)
+        # SpeedCounter.is_cell_exit() contract: True off map (self._distance is None), else
+        # distance + speed >= SEGMENT_LENGTH - deliberately NOT gated on speed > 0 (a STOPPED agent
+        # banked exactly at the boundary, pre_speed == 0, still counts as at cell exit). Unlike
+        # _candidate_entry_points' own is_cell_exit reconstruction - which folds in a pre_speed > 0 guard
+        # as a state-free proxy for state == MOVING, since its is_cell_exit is only ever used ANDed with
+        # is_on_map in the (3b.5) branch - action_valid is used off-map too and needs the real,
+        # state-independent geometric definition, not that proxy.
+        is_cell_exit = pre_offset is None or (pre_offset + pre_speed >= SEGMENT_LENGTH)
+        return not is_cell_exit or candidate_entry_point_independent is not None
+
     def _candidate_entry_points(self, action: RailEnvActions, agent: EnvAgent,
                                 pre_current_entry_point: Optional[EntryPointT],
                                 pre_next_entry_point: Optional[EntryPointT],
@@ -1158,13 +1184,31 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # candidates accepted in distribute phase
             else:
+                action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+                candidate_entry_point, _ = self._candidate_entry_points(
+                    action=action,
+                    agent=agent,
+                    pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                    pre_next_entry_point=pre_step.pre_next_entry_points[h],
+                    pre_speed=pre_speed,
+                    pre_offset=pre_step.pre_offsets[h],
+                    pre_done=pre_step.pre_dones[h],
+                    pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                    elapsed_steps=self._elapsed_steps,
+                )
                 assert agent.speed_counter.distance == self._candidate_distance(
                     pre_speed=pre_speed,
                     pre_offset=pre_step.pre_offsets[h],
                     pre_done=pre_step.pre_dones[h],
-                    candidate_entry_point=self.temp_transition_data[h].candidate_entry_point,
-                    in_malfunction=agent.malfunction_handler.in_malfunction,
-                    action_valid=self.temp_transition_data[h].state_transition_signal.action_valid,
+                    candidate_entry_point=candidate_entry_point,
+                    in_malfunction=pre_step.pre_in_malfunctions[h],
+                    action_valid=self._action_valid(
+                        action=action,
+                        agent=agent,
+                        pre_next_entry_point=pre_step.pre_next_entry_points[h],
+                        pre_speed=pre_speed,
+                        pre_offset=pre_step.pre_offsets[h],
+                    ),
                     agent_targets=agent.targets,
                 )
 
@@ -1182,14 +1226,31 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     assert agent.speed_counter.speed == 0
             # candidates accepted in distribute phase
             else:
+                candidate_entry_point, _ = self._candidate_entry_points(
+                    action=action,
+                    agent=agent,
+                    pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                    pre_next_entry_point=pre_step.pre_next_entry_points[h],
+                    pre_speed=pre_speed,
+                    pre_offset=pre_step.pre_offsets[h],
+                    pre_done=pre_step.pre_dones[h],
+                    pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                    elapsed_steps=self._elapsed_steps,
+                )
                 assert agent.speed_counter.speed == self._candidate_speed(
                     pre_speed=pre_speed,
                     action=action,
                     pre_current_entry_point=pre_step.pre_current_entry_points[h],
                     pre_done=pre_step.pre_dones[h],
-                    candidate_entry_point=self.temp_transition_data[h].candidate_entry_point,
-                    in_malfunction=agent.malfunction_handler.in_malfunction,
-                    action_valid=self.temp_transition_data[h].state_transition_signal.action_valid,
+                    candidate_entry_point=candidate_entry_point,
+                    in_malfunction=pre_step.pre_in_malfunctions[h],
+                    action_valid=self._action_valid(
+                        action=action,
+                        agent=agent,
+                        pre_next_entry_point=pre_step.pre_next_entry_points[h],
+                        pre_speed=pre_speed,
+                        pre_offset=pre_step.pre_offsets[h],
+                    ),
                     agent_targets=agent.targets,
                     agent_max_speed=agent.speed_counter.max_speed,
                 )
