@@ -660,18 +660,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE) - candidate_speed/candidate_distance
             # already computed in the collect phase ((3a)/(3c)); mirrors
             # _check_post_speed_distance_speedup_invariants's own "discarded vs. accepted" shape (a
-            # single set() call here instead of the assertions there) - both branches gate purely on
-            # resource_check, nothing more granular, and neither needs a crossing_completed flag
-            # (set() derives is_cell_entry internally, from old vs. new distance alone).
-            if not resource_check:
-                # candidates discarded -> speed 0 (None if the agent never made it onto the map this
-                # step - agent.old_entry_point is this step's stable pre-step snapshot, untouched by
-                # (10a) above) and distance capped at the pre-step speed, not credited with the crossing
-                # (SpeedCounter.distance/.speed still hold their pre-step values here - (10a) never
-                # touches speed_counter, and this is (10b)'s own first write to it this step).
-                new_speed = None if agent.old_entry_point is None else Fraction(0)
-                new_distance = SpeedCounter.distance_without_crossing(
-                    agent.speed_counter.distance, agent.speed_counter.speed)
+            # single set() call here instead of the assertions there).
+            if not resource_check and agent.old_entry_point is None:
+                # off map pre-step (agent.old_entry_point is this step's stable pre-step snapshot,
+                # untouched by (10a) above), denied map-entry attempt - speed_counter is already
+                # (None, None) here (the off-map invariant), and distance_without_crossing(None, None)
+                # is None too, so this is already exactly right: a true no-op.
+                pass
+            elif not resource_check:
+                # on-map, candidate discarded -> speed forced to 0 and distance capped at the pre-step
+                # speed, not credited with the (denied) crossing (SpeedCounter.distance/.speed still
+                # hold their pre-step values here - (10a) never touches speed_counter, and this is
+                # (10b)'s own first write to it this step).
+                new_speed = Fraction(0)
+                new_distance = SpeedCounter.distance_without_crossing(agent.speed_counter.distance, agent.speed_counter.speed)
                 agent.speed_counter.set(new_speed, new_distance)
             else:
                 # candidates accepted - distance is exactly candidate_distance in every case (already
