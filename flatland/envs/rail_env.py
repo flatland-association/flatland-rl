@@ -486,7 +486,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             state = agent.state
 
             # (2) CANDIDATE ENTRY POINT: action validity - need both by speed update (3a) and position update (3b) below
-            is_on_map = agent.next_entry_point is not None
             # whether the action leads to a valid transition - precomputed in pre_step_snapshot so
             # self.rail.apply_action_independent() runs exactly once per agent per step (also read by
             # _candidate_entry_points/_candidate_speed/_candidate_distance below, via the post-step checks)
@@ -497,110 +496,39 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             is_cell_exit = agent.speed_counter.is_cell_exit()
             action_valid = not is_cell_exit or candidate_entry_point_independent is not None
 
-            # (3a) SPEED UPDATE
-            # N.B. new speed is only applied if MOVING state and previous was not READY_TO_DEPART/MALFUNCTION_OFF_MAP, see below
-
-            # N.B. no acceleration if the action isn't (corrected to) MOVE_FORWARD, e.g. facing a
-            # symmetric switch with the action corrected to STOP_MOVING, or MOVE_LEFT/MOVE_RIGHT
-            # corrected to MOVE_FORWARD but not accelerated as the original action wasn't forward.
-            # get desired candidate speed independent of resource check
+            # (3a) SPEED UPDATE / (3b) POSITION UPDATE - delegated to the shared, pre-step-only
+            # candidate_ methods (also used by the post-step checks) instead of duplicating the branch
+            # logic inline here - see _candidate_entry_points/_candidate_speed's own docstrings for the
+            # branch-by-branch derivation. (3b) is computed first since (3a) needs its candidate_entry_point
+            # (the "done or target reached" branch).
             agent_max_speed = agent.speed_counter.max_speed
-            # (3a.1) done
-            if state == TrainState.DONE:
-                candidate_speed = Fraction(0)
-            # (3a.2) malfunction
-            elif in_malfunction:
-                candidate_speed = Fraction(0)
-            # (3a.3) map entry
-            elif not is_on_map and movement_action_given and earliest_departure_reached:
-                candidate_speed = self.acceleration_delta
-            # (3a.4) stay off map
-            elif not is_on_map:
-                candidate_speed = Fraction(0)
-            # (3a.5) invalid action
-            elif is_on_map and candidate_entry_point_independent is None and is_cell_exit:
-                candidate_speed = Fraction(0)
-            # (3a.6) accelerate upon forward
-            elif action == RailEnvActions.MOVE_FORWARD:
-                candidate_speed = agent.speed_counter.speed + self.acceleration_delta
-            # (3a.7) start moving
-            elif agent.speed_counter.speed == 0 and movement_action_given:
-                candidate_speed = agent.speed_counter.speed + self.acceleration_delta
-            # (3a.8) braking
-            elif stop_action_given:
-                # decelerate
-                candidate_speed = agent.speed_counter.speed + self.braking_delta
-            # (3a.9) default
-            else:
-                candidate_speed = agent.speed_counter.speed
-            candidate_speed = _cap_speed(agent_max_speed, candidate_speed)
-
-            # verification: _candidate_entry_points (used by _check_post_position_invariants) should
-            # reproduce exactly the same (candidate_entry_point, candidate_next_entry_point) as the
-            # inline (3b) derivation below, given the same pre-step values.
-            _verify_candidate_entry_point, _verify_candidate_next_entry_point = self._candidate_entry_points(
+            pre_speed = agent.speed_counter.speed
+            pre_offset = agent.speed_counter.distance
+            pre_done = agent.target_entry_point is not None
+            candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
                 action=action,
                 agent=agent,
                 pre_current_entry_point=agent.current_entry_point,
                 pre_next_entry_point=agent.next_entry_point,
-                pre_speed=agent.speed_counter.speed,
-                pre_offset=agent.speed_counter.distance,
-                pre_done=agent.target_entry_point is not None,
+                pre_speed=pre_speed,
+                pre_offset=pre_offset,
+                pre_done=pre_done,
                 pre_in_malfunction=in_malfunction,
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=candidate_entry_point_independent,
             )
-
-            # (3b) POSITION UPDATE - mirrors _check_post_position_invariants's "candidates accepted"
-            # derivation: done/malfunction/map-entry/on-map-transition/stay.
-            # (3b.1) done
-            if state == TrainState.DONE:
-                # design: for remove_agents_at_target=True, agent.current_entry_point is already
-                # None (handle_done_state() cleared it on removal) - a no-op. For
-                # remove_agents_at_target=False, this reserves the agent's occupied target cell as
-                # both its current and candidate resource
-                candidate_entry_point = agent.current_entry_point
-                candidate_next_entry_point = agent.next_entry_point
-            # (3b.2) malfunction - takes priority over (3b.3)/(3b.5) below: in_malfunction is resolved
-            # before this loop runs (see (0a)/(0b)), so it can be True while `state` (read above, still
-            # the pre-transition value) hasn't caught up to MALFUNCTION/MALFUNCTION_OFF_MAP yet -
-            # without this priority, a same-step malfunction onset could let a genuine crossing through.
-            elif in_malfunction:
-                candidate_entry_point = agent.current_entry_point
-                candidate_next_entry_point = agent.next_entry_point
-            #  (3b.3) map entry
-            elif action_valid and (
-                (state == TrainState.READY_TO_DEPART and movement_action_given)
-                # design (issue #280): MALFUNCTION_OFF_MAP intentionally does not go via READY_TO_DEPART -
-                # a movement action adds it to the map directly if possible, same as MOVING's own
-                # straight-to-MOVING shortcut in _handle_malfunction_off_map. A STOP_MOVING action never
-                # promotes it (_handle_malfunction_off_map only checks movement_action_given), so it is
-                # deliberately excluded here - including it would hand the distribute phase a candidate
-                # that never gets committed, an optimistic mismatch with no compensating benefit.
-                or (state == TrainState.MALFUNCTION_OFF_MAP and earliest_departure_reached
-                    and movement_action_given)
-            ):
-                candidate_entry_point = initial_entry_point
-                candidate_next_entry_point = candidate_entry_point_independent
-            # (3b.5) on-map cell transition
-            elif is_on_map and is_cell_exit and candidate_entry_point_independent is not None and state == TrainState.MOVING:
-                # design: actions applied at cell entry -- attempt the already-decided target
-                # (guaranteed on-map by is_on_map above); this step's action instead decides the
-                # look-ahead beyond it (candidate_entry_point_independent, computed above in (2)).
-                candidate_entry_point = agent.next_entry_point
-                candidate_next_entry_point = candidate_entry_point_independent
-            # (3b.2bis/3b.4/3b.6) unchanged - start-moving-from-stop, off-map-stay, and cell-stay
-            # (mid-cell / attempted-but-denied) all set the identical "keep current" candidate - a
-            # pure identity copy of already-valid current/next_entry_point, so it can't violate the
-            # off/on-map invariant that already held.
-            else:
-                candidate_entry_point = agent.current_entry_point
-                candidate_next_entry_point = agent.next_entry_point
-
-            assert (candidate_entry_point, candidate_next_entry_point) == (_verify_candidate_entry_point, _verify_candidate_next_entry_point), \
-                f"_candidate_entry_points diverged from inline (3b): inline={(candidate_entry_point, candidate_next_entry_point)} " \
-                f"_candidate_entry_points={(_verify_candidate_entry_point, _verify_candidate_next_entry_point)} agent={i_agent} state={state} " \
-                f"in_malfunction={in_malfunction} action={action} action_valid={action_valid}"
+            candidate_speed = self._candidate_speed(
+                pre_speed=pre_speed,
+                pre_offset=pre_offset,
+                action=action,
+                pre_current_entry_point=agent.current_entry_point,
+                pre_done=pre_done,
+                candidate_entry_point=candidate_entry_point,
+                in_malfunction=in_malfunction,
+                candidate_entry_point_independent=candidate_entry_point_independent,
+                agent_targets=agent.targets,
+                agent_max_speed=agent_max_speed,
+            )
 
             if self.check_step_pre_post_conditions:
                 self._check_off_on_map_invariant(candidate_entry_point, candidate_next_entry_point)
@@ -1141,21 +1069,22 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         accepted" derivation (assertions there become a return statement here).
 
         N.B. known gap, to be revisited: dropped the original assertions' `agent.target_entry_point`
-        cross-checks and the "stay off map" branch's `agent.speed_counter.distance is None` cross-check
-        (both unrelated to the speed value itself, the latter already covered by
-        _check_state_off_on_map_invariant) - callers should not rely on this method for those.
+        cross-checks (unrelated to the speed value itself) - callers should not rely on this method for
+        that distinction.
+
+        design: mirrors _candidate_entry_points - every branch below always returns the real
+        collect-phase placeholder value, matching step()'s own (3a) convention of never skipping
+        computation for a done/malfunctioning/off-map/invalid-action agent (see the loop's own N.B.
+        comment). The real post-step agent.speed_counter.speed is None instead of this value exactly
+        when off map or removed at target - callers must guard that separately (see
+        _check_post_speed_distance_speedup_invariants's own elif branches), not rely on this method's
+        return value for the None case.
         """
         # done or target reached
         if pre_done or candidate_entry_point in agent_targets:
-            # handle_done_state() clears position and nulls speed_counter (speed/distance both None) on
-            # the exact step the agent reaches DONE and gets removed.
-            if self.remove_agents_at_target:
-                return None
             return Fraction(0)
         # malfunction
         if in_malfunction:
-            if pre_current_entry_point is None:
-                return None
             return Fraction(0)
         # map entry - candidate_entry_point is exactly predictive of a real map entry here, same as
         # _candidate_distance's own "map entry" branch.
@@ -1163,8 +1092,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return _cap_speed(agent_max_speed, self.acceleration_delta)
         # stay off map
         if pre_current_entry_point is None:
-            return None
-        # invalid action at cell transition
+            return Fraction(0)
+        # invalid action at cell exit - see _candidate_distance's own docstring for why only this one
+        # (not _candidate_distance) needs the explicit is_cell_exit gate.
         is_cell_exit = pre_offset is None or (pre_offset + pre_speed >= SEGMENT_LENGTH)
         if candidate_entry_point_independent is None and is_cell_exit:
             return Fraction(0)
@@ -1252,18 +1182,26 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     elapsed_steps=self._elapsed_steps,
                     candidate_entry_point_independent=candidate_entry_point_independent,
                 )
-                assert agent.speed_counter.speed == self._candidate_speed(
-                    pre_speed=pre_speed,
-                    pre_offset=pre_step.pre_offsets[h],
-                    action=action,
-                    pre_current_entry_point=pre_step.pre_current_entry_points[h],
-                    pre_done=pre_step.pre_dones[h],
-                    candidate_entry_point=candidate_entry_point,
-                    in_malfunction=pre_step.pre_in_malfunctions[h],
-                    candidate_entry_point_independent=candidate_entry_point_independent,
-                    agent_targets=agent.targets,
-                    agent_max_speed=agent.speed_counter.max_speed,
-                )
+                # _candidate_speed never returns None (see its own docstring) - the real post-step speed
+                # is None instead exactly when removed at target or still/again off map, mirroring
+                # _check_post_position_update_invariants's own remove_agents_at_target guard.
+                if self.remove_agents_at_target and (pre_step.pre_dones[h] or candidate_entry_point in agent.targets):
+                    assert agent.speed_counter.speed is None
+                elif candidate_entry_point is None:
+                    assert agent.speed_counter.speed is None
+                else:
+                    assert agent.speed_counter.speed == self._candidate_speed(
+                        pre_speed=pre_speed,
+                        pre_offset=pre_step.pre_offsets[h],
+                        action=action,
+                        pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                        pre_done=pre_step.pre_dones[h],
+                        candidate_entry_point=candidate_entry_point,
+                        in_malfunction=pre_step.pre_in_malfunctions[h],
+                        candidate_entry_point_independent=candidate_entry_point_independent,
+                        agent_targets=agent.targets,
+                        agent_max_speed=agent.speed_counter.max_speed,
+                    )
 
     def _infrastructure_representation(self, entry_point: EntryPointT) -> str:
         raise NotImplementedError()
