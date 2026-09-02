@@ -406,13 +406,16 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             self.dones["__all__"] = True
 
-    def handle_done_state(self, agent):
-        """ Any updates to agent to be made in Done state """
+    def handle_done_state(self, agent, candidate_entry_point):
+        """
+        Any updates to agent to be made in Done state.
+
+        candidate_entry_point : the entry point reached
+        """
         if agent.state == TrainState.DONE and agent.arrival_time is None:
             agent.arrival_time = self._elapsed_steps
-            # capture which specific target alternative was reached before current_entry_point is
-            # possibly cleared below - see EnvAgent.target_entry_point.
-            agent.target_entry_point = agent.current_entry_point
+            # capture which specific target alternative was reached - see EnvAgent.target_entry_point.
+            agent.target_entry_point = candidate_entry_point
             self.dones[agent.handle] = True
             if self.remove_agents_at_target:
                 agent.current_entry_point = None
@@ -592,6 +595,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (7) FETCH THE SAVED TRANSITION DATA FOR AGENT
             agent_transition_data = self.temp_transition_data[i_agent]
             candidate_entry_point = agent_transition_data.candidate_entry_point
+            candidate_next_entry_point = agent_transition_data.candidate_next_entry_point
 
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             resource_check = self.resource_check.check_resource(i_agent)
@@ -618,31 +622,23 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             agent.state_machine.step()
 
             # (10a) POSITION UPDATE
-            # INVARIANT: agent.current_entry_point and agent.next_entry_point are always both None
-            # (agent off-map) XOR both not None (agent on-map); while on-map, the two are always
-            # updated together, on every crossing, and next_entry_point must never equal
-            # current_entry_point - there is no "nothing pending" sentinel: entering a new cell is
-            # only ever committed together with a valid, genuinely different candidate for what lies
-            # beyond it (see (3b) above, where the crossing itself is only attempted if that candidate
-            # exists - so candidate_entry_point below is guaranteed non-None whenever entering_new_cell
-            # is True).
-            if agent.state == TrainState.MOVING and agent_transition_data.speed == 0:
-                # design (D1): pre-step speed 0 (STOPPED/MALFUNCTION promoted to MOVING this step) -
-                # this step only grants permission to move; it contributes zero speed/distance itself,
-                # so no crossing may be committed yet. Position/next_entry_point stay exactly as they
-                # were, deferred to the following (genuinely pre-speed>0) step. See (10b) below for the
-                # matching distance/speed treatment.
+            pre_done = agent.target_entry_point is not None
+
+            # candidates discarded if not resource check -> keep previous configuration (no-op)
+            if not resource_check:
                 pass
-            elif agent.state == TrainState.MOVING or (
-                agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING
-                and resource_check
-            ):
-                entering_new_cell = agent.current_entry_point != candidate_entry_point
+            # target reached and removed
+            elif self.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
+                agent.current_entry_point = None
+                agent.next_entry_point = None
+                if not pre_done:
+                    agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
+            # candidates accepted
+            else:
                 agent.current_entry_point = _sanitize_entry_point(candidate_entry_point)
-                if entering_new_cell:
-                    assert agent_transition_data.candidate_next_entry_point is not None
-                    agent.next_entry_point = _sanitize_entry_point(agent_transition_data.candidate_next_entry_point)
-                agent.state_machine.update_if_reached(agent.current_entry_point, agent.targets)
+                agent.next_entry_point = _sanitize_entry_point(candidate_next_entry_point)
+                if not pre_done:
+                    agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
 
             # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE)
             if agent.state == TrainState.MOVING and agent_transition_data.speed == 0:
@@ -705,7 +701,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # and calls agent.speed_counter.step(speed=None, ...) itself.
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
-            self.handle_done_state(agent)
+            self.handle_done_state(agent, candidate_entry_point)
             have_all_agents_ended &= (agent.state == TrainState.DONE)
 
             # (12) UPDATE REWARDS
