@@ -457,10 +457,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # N.B. every candidate_ variable in this loop (candidate_speed, candidate_entry_point,
             # candidate_entry_point_independent, candidate_next_entry_point, ...) reflects
-            # the unilateral update of the collect phase (loop 1) - computed from the action alone,
+            # the unilateral update of the collect phase - computed from the action alone,
             # including for an invalid action, which itself just yields a
             # zeroed/unchanged candidate (e.g. candidate_speed = 0) rather than skipping computation
-            # entirely. Distribute phase (loop 2) checks whether the resource check actually granted it.
+            # entirely. The distribute phase checks whether the resource check actually granted it.
 
             # Invariant: both None off-map, both set and different on-map).
 
@@ -535,17 +535,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # verification: _candidate_entry_points (used by _check_post_position_invariants) should
             # reproduce exactly the same (candidate_entry_point, candidate_next_entry_point) as the
             # inline (3b) derivation below, given the same pre-step values.
-            # _verify_candidate_entry_point, _verify_candidate_next_entry_point = self._candidate_entry_points(
-            #     action=action,
-            #     agent=agent,
-            #     pre_current_entry_point=agent.current_entry_point,
-            #     pre_next_entry_point=agent.next_entry_point,
-            #     pre_speed=agent.speed_counter.speed,
-            #     pre_offset=agent.speed_counter.distance,
-            #     pre_done=agent.target_entry_point is not None,
-            #     pre_in_malfunction=in_malfunction,
-            #     elapsed_steps=self._elapsed_steps,
-            # )
+            _verify_candidate_entry_point, _verify_candidate_next_entry_point = self._candidate_entry_points(
+                action=action,
+                agent=agent,
+                pre_current_entry_point=agent.current_entry_point,
+                pre_next_entry_point=agent.next_entry_point,
+                pre_speed=agent.speed_counter.speed,
+                pre_offset=agent.speed_counter.distance,
+                pre_done=agent.target_entry_point is not None,
+                pre_in_malfunction=in_malfunction,
+                elapsed_steps=self._elapsed_steps,
+            )
 
             # (3b) POSITION UPDATE - mirrors _check_post_position_invariants's "candidates accepted"
             # derivation: done/malfunction/map-entry/on-map-transition/stay.
@@ -571,8 +571,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # a movement action adds it to the map directly if possible, same as MOVING's own
                 # straight-to-MOVING shortcut in _handle_malfunction_off_map. A STOP_MOVING action never
                 # promotes it (_handle_malfunction_off_map only checks movement_action_given), so it is
-                # deliberately excluded here - including it would hand loop 2 a candidate that never gets
-                # committed, an optimistic mismatch with no compensating benefit.
+                # deliberately excluded here - including it would hand the distribute phase a candidate
+                # that never gets committed, an optimistic mismatch with no compensating benefit.
                 or (state == TrainState.MALFUNCTION_OFF_MAP and earliest_departure_reached
                     and movement_action_given)
             ):
@@ -593,10 +593,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
 
-            # assert (candidate_entry_point, candidate_next_entry_point) == (_verify_candidate_entry_point, _verify_candidate_next_entry_point), \
-            #     f"_candidate_entry_points diverged from inline (3b): inline={(candidate_entry_point, candidate_next_entry_point)} " \
-            #     f"_candidate_entry_points={(_verify_candidate_entry_point, _verify_candidate_next_entry_point)} agent={i_agent} state={state} " \
-            #     f"in_malfunction={in_malfunction} action={action} action_valid={action_valid}"
+            assert (candidate_entry_point, candidate_next_entry_point) == (_verify_candidate_entry_point, _verify_candidate_next_entry_point), \
+                f"_candidate_entry_points diverged from inline (3b): inline={(candidate_entry_point, candidate_next_entry_point)} " \
+                f"_candidate_entry_points={(_verify_candidate_entry_point, _verify_candidate_next_entry_point)} agent={i_agent} state={state} " \
+                f"in_malfunction={in_malfunction} action={action} action_valid={action_valid}"
 
             if self.check_step_pre_post_conditions:
                 self._check_off_on_map_invariant(candidate_entry_point, candidate_next_entry_point)
@@ -639,7 +639,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
 
             # design: actions applied at cell entry -- carry this step's attempted target and
-            # look-ahead candidate via per-step scratch data; loop 2 decides whether to promote
+            # look-ahead candidate via per-step scratch data; the distribute phase decides whether to promote
             # the candidate into agent.next_entry_point once the attempt's outcome (motion check)
             # is known. agent.next_entry_point itself is left untouched here so it still holds the
             # value being contested until that outcome is known.
@@ -830,7 +830,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         """
         The expected (current, next) entry point pair for this step, given action + pre-step values
         (`elapsed_steps` included as one, i.e. `self._elapsed_steps` after its own (0) increment, same
-        as loop 1 sees it; `pre_done` is `agent.target_entry_point is not None`, NOT `self.dones` - see
+        as the collect phase sees it; `pre_done` is `agent.target_entry_point is not None`, NOT `self.dones` - see
         the "already done" branch below) -
         verbatim-adapted from _check_post_position_invariants's own "candidates accepted in distribute
         phase" derivation (assertions there become return statements here), so both step()'s own (3b)
@@ -883,10 +883,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # map entry
         if pre_current_entry_point is None and candidate_entry_point is not None:
             return candidate_entry_point, candidate_next_entry_point
-        # target reached
+        # target reached - real entering-target candidate (matches the collect phase's own
+        # resource-reservation value, needed there for collision detection); when
+        # remove_agents_at_target, the actual clearing to None only happens afterward, in the
+        # distribute phase (handle_done_state) - not this method's job (see
+        # _check_post_position_invariants's own guard for that).
         if candidate_entry_point in agent.targets and (pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH):
-            if self.remove_agents_at_target:
-                return None, None
             return candidate_entry_point, candidate_next_entry_point
         # on-map cell transition
         if candidate_next_entry_point is not None and (pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH):
@@ -958,7 +960,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Capture per-agent speed/entry-point/done/malfunction state for the post-step checks
         (`_check_post_speed_distance_invariants`/`_check_post_position_invariants`) to verify the
         post-step update against. Called after (0a)/(0b) so pre_in_malfunctions reflects this step's
-        own malfunction counter update/roll - the same value loop 1's own `in_malfunction` read sees -
+        own malfunction counter update/roll - the same value the collect phase's own `in_malfunction` read sees -
         rather than the previous step's already-stale ending malfunction status.
         """
         return PreStepSnapshot(
@@ -1012,24 +1014,28 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         """
         for h in pre_step.pre_speeds.keys():
             agent = self.agents[h]
+            action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+            candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
+                action=action,
+                agent=agent,
+                pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                pre_next_entry_point=pre_step.pre_next_entry_points[h],
+                pre_speed=pre_step.pre_speeds[h],
+                pre_offset=pre_step.pre_offsets[h],
+                pre_done=pre_step.pre_dones[h],
+                pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                elapsed_steps=self._elapsed_steps,
+            )
             # candidates discarded in distribute phase -> previous configuration
             if not self.temp_transition_data[h].resource_check:
                 assert agent.current_entry_point == pre_step.pre_current_entry_points[h]
                 assert agent.next_entry_point == pre_step.pre_next_entry_points[h]
+            # target reached and removed
+            elif self.remove_agents_at_target and (pre_step.pre_dones[h] or candidate_entry_point in agent.targets):
+                assert agent.current_entry_point is None
+                assert agent.next_entry_point is None
             # candidates accepted in distribute phase
             else:
-                action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
-                candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
-                    action=action,
-                    agent=agent,
-                    pre_current_entry_point=pre_step.pre_current_entry_points[h],
-                    pre_next_entry_point=pre_step.pre_next_entry_points[h],
-                    pre_speed=pre_step.pre_speeds[h],
-                    pre_offset=pre_step.pre_offsets[h],
-                    pre_done=pre_step.pre_dones[h],
-                    pre_in_malfunction=pre_step.pre_in_malfunctions[h],
-                    elapsed_steps=self._elapsed_steps,
-                )
                 assert agent.current_entry_point == candidate_entry_point
                 assert agent.next_entry_point == candidate_next_entry_point
 
