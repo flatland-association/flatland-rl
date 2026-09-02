@@ -532,6 +532,21 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_speed = agent.speed_counter.speed
             candidate_speed = _cap_speed(agent_max_speed, candidate_speed)
 
+            # verification: _candidate_entry_points (used by _check_post_position_invariants) should
+            # reproduce exactly the same (candidate_entry_point, candidate_next_entry_point) as the
+            # inline (3b) derivation below, given the same pre-step values.
+            # _verify_candidate_entry_point, _verify_candidate_next_entry_point = self._candidate_entry_points(
+            #     action=action,
+            #     agent=agent,
+            #     pre_current_entry_point=agent.current_entry_point,
+            #     pre_next_entry_point=agent.next_entry_point,
+            #     pre_speed=agent.speed_counter.speed,
+            #     pre_offset=agent.speed_counter.distance,
+            #     pre_done=agent.target_entry_point is not None,
+            #     pre_in_malfunction=in_malfunction,
+            #     elapsed_steps=self._elapsed_steps,
+            # )
+
             # (3b) POSITION UPDATE - mirrors _check_post_position_invariants's "candidates accepted"
             # derivation: done/malfunction/map-entry/on-map-transition/stay.
             # (3b.1) done
@@ -577,6 +592,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             else:
                 candidate_entry_point = agent.current_entry_point
                 candidate_next_entry_point = agent.next_entry_point
+
+            # assert (candidate_entry_point, candidate_next_entry_point) == (_verify_candidate_entry_point, _verify_candidate_next_entry_point), \
+            #     f"_candidate_entry_points diverged from inline (3b): inline={(candidate_entry_point, candidate_next_entry_point)} " \
+            #     f"_candidate_entry_points={(_verify_candidate_entry_point, _verify_candidate_next_entry_point)} agent={i_agent} state={state} " \
+            #     f"in_malfunction={in_malfunction} action={action} action_valid={action_valid}"
 
             if self.check_step_pre_post_conditions:
                 self._check_off_on_map_invariant(candidate_entry_point, candidate_next_entry_point)
@@ -810,15 +830,16 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         """
         The expected (current, next) entry point pair for this step, given action + pre-step values
         (`elapsed_steps` included as one, i.e. `self._elapsed_steps` after its own (0) increment, same
-        as loop 1 sees it) -
+        as loop 1 sees it; `pre_done` is `agent.target_entry_point is not None`, NOT `self.dones` - see
+        the "already done" branch below) -
         verbatim-adapted from _check_post_position_invariants's own "candidates accepted in distribute
         phase" derivation (assertions there become return statements here), so both step()'s own (3b)
         POSITION UPDATE and the post-step check call this one, identically shaped, implementation.
 
-        N.B. known gap, to be revisited: does not yet special-case done / remove_agents_at_target
-        the way the original assertions did (dropped the `agent.current_entry_point ==
-        agent.target_entry_point` cross-check, which doesn't fit an (current, next) return shape) -
-        callers should not yet rely on this method alone for the done/target-removal distinction.
+        N.B. known gap, to be revisited: dropped the original assertions' `agent.current_entry_point ==
+        agent.target_entry_point` cross-check (which specific target alternative was reached), since it
+        doesn't fit an (current, next) return shape - callers should not rely on this method for that
+        distinction.
         """
         is_on_map = pre_next_entry_point is not None
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
@@ -853,9 +874,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             candidate_next_entry_point = pre_next_entry_point
 
         # done
+        # N.B. Covers both remove_agents_at_target cases.
         if pre_done:
-            if self.remove_agents_at_target:
-                return None, None
             return pre_current_entry_point, pre_next_entry_point
         # in malfunction
         if pre_in_malfunction:
@@ -945,7 +965,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             pre_speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
             pre_current_entry_points={agent.handle: agent.current_entry_point for agent in self.agents},
             pre_next_entry_points={agent.handle: agent.next_entry_point for agent in self.agents},
-            pre_dones={agent.handle: self.dones[agent.handle] for agent in self.agents},
+            pre_dones={agent.handle: agent.target_entry_point is not None for agent in self.agents},
             pre_in_malfunctions={agent.handle: agent.malfunction_handler.in_malfunction for agent in self.agents},
             pre_offsets={agent.handle: agent.speed_counter.distance for agent in self.agents},
         )
