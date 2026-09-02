@@ -421,8 +421,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 agent.current_entry_point = None
                 agent.next_entry_point = None
                 # design: distance is None when off map -- passing speed=None sets distance back
-                # to None exactly when the agent's position leaves the map.
-                agent.speed_counter.step(speed=None, crossing_completed=False)
+                # to None exactly when the agent's position leaves the map. Overrides whatever (10b)
+                # set this step (candidate_speed's own "done or target reached" branch returns
+                # Fraction(0), not None - see its docstring), which is fine since (10b) always runs
+                # strictly before this.
+                agent.speed_counter.set(None, None)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
         """
@@ -499,11 +502,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             is_cell_exit = agent.speed_counter.is_cell_exit()
             action_valid = not is_cell_exit or candidate_entry_point_independent is not None
 
-            # (3a) SPEED UPDATE / (3b) POSITION UPDATE - delegated to the shared, pre-step-only
-            # candidate_ methods (also used by the post-step checks) instead of duplicating the branch
-            # logic inline here - see _candidate_entry_points/_candidate_speed's own docstrings for the
-            # branch-by-branch derivation. (3b) is computed first since (3a) needs its candidate_entry_point
-            # (the "done or target reached" branch).
+            # (3a) SPEED UPDATE / (3b) POSITION UPDATE / (3c) CANDIDATE DISTANCE - delegated to the
+            # shared, pre-step-only candidate_ methods (also used by the post-step checks) instead of
+            # duplicating the branch logic inline here - see _candidate_entry_points/_candidate_speed/
+            # _candidate_distance's own docstrings for the branch-by-branch derivation. (3b) is computed
+            # first since (3a)/(3c) both need its candidate_entry_point (the "done or target reached"
+            # branch).
             agent_max_speed = agent.speed_counter.max_speed
             pre_speed = agent.speed_counter.speed
             pre_offset = agent.speed_counter.distance
@@ -531,6 +535,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 agent_targets=agent.targets,
                 agent_max_speed=agent_max_speed,
+            )
+            # (3c) CANDIDATE DISTANCE - computed once here for the distribute phase's (10b) to read,
+            # mirroring (3a)'s candidate_speed (previously only the post-step checks called
+            # _candidate_distance; (10b) re-derived an equivalent distance itself via SpeedCounter.step()).
+            candidate_distance = self._candidate_distance(
+                pre_speed=pre_speed,
+                pre_offset=pre_offset,
+                pre_done=pre_done,
+                candidate_entry_point=candidate_entry_point,
+                in_malfunction=in_malfunction,
+                candidate_entry_point_independent=candidate_entry_point_independent,
+                agent_targets=agent.targets,
             )
 
             if self.check_step_pre_post_conditions:
@@ -581,6 +597,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self.temp_transition_data[i_agent].candidate_entry_point = candidate_entry_point
             self.temp_transition_data[i_agent].candidate_next_entry_point = candidate_next_entry_point
             self.temp_transition_data[i_agent].candidate_speed = candidate_speed
+            self.temp_transition_data[i_agent].candidate_distance = candidate_distance
 
             self.resource_check.add_agent(i_agent, current_resource, new_resource)
 
@@ -640,65 +657,36 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 if not pre_done:
                     agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
 
-            # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE)
-            if agent.state == TrainState.MOVING and agent_transition_data.speed == 0:
-                # design (D1): pre-step speed 0 -> distance held unchanged this step
-                # (SpeedCounter.step() with crossing_completed=False and old self._speed==0 is a no-op
-                # on distance); speed ramps from rest via this step's candidate_speed
-                # (acceleration_delta). The following step, now genuinely pre-speed>0, is the one that
-                # actually completes the crossing (see (3b.5)/(10a) above).
-                agent.speed_counter.step(speed=agent_transition_data.candidate_speed, crossing_completed=False)
-            elif agent.state == TrainState.MOVING:
-                crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
-                # N.B. map entry (previous state READY_TO_DEPART/MALFUNCTION_OFF_MAP) also flows through
-                # here: candidate_speed is already acceleration_delta (see (3a.3)), and speed_counter.step()
-                # bootstraps distance to 0 for an off-map -> on-map transition regardless of crossing_completed.
-                speed = agent_transition_data.candidate_speed
-                # design: reaching or remaining in MOVING requires movement_allowed (see (9), state_machine's
-                # _handle_moving/_handle_stopped/_handle_ready_to_depart/_handle_malfunction_off_map/
-                # _handle_malfunction all gate a transition into MOVING on movement_action_given and
-                # movement_allowed) - so action_valid and resource_check are always True here; distance
-                # advances by the pre-step speed and, if the crossing genuinely completed
-                # (agent.old_entry_point != candidate_entry_point), wraps into the new cell
-                # (distance % SEGMENT_LENGTH) - otherwise it's a normal within-cell advance.
-                agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
-            elif agent.state == TrainState.STOPPED and agent.state_machine.previous_state == TrainState.MOVING:
-                crossing_completed = (agent.old_entry_point != candidate_entry_point) and resource_check
-                speed = Fraction(0)
-                if not agent_transition_data.state_transition_signal.action_valid or not resource_check:
-                    # MOVING -> STOPPED via invalid action at the cell boundary, or resource_check
-                    # denying the crossing to another agent: distance still advances by the pre-step
-                    # speed (SpeedCounter.step() -> _distance_update() adds pre-step speed
-                    # unconditionally) but is clamped at the cell boundary (min(pre_distance +
-                    # pre_speed, SEGMENT_LENGTH)) instead of wrapping into the new cell - the agent
-                    # travels up to the boundary this step, it just isn't credited with crossing it.
-                    # This banking is intentional, not a (D1) violation, in both cases: pre_speed is
-                    # always > 0 here (a MOVING agent's pre-step speed can never be 0), so the advance
-                    # is real. What (D1) rules out is a *later*, pre-speed-0 STOPPED->MOVING step
-                    # consuming this banked distance for a free crossing - prevented by (10a)/(10b)'s
-                    # pre-speed-0 deferral above.
-                    agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
+            # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE) - candidate_speed/candidate_distance
+            # already computed in the collect phase ((3a)/(3c)); mirrors
+            # _check_post_speed_distance_speedup_invariants's own "discarded vs. accepted" shape (a
+            # single set() call here instead of the assertions there) - both branches gate purely on
+            # resource_check, nothing more granular, and neither needs a crossing_completed flag
+            # (set() derives is_cell_entry internally, from old vs. new distance alone).
+            if not resource_check:
+                # candidates discarded -> speed 0 (None if the agent never made it onto the map this
+                # step - agent.old_entry_point is this step's stable pre-step snapshot, untouched by
+                # (10a) above) and distance capped at the pre-step speed, not credited with the crossing
+                # (SpeedCounter.distance/.speed still hold their pre-step values here - (10a) never
+                # touches speed_counter, and this is (10b)'s own first write to it this step).
+                new_speed = None if agent.old_entry_point is None else Fraction(0)
+                new_distance = SpeedCounter.distance_without_crossing(
+                    agent.speed_counter.distance, agent.speed_counter.speed)
+                agent.speed_counter.set(new_speed, new_distance)
+            else:
+                # candidates accepted - distance is exactly candidate_distance in every case (already
+                # None for "removed at target"/"stayed off map", see _candidate_distance's own
+                # docstring); speed needs the same None guard _check_post_speed_distance_speedup_invariants
+                # itself uses, since _candidate_speed never returns None (see its own docstring) even
+                # though the real post-step speed must be.
+                new_distance = agent_transition_data.candidate_distance
+                if self.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
+                    new_speed = None
+                elif candidate_entry_point is None:
+                    new_speed = None
                 else:
-                    # MOVING -> STOPPED via an explicit STOP_MOVING action that braked candidate_speed to
-                    # exactly 0 this step, action valid and resource_check granted: distance advances by
-                    # the pre-step speed and, if the crossing genuinely completed, wraps into the new cell
-                    # (distance % SEGMENT_LENGTH) - the agent can still complete an already-in-flight cell
-                    # crossing on the very step it comes to a stop.
-                    agent.speed_counter.step(speed=speed, crossing_completed=crossing_completed)
-            elif agent.state.is_on_map_state():
-                # TODO harmonize condition with overleaf - force stop or malfunction
-                agent.speed_counter.stop()
-            elif agent.state.is_off_map_state():
-                # design: speed and distance are None while off map
-                agent.speed_counter.step(speed=None, crossing_completed=False)
-            elif not self.remove_agents_at_target:
-                # design: DONE but not removed is neither on-map nor off-map (see
-                # TrainState.is_on_map_state()/is_off_map_state()) - position stays put, so freeze
-                # speed at 0 instead of setting distance to None (agent.speed_counter.step(None, ...)
-                # is reserved for when the position itself leaves the map, see handle_done_state()).
-                assert agent.state == TrainState.DONE
-                agent.speed_counter.step(speed=Fraction(0), crossing_completed=False)
-            # and calls agent.speed_counter.step(speed=None, ...) itself.
+                    new_speed = agent_transition_data.candidate_speed
+                agent.speed_counter.set(new_speed, new_distance)
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
             self.handle_done_state(agent, candidate_entry_point)

@@ -1,4 +1,5 @@
 import time
+from fractions import Fraction
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import _sanitize_entry_point
@@ -40,7 +41,7 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_0._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_0.speed_counter.step(speed=agent_0.speed_counter.max_speed, crossing_completed=False)
+    agent_0.speed_counter.set(speed=agent_0.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
@@ -55,7 +56,7 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
     agent_1._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_1.speed_counter.step(speed=agent_1.speed_counter.max_speed, crossing_completed=False)
+    agent_1.speed_counter.set(speed=agent_1.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
@@ -129,7 +130,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_0._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_0.speed_counter.step(speed=agent_0.speed_counter.max_speed, crossing_completed=False)
+    agent_0.speed_counter.set(speed=agent_0.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
@@ -144,7 +145,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
     agent_1._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_1.speed_counter.step(speed=agent_1.speed_counter.max_speed, crossing_completed=False)
+    agent_1.speed_counter.set(speed=agent_1.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
@@ -215,7 +216,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_0._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_0.speed_counter.step(speed=agent_0.speed_counter.max_speed, crossing_completed=False)
+    agent_0.speed_counter.set(speed=agent_0.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_0.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_0.current_entry_point))
@@ -230,7 +231,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
     agent_1._set_state(TrainState.MOVING)
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent_1.speed_counter.step(speed=agent_1.speed_counter.max_speed, crossing_completed=False)
+    agent_1.speed_counter.set(speed=agent_1.speed_counter.max_speed, distance=Fraction(0))
     # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
     # invariant (both set and different while on-map) even for this direct test-harness setup.
     agent_1.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent_1.current_entry_point))
