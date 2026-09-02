@@ -107,15 +107,19 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
 
 
 # pylint: disable=protected-access
-def test_earliest_departure_zero_bug_BYDESIGN() -> None:
+def test_earliest_departure_zero_bug_FIXED() -> None:
     """
-    TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: by design of
-         https://flatland-association.github.io/flatland-book/environment/environment/agent.html#state-machine,
-         an agent can go from WAITING to READY_TO_DEPART only after the first step transition. However, the design may be questioned:
-         we could drop ready_to_depart by adding condition earliest_departure_reached to transition from WAITING to MOVING.
+    Trains that have earliest_departure=0 are dispatched directly into MOVING on the very first step() call
+    given a movement action - they never observably visit READY_TO_DEPART first. Design (issue #280):
+    rail_env.py's step() forces WAITING -> READY_TO_DEPART for such an agent before that same first step's
+    own state read, so it is already READY_TO_DEPART by the time the (3b.3) map-entry branch looks at it -
+    symmetric with MALFUNCTION_OFF_MAP's own straight-to-MOVING shortcut in _handle_malfunction_off_map.
 
-    Trains that have the earliest departure at ts 0 cannot be dispatched at ts 0 but only at ts 1. It seems like
-    every train starts with train state Waiting no matter the earliest departure.
+    - Setup: two agents, both WAITING. Agent 1 has earliest_departure=0, agent 0 has earliest_departure=1.
+    - Step 1 (agent 0 DO_NOTHING, agent 1 MOVE_FORWARD): agent 0 reaches only READY_TO_DEPART (still off
+      map); agent 1 is dispatched straight into MOVING, at its initial entry point.
+    - Step 2 (both MOVE_FORWARD): agent 0 is now dispatched into MOVING too - one step later than agent 1,
+      matching the one-step gap between their earliest_departure values.
     """
 
     env = init_test_rail_env(1)
@@ -124,32 +128,28 @@ def test_earliest_departure_zero_bug_BYDESIGN() -> None:
     agent_0, agent_1 = env.agents[0], env.agents[1]
 
     assert agent_1.earliest_departure == 0
-    # Since agent 1s earliest departure is 0, we should be able to dispatch it, however
     assert agent_1.state == TrainState.WAITING
-    # the train state is waiting
 
-    # other train.
     assert agent_0.earliest_departure == 1
     assert agent_0.state == TrainState.WAITING
 
-    # Now if we try to dispatch train 1 and do not dispatch train 0 ---> both end up being in ready to depart!
+    # Dispatch train 1 (earliest_departure=0) but not train 0 (earliest_departure=1).
     env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.MOVE_FORWARD})
     agent_0, agent_1 = env.agents[0], env.agents[1]
     assert agent_0.state == TrainState.READY_TO_DEPART
-    assert agent_1.state == TrainState.READY_TO_DEPART
     assert agent_0.current_entry_point is None
-    assert agent_1.current_entry_point is None
+    assert agent_1.state == TrainState.MOVING
+    assert np.all(agent_1.current_entry_point[0] == agent_1.initial_entry_point[0])
 
-    # If we now try to dispatch both trains they will be dispatched.
+    # Now dispatch train 0 too.
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     agent_0, agent_1 = env.agents[0], env.agents[1]
     assert agent_0.state == TrainState.MOVING
     assert agent_1.state == TrainState.MOVING
 
     assert np.all(agent_0.current_entry_point[0] == agent_0.initial_entry_point[0])
-    assert np.all(agent_1.current_entry_point[0] == agent_1.initial_entry_point[0])
 
-    # Thus we showed that train 0 could be dispatched at it's earliest departure and train 1 could not
+    # Thus train 1 (earliest_departure=0) was dispatched one step earlier than train 0 (earliest_departure=1).
 
 
 def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():

@@ -465,8 +465,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (1) STATE TRANSITION SIGNALS
             stop_action_given = action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
+            # design (issue #280): an earliest_departure=0 agent never goes through a state_machine.step()
+            # call before the very first step() runs - tweak state directly here, before this step's own
+            # state read below, so it already sees READY_TO_DEPART instead of stale WAITING (symmetric
+            # with MALFUNCTION_OFF_MAP's own straight-to-MOVING shortcut in _handle_malfunction_off_map).
+            if self._elapsed_steps == 1 and agent.earliest_departure == 0 and not in_malfunction and agent.state == TrainState.WAITING:
+                agent.state_machine.set_state(TrainState.READY_TO_DEPART)
             movement_action_given = RailEnvActions.is_moving_action(action)
-            earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps
+            # design (issue #280): earliest_departure_reached is signalled one step earlier,
+            # so the WAITING -> READY_TO_DEPART transition it drives in
+            # the state machine completes in N-1, so the agens is READY_TO_DEPART in step N and can enter
+            # the grid in step N
+            earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps + 1
             state = agent.state
 
             # (2) CANDIDATE ENTRY POINT: action validity - need both by speed update (3a) and position update (3b) below
@@ -540,7 +550,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             #  (3b.3) map entry
             elif action_valid and (
                 (state == TrainState.READY_TO_DEPART and movement_action_given)
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: weirdly, MALFUNCTION_OFF_MAP does not go via READY_TO_DEPART, but STOP_MOVING and MOVE_* adds to map if possible
+                # design (issue #280): MALFUNCTION_OFF_MAP intentionally does not go via READY_TO_DEPART -
+                # STOP_MOVING and MOVE_* both add to map directly if possible, same as MOVING's own
+                # straight-to-MOVING shortcut in _handle_malfunction_off_map.
                 or (state == TrainState.MALFUNCTION_OFF_MAP and earliest_departure_reached
                     and (movement_action_given or stop_action_given))
             ):
@@ -583,7 +595,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
             self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
             # Earliest departure reached - Train is allowed to move now
-            self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps >= agent.earliest_departure
+            self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps + 1 >= agent.earliest_departure
             # Stop action given
             self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
             # Movement action given
