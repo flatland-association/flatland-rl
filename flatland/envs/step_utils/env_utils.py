@@ -14,5 +14,4 @@ class AgentTransitionData:
     candidate_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_next_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_distance: Optional[Fraction] = None
-    action_valid: bool = False
     resource_check: bool = False
