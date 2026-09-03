@@ -1008,6 +1008,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
+        stopped = pre_speed == 0
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
         no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not is_off_map
                                    and not invalid_action_at_cell_exit)
@@ -1034,7 +1035,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 and not is_off_map):
             return Fraction(0)
         # acceleration or start moving
-        if (action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action))) \
+        if (action == RailEnvActions.MOVE_FORWARD or (stopped and RailEnvActions.is_moving_action(action))) \
                 and no_earlier_case_applies:
             # pre_speed is None while WAITING (not yet departing this step) -
             # speed_after_acceleration(None, ...) == None matches that case too.
@@ -1072,6 +1073,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
+        stopped = pre_speed == 0
 
         # done
         if pre_done:
@@ -1102,7 +1104,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # agent's pre-step speed can never be 0).
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
         # stopped - excludes done/target reached/off map/malfunction/invalid action
-        if (pre_speed == 0 and not pre_done and not target_reached and not is_off_map and not in_malfunction
+        if (stopped and not pre_done and not target_reached and not is_off_map and not in_malfunction
                 and not invalid_action_at_cell_exit):
             return pre_offset
         # default - genuine residual, not exhausted by the branches above. Covers (on map, valid
