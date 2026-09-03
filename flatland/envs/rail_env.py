@@ -519,7 +519,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 pre_speed=pre_speed,
                 pre_offset=pre_offset,
                 pre_done=pre_done,
-                pre_in_malfunction=in_malfunction,
+                in_malfunction=in_malfunction,
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=candidate_entry_point_independent,
             )
@@ -894,7 +894,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 pre_speed=pre_step.pre_speeds[h],
                 pre_offset=pre_step.pre_offsets[h],
                 pre_done=pre_step.pre_dones[h],
-                pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                in_malfunction=pre_step.pre_in_malfunctions[h],
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=pre_step.pre_candidate_entry_point_independents[h],
             )
@@ -917,7 +917,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                                 pre_speed: Optional[Fraction],
                                 pre_offset: Optional[Fraction],
                                 pre_done: bool,
-                                pre_in_malfunction: bool,
+                                in_malfunction: bool,
                                 elapsed_steps: int,
                                 candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Optional[EntryPointT], Optional[EntryPointT]]:
         """
@@ -927,10 +927,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
+        Branch order/exclusions match _candidate_speed/_candidate_distance's own done/target
+        reached/malfunction/map entry/stay off map/invalid action branches exactly, except where this
+        method - the one that actually derives is_off_map/is_cell_exit/target_reached/map_entry from
+        scratch, rather than consuming an already-resolved candidate_entry_point like the other two -
+        structurally can't (see is_cell_exit's own note below).
         """
-        is_on_map = pre_next_entry_point is not None
-        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
-
+        is_off_map = pre_current_entry_point is None
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
         # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
         # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
@@ -940,34 +943,49 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = (agent.earliest_departure == 0)  # no "step 0" exists, so this is the base case
         else:
             ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
-        map_entry = (not is_on_map and candidate_entry_point_independent is not None
+        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
+        map_entry = (is_off_map and not candidate_entry_point_independent_invalid
                      and movement_action_given and ready_to_depart)
-        target_reached = is_on_map and is_cell_exit and pre_next_entry_point in agent.targets
-        on_map_cell_transition = is_on_map and is_cell_exit and candidate_entry_point_independent is not None
+        # is_cell_exit deliberately keeps its own pre_speed > 0 guard, unlike _candidate_speed/
+        # _candidate_distance's shared is_cell_exit - this method is the one that actually moves the
+        # agent (target_reached/on_map_cell_transition below return a new position), so a STOPPED
+        # agent (pre_speed == 0) banked exactly at a boundary must never be misclassified as
+        # crossing/reaching target this step just because offset + 0 >= SEGMENT_LENGTH; the other two
+        # methods can safely drop this guard since a pre_speed == 0 agent already routes to a no-op
+        # value downstream regardless of is_cell_exit.
+        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
+        target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent.targets
+        on_map_cell_transition = not is_off_map and is_cell_exit and not candidate_entry_point_independent_invalid
 
         # done
         # N.B. Covers both remove_agents_at_target cases.
         if pre_done:
             return pre_current_entry_point, pre_next_entry_point
-        # malfunction - excludes done (independent flags, not structurally exclusive)
-        if pre_in_malfunction and not pre_done:
+        # target reached - excludes done (independent flags)
+        if target_reached and not pre_done:
+            return pre_next_entry_point, candidate_entry_point_independent
+        # malfunction - excludes done/target reached (independent flags)
+        if in_malfunction and not pre_done and not target_reached:
             return pre_current_entry_point, pre_next_entry_point
         # map entry - excludes done/malfunction; already mutually exclusive with target reached/
-        # on-map cell transition via is_on_map vs. not is_on_map, no need to repeat that here
-        if map_entry and not pre_done and not pre_in_malfunction:
+        # on-map cell transition via is_off_map vs. not is_off_map, no need to repeat that here
+        if map_entry and not pre_done and not in_malfunction:
             return agent.initial_entry_point, candidate_entry_point_independent
-        # target reached - excludes done/malfunction; already mutually exclusive with map entry via
-        # is_on_map vs. not is_on_map
-        if target_reached and not pre_done and not pre_in_malfunction:
-            return pre_next_entry_point, candidate_entry_point_independent
+        # stay off map - excludes done/malfunction/map entry; already mutually exclusive with target
+        # reached via is_off_map vs. not is_off_map
+        if is_off_map and not map_entry and not pre_done and not in_malfunction:
+            return pre_current_entry_point, pre_next_entry_point
         # on-map cell transition - excludes done/malfunction/target reached (this branch and target
-        # reached share is_on_map and is_cell_exit, so they don't exclude each other structurally)
-        if on_map_cell_transition and not pre_done and not pre_in_malfunction and not target_reached:
+        # reached share not is_off_map and is_cell_exit, so they don't exclude each other structurally)
+        if on_map_cell_transition and not pre_done and not in_malfunction and not target_reached:
             return pre_next_entry_point, candidate_entry_point_independent
-        # stay - genuine residual, not exhausted by the branches above. Covers:
-        # - off map, not entering this step (WAITING/READY_TO_DEPART with no granted departure)
-        # - on map, mid-cell (not at the boundary yet, so no transition to consider)
-        # - on map, at the boundary, invalid action and not reaching a target (crossing denied)
+        # invalid action at cell exit - excludes done/malfunction/target reached; already mutually
+        # exclusive with on-map cell transition via candidate_entry_point_independent_invalid
+        if (not is_off_map and is_cell_exit and candidate_entry_point_independent_invalid and not pre_done
+                and not in_malfunction and not target_reached):
+            return pre_current_entry_point, pre_next_entry_point
+        # default - genuine residual, not exhausted by the branches above: on map, mid-cell (not at
+        # the boundary yet, so no transition to consider) - the ordinary "keep moving" case.
         return pre_current_entry_point, pre_next_entry_point
 
     def _candidate_speed(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
@@ -1122,7 +1140,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     pre_speed=pre_speed,
                     pre_offset=pre_step.pre_offsets[h],
                     pre_done=pre_step.pre_dones[h],
-                    pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                    in_malfunction=pre_step.pre_in_malfunctions[h],
                     elapsed_steps=self._elapsed_steps,
                     candidate_entry_point_independent=candidate_entry_point_independent,
                 )
@@ -1160,7 +1178,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     pre_speed=pre_speed,
                     pre_offset=pre_step.pre_offsets[h],
                     pre_done=pre_step.pre_dones[h],
-                    pre_in_malfunction=pre_step.pre_in_malfunctions[h],
+                    in_malfunction=pre_step.pre_in_malfunctions[h],
                     elapsed_steps=self._elapsed_steps,
                     candidate_entry_point_independent=candidate_entry_point_independent,
                 )

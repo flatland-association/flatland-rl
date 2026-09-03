@@ -1,47 +1,66 @@
-# `_candidate_speed` / `_candidate_distance` branch contract
+# `_candidate_entry_points` / `_candidate_speed` / `_candidate_distance` branch contract
 
-Branch-by-branch comparison of `AbstractRailEnv._candidate_speed()` and `AbstractRailEnv._candidate_distance()`
-(`flatland/envs/rail_env.py`). Both methods are pure, pre-step-only derivations of this step's optimistic
-candidate speed/distance, called from the collect phase and cross-checked by the post-step invariant checks.
-Their branch conditions are written to be self-contained (order-independent) and, for every case both methods
-share, textually identical.
+Branch-by-branch comparison of `AbstractRailEnv._candidate_entry_points()`, `_candidate_speed()` and
+`_candidate_distance()` (`flatland/envs/rail_env.py`). All three are pure, pre-step-only derivations of this
+step's optimistic candidate entry points/speed/distance, called from the collect phase and cross-checked by the
+post-step invariant checks. `_candidate_entry_points` is the *producer*: it derives `is_off_map`/`is_cell_exit`/
+`target_reached`/`map_entry` from scratch and returns the resolved `candidate_entry_point`. `_candidate_speed`/
+`_candidate_distance` are *consumers*: they take that resolved `candidate_entry_point` as an input parameter
+rather than re-deriving it. That asymmetry is why some terms/branches can be made textually identical across all
+three, and others structurally can't - noted case by case below.
+
+Every branch condition is written to be self-contained (order-independent), and for every case shared between
+`_candidate_speed`/`_candidate_distance`, textually identical. `_candidate_entry_points`' shared branches
+(Done/Malfunction/Map entry/Stay off map/Invalid action at cell exit) use the same exclusion structure and
+branch order as the other two; its own Target reached/Map entry/On-map cell transition necessarily keep their
+own richer, from-scratch derivations.
 
 ## Table 1 — case / formula / candidate value
 
-| Case | Full formula | `_candidate_speed` | `_candidate_distance` |
-|---|---|---|---|
-| **Done** | `pre_done` | `0` | `distance_without_crossing(offset, speed)` |
-| **Target reached** | `target_reached ∧ ¬pre_done` | `0` | `None` if `remove_agents_at_target` else `distance_without_crossing(offset, speed)` |
-| **Malfunction** | `in_malfunction ∧ ¬pre_done ∧ ¬target_reached` | `0` | `pre_offset` |
-| **Map entry** | `is_off_map ∧ candidate≠None ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction` | `cap_speed(max_speed, accel_delta)` | `0` |
-| **Stay off map** | `is_off_map ∧ candidate=None ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction` | `0` | `None` |
-| **Invalid action at cell exit** | `candidate_entry_point_independent_invalid ∧ is_cell_exit ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction ∧ ¬is_off_map` | `0` | `distance_without_crossing(offset, speed)` |
-| **Stopped** (`pre_speed == 0`) | distance only | `pre_speed` (=`0`) *(via Default, if `DO_NOTHING`)*; `speed_after_acceleration(0, max_speed, accel_delta)` *(via Acceleration/start moving, if a moving action given)*; `speed_after_braking(0, braking_delta)` (=`0`) *(via Braking, if `STOP_MOVING`)* | `pre_offset` |
-| **Acceleration or start moving** | speed only | `speed_after_acceleration(pre_speed, max_speed, accel_delta)` | `pre_offset` *(via Stopped, if `pre_speed==0` — the "start moving" sub-case)*; `distance_after_crossing(offset, speed)` *(via Default, if `pre_speed>0` — already moving, `MOVE_FORWARD`)* |
-| **Braking** | speed only | `speed_after_braking(pre_speed, braking_delta)` | `pre_offset` *(via Stopped, if `pre_speed==0`)*; `distance_after_crossing(offset, speed)` *(via Default, if `pre_speed>0` — braking doesn't halt an already-in-flight boundary crossing)* |
-| **Default** | both: `no_earlier_case_applies` | `pre_speed` | `distance_after_crossing(offset, speed)` |
+| Case | Full formula | `_candidate_entry_points` | `_candidate_speed` | `_candidate_distance` |
+|---|---|---|---|---|
+| **Done** | `pre_done` | `(pre_current_entry_point, pre_next_entry_point)` | `0` | `distance_without_crossing(offset, speed)` |
+| **Target reached** | `target_reached ∧ ¬pre_done` (own derivation in entry_points, see Table 2) | `(pre_next_entry_point, candidate_entry_point_independent)` | `0` | `None` if `remove_agents_at_target` else `distance_without_crossing(offset, speed)` |
+| **Malfunction** | `in_malfunction ∧ ¬pre_done ∧ ¬target_reached` | `(pre_current_entry_point, pre_next_entry_point)` | `0` | `pre_offset` |
+| **Map entry** | entry_points: `map_entry ∧ ¬pre_done ∧ ¬in_malfunction`; speed/distance: `is_off_map ∧ candidate≠None ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction` | `(agent.initial_entry_point, candidate_entry_point_independent)` | `cap_speed(max_speed, accel_delta)` | `0` |
+| **Stay off map** | entry_points: `is_off_map ∧ ¬map_entry ∧ ¬pre_done ∧ ¬in_malfunction`; speed/distance: `is_off_map ∧ candidate=None ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction` | `(pre_current_entry_point, pre_next_entry_point)` = `(None, None)` | `0` | `None` |
+| **On-map cell transition** | `on_map_cell_transition ∧ ¬pre_done ∧ ¬in_malfunction ∧ ¬target_reached` | `(pre_next_entry_point, candidate_entry_point_independent)` | entry_points-only branch — absorbed into speed's **Default** | entry_points-only branch — absorbed into distance's **Default** |
+| **Invalid action at cell exit** | `candidate_entry_point_independent_invalid ∧ is_cell_exit ∧ ¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction ∧ ¬is_off_map` (same terms in all three; `is_cell_exit` itself is **not** the same formula, see Table 2) | `(pre_current_entry_point, pre_next_entry_point)` (unchanged - denied) | `0` | `distance_without_crossing(offset, speed)` |
+| **Stopped** (`pre_speed == 0`) | distance only, dedicated branch — entry_points doesn't distinguish by `pre_speed`/action at all | via **On-map cell transition** if `is_cell_exit ∧` valid action, else via **Default** — same as every other row below | `pre_speed` (=`0`) *(via Default, if `DO_NOTHING`)*; `speed_after_acceleration(0, max_speed, accel_delta)` *(via Acceleration/start moving, if a moving action given)*; `speed_after_braking(0, braking_delta)` (=`0`) *(via Braking, if `STOP_MOVING`)* | `pre_offset` |
+| **Acceleration or start moving** | speed only, dedicated branch | via **On-map cell transition**/**Default** (see above) | `speed_after_acceleration(pre_speed, max_speed, accel_delta)` | `pre_offset` *(via Stopped, if `pre_speed==0` — the "start moving" sub-case)*; `distance_after_crossing(offset, speed)` *(via Default, if `pre_speed>0` — already moving, `MOVE_FORWARD`)* |
+| **Braking** | speed only, dedicated branch | via **On-map cell transition**/**Default** (see above) | `speed_after_braking(pre_speed, braking_delta)` | `pre_offset` *(via Stopped, if `pre_speed==0`)*; `distance_after_crossing(offset, speed)` *(via Default, if `pre_speed>0` — braking doesn't halt an already-in-flight boundary crossing)* |
+| **Default** | on map, mid-cell (`¬is_cell_exit`) - narrower than speed/distance's Default, which also absorbs **On-map cell transition** | `(pre_current_entry_point, pre_next_entry_point)` (unchanged - genuinely mid-cell) | `pre_speed` | `distance_after_crossing(offset, speed)` |
 
-`Stopped`/`Acceleration or start moving`/`Braking` are not a clean fusion between the two methods: distance
+`Stopped`/`Acceleration or start moving`/`Braking` are not a clean fusion between speed and distance: distance
 partitions this region by physical state (`pre_speed == 0` or not), speed partitions the same region by the
 action given that step. Neither is a subset of the other - the two methods reach the same practical outcomes
-via different, non-corresponding branches there.
+via different, non-corresponding branches there. `_candidate_entry_points` doesn't partition this region at
+all - it only cares whether a genuine crossing is happening (`is_cell_exit` + a valid action), which is
+orthogonal to both speed's and distance's split.
 
 ## Table 2 — term definitions
 
-| Term | Definition | Same in both? |
+| Term | Definition | Same across all three? |
 |---|---|---|
 | `pre_done` | `agent.target_entry_point is not None` *(via PreStepSnapshot for the post-step checks)* | ✅ identical |
-| `target_reached` | `candidate_entry_point in agent_targets` | ✅ identical |
-| `in_malfunction` | `agent.malfunction_handler.in_malfunction` *(via PreStepSnapshot for the post-step checks)* | ✅ identical |
-| `is_off_map` | `pre_current_entry_point is None`, where `pre_current_entry_point = agent.current_entry_point` *(via PreStepSnapshot for the post-step checks)* | ✅ identical |
-| `candidate_entry_point is / is not None` | return value of `_candidate_entry_points(...)` - recomputed fresh each call, not stored/snapshotted | ✅ identical |
-| `candidate_entry_point_independent_invalid` | `candidate_entry_point_independent is None`, where `candidate_entry_point_independent = self.rail.apply_action_independent(RailEnvActions.from_value(action_dict.get(agent.handle, RailEnvActions.DO_NOTHING)), agent.next_entry_point if agent.next_entry_point is not None else agent.initial_entry_point)` *(via PreStepSnapshot, both call paths)* | ✅ identical |
-| `is_cell_exit` | `pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)`, where `pre_offset = agent.speed_counter.distance`, `pre_speed = agent.speed_counter.speed` *(both via PreStepSnapshot for the post-step checks)* | ✅ identical |
-| `invalid_action_at_cell_exit` | `candidate_entry_point_independent_invalid and is_cell_exit` | ✅ identical |
-| `pre_speed == 0` | `agent.speed_counter.speed == 0` *(via PreStepSnapshot for the post-step checks)* | ✅ identical expression |
-| `no_earlier_case_applies` | `¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction ∧ ¬is_off_map ∧ ¬invalid_action_at_cell_exit` | ✅ same 5 exclusions |
+| `in_malfunction` | `agent.malfunction_handler.in_malfunction` *(via PreStepSnapshot for the post-step checks)* | ✅ identical (entry_points' parameter was `pre_in_malfunction` until this session's rename) |
+| `is_off_map` | `pre_current_entry_point is None`, where `pre_current_entry_point = agent.current_entry_point` *(via PreStepSnapshot for the post-step checks)* | ✅ identical - all three now read the same variable (entry_points previously derived it from `pre_next_entry_point`) |
+| `target_reached` | speed/distance: `candidate_entry_point in agent_targets` (consumes the already-resolved value); entry_points: `not is_off_map and is_cell_exit and pre_next_entry_point in agent.targets` (derives it from scratch - it's the one that decides what `candidate_entry_point` even is) | ⚠️ equivalent by construction (speed/distance's check is exactly what `candidate_entry_point` was set to by entry_points' own Target reached branch), but not the same expression - entry_points has no `candidate_entry_point` to read yet at this point |
+| `candidate_entry_point is / is not None` | return value of `_candidate_entry_points(...)` - recomputed fresh each call, not stored/snapshotted | N/A for entry_points itself (it's the producer, not a consumer, of this value) |
+| `candidate_entry_point_independent_invalid` | `candidate_entry_point_independent is None`, where `candidate_entry_point_independent = self.rail.apply_action_independent(RailEnvActions.from_value(action_dict.get(agent.handle, RailEnvActions.DO_NOTHING)), agent.next_entry_point if agent.next_entry_point is not None else agent.initial_entry_point)` *(via PreStepSnapshot, all call paths)* | ✅ identical - used by all three (introduced as a named local in entry_points this session too) |
+| `is_cell_exit` | speed/distance (shared): `pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)`; entry_points: `pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH` | ❌ **deliberately different** - entry_points' extra `pre_speed > 0` guard is load-bearing: without it, a `STOPPED` agent (`pre_speed == 0`) parked exactly at a boundary would be misclassified as completing a crossing/reaching target this step, since it's entry_points alone that decides whether the agent's *position* actually changes. Speed/distance can safely drop the guard because a `pre_speed == 0` agent already routes to a no-op value downstream regardless of `is_cell_exit`'s value there. |
+| `map_entry` | `is_off_map and not candidate_entry_point_independent_invalid and movement_action_given and ready_to_depart` (entry_points only - speed/distance consume its *result*, `candidate_entry_point is not None`, rather than this richer predicate) | N/A - speed/distance's "map entry" condition is a downstream proxy for this, not the same expression |
+| `movement_action_given` | `RailEnvActions.is_moving_action(action)` (entry_points only) | N/A |
+| `ready_to_depart` | `agent.earliest_departure == 0` if `elapsed_steps == 1` else `agent.earliest_departure <= elapsed_steps` (entry_points only) | N/A |
+| `invalid_action_at_cell_exit` | `candidate_entry_point_independent_invalid and is_cell_exit` (speed/distance name this; entry_points inlines the same conjunction into its Invalid action at cell exit branch) | ✅ same conjunction, using each method's own `is_cell_exit` |
+| `pre_speed == 0` | `agent.speed_counter.speed == 0` *(via PreStepSnapshot for the post-step checks)* | ✅ identical expression (distance only - entry_points/speed don't branch on this directly) |
+| `no_earlier_case_applies` | `¬pre_done ∧ ¬target_reached ∧ ¬in_malfunction ∧ ¬is_off_map ∧ ¬invalid_action_at_cell_exit` | ✅ same 5 exclusions in all three (speed names it explicitly; distance/entry_points reach the same set via elimination/fallthrough) |
 
-One open naming question, not yet resolved: `candidate_entry_point is None` (used in the `map entry`/`stay off
-map` branches) was considered for a `candidate_entry_point_invalid` rename to match
-`candidate_entry_point_independent_invalid`, but rejected - it means "no departure happened this step" (which
-also covers "not yet ready to depart" / "no movement action given"), not specifically "the action was invalid".
+## Open items
+
+- `candidate_entry_point is None` (used in speed/distance's `map entry`/`stay off map` branches) was considered
+  for a `candidate_entry_point_invalid` rename to match `candidate_entry_point_independent_invalid`, but
+  rejected - it means "no departure happened this step" (which also covers "not yet ready to depart"/"no
+  movement action given"), not specifically "the action was invalid".
+- `is_cell_exit` is intentionally *not* unified across all three (see Table 2) - unifying it would introduce a
+  real bug in `_candidate_entry_points`.

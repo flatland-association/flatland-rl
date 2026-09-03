@@ -759,7 +759,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
         action=action, agent=agent, pre_current_entry_point=pre_current_entry_point,
         pre_next_entry_point=pre_next_entry_point, pre_speed=pre_speed, pre_offset=pre_offset,
-        pre_done=pre_done, pre_in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
+        pre_done=pre_done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
         candidate_entry_point_independent=candidate_entry_point_independent,
     )
 
