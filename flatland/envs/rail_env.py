@@ -985,8 +985,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         """
         done_or_target_reached = pre_done or candidate_entry_point in agent_targets
         is_off_map = pre_current_entry_point is None
-        # None-safe regardless of evaluation order - pre_offset can be None here
-        is_cell_exit = pre_offset is None or (pre_offset + pre_speed >= SEGMENT_LENGTH)
+        is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
         invalid_action_at_cell_exit = candidate_entry_point_independent is None and is_cell_exit
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
         no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not is_off_map
