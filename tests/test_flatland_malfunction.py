@@ -85,7 +85,7 @@ def test_malfunction_process():
         env_agent.state = TrainState.MOVING
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        env_agent.speed_counter.step(speed=env_agent.speed_counter.max_speed, crossing_completed=False)
+        env_agent.speed_counter.set(speed=env_agent.speed_counter.max_speed, distance=Fraction(0))
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
@@ -490,7 +490,7 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
         agent._set_state(TrainState.MOVING)
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        agent.speed_counter.step(speed=agent.speed_counter.max_speed, crossing_completed=False)
+        agent.speed_counter.set(speed=agent.speed_counter.max_speed, distance=Fraction(0))
         # design: actions applied at cell entry
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
         assert transition is not None
@@ -530,7 +530,7 @@ def test_stop_moving_wraps_overshoot_beyond_boundary():
     """
     Further consequence of the fix in test_stop_moving_crossing_completion_consistent_with_do_nothing:
     once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
-    boundary is preserved (wrapped via `SpeedCounter._distance_update`'s `distance % SEGMENT_LENGTH`),
+    boundary is preserved (wrapped via `SpeedCounter.distance_after_crossing`'s `distance % SEGMENT_LENGTH`),
     not discarded - `distance + pre_speed` reaching `3/2` lands the agent `1/2` into the new cell, not
     capped at exactly the boundary.
     """
@@ -552,7 +552,7 @@ def test_stop_moving_wraps_overshoot_beyond_boundary():
     agent.speed_counter = SpeedCounter(speed=Fraction(1, 2), max_speed=Fraction(1, 1))
     # design: distance is None when off map -- the agent is placed directly on the map here,
     # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
+    agent.speed_counter.set(speed=agent.speed_counter.speed, distance=Fraction(0))
 
     env.step({0: RailEnvActions.MOVE_FORWARD})
     pre_speed = agent.speed_counter.speed
@@ -757,7 +757,7 @@ def test_last_malfunction_step():
         env_agent.state = TrainState.MOVING
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        env_agent.speed_counter.step(speed=env_agent.speed_counter.max_speed, crossing_completed=False)
+        env_agent.speed_counter.set(speed=env_agent.speed_counter.max_speed, distance=Fraction(0))
         # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
         # invariant (both set and different while on-map) even for this direct test-harness setup.
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)

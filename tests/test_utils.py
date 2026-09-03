@@ -1,4 +1,5 @@
 """Test Utils."""
+from fractions import Fraction
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -128,9 +129,9 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                     agent._set_state(TrainState.MOVING)
                     # design: distance is None when off map -- this test-harness shortcut places
                     # the agent directly onto the map, bypassing the state machine's own departure
-                    # step (which would otherwise call speed_counter.step() with a non-None speed);
+                    # step (which would otherwise call speed_counter.set() with a non-None speed);
                     # do it explicitly here so distance starts at 0 (on-map) instead of None.
-                    agent.speed_counter.step(speed=agent.speed_counter.speed, crossing_completed=False)
+                    agent.speed_counter.set(speed=agent.speed_counter.speed, distance=Fraction(0))
                     # design: actions applied at cell entry -- keep the current_entry_point/
                     # next_entry_point invariant (both set and different while on-map, see the
                     # invariant documented in RailEnv.step()) even for this test-harness shortcut:

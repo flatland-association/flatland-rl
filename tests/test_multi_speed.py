@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
@@ -93,7 +95,7 @@ def test_multi_speed_init():
         # design: distance is None when off map -- the agent is already on the map here, so mark
         # the fresh speed_counter as having just entered (distance 0), not off-map (None).
         sc = env.agents[i_agent].speed_counter
-        sc.step(speed=sc.speed, crossing_completed=False)
+        sc.set(speed=sc.speed, distance=Fraction(0))
         old_pos.append(_position(env.agents[i_agent]))
         print(_position(env.agents[i_agent]))
     # Run episode

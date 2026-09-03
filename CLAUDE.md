@@ -361,6 +361,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
+- Call a method/function with more than a couple of parameters using keyword arguments at the call site
+  (`self._foo(action=action, state=state, ...)`), not positional - positional args for a long signature are
+  easy to silently mis-order (especially several same-typed/`Optional` params in a row) and a keyword mismatch
+  fails loudly instead.
 - Prefer `NamedTuple` over a plain unnamed `Tuple` or `Dict` for structured data that doesn't need methods.
 - Use `attrs` (`@attrs`/`attrib`) for classes that must keep multiple members in sync as an invariant.
 - Use `abc.ABCMeta`/`abc.abstractmethod` for extension-point base classes.

@@ -1,7 +1,7 @@
 from decimal import Decimal
 from fractions import Fraction
 from functools import lru_cache
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -67,27 +67,14 @@ def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -
     return _cached_cell_exit(distance, speed)
 
 
-@lru_cache()
-def _distance_update(distance: Fraction, speed: Fraction,
-                     crossing_completed: bool = True) -> Tuple[Fraction, bool]:
-    if crossing_completed:
-        # check assumption
-        assert distance + speed >= SEGMENT_LENGTH
-        new_distance = SpeedCounter.distance_after_crossing(distance, speed)
-        return new_distance, new_distance < speed
-
-    # move at most segment end
-    return SpeedCounter.distance_without_crossing(distance, speed), False
-
-
 class SpeedCounter:
     """
     Tracks an agent's speed and within-cell distance as Fractions of SEGMENT_LENGTH. speed/distance are
-    None while off map (see step()) and become concrete Fractions once the agent enters the map.
+    None while off map (see set()) and become concrete Fractions once the agent enters the map.
 
     Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
-    pre-step inputs - used internally (e.g. _distance_update()) as well as by RailEnv.step() to compute
-    candidate speed/distance, and again by its post-step invariant checks
+    pre-step inputs - used by RailEnv.step() to compute candidate speed/distance (which set() is then
+    called with directly), and again by its post-step invariant checks
     (_check_post_speed_distance_invariants) to verify the actual post-step values match. They are static
     rather than instance methods since they compute a *candidate* value from explicit pre-step inputs,
     not the counter's own (post-step) state; acceleration_delta/braking_delta are env-level parameters,
@@ -113,34 +100,41 @@ class SpeedCounter:
         self._distance: Optional[Fraction] = None
         self._is_cell_entry = False
 
-    def step(self, speed: Optional[Fraction], crossing_completed: bool) -> None:
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction]) -> None:
         """
-        Step the speed counter:
-        - the distance traveled this step is computed from the pre-step speed.
-        - the speed is updated to the new speed (modulo capping by max speed).
+        Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
+        candidate_speed/candidate_distance (accepted), or the discarded-candidate formulas
+        (distance_without_crossing/Fraction(0)) when the candidate was rejected. Unlike the old step(),
+        this does not itself derive distance from a crossing decision - the caller has already made
+        that decision; set() only tracks the resulting state and derives is_cell_entry from it.
 
         Parameters
         ----------
         speed : Optional[Fraction]
-            The new speed, effective from the next step, or None while off map (leaving the map,
-            or staying off map).
-        crossing_completed : bool
-            Whether the transition into the next cell actually completed.
+            The new speed, or None while off map (leaving the map, or staying off map).
+        distance : Optional[Fraction]
+            The new within-cell distance, or None while off map. Both speed and distance are None
+            together, or both concrete Fractions together - never mixed (see the class docstring).
         """
-        if speed is None:
-            # design: speed and distance are None when off map
-            self._distance = None
-            self._speed = None
-            self._is_cell_entry = False
-            return
-        if self._distance is None:
-            # design: distance is None when off map -- entering the map: bootstrap distance to 0
-            # instead of advancing from a pre-step speed that does not reflect being on the map yet.
-            self._distance = Fraction(0)
-            self._is_cell_entry = True
-        else:
-            self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
-        self._speed = _cap_speed(self._max_speed, _pseudo_fractional(speed))
+        # design: is_cell_entry is "just entered a new cell" - true exactly when distance dropped
+        # relative to its previous value (a wrap into a new cell), or the agent just bootstrapped onto
+        # the map (previous distance None, new distance concrete). distance never decreases within the
+        # same cell (both distance_after_crossing's modulo and distance_without_crossing's cap only ever
+        # hold or grow it), so "new < old" is unambiguously a crossing, not mid-cell noise. Unlike the
+        # old step()'s new_distance < speed (which reduces to old_distance < SEGMENT_LENGTH under
+        # crossing_completed, wrongly False for an agent banked exactly at the boundary that resumes and
+        # genuinely crosses), this needs no separate crossing_completed flag at all.
+        self._is_cell_entry = (
+            (self._distance is None and distance is not None)
+            or (self._distance is not None and distance is not None and distance < self._distance)
+        )
+        self._distance = distance
+        # design: speed and distance are None together while off map - force speed None whenever
+        # distance is None, regardless of what was passed, so a caller's off-map placeholder speed
+        # (e.g. _candidate_speed's own "stay off map" branch, which always returns Fraction(0) rather
+        # than None - see its docstring) can never leave the two inconsistent.
+        self._speed = (_cap_speed(self._max_speed, _pseudo_fractional(speed))
+                       if (speed is not None and distance is not None) else None)
 
     def stop(self) -> None:
         """
@@ -291,7 +285,7 @@ class SpeedCounter:
                  is_cell_entry: {self.is_cell_entry}"
 
     def reset(self):
-        self.step(None, False)
+        self.set(None, None)
 
     @property
     def is_cell_entry(self):

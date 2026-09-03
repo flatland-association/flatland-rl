@@ -250,11 +250,10 @@ def _make_straight_rail(n_cells: int):
     exercise SpeedCounter.distance_without_crossing's "target reached, remove_agents_at_target=False"
     case via an actual RailEnv rather than by calling the formula directly - this matters because the
     formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (10b) runs,
-    agent.state is already DONE (see (10a)'s update_if_reached(), called before (10b)), so the crossing
-    never goes through (10b)'s ordinary `elif agent.state == TrainState.MOVING:` branch (the one that
-    would wrap distance via distance_after_crossing) - it falls through to the DONE-but-not-removed
-    fallback branch instead, which calls speed_counter.step(speed=0, crossing_completed=False),
-    i.e. distance_without_crossing.
+    agent.state is already DONE (see (10a)'s update_if_reached(), called before (10b)), so
+    _candidate_distance's own "pre_done" branch is the one that applies (not its ordinary "genuine
+    crossing" branch, which would wrap distance via distance_after_crossing) - it calls
+    distance_without_crossing directly.
     """
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
@@ -285,7 +284,7 @@ def _place_agent_on_map(env, handle, position, direction, target, state, max_spe
     agent.targets = {(target, d) for d in Grid4TransitionsEnum}
     agent._set_state(state)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=speed)
-    agent.speed_counter.step(speed=speed, crossing_completed=False)  # bootstrap distance to 0 on-map
+    agent.speed_counter.set(speed=speed, distance=Fraction(0))  # bootstrap distance to 0 on-map
     next_entry_point = env.rail.apply_action_independent(first_action, agent.current_entry_point)
     assert next_entry_point is not None
     agent.next_entry_point = _sanitize_entry_point(next_entry_point)

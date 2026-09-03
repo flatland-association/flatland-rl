@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from fractions import Fraction
-from typing import Tuple
+from typing import Optional, Tuple
 
 from flatland.envs.step_utils.states import StateTransitionSignals
 
@@ -13,5 +13,5 @@ class AgentTransitionData:
     state_transition_signal: StateTransitionSignals
     candidate_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_next_entry_point: Tuple[Tuple[int, int], int] = None
-    action_valid: bool = False
+    candidate_distance: Optional[Fraction] = None
     resource_check: bool = False

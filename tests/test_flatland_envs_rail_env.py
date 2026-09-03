@@ -29,6 +29,7 @@ from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from tests.test_flatland_rail_agent_status import _make_straight_rail, _place_agent_on_map
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 """Tests for `flatland` package."""
@@ -734,6 +735,216 @@ def test_symmetric_switch_move_forward_action():
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
     assert agent.speed_counter.distance == Fraction(1, 2)
+
+
+def _assert_speed_distance_match_candidates(env, agent, action_dict):
+    """Capture `agent`'s pre-step values, step `env` with `action_dict`, then assert the real post-step
+    agent.speed_counter.speed/.distance exactly match env._candidate_speed()/env._candidate_distance()
+    (or, when resource_check denies the candidate, the discarded-candidate fallback formulas) computed
+    from those captured pre-step values - the same cross-check RailEnv.step()'s own
+    _check_post_speed_distance_speedup_invariants performs internally after every step, done here
+    explicitly against the candidate_ methods themselves. Returns the real resource_check outcome for
+    `agent` this step, for the caller's own assertions on top.
+    """
+    action = RailEnvActions.from_value(action_dict.get(agent.handle, RailEnvActions.DO_NOTHING))
+    pre_speed = agent.speed_counter.speed
+    pre_offset = agent.speed_counter.distance
+    pre_done = agent.target_entry_point is not None
+    in_malfunction = agent.malfunction_handler.in_malfunction
+    pre_current_entry_point = agent.current_entry_point
+    pre_next_entry_point = agent.next_entry_point
+
+    candidate_entry_point_independent = env.rail.apply_action_independent(
+        action, pre_next_entry_point if pre_next_entry_point is not None else agent.initial_entry_point)
+    candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
+        action=action, agent=agent, pre_current_entry_point=pre_current_entry_point,
+        pre_next_entry_point=pre_next_entry_point, pre_speed=pre_speed, pre_offset=pre_offset,
+        pre_done=pre_done, pre_in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
+        candidate_entry_point_independent=candidate_entry_point_independent,
+    )
+
+    env.step(action_dict)
+
+    resource_check = env.temp_transition_data[agent.handle].resource_check
+    if not resource_check:
+        expected_speed = None if pre_current_entry_point is None else Fraction(0)
+        expected_distance = SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
+    else:
+        expected_distance = env._candidate_distance(
+            pre_speed=pre_speed, pre_offset=pre_offset, pre_done=pre_done,
+            candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
+            candidate_entry_point_independent=candidate_entry_point_independent, agent_targets=agent.targets,
+        )
+        if env.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
+            expected_speed = None
+        elif candidate_entry_point is None:
+            expected_speed = None
+        else:
+            expected_speed = env._candidate_speed(
+                pre_speed=pre_speed, pre_offset=pre_offset, action=action,
+                pre_current_entry_point=pre_current_entry_point, pre_done=pre_done,
+                candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
+                candidate_entry_point_independent=candidate_entry_point_independent,
+                agent_targets=agent.targets, agent_max_speed=agent.speed_counter.max_speed,
+            )
+    assert agent.speed_counter.speed == expected_speed, (agent.speed_counter.speed, expected_speed)
+    assert agent.speed_counter.distance == expected_distance, (agent.speed_counter.distance, expected_distance)
+    return resource_check
+
+
+def test_candidate_speed_and_distance_match_genuine_crossing():
+    """Single MOVING agent on L=(3,8) of make_simple_rail's row-3 corridor, at max_speed=1, halfway
+    across L (distance 0.5) - MOVE_FORWARD completes the crossing into R this step (no other agent to
+    contest it, resource_check trivially granted): the real post-step speed/distance exactly match
+    env._candidate_speed()/env._candidate_distance() computed from the pre-step values captured just
+    before the step.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1, random_seed=1)
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    agent = env.agents[0]
+    L = ((3, 8), Grid4TransitionsEnum.WEST)
+    agent.current_entry_point = L
+    agent._set_state(TrainState.MOVING)
+    agent.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
+    agent.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(1))
+    agent.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2))
+
+    resource_check = _assert_speed_distance_match_candidates(env, agent, {0: RailEnvActions.MOVE_FORWARD})
+    assert resource_check
+    assert agent.current_entry_point != L  # the crossing genuinely completed
+
+
+def test_candidate_speed_and_distance_match_invalid_action_denial_at_cell_exit():
+    """An invalid STOP_MOVING at a symmetric switch (no straight-through option, see
+    test_symmetric_switch_stop_action) denies the crossing at the cell boundary - the real post-step
+    speed/distance exactly match env._candidate_speed()/env._candidate_distance() computed from the
+    pre-step values captured just before the step: speed forced to 0, distance banked at the boundary,
+    not credited with the (denied) crossing.
+    """
+    env, _, _ = env_generator_legacy(seed=43, n_agents=1)
+    assert env.rail.get_full_transitions(15, 15) == RailEnvTransitionsEnum.symmetric_switch_from_west
+
+    agent = env.agents[0]
+    agent.current_entry_point = ((15, 14), 1)
+    agent._set_state(TrainState.MOVING)
+    agent.next_entry_point = _sanitize_entry_point(
+        env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point))
+    agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(1, 2))
+    agent.speed_counter.set(speed=Fraction(1, 2), distance=Fraction(1))  # banked exactly at the boundary
+
+    resource_check = _assert_speed_distance_match_candidates(env, agent, {agent.handle: RailEnvActions.STOP_MOVING})
+    # denial here is via the invalid action, not a resource conflict - self-loop, trivially granted
+    assert resource_check
+    assert agent.current_entry_point == ((15, 14), 1)  # crossing denied - position unchanged
+    assert agent.speed_counter.speed == Fraction(0)
+    assert agent.speed_counter.distance == Fraction(1)
+
+
+def test_candidate_speed_and_distance_match_resource_check_denial():
+    """Agent A on L=(3,8) of make_simple_rail's row-3 corridor, agent B parked at rest on the
+    neighboring cell R=(3,7) directly ahead of A - A tries to cross into R this step and is denied
+    (resource_check False, B still there): the real post-step speed/distance exactly match the
+    discarded-candidate fallback formulas (speed forced to 0, distance banked at the boundary) computed
+    from the pre-step values captured just before the step.
+    """
+    rail, rail_map, optionals = make_simple_rail()
+    env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1)
+    env.reset()
+    env.acceleration_delta = Fraction(1)
+    agent_a, agent_b = env.agents[0], env.agents[1]
+    L = ((3, 8), Grid4TransitionsEnum.WEST)
+    R = ((3, 7), Grid4TransitionsEnum.WEST)
+
+    agent_a.current_entry_point = L
+    agent_a._set_state(TrainState.MOVING)
+    agent_a.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
+    agent_a.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(1))
+    agent_a.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2))
+
+    agent_b.current_entry_point = R
+    agent_b._set_state(TrainState.STOPPED)
+    agent_b.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, R))
+    agent_b.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(0))
+    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(1, 2))
+
+    resource_check = _assert_speed_distance_match_candidates(
+        env, agent_a, {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
+    assert not resource_check
+    assert agent_a.current_entry_point == L  # denied - position unchanged
+    assert agent_a.speed_counter.speed == Fraction(0)
+    assert agent_a.speed_counter.distance == Fraction(1)
+
+
+def test_pre_done_candidate_entry_point_independent_is_stale_not_a_live_reservation():
+    """
+    Documents that a removed agent never actually holds its initial cell as a reservation another agent
+    can be blocked by.
+
+    Rail: `_make_straight_rail(3)`'s 3-cell corridor A=(0,0) - B=(0,1) - C=(0,2). Agent 0's target is B;
+    B is also agent 1's own initial cell (agent 1's line runs B -> C).
+
+    - Setup: agent 0 bootstrapped directly onto A, MOVING at max_speed=1 with distance already at the
+      cell boundary (crosses into B in one step). Agent 1 stays off map, READY_TO_DEPART with
+      earliest_departure=0 and initial_entry_point B.
+    - Step 0: both agents contest resource B in the same step - agent 0 crossing A->B, agent 1 departing
+      directly onto B - so agent 0 genuinely occupies B (agent 1's own initial cell) as this step is
+      resolved. MotionCheck's same-target tie-break favors the lower handle: agent 0 wins, reaches its
+      target B, and (remove_agents_at_target) is immediately DONE with current_entry_point already None
+      by the end of this step. Agent 1 loses the conflict - motion_check.stopped names it as blocked,
+      it stays off map, still READY_TO_DEPART, and (collision_factor set > 0 here specifically to make
+      this checkable) draws no collision/invalid-action penalty for the denial.
+    - Step 1: agent 1 retries the identical departure action - granted this time with no denial, even
+      though the pre-step snapshot still computes a transition from agent 0's (now DONE) initial cell A:
+      that lookup is never consulted for a DONE agent's own resource, so it leaves B genuinely free -
+      agent 1 ends up on exactly its own initial cell.
+    """
+    rail, optionals = _make_straight_rail(3)
+    env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  rewards=BaseDefaultRewards(collision_factor=1.0))
+    env.reset()
+    env._max_episode_steps = 1000
+    _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 1), TrainState.MOVING,
+                        Fraction(1), Fraction(1), RailEnvActions.MOVE_FORWARD)
+    agent0, agent1 = env.agents[0], env.agents[1]
+
+    agent1.initial_entry_point = ((0, 1), Grid4TransitionsEnum.EAST)
+    agent1.targets = {((0, 2), d) for d in Grid4TransitionsEnum}
+    agent1.earliest_departure = 0
+    agent1._set_state(TrainState.READY_TO_DEPART)
+
+    # agent 0 is about to cross into B - agent 1's own initial cell - this very step
+    assert agent0.next_entry_point[0] == agent1.initial_entry_point[0]
+
+    _, rewards_dict, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+    # agent 0 genuinely occupied B (agent 1's initial cell) while this conflicting step was resolved,
+    # even though it is DONE and removed (current_entry_point back to None) by the time step() returns
+    assert env.temp_transition_data[agent0.handle].candidate_entry_point[0] == agent1.initial_entry_point[0]
+    assert agent0.state == TrainState.DONE
+    assert agent0.current_entry_point is None  # removed - B genuinely free now
+    assert agent1.state == TrainState.READY_TO_DEPART  # denied - lower-handle agent 0 won the conflict
+    assert agent1.current_entry_point is None
+    assert agent1.handle in env.resource_check.stopped  # motion_check itself names agent 1 as blocked
+    assert agent0.handle not in env.resource_check.stopped  # agent 0 was not blocked - it won the conflict
+    # denial by a resource conflict is not penalized as a collision/invalid action for agent 1, despite
+    # collision_factor > 0 - BaseDefaultRewards.step_reward only penalizes a MOVING->STOPPED transition,
+    # and agent 1 never left READY_TO_DEPART
+    assert rewards_dict[agent1.handle][DefaultPenalties.COLLISION.value] == 0
+    assert rewards_dict[agent1.handle][DefaultPenalties.INVALID_ACTION.value] == 0
+
+    env.step({1: RailEnvActions.MOVE_FORWARD})
+    assert agent1.current_entry_point == agent1.initial_entry_point  # entered unhindered, on its own initial cell
+    assert agent1.state == TrainState.MOVING
+    assert agent0.state == TrainState.DONE  # still done - stays terminal
+    assert agent0.current_entry_point is None
+    assert agent0.next_entry_point is None
 
 
 def test_blocked_agent_cannot_redirect_via_later_action():
@@ -1779,7 +1990,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     agent_a._set_state(TrainState.MOVING)
     agent_a.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
     agent_a.speed_counter = SpeedCounter(max_speed=speed, speed=speed)
-    agent_a.speed_counter.step(speed=speed, crossing_completed=False)  # bootstrap onto the map at distance 0
+    agent_a.speed_counter.set(speed=speed, distance=Fraction(0))  # bootstrap onto the map at distance 0
     agent_a.speed_counter._distance = Fraction(1, 2)
 
     # place B directly on R, at rest - a stopped, blocking neighbor.
@@ -1787,7 +1998,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     agent_b._set_state(TrainState.STOPPED)
     agent_b.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, R))
     agent_b.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(0))
-    agent_b.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
     agent_b.speed_counter._distance = Fraction(1, 2)
 
     for step in range(1, steps_to_boundary):
@@ -1860,7 +2071,7 @@ def test_platoon_of_four_agents_starts_and_advances_together_without_force_stops
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
-        agent.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
         agent.speed_counter._distance = Fraction(1)
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
@@ -1951,7 +2162,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
-        agent.speed_counter.step(speed=Fraction(0), crossing_completed=False)
+        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
         agent.speed_counter._distance = distance
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
@@ -2035,7 +2246,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-        agent.speed_counter.step(speed=max_speed, crossing_completed=False)  # bootstrap onto the map at distance 0
+        agent.speed_counter.set(speed=max_speed, distance=Fraction(0))  # bootstrap onto the map at distance 0
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
     hold_leader = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD,
@@ -2148,7 +2359,7 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-        agent.speed_counter.step(speed=max_speed, crossing_completed=False)
+        agent.speed_counter.set(speed=max_speed, distance=Fraction(0))
         agent.speed_counter._distance = distance
 
     forward = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}
