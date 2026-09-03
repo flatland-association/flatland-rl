@@ -923,6 +923,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         The (optimistic) candidate entry points of collect phase
         (actions invalid in the grid if cell transition is imminent lead to staying on the cell)
         to be accepted/rejected by resource check in distribute phase.
+
+        Each branch's condition below is self-contained: it explicitly excludes every other branch
+        it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
         is_on_map = pre_next_entry_point is not None
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
@@ -938,24 +941,32 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
         map_entry = (not is_on_map and candidate_entry_point_independent is not None
                      and movement_action_given and ready_to_depart)
+        target_reached = is_on_map and is_cell_exit and pre_next_entry_point in agent.targets
+        on_map_cell_transition = is_on_map and is_cell_exit and candidate_entry_point_independent is not None
 
         # done
         # N.B. Covers both remove_agents_at_target cases.
         if pre_done:
             return pre_current_entry_point, pre_next_entry_point
-        # malfunction
-        if pre_in_malfunction:
+        # malfunction - excludes done (independent flags, not structurally exclusive)
+        if pre_in_malfunction and not pre_done:
             return pre_current_entry_point, pre_next_entry_point
-        # map entry
-        if map_entry:
+        # map entry - excludes done/malfunction; already mutually exclusive with target reached/
+        # on-map cell transition via is_on_map vs. not is_on_map, no need to repeat that here
+        if map_entry and not pre_done and not pre_in_malfunction:
             return agent.initial_entry_point, candidate_entry_point_independent
-        # target reached
-        if is_on_map and is_cell_exit and pre_next_entry_point in agent.targets:
+        # target reached - excludes done/malfunction; already mutually exclusive with map entry via
+        # is_on_map vs. not is_on_map
+        if target_reached and not pre_done and not pre_in_malfunction:
             return pre_next_entry_point, candidate_entry_point_independent
-        # on-map cell transition
-        if is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
+        # on-map cell transition - excludes done/malfunction/target reached (this branch and target
+        # reached share is_on_map and is_cell_exit, so they don't exclude each other structurally)
+        if on_map_cell_transition and not pre_done and not pre_in_malfunction and not target_reached:
             return pre_next_entry_point, candidate_entry_point_independent
-        # stay
+        # stay - genuine residual, not exhausted by the branches above. Covers:
+        # - off map, not entering this step (WAITING/READY_TO_DEPART with no granted departure)
+        # - on map, mid-cell (not at the boundary yet, so no transition to consider)
+        # - on map, at the boundary, invalid action and not reaching a target (crossing denied)
         return pre_current_entry_point, pre_next_entry_point
 
     def _candidate_speed(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
@@ -968,34 +979,50 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         The (optimistic) candidate speed of collect phase
         (actions invalid in the grid if cell transition is imminent lead to speed 0)
         to be accepted/rejected by resource check in distribute phase.
+
+        Each branch's condition below is self-contained: it explicitly excludes every other branch
+        it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
-        # done or target reached
-        if pre_done or candidate_entry_point in agent_targets:
-            return Fraction(0)
-        # malfunction
-        if in_malfunction:
-            return Fraction(0)
-        # map entry
-        if pre_current_entry_point is None and candidate_entry_point is not None:
-            return _cap_speed(agent_max_speed, self.acceleration_delta)
-        # stay off map
-        if pre_current_entry_point is None:
-            return Fraction(0)
-        # invalid action at cell exit
+        done_or_target_reached = pre_done or candidate_entry_point in agent_targets
+        is_off_map = pre_current_entry_point is None
+        # None-safe regardless of evaluation order - pre_offset can be None here
         is_cell_exit = pre_offset is None or (pre_offset + pre_speed >= SEGMENT_LENGTH)
-        if candidate_entry_point_independent is None and is_cell_exit:
+        invalid_action_at_cell_exit = candidate_entry_point_independent is None and is_cell_exit
+        # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
+        no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not is_off_map
+                                   and not invalid_action_at_cell_exit)
+
+        # done or target reached
+        if done_or_target_reached:
+            return Fraction(0)
+        # malfunction - excludes done/target reached (independent flags)
+        if in_malfunction and not done_or_target_reached:
+            return Fraction(0)
+        # map entry - excludes done/target reached/malfunction
+        if is_off_map and candidate_entry_point is not None and not done_or_target_reached and not in_malfunction:
+            return _cap_speed(agent_max_speed, self.acceleration_delta)
+        # stay off map - excludes done/target reached/malfunction, and map entry (which shares is_off_map)
+        if is_off_map and candidate_entry_point is None and not done_or_target_reached and not in_malfunction:
+            return Fraction(0)
+        # invalid action at cell exit - excludes done/target reached/malfunction/[map entry, stay
+        # off map] (the last two subsumed by "not is_off_map", since both share is_off_map)
+        if invalid_action_at_cell_exit and not done_or_target_reached and not in_malfunction and not is_off_map:
             return Fraction(0)
         # acceleration or start moving
-        if action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action)):
+        if (action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action))) \
+                and no_earlier_case_applies:
             # pre_speed is None while WAITING (not yet departing this step) -
             # speed_after_acceleration(None, ...) == None matches that case too.
             return SpeedCounter.speed_after_acceleration(pre_speed, agent_max_speed, self.acceleration_delta)
-        # braking
-        if action == RailEnvActions.STOP_MOVING:
+        # braking - already mutually exclusive with "acceleration or start moving" (STOP_MOVING is
+        # neither MOVE_FORWARD nor a moving action), no need to repeat that exclusion here
+        if action == RailEnvActions.STOP_MOVING and no_earlier_case_applies:
             # pre_speed is None for WAITING/READY_TO_DEPART/MALFUNCTION_OFF_MAP -
             # speed_after_braking(None, ...) == None matches that case too.
             return SpeedCounter.speed_after_braking(pre_speed, self.braking_delta)
-        # default
+        # default - genuine residual, not exhausted by the branches above. Covers (on map, valid
+        # path, pre_speed already established): DO_NOTHING (any pre_speed), or MOVE_LEFT/MOVE_RIGHT
+        # while already moving (pre_speed != 0) - maintain current speed unchanged either way.
         return pre_speed
 
     def _candidate_distance(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
@@ -1006,36 +1033,53 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         The (optimistic) candidate distance of collect phase
         (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
         to be accepted/rejected by resource check in distribute phase.
+
+        Each branch's condition below is self-contained: it explicitly excludes every other branch
+        it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
+        target_reached = candidate_entry_point in agent_targets
+        is_off_map = pre_offset is None
+        # None-safe regardless of evaluation order - pre_offset can be None here
+        is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
+        invalid_action_at_cell_exit = candidate_entry_point_independent is None and is_cell_exit
+
         # done
         if pre_done:
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # target reached
-        if candidate_entry_point in agent_targets:
+        # target reached - excludes done (independent flags)
+        if target_reached and not pre_done:
             if self.remove_agents_at_target:
                 return None
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # stay off map
-        if pre_offset is None and candidate_entry_point is None:
+        # stay off map - excludes done; target reached doesn't need excluding here since
+        # agent_targets never contains None, so target_reached already implies candidate_entry_point
+        # is not None, which already contradicts this branch's own condition
+        if is_off_map and candidate_entry_point is None and not pre_done:
             return None
-        # map entry
-        if pre_offset is None and candidate_entry_point is not None:
+        # map entry - excludes done/target reached (an on-map entry landing directly on a target
+        # cell is not structurally impossible, so target reached needs excluding here)
+        if is_off_map and candidate_entry_point is not None and not pre_done and not target_reached:
             return Fraction(0)
-        # malfunction
-        if in_malfunction:
+        # malfunction - excludes done/target reached, and [stay off map, map entry] (subsumed by
+        # "not is_off_map", since both of those share is_off_map)
+        if in_malfunction and not pre_done and not target_reached and not is_off_map:
             return pre_offset
-        # invalid action at cell exit
-        is_cell_exit = pre_offset + pre_speed >= SEGMENT_LENGTH
-        if candidate_entry_point_independent is None and is_cell_exit:
+        # invalid action at cell exit - excludes done/target reached/off map/malfunction
+        if (invalid_action_at_cell_exit and not pre_done and not target_reached and not is_off_map
+                and not in_malfunction):
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
             # boundary, it just isn't credited with crossing it. pre_speed is always > 0 here (a MOVING
             # agent's pre-step speed can never be 0).
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # stopped
-        if pre_speed == 0:
+        # stopped - excludes done/target reached/off map/malfunction/invalid action
+        if (pre_speed == 0 and not pre_done and not target_reached and not is_off_map and not in_malfunction
+                and not invalid_action_at_cell_exit):
             return pre_offset
+        # default - genuine residual, not exhausted by the branches above. Covers (on map, valid
+        # path, pre_speed != 0): still mid-cell (is_cell_exit False, wrap is a no-op), or genuinely
+        # crossing at the boundary with a valid action - the ordinary "keep moving" case.
         return SpeedCounter.distance_after_crossing(pre_offset, pre_speed)
 
     def _check_post_speed_distance_speedup_invariants(self, action_dict: Dict[int, RailEnvActions],
