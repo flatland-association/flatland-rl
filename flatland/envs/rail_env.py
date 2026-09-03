@@ -747,20 +747,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                                 elapsed_steps: int,
                                 candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Optional[EntryPointT], Optional[EntryPointT]]:
         """
-        The expected (current, next) entry point pair for this step, given action + pre-step values
-        (`elapsed_steps` included as one, i.e. `self._elapsed_steps` after its own (0) increment, same
-        as the collect phase sees it; `pre_done` is `agent.target_entry_point is not None`, NOT `self.dones`
-        - see the "already done" branch below; `candidate_entry_point_independent` is
-        pre_step_snapshot.pre_candidate_entry_point_independents[h], precomputed there so
-        self.rail.apply_action_independent() runs once per agent per step, not once per caller) -
-        verbatim-adapted from _check_post_position_invariants's own "candidates accepted in distribute
-        phase" derivation (assertions there become return statements here), so both step()'s own (3b)
-        POSITION UPDATE and the post-step check call this one, identically shaped, implementation.
-
-        N.B. known gap, to be revisited: dropped the original assertions' `agent.current_entry_point ==
-        agent.target_entry_point` cross-check (which specific target alternative was reached), since it
-        doesn't fit an (current, next) return shape - callers should not rely on this method for that
-        distinction.
+        The (optimistic) candidate entry points of collect phase
+        (actions invalid in the grid if cell transition is imminent lead to staying on the cell)
+        to be accepted/rejected by resource check in distribute phase.
         """
         is_on_map = pre_next_entry_point is not None
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
@@ -776,19 +765,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
         map_entry = (not is_on_map and candidate_entry_point_independent is not None
                      and movement_action_given and ready_to_depart)
-        if map_entry:
-            # (3b.3) map entry
-            candidate_entry_point = agent.initial_entry_point
-            candidate_next_entry_point = candidate_entry_point_independent
-        elif is_on_map and is_cell_exit:
-            # (3b.5) on-map cell transition - candidate_next_entry_point stays None here exactly
-            # when the action was invalid at the boundary (denied by (3b.6)); guarded for below.
-            candidate_entry_point = pre_next_entry_point
-            candidate_next_entry_point = candidate_entry_point_independent
-        else:
-            # (3b.1/3b.2/3b.2bis/3b.4/3b.6) unchanged
-            candidate_entry_point = pre_current_entry_point
-            candidate_next_entry_point = pre_next_entry_point
 
         # done
         # N.B. Covers both remove_agents_at_target cases.
@@ -798,18 +774,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if pre_in_malfunction:
             return pre_current_entry_point, pre_next_entry_point
         # map entry
-        if pre_current_entry_point is None and candidate_entry_point is not None:
-            return candidate_entry_point, candidate_next_entry_point
+        if map_entry:
+            return agent.initial_entry_point, candidate_entry_point_independent
         # target reached - real entering-target candidate (matches the collect phase's own
         # resource-reservation value, needed there for collision detection); when
         # remove_agents_at_target, the actual clearing to None only happens afterward, in the
         # distribute phase (handle_done_state) - not this method's job (see
         # _check_post_position_invariants's own guard for that).
-        if candidate_entry_point in agent.targets and (pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH):
-            return candidate_entry_point, candidate_next_entry_point
+        if is_on_map and is_cell_exit and pre_next_entry_point in agent.targets:
+            return pre_next_entry_point, candidate_entry_point_independent
         # on-map cell transition
-        if candidate_next_entry_point is not None and (pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH):
-            return candidate_entry_point, candidate_next_entry_point
+        if is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
+            return pre_next_entry_point, candidate_entry_point_independent
         # stay
         return pre_current_entry_point, pre_next_entry_point
 
@@ -991,22 +967,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             pre_done: bool, candidate_entry_point: Optional[EntryPointT],
                             in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
                             agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
+        # TODO revise design: code is unconditional in invalid action!
         """
-        The expected post-step speed_counter.distance for an agent whose candidate was accepted in the
-        distribute phase (self.temp_transition_data[h].resource_check True) - verbatim-adapted from
-        _check_post_speed_distance_speedup_invariants's own "distance update invariant"/"candidates
-        accepted" derivation (assertions there become a return statement here).
-
-        N.B. known gap, to be revisited: dropped the original assertions' `agent.target_entry_point is
-        not None`/`agent.target_entry_point in agent.targets` cross-checks (unrelated to the distance
-        value itself) - callers should not rely on this method for that distinction.
-
-        Unlike _candidate_speed, the "invalid action" branch below needs no is_cell_exit gate: mid-cell
-        (pre_offset + pre_speed < SEGMENT_LENGTH), distance_without_crossing and distance_after_crossing
-        are the exact same formula (min()/modulo both no-op below SEGMENT_LENGTH), and when pre_speed == 0
-        distance_without_crossing(pre_offset, 0) == pre_offset, matching the (D1) branch below it too - so
-        candidate_entry_point_independent is None (pure transition-map invalidity, no cell-exit
-        conflation) is already the exact right condition regardless of position within the cell.
+        The (optimistic) candidate distance of collect phase
+        (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
+        to be accepted/rejected by resource check in distribute phase.
         """
         # done
         if pre_done:
@@ -1049,22 +1014,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                          candidate_entry_point_independent: Optional[EntryPointT], agent_targets: Set[EntryPointT],
                          agent_max_speed: Fraction) -> Optional[Fraction]:
         """
-        The expected post-step speed_counter.speed for an agent whose candidate was accepted in the
-        distribute phase (self.temp_transition_data[h].resource_check True) - verbatim-adapted from
-        _check_post_speed_distance_speedup_invariants's own "speed update invariant"/"candidates
-        accepted" derivation (assertions there become a return statement here).
-
-        N.B. known gap, to be revisited: dropped the original assertions' `agent.target_entry_point`
-        cross-checks (unrelated to the speed value itself) - callers should not rely on this method for
-        that distinction.
-
-        design: mirrors _candidate_entry_points - every branch below always returns the real
-        collect-phase placeholder value, matching step()'s own (3a) convention of never skipping
-        computation for a done/malfunctioning/off-map/invalid-action agent (see the loop's own N.B.
-        comment). The real post-step agent.speed_counter.speed is None instead of this value exactly
-        when off map or removed at target - callers must guard that separately (see
-        _check_post_speed_distance_speedup_invariants's own elif branches), not rely on this method's
-        return value for the None case.
+        The (optimistic) candidate speed of collect phase
+        (actions invalid in the grid if cell transition is imminent lead to speed 0)
+        to be accepted/rejected by resource check in distribute phase.
         """
         # done or target reached
         if pre_done or candidate_entry_point in agent_targets:
