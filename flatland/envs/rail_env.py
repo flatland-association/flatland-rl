@@ -495,7 +495,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # whether the action leads to a valid transition - precomputed in pre_step_snapshot so
             # self.rail.apply_action_independent() runs exactly once per agent per step (also read by
             # _candidate_entry_points/_candidate_speed/_candidate_distance below, via the post-step checks)
-            # TODO this is wrong: if done, we should not try to reservee the initial edge!
             candidate_entry_point_independent = pre_step_snapshot.pre_candidate_entry_point_independents[i_agent]
 
             # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches)

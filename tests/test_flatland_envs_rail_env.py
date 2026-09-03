@@ -29,6 +29,7 @@ from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from tests.test_flatland_rail_agent_status import _make_straight_rail, _place_agent_on_map
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 """Tests for `flatland` package."""
@@ -878,6 +879,72 @@ def test_candidate_speed_and_distance_match_resource_check_denial():
     assert agent_a.current_entry_point == L  # denied - position unchanged
     assert agent_a.speed_counter.speed == Fraction(0)
     assert agent_a.speed_counter.distance == Fraction(1)
+
+
+def test_pre_done_candidate_entry_point_independent_is_stale_not_a_live_reservation():
+    """
+    Documents that a removed agent never actually holds its initial cell as a reservation another agent
+    can be blocked by.
+
+    Rail: `_make_straight_rail(3)`'s 3-cell corridor A=(0,0) - B=(0,1) - C=(0,2). Agent 0's target is B;
+    B is also agent 1's own initial cell (agent 1's line runs B -> C).
+
+    - Setup: agent 0 bootstrapped directly onto A, MOVING at max_speed=1 with distance already at the
+      cell boundary (crosses into B in one step). Agent 1 stays off map, READY_TO_DEPART with
+      earliest_departure=0 and initial_entry_point B.
+    - Step 0: both agents contest resource B in the same step - agent 0 crossing A->B, agent 1 departing
+      directly onto B - so agent 0 genuinely occupies B (agent 1's own initial cell) as this step is
+      resolved. MotionCheck's same-target tie-break favors the lower handle: agent 0 wins, reaches its
+      target B, and (remove_agents_at_target) is immediately DONE with current_entry_point already None
+      by the end of this step. Agent 1 loses the conflict - motion_check.stopped names it as blocked,
+      it stays off map, still READY_TO_DEPART, and (collision_factor set > 0 here specifically to make
+      this checkable) draws no collision/invalid-action penalty for the denial.
+    - Step 1: agent 1 retries the identical departure action - granted this time with no denial, even
+      though the pre-step snapshot still computes a transition from agent 0's (now DONE) initial cell A:
+      that lookup is never consulted for a DONE agent's own resource, so it leaves B genuinely free -
+      agent 1 ends up on exactly its own initial cell.
+    """
+    rail, optionals = _make_straight_rail(3)
+    env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
+                  obs_builder_object=GlobalObsForRailEnv(),
+                  rewards=BaseDefaultRewards(collision_factor=1.0))
+    env.reset()
+    env._max_episode_steps = 1000
+    _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 1), TrainState.MOVING,
+                        Fraction(1), Fraction(1), RailEnvActions.MOVE_FORWARD)
+    agent0, agent1 = env.agents[0], env.agents[1]
+
+    agent1.initial_entry_point = ((0, 1), Grid4TransitionsEnum.EAST)
+    agent1.targets = {((0, 2), d) for d in Grid4TransitionsEnum}
+    agent1.earliest_departure = 0
+    agent1._set_state(TrainState.READY_TO_DEPART)
+
+    # agent 0 is about to cross into B - agent 1's own initial cell - this very step
+    assert agent0.next_entry_point[0] == agent1.initial_entry_point[0]
+
+    _, rewards_dict, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
+    # agent 0 genuinely occupied B (agent 1's initial cell) while this conflicting step was resolved,
+    # even though it is DONE and removed (current_entry_point back to None) by the time step() returns
+    assert env.temp_transition_data[agent0.handle].candidate_entry_point[0] == agent1.initial_entry_point[0]
+    assert agent0.state == TrainState.DONE
+    assert agent0.current_entry_point is None  # removed - B genuinely free now
+    assert agent1.state == TrainState.READY_TO_DEPART  # denied - lower-handle agent 0 won the conflict
+    assert agent1.current_entry_point is None
+    assert agent1.handle in env.resource_check.stopped  # motion_check itself names agent 1 as blocked
+    assert agent0.handle not in env.resource_check.stopped  # agent 0 was not blocked - it won the conflict
+    # denial by a resource conflict is not penalized as a collision/invalid action for agent 1, despite
+    # collision_factor > 0 - BaseDefaultRewards.step_reward only penalizes a MOVING->STOPPED transition,
+    # and agent 1 never left READY_TO_DEPART
+    assert rewards_dict[agent1.handle][DefaultPenalties.COLLISION.value] == 0
+    assert rewards_dict[agent1.handle][DefaultPenalties.INVALID_ACTION.value] == 0
+
+    env.step({1: RailEnvActions.MOVE_FORWARD})
+    assert agent1.current_entry_point == agent1.initial_entry_point  # entered unhindered, on its own initial cell
+    assert agent1.state == TrainState.MOVING
+    assert agent0.state == TrainState.DONE  # still done - stays terminal
+    assert agent0.current_entry_point is None
+    assert agent0.next_entry_point is None
 
 
 def test_blocked_agent_cannot_redirect_via_later_action():
