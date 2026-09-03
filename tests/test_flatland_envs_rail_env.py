@@ -771,8 +771,8 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         expected_distance = SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
     else:
         expected_distance = env._candidate_distance(
-            pre_speed=pre_speed, pre_offset=pre_offset, pre_done=pre_done,
-            candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
+            pre_speed=pre_speed, pre_offset=pre_offset, pre_current_entry_point=pre_current_entry_point,
+            pre_done=pre_done, candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
             candidate_entry_point_independent=candidate_entry_point_independent, agent_targets=agent.targets,
         )
         if env.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):

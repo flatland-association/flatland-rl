@@ -541,6 +541,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             candidate_distance = self._candidate_distance(
                 pre_speed=pre_speed,
                 pre_offset=pre_offset,
+                pre_current_entry_point=agent.current_entry_point,
                 pre_done=pre_done,
                 candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
@@ -983,29 +984,36 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
-        done_or_target_reached = pre_done or candidate_entry_point in agent_targets
+        target_reached = candidate_entry_point in agent_targets
+        done_or_target_reached = pre_done or target_reached
         is_off_map = pre_current_entry_point is None
         is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
-        invalid_action_at_cell_exit = candidate_entry_point_independent is None and is_cell_exit
+        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
+        invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
         no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not is_off_map
                                    and not invalid_action_at_cell_exit)
 
-        # done or target reached
-        if done_or_target_reached:
+        # done
+        if pre_done:
+            return Fraction(0)
+        # target reached
+        if target_reached and not pre_done:
             return Fraction(0)
         # malfunction - excludes done/target reached (independent flags)
-        if in_malfunction and not done_or_target_reached:
+        if in_malfunction and not pre_done and not target_reached:
             return Fraction(0)
         # map entry - excludes done/target reached/malfunction
-        if is_off_map and candidate_entry_point is not None and not done_or_target_reached and not in_malfunction:
+        if (is_off_map and candidate_entry_point is not None and not pre_done and not target_reached
+                and not in_malfunction):
             return _cap_speed(agent_max_speed, self.acceleration_delta)
-        # stay off map - excludes done/target reached/malfunction, and map entry (which shares is_off_map)
-        if is_off_map and candidate_entry_point is None and not done_or_target_reached and not in_malfunction:
+        # stay off map - excludes done/target reached/malfunction
+        if (is_off_map and candidate_entry_point is None and not pre_done and not target_reached
+                and not in_malfunction):
             return Fraction(0)
-        # invalid action at cell exit - excludes done/target reached/malfunction/[map entry, stay
-        # off map] (the last two subsumed by "not is_off_map", since both share is_off_map)
-        if invalid_action_at_cell_exit and not done_or_target_reached and not in_malfunction and not is_off_map:
+        # invalid action at cell exit - excludes done/target reached/malfunction/off map
+        if (invalid_action_at_cell_exit and not pre_done and not target_reached and not in_malfunction
+                and not is_off_map):
             return Fraction(0)
         # acceleration or start moving
         if (action == RailEnvActions.MOVE_FORWARD or (pre_speed == 0 and RailEnvActions.is_moving_action(action))) \
@@ -1025,6 +1033,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         return pre_speed
 
     def _candidate_distance(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
+                            pre_current_entry_point: Optional[EntryPointT],
                             pre_done: bool, candidate_entry_point: Optional[EntryPointT],
                             in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
                             agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
@@ -1037,10 +1046,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
         target_reached = candidate_entry_point in agent_targets
-        is_off_map = pre_offset is None
+        # same is_off_map proxy as _candidate_speed (pre_current_entry_point, not pre_offset) - the
+        # two always agree by the on/off-map invariant, but reading the same variable in both keeps
+        # this method's formulas textually identical to _candidate_speed's, not just logically so.
+        is_off_map = pre_current_entry_point is None
         # None-safe regardless of evaluation order - pre_offset can be None here
         is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
-        invalid_action_at_cell_exit = candidate_entry_point_independent is None and is_cell_exit
+        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
+        invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
 
         # done
         if pre_done:
@@ -1050,22 +1063,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             if self.remove_agents_at_target:
                 return None
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # stay off map - excludes done; target reached doesn't need excluding here since
-        # agent_targets never contains None, so target_reached already implies candidate_entry_point
-        # is not None, which already contradicts this branch's own condition
-        if is_off_map and candidate_entry_point is None and not pre_done:
-            return None
-        # map entry - excludes done/target reached (an on-map entry landing directly on a target
-        # cell is not structurally impossible, so target reached needs excluding here)
-        if is_off_map and candidate_entry_point is not None and not pre_done and not target_reached:
-            return Fraction(0)
-        # malfunction - excludes done/target reached, and [stay off map, map entry] (subsumed by
-        # "not is_off_map", since both of those share is_off_map)
-        if in_malfunction and not pre_done and not target_reached and not is_off_map:
+        # malfunction - excludes done/target reached (independent flags); matches _candidate_speed's
+        # own branch order (malfunction checked before the off-map cases below)
+        if in_malfunction and not pre_done and not target_reached:
             return pre_offset
-        # invalid action at cell exit - excludes done/target reached/off map/malfunction
-        if (invalid_action_at_cell_exit and not pre_done and not target_reached and not is_off_map
+        # stay off map - excludes done/target reached/malfunction
+        if is_off_map and candidate_entry_point is None and not pre_done and not target_reached and not in_malfunction:
+            return None
+        # map entry - excludes done/target reached/malfunction
+        if (is_off_map and candidate_entry_point is not None and not pre_done and not target_reached
                 and not in_malfunction):
+            return Fraction(0)
+        # invalid action at cell exit - excludes done/target reached/malfunction/off map
+        if (invalid_action_at_cell_exit and not pre_done and not target_reached and not in_malfunction
+                and not is_off_map):
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
@@ -1118,6 +1129,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 assert agent.speed_counter.distance == self._candidate_distance(
                     pre_speed=pre_speed,
                     pre_offset=pre_step.pre_offsets[h],
+                    pre_current_entry_point=pre_step.pre_current_entry_points[h],
                     pre_done=pre_step.pre_dones[h],
                     candidate_entry_point=candidate_entry_point,
                     in_malfunction=pre_step.pre_in_malfunctions[h],
