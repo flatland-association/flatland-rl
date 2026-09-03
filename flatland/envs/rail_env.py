@@ -966,7 +966,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             pre_done: bool, candidate_entry_point: Optional[EntryPointT],
                             in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
                             agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
-        # TODO revise design: code is unconditional in invalid action!
         """
         The (optimistic) candidate distance of collect phase
         (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
@@ -990,8 +989,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # malfunction
         if in_malfunction:
             return pre_offset
-        # invalid action
-        if candidate_entry_point_independent is None:
+        # invalid action at cell exit
+        is_cell_exit = pre_offset + pre_speed >= SEGMENT_LENGTH
+        if candidate_entry_point_independent is None and is_cell_exit:
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
