@@ -715,7 +715,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         if self.check_step_pre_post_conditions:
             self._check_pre_post_invariants()
-            self._check_malfunction_state_invariant() # only holds after env.step()!
+            self._check_malfunction_state_invariant()  # only holds after env.step()!
             self._check_post_speed_distance_speedup_invariants(action_dict, pre_step_snapshot)
             self._check_post_position_update_invariants(action_dict, pre_step_snapshot)
 
@@ -735,58 +735,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     @lru_cache()
     def _is_speed_zero(self, candidate_speed: Fraction) -> bool:
         return candidate_speed == 0.0
-
-    def _candidate_entry_points(self, action: RailEnvActions, agent: EnvAgent,
-                                pre_current_entry_point: Optional[EntryPointT],
-                                pre_next_entry_point: Optional[EntryPointT],
-                                pre_speed: Optional[Fraction],
-                                pre_offset: Optional[Fraction],
-                                pre_done: bool,
-                                pre_in_malfunction: bool,
-                                elapsed_steps: int,
-                                candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Optional[EntryPointT], Optional[EntryPointT]]:
-        """
-        The (optimistic) candidate entry points of collect phase
-        (actions invalid in the grid if cell transition is imminent lead to staying on the cell)
-        to be accepted/rejected by resource check in distribute phase.
-        """
-        is_on_map = pre_next_entry_point is not None
-        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
-
-        # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
-        # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
-        # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
-        # deliberately signalled one step early to drive next step's WAITING->READY_TO_DEPART transition.
-        movement_action_given = RailEnvActions.is_moving_action(action)
-        if elapsed_steps == 1:
-            ready_to_depart = (agent.earliest_departure == 0)  # no "step 0" exists, so this is the base case
-        else:
-            ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
-        map_entry = (not is_on_map and candidate_entry_point_independent is not None
-                     and movement_action_given and ready_to_depart)
-
-        # done
-        # N.B. Covers both remove_agents_at_target cases.
-        if pre_done:
-            return pre_current_entry_point, pre_next_entry_point
-        # in malfunction
-        if pre_in_malfunction:
-            return pre_current_entry_point, pre_next_entry_point
-        # map entry
-        if map_entry:
-            return agent.initial_entry_point, candidate_entry_point_independent
-        # target reached - real entering-target candidate (matches the collect phase's own
-        # resource-reservation value, needed there for collision detection); when
-        # remove_agents_at_target, the actual clearing to None only happens afterward, in the
-        # distribute phase (handle_done_state) - not this method's job (see
-        # _check_post_position_invariants's own guard for that).
-        if is_on_map and is_cell_exit and pre_next_entry_point in agent.targets:
-            return pre_next_entry_point, candidate_entry_point_independent
-        # on-map cell transition
-        if is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
-            return pre_next_entry_point, candidate_entry_point_independent
-        # stay
-        return pre_current_entry_point, pre_next_entry_point
 
     @lru_cache()
     def _fast_state_position_sync_check(self, state, entry_point, remove_agents_at_target):
@@ -962,49 +910,53 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 assert agent.current_entry_point == candidate_entry_point
                 assert agent.next_entry_point == candidate_next_entry_point
 
-    def _candidate_distance(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
-                            pre_done: bool, candidate_entry_point: Optional[EntryPointT],
-                            in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
-                            agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
+    def _candidate_entry_points(self, action: RailEnvActions, agent: EnvAgent,
+                                pre_current_entry_point: Optional[EntryPointT],
+                                pre_next_entry_point: Optional[EntryPointT],
+                                pre_speed: Optional[Fraction],
+                                pre_offset: Optional[Fraction],
+                                pre_done: bool,
+                                pre_in_malfunction: bool,
+                                elapsed_steps: int,
+                                candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Optional[EntryPointT], Optional[EntryPointT]]:
         """
-        The (optimistic) candidate distance of collect phase
-        (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
+        The (optimistic) candidate entry points of collect phase
+        (actions invalid in the grid if cell transition is imminent lead to staying on the cell)
         to be accepted/rejected by resource check in distribute phase.
         """
+        is_on_map = pre_next_entry_point is not None
+        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
+
+        # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
+        # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
+        # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
+        # deliberately signalled one step early to drive next step's WAITING->READY_TO_DEPART transition.
+        movement_action_given = RailEnvActions.is_moving_action(action)
+        if elapsed_steps == 1:
+            ready_to_depart = (agent.earliest_departure == 0)  # no "step 0" exists, so this is the base case
+        else:
+            ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
+        map_entry = (not is_on_map and candidate_entry_point_independent is not None
+                     and movement_action_given and ready_to_depart)
+
         # done
+        # N.B. Covers both remove_agents_at_target cases.
         if pre_done:
-            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # target reached
-        if candidate_entry_point in agent_targets:
-            if self.remove_agents_at_target:
-                return None
-            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # off map (stayed off map) / map entry - candidate_entry_point is exactly predictive of a real
-        # map entry here (the optimistic MALFUNCTION_OFF_MAP+STOP_MOVING mismatch was closed by
-        # excluding stop_action_given from (3b.3)'s condition).
-        if pre_offset is None and candidate_entry_point is None:
-            return None
-        if pre_offset is None and candidate_entry_point is not None:
-            return Fraction(0)
+            return pre_current_entry_point, pre_next_entry_point
         # malfunction
-        if in_malfunction:
-            return pre_offset
-        # invalid action at cell exit
-        is_cell_exit = pre_offset + pre_speed >= SEGMENT_LENGTH
-        if candidate_entry_point_independent is None and is_cell_exit:
-            # design: an invalid action denies the crossing attempt at the cell boundary, same
-            # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
-            # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
-            # boundary, it just isn't credited with crossing it. pre_speed is always > 0 here (a MOVING
-            # agent's pre-step speed can never be 0).
-            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # stopped, or stopped -> moving (or malfunction recovering)
-        # (D1): pre-step speed 0 must never advance distance this step, whether the agent stays STOPPED
-        # (a plain no-op) or is promoted to MOVING - (10a)/(10b)'s pre-speed-0 deferral in step() defers
-        # any crossing to the following (genuinely positive-pre-speed) step.
-        if pre_speed == 0:
-            return pre_offset
-        return SpeedCounter.distance_after_crossing(pre_offset, pre_speed)
+        if pre_in_malfunction:
+            return pre_current_entry_point, pre_next_entry_point
+        # map entry
+        if map_entry:
+            return agent.initial_entry_point, candidate_entry_point_independent
+        # target reached
+        if is_on_map and is_cell_exit and pre_next_entry_point in agent.targets:
+            return pre_next_entry_point, candidate_entry_point_independent
+        # on-map cell transition
+        if is_on_map and is_cell_exit and candidate_entry_point_independent is not None:
+            return pre_next_entry_point, candidate_entry_point_independent
+        # stay
+        return pre_current_entry_point, pre_next_entry_point
 
     def _candidate_speed(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
                          action: RailEnvActions,
@@ -1047,6 +999,47 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return SpeedCounter.speed_after_braking(pre_speed, self.braking_delta)
         # default
         return pre_speed
+
+    def _candidate_distance(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
+                            pre_done: bool, candidate_entry_point: Optional[EntryPointT],
+                            in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
+                            agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
+        """
+        The (optimistic) candidate distance of collect phase
+        (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
+        to be accepted/rejected by resource check in distribute phase.
+        """
+        # done
+        if pre_done:
+            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
+        # target reached
+        if candidate_entry_point in agent_targets:
+            if self.remove_agents_at_target:
+                return None
+            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
+        # off map (stayed off map) / map entry - candidate_entry_point is exactly predictive of a real
+        # map entry here (the optimistic MALFUNCTION_OFF_MAP+STOP_MOVING mismatch was closed by
+        # excluding stop_action_given from (3b.3)'s condition).
+        if pre_offset is None and candidate_entry_point is None:
+            return None
+        if pre_offset is None and candidate_entry_point is not None:
+            return Fraction(0)
+        # malfunction
+        if in_malfunction:
+            return pre_offset
+        # invalid action at cell exit
+        is_cell_exit = pre_offset + pre_speed >= SEGMENT_LENGTH
+        if candidate_entry_point_independent is None and is_cell_exit:
+            # design: an invalid action denies the crossing attempt at the cell boundary, same
+            # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
+            # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
+            # boundary, it just isn't credited with crossing it. pre_speed is always > 0 here (a MOVING
+            # agent's pre-step speed can never be 0).
+            return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
+        # stopped
+        if pre_speed == 0:
+            return pre_offset
+        return SpeedCounter.distance_after_crossing(pre_offset, pre_speed)
 
     def _check_post_speed_distance_speedup_invariants(self, action_dict: Dict[int, RailEnvActions],
                                                       pre_step: PreStepSnapshot) -> None:
