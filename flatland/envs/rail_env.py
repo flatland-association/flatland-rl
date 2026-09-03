@@ -975,15 +975,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # malfunction
         if in_malfunction:
             return Fraction(0)
-        # map entry - candidate_entry_point is exactly predictive of a real map entry here, same as
-        # _candidate_distance's own "map entry" branch.
+        # map entry
         if pre_current_entry_point is None and candidate_entry_point is not None:
             return _cap_speed(agent_max_speed, self.acceleration_delta)
         # stay off map
         if pre_current_entry_point is None:
             return Fraction(0)
-        # invalid action at cell exit - see _candidate_distance's own docstring for why only this one
-        # (not _candidate_distance) needs the explicit is_cell_exit gate.
+        # invalid action at cell exit
         is_cell_exit = pre_offset is None or (pre_offset + pre_speed >= SEGMENT_LENGTH)
         if candidate_entry_point_independent is None and is_cell_exit:
             return Fraction(0)
@@ -1017,11 +1015,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             if self.remove_agents_at_target:
                 return None
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
-        # off map (stayed off map) / map entry - candidate_entry_point is exactly predictive of a real
-        # map entry here (the optimistic MALFUNCTION_OFF_MAP+STOP_MOVING mismatch was closed by
-        # excluding stop_action_given from (3b.3)'s condition).
+        # stay off map
         if pre_offset is None and candidate_entry_point is None:
             return None
+        # map entry
         if pre_offset is None and candidate_entry_point is not None:
             return Fraction(0)
         # malfunction
