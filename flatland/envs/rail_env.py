@@ -646,7 +646,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # candidates discarded if not resource check -> keep previous configuration (no-op)
             if not resource_check:
                 pass
-            # target reached and removed
+            # target reached and removed - candidate_entry_point already fed
+            # resource_map.get_resource()/MotionCheck.add_agent() above, before resource_check was
+            # known; _candidate_entry_points always returns the target's real entry point regardless
+            # of remove_agents_at_target for exactly this reason (nulling it out early would break
+            # conflict registration for another agent contesting the same target cell this step) -
+            # the removal itself can only be applied here, once resource_check is resolved.
             elif self.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
                 agent.current_entry_point = None
                 agent.next_entry_point = None
@@ -673,7 +678,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # on-map, candidate discarded -> speed forced to 0 and distance capped at the pre-step
                 # speed, not credited with the (denied) crossing (SpeedCounter.distance/.speed still
                 # hold their pre-step values here - (10a) never touches speed_counter, and this is
-                # (10b)'s own first write to it this step).
+                # (10b)'s own first write to it this step). This fallback can't be precomputed inside
+                # the candidate_ methods themselves: resource_check for any agent isn't known until
+                # MotionCheck.find_conflicts() runs across every agent's registered candidate, which
+                # happens only after the whole collect-phase loop above completes - the candidate_
+                # methods are single-agent and have no visibility into other agents' candidates.
                 new_speed = Fraction(0)
                 new_distance = SpeedCounter.distance_without_crossing(agent.speed_counter.distance, agent.speed_counter.speed)
                 agent.speed_counter.set(new_speed, new_distance)
