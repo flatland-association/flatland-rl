@@ -735,7 +735,7 @@ def test_symmetric_switch_move_forward_action():
     # False at speed 0 (see design_by_contract.md) - a STOPPED agent given a moving action is always
     # optimistically promoted back to MOVING, regardless of whether that action (MOVE_FORWARD's
     # straight-through look-ahead) is itself structurally valid here. Distance stays banked at the
-    # boundary, unchanged (pre_speed was still 0 going into this step). This promotion step is not a
+    # boundary, unchanged (speed was still 0 going into this step). This promotion step is not a
     # MOVING->STOPPED transition, so no penalty is charged for it.
     _, rewards, _, _ = env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.current_entry_point == ((15, 14), 1)
@@ -746,7 +746,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # retrying the same invalid action now genuinely re-attempts the crossing (pre_speed > 0 going
+    # retrying the same invalid action now genuinely re-attempts the crossing (speed > 0 going
     # into this step, so is_cell_exit is true again) - denied again, forced back to STOPPED, and
     # charged a fresh INVALID_ACTION penalty: this is a new entering attempt, not a retry of the
     # previous one.
@@ -792,19 +792,19 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     this step's rewards dict for `agent`, for the caller's own assertions on top.
     """
     action = RailEnvActions.from_value(action_dict.get(agent.handle, RailEnvActions.DO_NOTHING))
-    pre_speed = agent.speed_counter.speed
-    pre_offset = agent.speed_counter.distance
-    pre_done = agent.target_entry_point is not None
+    speed = agent.speed_counter.speed
+    offset = agent.speed_counter.distance
+    done = agent.target_entry_point is not None
     in_malfunction = agent.malfunction_handler.in_malfunction
-    pre_current_entry_point = agent.current_entry_point
-    pre_next_entry_point = agent.next_entry_point
+    current_entry_point = agent.current_entry_point
+    next_entry_point = agent.next_entry_point
 
     candidate_entry_point_independent = env.rail.apply_action_independent(
-        action, pre_next_entry_point if pre_next_entry_point is not None else agent.initial_entry_point)
+        action, next_entry_point if next_entry_point is not None else agent.initial_entry_point)
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
-        action=action, initial_entry_point=agent.initial_entry_point, pre_current_entry_point=pre_current_entry_point,
-        pre_next_entry_point=pre_next_entry_point, pre_speed=pre_speed, pre_offset=pre_offset,
-        pre_done=pre_done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
+        action=action, initial_entry_point=agent.initial_entry_point, current_entry_point=current_entry_point,
+        next_entry_point=next_entry_point, speed=speed, offset=offset,
+        done=done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
         candidate_entry_point_independent=candidate_entry_point_independent,
         earliest_departure=agent.earliest_departure, agent_targets=frozenset(agent.targets),
     )
@@ -813,30 +813,30 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
 
     resource_check = env.temp_transition_data[agent.handle].resource_check
     if not resource_check:
-        expected_speed = None if pre_current_entry_point is None else Fraction(0)
-        expected_distance = SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
+        expected_speed = None if current_entry_point is None else Fraction(0)
+        expected_distance = SpeedCounter.distance_without_crossing(offset, speed)
     else:
         expected_distance = env._candidate_distance(
-            pre_speed=pre_speed,
-            pre_offset=pre_offset,
-            pre_current_entry_point=pre_current_entry_point,
-            pre_next_entry_point=pre_next_entry_point,
-            pre_done=pre_done,
+            speed=speed,
+            offset=offset,
+            current_entry_point=current_entry_point,
+            next_entry_point=next_entry_point,
+            done=done,
             candidate_entry_point=candidate_entry_point,
             in_malfunction=in_malfunction,
             candidate_entry_point_independent=candidate_entry_point_independent,
             agent_targets=frozenset(agent.targets),
             remove_agents_at_target=env.remove_agents_at_target,
         )
-        if env.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
+        if env.remove_agents_at_target and (done or candidate_entry_point in agent.targets):
             expected_speed = None
         elif candidate_entry_point is None:
             expected_speed = None
         else:
             expected_speed = env._candidate_speed(
-                pre_speed=pre_speed, pre_offset=pre_offset, action=action,
-                pre_current_entry_point=pre_current_entry_point, pre_next_entry_point=pre_next_entry_point,
-                pre_done=pre_done,
+                speed=speed, offset=offset, action=action,
+                current_entry_point=current_entry_point, next_entry_point=next_entry_point,
+                done=done,
                 candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 agent_targets=frozenset(agent.targets),
@@ -952,7 +952,7 @@ def test_candidate_speed_and_distance_match_resource_check_denial():
     assert rewards[DefaultPenalties.INVALID_ACTION.value] == 0
 
 
-def test_pre_done_candidate_entry_point_independent_is_stale_not_a_live_reservation():
+def test_done_candidate_entry_point_independent_is_stale_not_a_live_reservation():
     """
     Documents that a removed agent never actually holds its initial cell as a reservation another agent
     can be blocked by.

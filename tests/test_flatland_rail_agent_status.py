@@ -251,7 +251,7 @@ def _make_straight_rail(n_cells: int):
     case via an actual RailEnv rather than by calling the formula directly - this matters because the
     formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (10b) runs,
     agent.state is already DONE (see (10a)'s update_if_reached(), called before (10b)), so
-    _candidate_distance's own "pre_done" branch is the one that applies (not its ordinary "genuine
+    _candidate_distance's own "done" branch is the one that applies (not its ordinary "genuine
     crossing" branch, which would wrap distance via distance_after_crossing) - it calls
     distance_without_crossing directly.
     """
