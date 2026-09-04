@@ -802,10 +802,11 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     candidate_entry_point_independent = env.rail.apply_action_independent(
         action, pre_next_entry_point if pre_next_entry_point is not None else agent.initial_entry_point)
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
-        action=action, agent=agent, pre_current_entry_point=pre_current_entry_point,
+        action=action, initial_entry_point=agent.initial_entry_point, pre_current_entry_point=pre_current_entry_point,
         pre_next_entry_point=pre_next_entry_point, pre_speed=pre_speed, pre_offset=pre_offset,
         pre_done=pre_done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
         candidate_entry_point_independent=candidate_entry_point_independent,
+        earliest_departure=agent.earliest_departure, agent_targets=frozenset(agent.targets),
     )
 
     _, rewards, _, _ = env.step(action_dict)
@@ -816,10 +817,16 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         expected_distance = SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
     else:
         expected_distance = env._candidate_distance(
-            pre_speed=pre_speed, pre_offset=pre_offset, pre_current_entry_point=pre_current_entry_point,
+            pre_speed=pre_speed,
+            pre_offset=pre_offset,
+            pre_current_entry_point=pre_current_entry_point,
             pre_next_entry_point=pre_next_entry_point,
-            pre_done=pre_done, candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
-            candidate_entry_point_independent=candidate_entry_point_independent, agent_targets=agent.targets,
+            pre_done=pre_done,
+            candidate_entry_point=candidate_entry_point,
+            in_malfunction=in_malfunction,
+            candidate_entry_point_independent=candidate_entry_point_independent,
+            agent_targets=frozenset(agent.targets),
+            remove_agents_at_target=env.remove_agents_at_target,
         )
         if env.remove_agents_at_target and (pre_done or candidate_entry_point in agent.targets):
             expected_speed = None
@@ -832,7 +839,10 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
                 pre_done=pre_done,
                 candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
                 candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=agent.targets, agent_max_speed=agent.speed_counter.max_speed,
+                agent_targets=frozenset(agent.targets),
+                agent_max_speed=agent.speed_counter.max_speed,
+                acceleration_delta=env.acceleration_delta,
+                braking_delta=env.braking_delta,
             )
     assert agent.speed_counter.speed == expected_speed, (agent.speed_counter.speed, expected_speed)
     assert agent.speed_counter.distance == expected_distance, (agent.speed_counter.distance, expected_distance)

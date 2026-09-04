@@ -47,6 +47,33 @@ resource-check-blocked agent already does elsewhere - the *next* step then genui
 (now with `pre_speed > 0`), and is denied and re-charged again if the action is still invalid. The penalty is
 per genuine entering attempt, not per retry (see `BaseDefaultRewards.step_reward` in `rewards.py`).
 
+## Branch order (as they appear in code)
+
+The branch labels below are the code comments immediately above each `if` in
+`flatland/envs/rail_env.py`, in on-disk order - a quick index into Table 1's rows as they're actually
+laid out method by method. Per the note at the top of each method's own branch section, this order is
+cosmetic (every branch condition is self-contained and pairwise disjoint - see the branches themselves
+for the exclusion reasoning), not load-bearing.
+
+```
+_candidate_entry_points          _candidate_speed                 _candidate_distance
+------------------------         ------------------------         ------------------------
+done                             done                              done
+target reached                   target reached                    target reached
+malfunction                      malfunction                       malfunction
+map entry                        map entry                         map entry
+off_map_no_departure             stay off map                      stay off map
+on-map cell transition           invalid action at cell exit       invalid action at cell exit
+invalid action at cell exit      acceleration or start moving      stopped
+keep moving mid-cell             braking                           keep moving mid-cell
+                                 keep moving mid-cell
+```
+
+Each method's final branch (`keep moving mid-cell`) is an explicit `if`, not an implicit `else` - its
+condition is the exact logical complement of every branch above it, followed by a
+`raise ValueError(...)` that is unreachable by construction (the branches are exhaustive as well as
+disjoint).
+
 ## Table 2a — preconditions
 
 Base terms: none of these reference any other term in Table 2a/2b - each is a direct fact about the
