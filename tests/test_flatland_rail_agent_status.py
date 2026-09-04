@@ -309,16 +309,16 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     `configurations` entry, i.e. before the cap is applied.
 
     - exact_fit-default_speed: max_speed=1 (the common default). Step 0 is the agent's own departure
-      settling step (distance deferred at 0, speed ramps 0 -> 1); step 1 already has pre_offset=0,
+      settling step (distance deferred at 0, speed ramps 0 -> 1); step 1 already has pre_distance=0,
       pre_speed=1, so it crosses directly into the target with zero excess (sum == SEGMENT_LENGTH
       exactly).
     - exact_fit-fractional_speed: max_speed=1/2 evenly divides SEGMENT_LENGTH. Step 0 settles (distance
-      0, speed ramps to 1/2); step 1 advances mid-cell to distance=1/2 (pre_offset=0, pre_speed=1/2,
-      sum=1/2, no crossing yet); step 2 crosses into the target with pre_offset=1/2, pre_speed=1/2,
+      0, speed ramps to 1/2); step 1 advances mid-cell to distance=1/2 (pre_distance=0, pre_speed=1/2,
+      sum=1/2, no crossing yet); step 2 crosses into the target with pre_distance=1/2, pre_speed=1/2,
       sum=1 exactly - zero excess again, purely because 1/2 divides 1.
     - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide SEGMENT_LENGTH. Step 0
       settles (speed ramps to 3/4); step 1 advances to distance=3/4 (sum=3/4, no crossing yet); step 2
-      crosses into the target with pre_offset=3/4, pre_speed=3/4, sum=3/2 - an excess of 1/2 gets
+      crosses into the target with pre_distance=3/4, pre_speed=3/4, sum=3/2 - an excess of 1/2 gets
       silently discarded by the cap, with no prior blocking/banking involved at all.
     """
     rail, optionals = _make_straight_rail(2)
@@ -337,11 +337,11 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
         env.step({0: RailEnvActions.MOVE_FORWARD})
     print(f"configurations leading up to target: {configurations}")
 
-    _, final_pre_offset, final_pre_speed = configurations[-1]
+    _, final_pre_distance, final_pre_speed = configurations[-1]
     assert agent.current_entry_point in agent.targets
     assert agent.speed_counter.distance == SEGMENT_LENGTH
-    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(final_pre_offset, final_pre_speed)
-    assert (final_pre_offset + final_pre_speed) == (SEGMENT_LENGTH + expected_excess)
+    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(final_pre_distance, final_pre_speed)
+    assert (final_pre_distance + final_pre_speed) == (SEGMENT_LENGTH + expected_excess)
 
 
 def test_distance_without_crossing_reaches_segment_length_on_target_banked_restart():
@@ -370,11 +370,11 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
       ramps to 1).
     - step 2: agent 0 still DO_NOTHING (unchanged). Agent 1's pre_speed is now genuinely 1 - its real
       crossing B->C succeeds uncontested (agent 0 isn't contesting B this step), reaching its own target
-      C with pre_offset=0, pre_speed=1, sum=1 exactly (zero excess) - agent 1 is now DONE, B is free.
+      C with pre_distance=0, pre_speed=1, sum=1 exactly (zero excess) - agent 1 is now DONE, B is free.
     - step 3: agent 0 given MOVE_FORWARD - optimistically promoted STOPPED->MOVING (self-loop, distance
       stays at its banked value of 1, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
-    - step 4: agent 0's pre_speed is now genuinely 1 again, with pre_offset still 1 (banked) - its real
-      crossing A->B succeeds (B is now completely free), reaching its target B with pre_offset=1,
+    - step 4: agent 0's pre_speed is now genuinely 1 again, with pre_distance still 1 (banked) - its real
+      crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=1,
       pre_speed=1, sum=2 - a full SEGMENT_LENGTH of momentum discarded by the cap.
     """
     rail, optionals = _make_straight_rail(3)
@@ -416,7 +416,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     # or excess, and stays true forever afterward (DONE's (10b) fallback keeps re-deriving it from a
     # now-frozen speed=0) - it does not by itself distinguish this banked-restart case from an ordinary
     # exact-fit one. What is actually specific to this case is the pre-step sum on the final (granted)
-    # crossing attempt: pre_offset(1, banked) + pre_speed(1, ramped) == 2, a full SEGMENT_LENGTH of excess
+    # crossing attempt: pre_distance(1, banked) + pre_speed(1, ramped) == 2, a full SEGMENT_LENGTH of excess
     # momentum silently discarded by the cap - captured here from the last iteration's pre-step values.
     assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == SEGMENT_LENGTH + Fraction(1)
 

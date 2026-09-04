@@ -87,8 +87,8 @@ class SpeedCounter:
     |---|---|---|
     | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
     | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
-    | `distance_after_crossing` | `(pre_offset + pre_speed) % SEGMENT_LENGTH` | cell boundary crossed |
-    | `distance_without_crossing` | `min(pre_offset + pre_speed, SEGMENT_LENGTH)` | cell boundary not crossed |
+    | `distance_after_crossing` | `(distance + pre_speed) % SEGMENT_LENGTH` | cell boundary crossed |
+    | `distance_without_crossing` | `min(distance + pre_speed, SEGMENT_LENGTH)` | cell boundary not crossed |
     """
 
     def __init__(self, max_speed: float, speed: Optional[float] = None):
@@ -186,7 +186,7 @@ class SpeedCounter:
 
     @staticmethod
     @lru_cache()
-    def distance_after_crossing(pre_offset: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+    def distance_after_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
         """
         Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
         pre-step speed, wrapped into the newly-entered cell. None (off map) in, None out.
@@ -205,13 +205,13 @@ class SpeedCounter:
         inside it, never still sitting exactly on the boundary it just crossed (that "sitting on the
         boundary" case is distance_without_crossing below, where the crossing does *not* happen).
         """
-        if pre_offset is None:
+        if distance is None:
             return None
-        return (pre_offset + pre_speed) % SEGMENT_LENGTH
+        return (distance + pre_speed) % SEGMENT_LENGTH
 
     @staticmethod
     @lru_cache()
-    def distance_without_crossing(pre_offset: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+    def distance_without_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
         """
         Expected distance when this step's cell-boundary crossing did not complete (denied by an
         invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
@@ -229,7 +229,7 @@ class SpeedCounter:
 
         The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
         all three only ever apply once `is_cell_exit()` was already true pre-step (i.e.
-        `pre_offset + pre_speed >= SEGMENT_LENGTH`, which is exactly the min()'s other operand):
+        `distance + pre_speed >= SEGMENT_LENGTH`, which is exactly the min()'s other operand):
         - an invalid action denies the crossing attempt at the cell boundary (e.g. going straight
           through a symmetric switch, which only allows turning) - the operator's own mistaken
           instruction, physically a real train braking hard right at the switch rather than derailing;
@@ -241,8 +241,8 @@ class SpeedCounter:
         The target-reached case always lands at exactly SEGMENT_LENGTH too, never below: RailEnv.step()'s
         (3b.5) only ever turns a step into a genuine crossing attempt (the candidate entry point becoming
         a *new* cell, which could then turn out to be the target) once `is_cell_exit()` already holds -
-        there is no path into this branch with `pre_offset + pre_speed < SEGMENT_LENGTH`. What varies
-        between target-reached occurrences is only how much excess (`pre_offset + pre_speed -
+        there is no path into this branch with `distance + pre_speed < SEGMENT_LENGTH`. What varies
+        between target-reached occurrences is only how much excess (`distance + pre_speed -
         SEGMENT_LENGTH`) gets silently discarded by the cap - anywhere from zero (an exact-fitting
         arrival) up to a full SEGMENT_LENGTH (e.g. a `max_speed` that doesn't evenly divide SEGMENT_LENGTH,
         or an agent restarting from a previously banked-at-boundary position). See
@@ -276,9 +276,9 @@ class SpeedCounter:
         penalized, depending purely on timing relative to the leader's own progress, not on whether the
         target looked free at the moment the operator's movement action was given.
         """
-        if pre_offset is None:
+        if distance is None:
             return None
-        return min(pre_offset + pre_speed, SEGMENT_LENGTH)
+        return min(distance + pre_speed, SEGMENT_LENGTH)
 
     def __repr__(self):
         return f"speed: {self.speed} \

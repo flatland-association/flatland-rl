@@ -793,7 +793,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     """
     action = RailEnvActions.from_value(action_dict.get(agent.handle, RailEnvActions.DO_NOTHING))
     speed = agent.speed_counter.speed
-    offset = agent.speed_counter.distance
+    distance = agent.speed_counter.distance
     done = agent.target_entry_point is not None
     in_malfunction = agent.malfunction_handler.in_malfunction
     current_entry_point = agent.current_entry_point
@@ -803,7 +803,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         action, next_entry_point if next_entry_point is not None else agent.initial_entry_point)
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
         action=action, initial_entry_point=agent.initial_entry_point, current_entry_point=current_entry_point,
-        next_entry_point=next_entry_point, speed=speed, offset=offset,
+        next_entry_point=next_entry_point, speed=speed, distance=distance,
         done=done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
         candidate_entry_point_independent=candidate_entry_point_independent,
         earliest_departure=agent.earliest_departure, agent_targets=frozenset(agent.targets),
@@ -814,11 +814,11 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     resource_check = env.temp_transition_data[agent.handle].resource_check
     if not resource_check:
         expected_speed = None if current_entry_point is None else Fraction(0)
-        expected_distance = SpeedCounter.distance_without_crossing(offset, speed)
+        expected_distance = SpeedCounter.distance_without_crossing(distance, speed)
     else:
         expected_distance = env._candidate_distance(
             speed=speed,
-            offset=offset,
+            distance=distance,
             current_entry_point=current_entry_point,
             next_entry_point=next_entry_point,
             done=done,
@@ -834,7 +834,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
             expected_speed = None
         else:
             expected_speed = env._candidate_speed(
-                speed=speed, offset=offset, action=action,
+                speed=speed, distance=distance, action=action,
                 current_entry_point=current_entry_point, next_entry_point=next_entry_point,
                 done=done,
                 candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
@@ -1199,7 +1199,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     """
     Same as test_earliest_departure_state_transitions_initial_speed_zero, but with acceleration
     delta equal to max speed (1): the agent reaches max speed in a single accelerating step, so
-    distance resets to 0 cleanly on every crossing from then on (no fractional cruise offset).
+    distance resets to 0 cleanly on every crossing from then on (no fractional cruise distance).
     """
     env, _, _ = env_generator(seed=42, n_agents=1)
     env.acceleration_delta = Fraction(1)
@@ -1239,7 +1239,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
 
     # Already at max speed since departure: the agent advances exactly one entry point every step,
     # distance resetting to 0 cleanly (unlike a fractional acceleration delta, see
-    # test_earliest_departure_state_transitions_initial_speed_zero's 1/2 cruise offset).
+    # test_earliest_departure_state_transitions_initial_speed_zero's 1/2 cruise distance).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert env._elapsed_steps == 4  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
@@ -1365,8 +1365,8 @@ def test_map_entry(with_malfunction, earliest_departure):
 def test_earliest_departure_state_transitions_partial_acceleration():
     """
     Same as test_earliest_departure_state_transitions_initial_speed_zero, but with acceleration
-    delta 0.3 (max speed 1): ramps up over more steps, and settles into a 0.8 cruise offset once
-    at max speed (instead of 0.5 for delta 0.5, or 0 for a full delta) - the cruise offset is
+    delta 0.3 (max speed 1): ramps up over more steps, and settles into a 0.8 cruise distance once
+    at max speed (instead of 0.5 for delta 0.5, or 0 for a full delta) - the cruise distance is
     1 - (max_speed % acceleration_delta)-driven and differs per delta.
     """
     env, _, _ = env_generator(seed=42, n_agents=1)
@@ -1431,7 +1431,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     assert agent.speed_counter.distance == Fraction(8, 10)
 
     # At max speed, the agent advances exactly one entry point per step from here on, cruising at
-    # a steady 0.8 offset (0.8 + 1 = 1.8, wraps to 0.8 again).
+    # a steady 0.8 distance (0.8 + 1 = 1.8, wraps to 0.8 again).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert env._elapsed_steps == 7  # _elapsed_steps +1
     assert agent.state == TrainState.MOVING
@@ -1501,7 +1501,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
     assert agent.speed_counter.distance == Fraction(1, 2)
 
     # Now at max speed with a full cell's worth of distance already banked: the agent overshoots
-    # into the entry point after the first one, and cruises with a steady 1/2 offset from here on.
+    # into the entry point after the first one, and cruises with a steady 1/2 distance from here on.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
