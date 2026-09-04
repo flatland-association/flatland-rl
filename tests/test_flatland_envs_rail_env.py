@@ -817,6 +817,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     else:
         expected_distance = env._candidate_distance(
             pre_speed=pre_speed, pre_offset=pre_offset, pre_current_entry_point=pre_current_entry_point,
+            pre_next_entry_point=pre_next_entry_point,
             pre_done=pre_done, candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
             candidate_entry_point_independent=candidate_entry_point_independent, agent_targets=agent.targets,
         )
@@ -827,7 +828,8 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         else:
             expected_speed = env._candidate_speed(
                 pre_speed=pre_speed, pre_offset=pre_offset, action=action,
-                pre_current_entry_point=pre_current_entry_point, pre_done=pre_done,
+                pre_current_entry_point=pre_current_entry_point, pre_next_entry_point=pre_next_entry_point,
+                pre_done=pre_done,
                 candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 agent_targets=agent.targets, agent_max_speed=agent.speed_counter.max_speed,

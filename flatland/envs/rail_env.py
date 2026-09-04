@@ -528,6 +528,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 pre_offset=pre_offset,
                 action=action,
                 pre_current_entry_point=agent.current_entry_point,
+                pre_next_entry_point=agent.next_entry_point,
                 pre_done=pre_done,
                 candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
@@ -542,6 +543,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 pre_speed=pre_speed,
                 pre_offset=pre_offset,
                 pre_current_entry_point=agent.current_entry_point,
+                pre_next_entry_point=agent.next_entry_point,
                 pre_done=pre_done,
                 candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
@@ -988,7 +990,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
     def _candidate_speed(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
                          action: RailEnvActions,
-                         pre_current_entry_point: Optional[EntryPointT], pre_done: bool,
+                         pre_current_entry_point: Optional[EntryPointT], pre_next_entry_point: Optional[EntryPointT],
+                         pre_done: bool,
                          candidate_entry_point: Optional[EntryPointT], in_malfunction: bool,
                          candidate_entry_point_independent: Optional[EntryPointT], agent_targets: Set[EntryPointT],
                          agent_max_speed: Fraction) -> Optional[Fraction]:
@@ -1000,8 +1003,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
-        target_reached = candidate_entry_point in agent_targets
-        done_or_target_reached = pre_done or target_reached
         is_off_map = pre_current_entry_point is None
         # is_cell_exit requires pre_speed > 0, not just pre_offset + pre_speed >= SEGMENT_LENGTH - shared
         # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
@@ -1009,6 +1010,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # exit" - it must first be given a moving action and actually start moving again before a fresh
         # crossing attempt (and is_cell_exit) can apply.
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
+        # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
+        # just an equivalent check on the already-resolved candidate_entry_point.
+        target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
+        done_or_target_reached = pre_done or target_reached
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
         stopped = pre_speed == 0
@@ -1060,7 +1065,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         return pre_speed
 
     def _candidate_distance(self, pre_speed: Optional[Fraction], pre_offset: Optional[Fraction],
-                            pre_current_entry_point: Optional[EntryPointT],
+                            pre_current_entry_point: Optional[EntryPointT], pre_next_entry_point: Optional[EntryPointT],
                             pre_done: bool, candidate_entry_point: Optional[EntryPointT],
                             in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
                             agent_targets: Set[EntryPointT]) -> Optional[Fraction]:
@@ -1072,7 +1077,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         """
-        target_reached = candidate_entry_point in agent_targets
         # same is_off_map proxy as _candidate_speed (pre_current_entry_point, not pre_offset) - the
         # two always agree by the on/off-map invariant, but reading the same variable in both keeps
         # this method's formulas textually identical to _candidate_speed's, not just logically so.
@@ -1083,6 +1087,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # exit" - it must first be given a moving action and actually start moving again before a fresh
         # crossing attempt (and is_cell_exit) can apply.
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
+        # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
+        # just an equivalent check on the already-resolved candidate_entry_point.
+        target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
         stopped = pre_speed == 0
@@ -1165,6 +1172,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     pre_speed=pre_speed,
                     pre_offset=pre_step.pre_offsets[h],
                     pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                    pre_next_entry_point=pre_step.pre_next_entry_points[h],
                     pre_done=pre_step.pre_dones[h],
                     candidate_entry_point=candidate_entry_point,
                     in_malfunction=pre_step.pre_in_malfunctions[h],
@@ -1212,6 +1220,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         pre_offset=pre_step.pre_offsets[h],
                         action=action,
                         pre_current_entry_point=pre_step.pre_current_entry_points[h],
+                        pre_next_entry_point=pre_step.pre_next_entry_points[h],
                         pre_done=pre_step.pre_dones[h],
                         candidate_entry_point=candidate_entry_point,
                         in_malfunction=pre_step.pre_in_malfunctions[h],
