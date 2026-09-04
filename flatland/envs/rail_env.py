@@ -930,10 +930,25 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         Branch order/exclusions match _candidate_speed/_candidate_distance's own done/target
-        reached/malfunction/map entry/stay off map/invalid action branches exactly, except where this
-        method - the one that actually derives is_off_map/target_reached/map_entry from scratch, rather
-        than consuming an already-resolved candidate_entry_point like the other two - structurally
-        can't; is_cell_exit itself is one shared definition across all three (see below).
+        reached/malfunction/map entry/off_map_no_departure/invalid action branches exactly, except
+        where this method - the one that actually derives is_off_map/target_reached/map_entry from
+        scratch, rather than consuming an already-resolved candidate_entry_point like the other two -
+        structurally can't; is_cell_exit itself is one shared definition across all three (see below).
+
+        The returned candidate_entry_point is None in exactly three cases, all requiring is_off_map -
+        _candidate_speed/_candidate_distance name this broader condition stay_off_map (a named local,
+        `candidate_entry_point is None`, used in their own map entry/stay off map branches):
+        Done (an already-removed DONE agent stays removed), Malfunction (MALFUNCTION_OFF_MAP - a
+        malfunction before ever entering the map), and off_map_no_departure, whose own
+        required_action_invalid_or_not_required_or_no_movement condition further breaks down into:
+
+        - not yet ready to depart (still WAITING) - an action isn't required yet
+        - ready to depart but no moving action given (e.g. DO_NOTHING) - an action was required but
+          a departure wasn't attempted
+        - a moving action given that doesn't resolve to a valid transition on the rail
+          (action_invalid_on_rail) - an action was required, attempted, and invalid
+
+        See design_by_contract.md's Table 2.
         """
         is_off_map = pre_current_entry_point is None
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
@@ -945,9 +960,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = (agent.earliest_departure == 0)  # no "step 0" exists, so this is the base case
         else:
             ready_to_depart = (agent.earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
-        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
-        map_entry = (is_off_map and not candidate_entry_point_independent_invalid
-                     and movement_action_given and ready_to_depart)
+        action_invalid_on_rail = candidate_entry_point_independent is None
+        # required_action_invalid_or_not_required_or_no_movement: why an off-map agent doesn't depart
+        # this step - one of three disjoint reasons: not yet ready to depart (action not required
+        # yet), ready to depart but no moving action given (action required, but not attempted), or a
+        # moving action given that doesn't resolve to a valid transition on the rail
+        # (action_invalid_on_rail).
+        required_action_invalid_or_not_required_or_no_movement = (
+            action_invalid_on_rail or not movement_action_given or not ready_to_depart)
+        map_entry = is_off_map and not required_action_invalid_or_not_required_or_no_movement
+        # off_map_no_departure: the agent was already off map and doesn't depart this step either -
+        # see required_action_invalid_or_not_required_or_no_movement's own three cases above. Core
+        # predicate only, like map_entry above - not pre_done/not in_malfunction are applied
+        # separately at the branch below.
+        off_map_no_departure = is_off_map and required_action_invalid_or_not_required_or_no_movement
         # is_cell_exit requires pre_speed > 0, not just pre_offset + pre_speed >= SEGMENT_LENGTH - shared
         # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
         # A STOPPED agent (pre_speed == 0) banked exactly at a boundary is never, by itself, "at a cell
@@ -955,7 +981,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # crossing attempt (and is_cell_exit) can apply.
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent.targets
-        on_map_cell_transition = not is_off_map and is_cell_exit and not candidate_entry_point_independent_invalid
+        on_map_cell_transition = not is_off_map and is_cell_exit and not action_invalid_on_rail
 
         # done
         # N.B. Covers both remove_agents_at_target cases.
@@ -971,17 +997,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # on-map cell transition via is_off_map vs. not is_off_map, no need to repeat that here
         if map_entry and not pre_done and not in_malfunction:
             return agent.initial_entry_point, candidate_entry_point_independent
-        # stay off map - excludes done/malfunction/map entry; already mutually exclusive with target
-        # reached via is_off_map vs. not is_off_map
-        if is_off_map and not map_entry and not pre_done and not in_malfunction:
+        # off_map_no_departure - excludes done/malfunction/map entry; already mutually exclusive
+        # with target reached via is_off_map vs. not is_off_map
+        if off_map_no_departure and not pre_done and not in_malfunction:
             return pre_current_entry_point, pre_next_entry_point
         # on-map cell transition - excludes done/malfunction/target reached (this branch and target
         # reached share not is_off_map and is_cell_exit, so they don't exclude each other structurally)
         if on_map_cell_transition and not pre_done and not in_malfunction and not target_reached:
             return pre_next_entry_point, candidate_entry_point_independent
         # invalid action at cell exit - excludes done/malfunction/target reached; already mutually
-        # exclusive with on-map cell transition via candidate_entry_point_independent_invalid
-        if (not is_off_map and is_cell_exit and candidate_entry_point_independent_invalid and not pre_done
+        # exclusive with on-map cell transition via action_invalid_on_rail
+        if (not is_off_map and is_cell_exit and action_invalid_on_rail and not pre_done
                 and not in_malfunction and not target_reached):
             return pre_current_entry_point, pre_next_entry_point
         # default - genuine residual, not exhausted by the branches above: on map, mid-cell (not at
@@ -1014,9 +1040,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # just an equivalent check on the already-resolved candidate_entry_point.
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
         done_or_target_reached = pre_done or target_reached
-        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
-        invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
+        action_invalid_on_rail = candidate_entry_point_independent is None
+        invalid_action_at_cell_exit = action_invalid_on_rail and is_cell_exit
         stopped = pre_speed == 0
+        # stay_off_map: the broader condition _candidate_entry_points documents as producing
+        # candidate_entry_point is None (Done, Malfunction off map, or off_map_no_departure - see its
+        # own docstring), consumed here rather than re-derived.
+        stay_off_map = candidate_entry_point is None
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
         no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not is_off_map
                                    and not invalid_action_at_cell_exit)
@@ -1031,12 +1061,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if in_malfunction and not pre_done and not target_reached:
             return Fraction(0)
         # map entry - excludes done/target reached/malfunction
-        if (is_off_map and candidate_entry_point is not None and not pre_done and not target_reached
-                and not in_malfunction):
+        if is_off_map and not stay_off_map and not pre_done and not target_reached and not in_malfunction:
             return _cap_speed(agent_max_speed, self.acceleration_delta)
         # stay off map - excludes done/target reached/malfunction
-        if (is_off_map and candidate_entry_point is None and not pre_done and not target_reached
-                and not in_malfunction):
+        if is_off_map and stay_off_map and not pre_done and not target_reached and not in_malfunction:
             return Fraction(0)
         # invalid action at cell exit - excludes done/target reached/malfunction/off map. Since
         # is_cell_exit requires pre_speed > 0, this (and thus invalid_action_at_cell_exit) can never be
@@ -1090,9 +1118,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
         # just an equivalent check on the already-resolved candidate_entry_point.
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
-        candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
-        invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
+        action_invalid_on_rail = candidate_entry_point_independent is None
+        invalid_action_at_cell_exit = action_invalid_on_rail and is_cell_exit
         stopped = pre_speed == 0
+        # stay_off_map: the broader condition _candidate_entry_points documents as producing
+        # candidate_entry_point is None (Done, Malfunction off map, or off_map_no_departure - see its
+        # own docstring), consumed here rather than re-derived.
+        stay_off_map = candidate_entry_point is None
 
         # done
         if pre_done:
@@ -1107,11 +1139,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if in_malfunction and not pre_done and not target_reached:
             return pre_offset
         # stay off map - excludes done/target reached/malfunction
-        if is_off_map and candidate_entry_point is None and not pre_done and not target_reached and not in_malfunction:
+        if is_off_map and stay_off_map and not pre_done and not target_reached and not in_malfunction:
             return None
         # map entry - excludes done/target reached/malfunction
-        if (is_off_map and candidate_entry_point is not None and not pre_done and not target_reached
-                and not in_malfunction):
+        if is_off_map and not stay_off_map and not pre_done and not target_reached and not in_malfunction:
             return Fraction(0)
         # invalid action at cell exit - excludes done/target reached/malfunction/off map. pre_speed is
         # always > 0 here by construction (is_cell_exit itself requires pre_speed > 0, see above) - this
