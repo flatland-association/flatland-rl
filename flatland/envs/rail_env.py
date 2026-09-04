@@ -977,11 +977,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
         # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
         # deliberately signalled one step early to drive next step's WAITING->READY_TO_DEPART transition.
+        # A DONE agent is never "ready to depart" regardless of earliest_departure timing - not pre_done
+        # is included here for semantic correctness, even though every consumer below already applies its
+        # own not pre_done guard at the branch, so this doesn't change any branch's outcome.
         movement_action_given = RailEnvActions.is_moving_action(action)
         if elapsed_steps == 1:
-            ready_to_depart = (earliest_departure == 0)  # no "step 0" exists, so this is the base case
+            ready_to_depart = not pre_done and (earliest_departure == 0)  # no "step 0" exists, so this is the base case
         else:
-            ready_to_depart = (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
+            ready_to_depart = not pre_done and (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
         action_invalid_on_rail = candidate_entry_point_independent is None
         # required_action_invalid_or_not_required_or_no_movement: why an off-map agent doesn't depart
         # this step - one of three disjoint reasons: not yet ready to depart (action not required
