@@ -156,7 +156,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # the "speed/distance are None while off map" design can carry a stale off-map speed pinned at
     # max_speed (with distance 0) instead of None, or a stale nonzero speed while in MALFUNCTION - live
     # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
-    # old pickle in line here rather than let a stale value violate _check_post_speed_distance_invariants
+    # old pickle in line here rather than let a stale value violate _check_speed_distance_speedup_postconditions
     # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
     # genuine mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
     # entirely.

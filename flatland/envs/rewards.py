@@ -217,7 +217,14 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # - if braking, reduced speed
                 # - if not braking, still full speed
                 # - if invalid action, speed set to 0
-                # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design, should we penalize invalid actions upon symmetric switch?
+                # design (issue #280): yes, an invalid action is penalized - once per genuine entering
+                # attempt (a MOVING->STOPPED transition that denies the crossing). A STOPPED agent given
+                # a non-moving retry of the same denied action (e.g. STOP_MOVING resolving to the same
+                # invalid look-ahead) never promotes and so never re-charges; but a STOPPED agent given a
+                # genuinely moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
+                # requires speed > 0, see design_by_contract.md, so a STOPPED/banked agent never blocks its
+                # own promotion), and if the resulting fresh attempt is denied again, that is itself a new
+                # MOVING->STOPPED transition and is charged again.
                 # Reaching here guarantees movement_allowed was False (see comment above), and
                 # movement_allowed = action_valid and resource_check (rail_env.py) - so exactly one of
                 # the two branches below applies. Same penalty value for both, tracked under different

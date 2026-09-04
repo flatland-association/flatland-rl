@@ -169,15 +169,15 @@ load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance le
 `SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
 `speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
 truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
-itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step invariant checks to verify the actual
+itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondition checks to verify the actual
 post-step value against the same formula. Change the math in one place, not independently in `step()` and in
-the invariant that checks it.
+the postcondition check that verifies it.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
-`AbstractRailEnv.step()` itself calls `_check_pre_step_invariants_and_capture_snapshot()` up front, and
-`_check_malfunction_state_invariant()` / `_verify_mutually_exclusive_resource_allocation()` /
-`_check_post_speed_distance_invariants()` / `_check_post_position_invariants()` (`rail_env.py`) at the end - a
+`AbstractRailEnv.step()` itself calls `_check_pre_post_invariants()` and `_capture_pre_step_snapshot()` up front, and
+`_check_malfunction_state_postcondition()` / `_verify_mutually_exclusive_resource_allocation()` /
+`_check_speed_distance_speedup_postconditions()` / `_check_position_update_postconditions()` (`rail_env.py`) at the end - a
 correctness net verifying every per-agent speed/distance/position update and resource allocation this step
 matches exactly what the action/state-machine/motion-check outcome implies, not part of normal control flow.
 Since these live in `AbstractRailEnv` itself (not a subclass override), `RailEnv` and `GraphRailEnv` both run
@@ -187,10 +187,10 @@ so the extra per-step overhead can be disabled where it matters - `examples/flat
 `get_rail_env()` defaults it to `False`, since that script exists specifically to profile `step()`'s own
 cumulative time and the assertions would otherwise inflate every measurement.
 
-`_check_post_position_invariants`/`_check_post_speed_distance_invariants` branch purely on position
+`_check_position_update_postconditions`/`_check_speed_distance_speedup_postconditions` branch purely on position
 (`current_entry_point is None`) and resource/malfunction/action outcomes, never on `agent.state` - the
 off/on-map position signal is the invariant these checks themselves help enforce, so re-deriving branches from
-`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_invariant`
+`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_postcondition`
 is the one exception, since it specifically checks state/malfunction-counter consistency.
 
 ### Cython-accelerated hot paths (`ext-modules`)
@@ -361,6 +361,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
+- Commit messages always follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+  (`type(scope): summary`, e.g. `fix(envs): ...`, `docs: ...`, `refactor(rail_env): ...`) - not just PR titles
+  (see "Releases and versioning" above for why PR titles specifically matter to `release-please`); every commit
+  on the branch should follow the same convention.
 - Call a method/function with more than a couple of parameters using keyword arguments at the call site
   (`self._foo(action=action, state=state, ...)`), not positional - positional args for a long signature are
   easy to silently mis-order (especially several same-typed/`Optional` params in a row) and a keyword mismatch
@@ -390,3 +394,8 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   (e.g. `env_observation_builder.py`'s unbound `EnvT`, `entry_point_distance_map.py`'s unbound `DistanceMapT`) -
   don't confuse the two: the same base name can be legitimately unbound-and-generic in one file and
   bound-and-specific in another.
+- In comments/docstrings, always be precise about which *switch type* is meant - symmetric vs. single
+  (`RailEnvTransitionsEnum.symmetric_switch_from_*` vs. the single/ordinary switch transitions) - since the two
+  differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
+  makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
+  unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".
