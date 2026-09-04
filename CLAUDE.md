@@ -361,6 +361,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
+- Commit messages always follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+  (`type(scope): summary`, e.g. `fix(envs): ...`, `docs: ...`, `refactor(rail_env): ...`) - not just PR titles
+  (see "Releases and versioning" above for why PR titles specifically matter to `release-please`); every commit
+  on the branch should follow the same convention.
 - Call a method/function with more than a couple of parameters using keyword arguments at the call site
   (`self._foo(action=action, state=state, ...)`), not positional - positional args for a long signature are
   easy to silently mis-order (especially several same-typed/`Optional` params in a row) and a keyword mismatch
