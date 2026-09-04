@@ -100,7 +100,7 @@ class TrainStateMachine:
         unconditionally for every agent, see _handle_malfunction_off_map's docstring) and have
         malfunction_handler.in_malfunction read True, but it never transitions to
         MALFUNCTION/MALFUNCTION_OFF_MAP for it - the roll is silently absorbed with no state
-        consequence, since DONE is terminal. See rail_env.py's _check_malfunction_state_invariant,
+        consequence, since DONE is terminal. See rail_env.py's _check_malfunction_state_postcondition,
         which excludes DONE agents from its state/in_malfunction consistency check for this reason.
 
         This holds independently of remove_agents_at_target, which only decides what DONE's position
@@ -147,7 +147,7 @@ class TrainStateMachine:
         step", not a preview of the next one. MALFUNCTION/MALFUNCTION_OFF_MAP transitions honor this:
         rail_env.py's step() decrements malfunction_handler's down-counter and rolls any new
         malfunction (MalfunctionEffectsGenerator.on_episode_step_start) at the very start of the same
-        env.step() call (see rail_env.py's _check_malfunction_state_invariant).
+        env.step() call (see rail_env.py's _check_malfunction_state_postcondition).
 
         This still leaves an asymmetry worth knowing about: the counter itself is genuinely external to
         this step()-then-reflect contract - it is mutated by an outside generator as an *input* to this

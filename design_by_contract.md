@@ -1,9 +1,15 @@
 # `_candidate_entry_points` / `_candidate_speed` / `_candidate_distance` branch contract
 
+Design by Contract (DbC) is a software correctness discipline introduced by Bertrand Meyer in the mid-1980s with
+the Eiffel programming language, addressing the problem of specifying precisely - via preconditions,
+postconditions and invariants - what a caller must guarantee before invoking a routine and what the routine
+guarantees in return, so a broken assumption is caught exactly where it occurs rather than surfacing later as an
+unrelated-looking symptom.
+
 Branch-by-branch comparison of `AbstractRailEnv._candidate_entry_points()`, `_candidate_speed()` and
 `_candidate_distance()` (`flatland/envs/rail_env.py`). All three are pure, pre-step-only derivations of this
 step's optimistic candidate entry points/speed/distance, called from the collect phase and cross-checked by the
-post-step invariant checks. `_candidate_entry_points` is the *producer*: it derives `off_map`/`cell_exit`/
+post-step postcondition checks. `_candidate_entry_points` is the *producer*: it derives `off_map`/`cell_exit`/
 `target_reached`/`map_entry` from scratch and returns the resolved `candidate_entry_point`. `_candidate_speed`/
 `_candidate_distance` are *consumers*: they take that resolved `candidate_entry_point` as an input parameter
 rather than re-deriving it. That asymmetry is why some terms/branches can be made textually identical across all

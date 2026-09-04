@@ -77,7 +77,7 @@ class SpeedCounter:
     Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
     pre-step inputs - used by RailEnv.step() to compute candidate speed/distance (which set() is then
     called with directly), and again by its post-step invariant checks
-    (_check_post_speed_distance_invariants) to verify the actual post-step values match. They are static
+    (_check_speed_distance_speedup_postconditions) to verify the actual post-step values match. They are static
     rather than instance methods since they compute a *candidate* value from explicit pre-step inputs,
     not the counter's own (post-step) state; acceleration_delta/braking_delta are env-level parameters,
     not SpeedCounter state, so are passed in explicitly rather than read off self. All four are None
@@ -225,7 +225,7 @@ class SpeedCounter:
         contrast with an agent whose pre-step speed genuinely was 0 this step (STOPPED, or STOPPED/
         MALFUNCTION promoted to MOVING this step), whose distance is asserted unchanged at its pre-step
         value by a completely different invariant branch (see (D1) in
-        _check_post_speed_distance_invariants), not by this formula.
+        _check_speed_distance_speedup_postconditions), not by this formula.
 
         The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
         all three only ever apply once `is_cell_exit()` was already true pre-step (i.e.

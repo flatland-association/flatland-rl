@@ -787,7 +787,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     agent.speed_counter.speed/.distance exactly match env._candidate_speed()/env._candidate_distance()
     (or, when resource_check denies the candidate, the discarded-candidate fallback formulas) computed
     from those captured pre-step values - the same cross-check RailEnv.step()'s own
-    _check_post_speed_distance_speedup_invariants performs internally after every step, done here
+    _check_speed_distance_speedup_postconditions performs internally after every step, done here
     explicitly against the candidate_ methods themselves. Returns the real resource_check outcome and
     this step's rewards dict for `agent`, for the caller's own assertions on top.
     """

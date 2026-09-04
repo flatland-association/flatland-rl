@@ -169,15 +169,15 @@ load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance le
 `SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
 `speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
 truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
-itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step invariant checks to verify the actual
+itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondition checks to verify the actual
 post-step value against the same formula. Change the math in one place, not independently in `step()` and in
-the invariant that checks it.
+the postcondition check that verifies it.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
-`AbstractRailEnv.step()` itself calls `_check_pre_step_invariants_and_capture_snapshot()` up front, and
-`_check_malfunction_state_invariant()` / `_verify_mutually_exclusive_resource_allocation()` /
-`_check_post_speed_distance_invariants()` / `_check_post_position_invariants()` (`rail_env.py`) at the end - a
+`AbstractRailEnv.step()` itself calls `_check_pre_post_invariants()` and `_capture_pre_step_snapshot()` up front, and
+`_check_malfunction_state_postcondition()` / `_verify_mutually_exclusive_resource_allocation()` /
+`_check_speed_distance_speedup_postconditions()` / `_check_position_update_postconditions()` (`rail_env.py`) at the end - a
 correctness net verifying every per-agent speed/distance/position update and resource allocation this step
 matches exactly what the action/state-machine/motion-check outcome implies, not part of normal control flow.
 Since these live in `AbstractRailEnv` itself (not a subclass override), `RailEnv` and `GraphRailEnv` both run
@@ -187,10 +187,10 @@ so the extra per-step overhead can be disabled where it matters - `examples/flat
 `get_rail_env()` defaults it to `False`, since that script exists specifically to profile `step()`'s own
 cumulative time and the assertions would otherwise inflate every measurement.
 
-`_check_post_position_invariants`/`_check_post_speed_distance_invariants` branch purely on position
+`_check_position_update_postconditions`/`_check_speed_distance_speedup_postconditions` branch purely on position
 (`current_entry_point is None`) and resource/malfunction/action outcomes, never on `agent.state` - the
 off/on-map position signal is the invariant these checks themselves help enforce, so re-deriving branches from
-`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_invariant`
+`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_postcondition`
 is the one exception, since it specifically checks state/malfunction-counter consistency.
 
 ### Cython-accelerated hot paths (`ext-modules`)
