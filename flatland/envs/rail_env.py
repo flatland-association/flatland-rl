@@ -968,7 +968,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         - ready to depart but no moving action given (e.g. DO_NOTHING) - an action was required but
           a departure wasn't attempted
         - a moving action given that doesn't resolve to a valid transition on the rail
-          (action_invalid_on_rail) - an action was required, attempted, and invalid
+          (transition_invalid) - an action was required, attempted, and invalid
 
         See design_by_contract.md's Table 2.
         """
@@ -985,14 +985,19 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = not pre_done and (earliest_departure == 0)  # no "step 0" exists, so this is the base case
         else:
             ready_to_depart = not pre_done and (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
-        action_invalid_on_rail = candidate_entry_point_independent is None
+        transition_invalid = candidate_entry_point_independent is None
+        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
+        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
+        # The off-map departure check below needs the raw transition_invalid instead, since is_off_map
+        # is true by construction there.
+        action_invalid_on_rail = transition_invalid and not is_off_map
         # required_action_invalid_or_not_required_or_no_movement: why an off-map agent doesn't depart
         # this step - one of three disjoint reasons: not yet ready to depart (action not required
         # yet), ready to depart but no moving action given (action required, but not attempted), or a
         # moving action given that doesn't resolve to a valid transition on the rail
-        # (action_invalid_on_rail).
+        # (transition_invalid).
         required_action_invalid_or_not_required_or_no_movement = (
-            action_invalid_on_rail or not movement_action_given or not ready_to_depart)
+            transition_invalid or not movement_action_given or not ready_to_depart)
         map_entry = is_off_map and not required_action_invalid_or_not_required_or_no_movement
         # off_map_no_departure: the agent was already off map and doesn't depart this step either -
         # see required_action_invalid_or_not_required_or_no_movement's own three cases above. Core
@@ -1094,7 +1099,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # just an equivalent check on the already-resolved candidate_entry_point.
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
         done_or_target_reached = pre_done or target_reached
-        action_invalid_on_rail = candidate_entry_point_independent is None
+        transition_invalid = candidate_entry_point_independent is None
+        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
+        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
+        action_invalid_on_rail = transition_invalid and not is_off_map
         invalid_action_at_cell_exit = action_invalid_on_rail and is_cell_exit
         stopped = pre_speed == 0
         # stay_off_map: the broader condition _candidate_entry_points documents as producing
@@ -1207,7 +1215,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
         # just an equivalent check on the already-resolved candidate_entry_point.
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent_targets
-        action_invalid_on_rail = candidate_entry_point_independent is None
+        transition_invalid = candidate_entry_point_independent is None
+        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
+        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
+        action_invalid_on_rail = transition_invalid and not is_off_map
         invalid_action_at_cell_exit = action_invalid_on_rail and is_cell_exit
         stopped = pre_speed == 0
         # stay_off_map: the broader condition _candidate_entry_points documents as producing
