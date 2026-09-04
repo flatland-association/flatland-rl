@@ -58,6 +58,8 @@ def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
 
 @lru_cache()
 def _cached_cell_exit(_distance, speed: Fraction) -> bool:
+    if speed == 0:
+        return False
     return _distance + speed >= SEGMENT_LENGTH
 
 

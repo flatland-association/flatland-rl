@@ -390,3 +390,8 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   (e.g. `env_observation_builder.py`'s unbound `EnvT`, `entry_point_distance_map.py`'s unbound `DistanceMapT`) -
   don't confuse the two: the same base name can be legitimately unbound-and-generic in one file and
   bound-and-specific in another.
+- In comments/docstrings, always be precise about which *switch type* is meant - symmetric vs. single
+  (`RailEnvTransitionsEnum.symmetric_switch_from_*` vs. the single/ordinary switch transitions) - since the two
+  differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
+  makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
+  unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".

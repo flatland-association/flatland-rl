@@ -929,9 +929,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
         Branch order/exclusions match _candidate_speed/_candidate_distance's own done/target
         reached/malfunction/map entry/stay off map/invalid action branches exactly, except where this
-        method - the one that actually derives is_off_map/is_cell_exit/target_reached/map_entry from
-        scratch, rather than consuming an already-resolved candidate_entry_point like the other two -
-        structurally can't (see is_cell_exit's own note below).
+        method - the one that actually derives is_off_map/target_reached/map_entry from scratch, rather
+        than consuming an already-resolved candidate_entry_point like the other two - structurally
+        can't; is_cell_exit itself is one shared definition across all three (see below).
         """
         is_off_map = pre_current_entry_point is None
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
@@ -946,13 +946,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         map_entry = (is_off_map and not candidate_entry_point_independent_invalid
                      and movement_action_given and ready_to_depart)
-        # is_cell_exit deliberately keeps its own pre_speed > 0 guard, unlike _candidate_speed/
-        # _candidate_distance's shared is_cell_exit - this method is the one that actually moves the
-        # agent (target_reached/on_map_cell_transition below return a new position), so a STOPPED
-        # agent (pre_speed == 0) banked exactly at a boundary must never be misclassified as
-        # crossing/reaching target this step just because offset + 0 >= SEGMENT_LENGTH; the other two
-        # methods can safely drop this guard since a pre_speed == 0 agent already routes to a no-op
-        # value downstream regardless of is_cell_exit.
+        # is_cell_exit requires pre_speed > 0, not just pre_offset + pre_speed >= SEGMENT_LENGTH - shared
+        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
+        # A STOPPED agent (pre_speed == 0) banked exactly at a boundary is never, by itself, "at a cell
+        # exit" - it must first be given a moving action and actually start moving again before a fresh
+        # crossing attempt (and is_cell_exit) can apply.
         is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
         target_reached = not is_off_map and is_cell_exit and pre_next_entry_point in agent.targets
         on_map_cell_transition = not is_off_map and is_cell_exit and not candidate_entry_point_independent_invalid
@@ -1005,7 +1003,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         target_reached = candidate_entry_point in agent_targets
         done_or_target_reached = pre_done or target_reached
         is_off_map = pre_current_entry_point is None
-        is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
+        # is_cell_exit requires pre_speed > 0, not just pre_offset + pre_speed >= SEGMENT_LENGTH - shared
+        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
+        # A STOPPED agent (pre_speed == 0) banked exactly at a boundary is never, by itself, "at a cell
+        # exit" - it must first be given a moving action and actually start moving again before a fresh
+        # crossing attempt (and is_cell_exit) can apply.
+        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
         stopped = pre_speed == 0
@@ -1030,7 +1033,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if (is_off_map and candidate_entry_point is None and not pre_done and not target_reached
                 and not in_malfunction):
             return Fraction(0)
-        # invalid action at cell exit - excludes done/target reached/malfunction/off map
+        # invalid action at cell exit - excludes done/target reached/malfunction/off map. Since
+        # is_cell_exit requires pre_speed > 0, this (and thus invalid_action_at_cell_exit) can never be
+        # true while stopped - a STOPPED agent given a moving action always falls through to
+        # "acceleration or start moving" below regardless of whether that action is itself structurally
+        # valid; a fresh, genuine re-attempt at the boundary (this time with pre_speed > 0) is what gets
+        # denied and re-charged, not the promotion step itself.
         if (invalid_action_at_cell_exit and not pre_done and not target_reached and not in_malfunction
                 and not is_off_map):
             return Fraction(0)
@@ -1069,8 +1077,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # two always agree by the on/off-map invariant, but reading the same variable in both keeps
         # this method's formulas textually identical to _candidate_speed's, not just logically so.
         is_off_map = pre_current_entry_point is None
-        # None-safe regardless of evaluation order - pre_offset can be None here
-        is_cell_exit = pre_offset is not None and (pre_offset + pre_speed >= SEGMENT_LENGTH)
+        # is_cell_exit requires pre_speed > 0, not just pre_offset + pre_speed >= SEGMENT_LENGTH - shared
+        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
+        # A STOPPED agent (pre_speed == 0) banked exactly at a boundary is never, by itself, "at a cell
+        # exit" - it must first be given a moving action and actually start moving again before a fresh
+        # crossing attempt (and is_cell_exit) can apply.
+        is_cell_exit = pre_speed is not None and pre_speed > 0 and pre_offset + pre_speed >= SEGMENT_LENGTH
         candidate_entry_point_independent_invalid = candidate_entry_point_independent is None
         invalid_action_at_cell_exit = candidate_entry_point_independent_invalid and is_cell_exit
         stopped = pre_speed == 0
@@ -1094,14 +1106,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if (is_off_map and candidate_entry_point is not None and not pre_done and not target_reached
                 and not in_malfunction):
             return Fraction(0)
-        # invalid action at cell exit - excludes done/target reached/malfunction/off map
+        # invalid action at cell exit - excludes done/target reached/malfunction/off map. pre_speed is
+        # always > 0 here by construction (is_cell_exit itself requires pre_speed > 0, see above) - this
+        # can never fire while stopped, so a fresh, genuine re-attempt at the boundary is what gets
+        # denied here, not a STOPPED agent's mere promotion/resumption (see the dedicated stopped
+        # branch below, which handles that case instead).
         if (invalid_action_at_cell_exit and not pre_done and not target_reached and not in_malfunction
                 and not is_off_map):
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
-            # boundary, it just isn't credited with crossing it. pre_speed is always > 0 here (a MOVING
-            # agent's pre-step speed can never be 0).
+            # boundary, it just isn't credited with crossing it.
             return SpeedCounter.distance_without_crossing(pre_offset, pre_speed)
         # stopped - excludes done/target reached/off map/malfunction/invalid action
         if (stopped and not pre_done and not target_reached and not is_off_map and not in_malfunction
