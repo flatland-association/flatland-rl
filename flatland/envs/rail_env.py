@@ -133,6 +133,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
     check_step_pre_post_conditions : bool
         Set to False to skip checking step() pre- and postconditions, e.g. in performance-sensitive production use.
+    skip_state_machine_update : bool
+        Set to True to skip updating agent.state_machine/agent.state in step(), e.g. in performance-sensitive
+        production use that doesn't consume get_info_dict()'s 'state'/'action_required' fields - step()'s own
+        control flow (candidate position/speed/distance, resource conflict resolution, DONE detection) never
+        reads agent.state back, so position/speed/reward/done behavior is unaffected. When True, agent.state
+        stays frozen at its pre-skip value and get_info_dict()'s 'state'/'action_required' are stale/meaningless.
     rewards : DefaultRewards
         The rewards function to use. Defaults to standard settings of Flatland 3 behaviour.
     effects_generator : Optional[EffectsGenerator["RailEnv"]]
@@ -154,6 +160,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                  acceleration_delta: Fraction = Fraction(1),
                  braking_delta: Fraction = -Fraction(1),
                  check_step_pre_post_conditions: bool = True,
+                 skip_state_machine_update: bool = False,
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None,
                  distance_map: AgentSourceTargetDistanceMap = None,
@@ -221,6 +228,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
         self.check_step_pre_post_conditions = check_step_pre_post_conditions
+        self.skip_state_machine_update = skip_state_machine_update
 
         mf = mfg.MalfunctionEffectsGenerator(self.malfunction_generator)
         if effects_generator is None:
@@ -379,6 +387,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     malfunction - Counter value for malfunction > 0 means train is in malfunction
                     speed - Speed of the train
                     state - State from the trains's state machine
+
+        'action_required' and 'state' are derived from agent.state_machine/agent.state - with
+        skip_state_machine_update, these are frozen at their pre-skip values and don't reflect this step's
+        actual position/speed/malfunction outcome.
         """
         info_dict = {
             'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit())
@@ -431,6 +443,19 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # Fraction(0), not None - see its docstring), which is fine since (10b) always runs
                 # strictly before this.
                 agent.speed_counter.set(None, None)
+
+    def _update_state_machine(self, agent: EnvAgent, agent_transition_data: env_utils.AgentTransitionData):
+        """
+        (9) STATE MACHINE STEP - updates agent.state_machine/agent.state, read back only for
+        get_info_dict()'s 'state'/'action_required' output - step()'s own control flow (candidate
+        position/speed/distance, resource conflict resolution, DONE detection) never reads them back,
+        see AgentTransitionData.just_reached_target. Skipped when skip_state_machine_update, leaving
+        agent.state (and so 'state'/'action_required') frozen at their pre-skip values.
+        """
+        if self.skip_state_machine_update:
+            return
+        agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
+        agent.state_machine.step()
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
         """
@@ -486,7 +511,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # call before the very first step() runs - tweak state directly here, before this step's own
             # state read below, so it already sees READY_TO_DEPART instead of stale WAITING (symmetric
             # with MALFUNCTION_OFF_MAP's own straight-to-MOVING shortcut in _handle_malfunction_off_map).
-            if self._elapsed_steps == 1 and agent.earliest_departure == 0 and not in_malfunction and agent.state == TrainState.WAITING:
+            # State-machine-only (map entry itself is derived from earliest_departure/elapsed_steps
+            # directly in _candidate_entry_points, not from this) - skip with the rest of the state machine.
+            if (not self.skip_state_machine_update and self._elapsed_steps == 1 and agent.earliest_departure == 0
+                    and not in_malfunction and agent.state == TrainState.WAITING):
                 agent.state_machine.set_state(TrainState.READY_TO_DEPART)
             movement_action_given = RailEnvActions.is_moving_action(action)
             # design (issue #280): earliest_departure_reached is signalled one step earlier,
@@ -647,8 +675,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             agent_transition_data.resource_check = resource_check
 
             # (9) STATE MACHINE STEP
-            agent.state_machine.set_transition_signals(agent_transition_data.state_transition_signal)
-            agent.state_machine.step()
+            self._update_state_machine(agent, agent_transition_data)
 
             # (10a) POSITION UPDATE
             done = agent.target_entry_point is not None
@@ -669,14 +696,16 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             elif self.remove_agents_at_target and (done or target_reached):
                 agent.current_entry_point = None
                 agent.next_entry_point = None
-                if not done:
-                    agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
             # candidates accepted
             else:
                 agent.current_entry_point = _sanitize_entry_point(candidate_entry_point)
                 agent.next_entry_point = _sanitize_entry_point(candidate_next_entry_point)
-                if not done:
-                    agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
+
+            # update_if_reached() is a state_machine-internal mutation only (its "entry_point in targets"
+            # check is duplicated above into just_reached_target for control flow) - skip with the rest of
+            # the state machine.
+            if resource_check and not done and not self.skip_state_machine_update:
+                agent.state_machine.update_if_reached(candidate_entry_point, agent.targets)
 
             # (10b) SPEED_COUNTER UPDATE (SPEED AND DISTANCE) - candidate_speed/candidate_distance
             # already computed in the collect phase ((3a)/(3c)); mirrors
@@ -732,8 +761,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 )
             )
 
-            # Off map or on map state and position should match
-            if not self._fast_state_position_sync_check(agent.state, agent.current_entry_point, self.remove_agents_at_target):
+            # Off map or on map state and position should match - not checked when
+            # skip_state_machine_update, since agent.state is then frozen and expected to diverge from position.
+            if not self.skip_state_machine_update and not self._fast_state_position_sync_check(agent.state, agent.current_entry_point, self.remove_agents_at_target):
                 agent.state_machine.state_position_sync_check(agent.current_entry_point, agent.handle, self.remove_agents_at_target)
 
         # Check if episode has ended and update rewards and dones
@@ -743,7 +773,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         if self.check_step_pre_post_conditions:
             self._check_pre_post_invariants()
-            self._check_malfunction_state_postcondition()  # only holds after env.step()!
+            if not self.skip_state_machine_update:
+                self._check_malfunction_state_postcondition()  # only holds after env.step()!
             self._check_speed_distance_speedup_postconditions(action_dict, pre_step_snapshot)
             self._check_position_update_postconditions(action_dict, pre_step_snapshot)
 
@@ -817,9 +848,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             current_entry_point = agent.current_entry_point
             next_entry_point = agent.next_entry_point
             self._check_off_on_map_invariant(current_entry_point, next_entry_point)
-            assert agent.state is not None
-            self._check_state_off_on_map_invariant(current_entry_point, agent.speed_counter.speed,
-                                                   agent.speed_counter.distance, agent.state, agent.target_entry_point)
+            # agent.state is frozen (and so expected to diverge from position) when skip_state_machine_update.
+            if not self.skip_state_machine_update:
+                assert agent.state is not None
+                self._check_state_off_on_map_invariant(current_entry_point, agent.speed_counter.speed,
+                                                       agent.speed_counter.distance, agent.state, agent.target_entry_point)
 
         self._verify_mutually_exclusive_resource_allocation()
 
@@ -1444,6 +1477,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                  acceleration_delta=1.0,
                  braking_delta=-1.0,
                  check_step_pre_post_conditions: bool = True,
+                 skip_state_machine_update: bool = False,
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None
                  ):
@@ -1475,6 +1509,7 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
             acceleration_delta=acceleration_delta,
             braking_delta=braking_delta,
             check_step_pre_post_conditions=check_step_pre_post_conditions,
+            skip_state_machine_update=skip_state_machine_update,
             rewards=rewards,
             effects_generator=effects_generator,
             distance_map=DistanceMap([], height, width),
