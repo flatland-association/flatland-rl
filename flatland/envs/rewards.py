@@ -9,7 +9,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
-from flatland.envs.step_utils.states import TrainState
+from flatland.envs.step_utils.states import StateTransitionSignals
 
 RewardT = TypeVar('RewardT')
 EntryPointT = TypeVar('EntryPointT')
@@ -102,10 +102,6 @@ class Rewards(Generic[RewardT]):
         return zip(agent_waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1])
 
 
-def defaultdict_set():
-    return defaultdict(lambda: set())
-
-
 def defaultdict_list():
     return defaultdict(lambda: [])
 
@@ -183,13 +179,34 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
         self.departures: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
-        self.states: Dict[AgentHandle, Dict[EntryPointT, Set[TrainState]]] = defaultdict(defaultdict_set)
+        # entry points where the agent was ever recorded on-map and genuinely halted (not malfunctioning)
+        # - a state-machine-independent equivalent of "was ever TrainState.STOPPED here".
+        self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
-        if agent.current_entry_point is not None:
+        # tests call step_reward() directly with agent_transition_data=None when a scenario doesn't
+        # involve any per-step signal (e.g. a hand-constructed already-DONE/off-map agent, or a plain
+        # dwelling/departure bookkeeping call) - treat as "normal, unimpeded movement, no special signal
+        # this step" (movement_allowed=True keeps is_stopped_now False below, matching the old code's
+        # implicit behavior of never actually dereferencing agent_transition_data in those scenarios).
+        agent_transition_data = agent_transition_data or AgentTransitionData(None, None, StateTransitionSignals(movement_allowed=True))
+        # some tests construct AgentTransitionData directly with state_transition_signal=None when they
+        # don't care about motion-check signals for that call - same "no special signal" fallback as above.
+        sts = agent_transition_data.state_transition_signal or StateTransitionSignals(movement_allowed=True)
+        is_on_map = agent.current_entry_point is not None
+        # mirrors TrainStateMachine._handle_moving's own MOVING->STOPPED transition condition, using only
+        # this step's signals - a state-machine-independent equivalent of agent.state == TrainState.STOPPED
+        # (on-map, not malfunctioning, only MOVING/STOPPED remain).
+        is_stopped_now = is_on_map and not sts.in_malfunction and ((sts.stop_action_given and sts.new_speed_zero) or not sts.movement_allowed)
+        # agent_transition_data.speed is this step's pre-update speed (see rail_env.py's (8) FETCH
+        # CONFLICT RESOLUTION) - a state-machine-independent equivalent of
+        # agent.state_machine.previous_state == TrainState.MOVING.
+        was_moving = agent_transition_data.speed is not None and agent_transition_data.speed > 0
 
-            self.states[agent.handle][agent.current_entry_point].add(agent.state)
+        if is_on_map:
+            if is_stopped_now:
+                self.stopped_waypoints[agent.handle].add(agent.current_entry_point)
 
             # Only record arrival if this is a new waypoint (not dwelling at same position)
             if agent.old_entry_point != agent.current_entry_point:
@@ -202,7 +219,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         elif agent.old_entry_point is not None:
             self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)
 
-        if agent.state_machine.previous_state == TrainState.MOVING and agent.state == TrainState.STOPPED:
+        if was_moving and is_stopped_now:
             # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step,
             # and the env did not itself deny movement (invalid action or motion check conflict, see
             # TrainStateMachine._handle_moving: MOVING -> STOPPED on `(stop_action_given and new_speed_zero) or not
@@ -210,7 +227,6 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
             # with a STOP_MOVING action (e.g. STOP_MOVING evaluated as invalid upon facing a symmetric switch) would
             # be misclassified as voluntary and skip the penalty.
             # Only penalize stops imposed by the env (motion check conflict or invalid action), not controlled stops.
-            sts = agent_transition_data.state_transition_signal
             voluntary_stop = sts.stop_action_given and sts.new_speed_zero and sts.movement_allowed
             if not voluntary_stop:
                 # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
@@ -236,14 +252,16 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 elif not agent_transition_data.resource_check:
                     d[DefaultPenalties.COLLISION.value] = penalty
 
-        if agent.state == TrainState.DONE and agent.state_machine.previous_state != TrainState.DONE:
+        if agent_transition_data.just_reached_target:
             self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
         return d
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
-        # If agent finished during episode, reward already calculated in step_reward()
-        if agent.state == TrainState.DONE:
+        # If agent finished during episode, reward already calculated in step_reward() - target_entry_point
+        # is set exactly once, permanently, the first step the agent reaches DONE (see
+        # AbstractRailEnv.handle_done_state()), so it's a state-machine-independent done proxy.
+        if agent.target_entry_point is not None:
             return d
         # Calculate penalty for not reaching target before episode end
         return self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
@@ -258,19 +276,19 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
 
         Handles both completed and incomplete journeys.
         """
-        if agent.state == TrainState.DONE:
+        if agent.target_entry_point is not None:
             # delay at target
             # if agent arrived earlier or on time = 0
             # if agent arrived later = -ve reward based on how late
             d[DefaultPenalties.TARGET_LATE_ARRIVAL.value] = min(agent.latest_arrival - agent.arrival_time, 0)
         else:
-            if agent.state.is_off_map_state():
+            if agent.current_entry_point is None:
                 # journey not started
                 d[DefaultPenalties.CANCELLATION.value] = -1 * self.cancellation_factor * \
                                                          (agent.get_travel_time_on_shortest_path(distance_map) + self.cancellation_time_buffer)
 
             # target not reached
-            if agent.state.is_on_map_state():
+            if agent.current_entry_point is not None:
                 d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty,
                                                                    agent.get_current_delay(elapsed_steps, distance_map))
         agent_waypoints = self._sanitize_waypoints(agent.waypoints)
@@ -280,7 +298,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
             wps_intersection: Set[EntryPointT] = intermediate_alternatives.intersection(agent_arrivals)
             # a station may consist of several halting cells (alternative waypoints);
             # the stop is served iff the train stopped at any of them
-            stopped_wps: Set[EntryPointT] = {wp for wp in wps_intersection if TrainState.STOPPED in self.states[agent.handle][wp]}
+            stopped_wps: Set[EntryPointT] = wps_intersection.intersection(self.stopped_waypoints[agent.handle])
             if len(stopped_wps) == 0:
                 # stop not served or served but not stopped
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
@@ -485,8 +503,13 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
 
         # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: speed_counter currently is not set to 0 during malfunctions.
-        # N.B. enforces penalization before/after malfunction
-        current_speed = agent.speed_counter.speed if agent.state == TrainState.MOVING else 0
+        # N.B. enforces penalization before/after malfunction, off-map and just-arrived (on-map, not
+        # malfunctioning and not just done is exactly MOVING or STOPPED - a stopped agent's
+        # speed_counter.speed is already 0, so this doesn't need to single out MOVING specifically).
+        just_reached_target = agent_transition_data is not None and agent_transition_data.just_reached_target
+        current_speed = agent.speed_counter.speed if (
+            agent.current_entry_point is not None and not agent.malfunction_handler.in_malfunction and not just_reached_target
+        ) else 0
 
         energy_efficiency = -(current_speed / agent.speed_counter.max_speed) ** 2
         smoothness = 0
@@ -529,11 +552,10 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # are only ever appended to once, coupled together, so end_of_episode_reward()'s zip(arrivals[wp],
         # departures[wp]) stays aligned.
         # `agent.target_entry_point` is set deterministically by AbstractRailEnv.handle_done_state() before
-        # `current_entry_point` is possibly cleared to None (remove_agents_at_target) - see
-        # EnvAgent.target_entry_point and agent_utils.virtual_entry_point(), whose DONE branch this mirrors.
-        entry_point = (
-            agent.target_entry_point if agent.state_machine.state == TrainState.DONE else agent.current_entry_point
-        )
+        # `current_entry_point` is possibly cleared to None (remove_agents_at_target), and stays set
+        # permanently from that step on - see EnvAgent.target_entry_point and agent_utils.virtual_entry_point(),
+        # whose DONE branch this mirrors.
+        entry_point = agent.target_entry_point if agent.target_entry_point is not None else agent.current_entry_point
         if entry_point is not None and entry_point not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][entry_point].append(elapsed_steps)
             # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
