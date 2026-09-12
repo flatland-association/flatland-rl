@@ -7,9 +7,9 @@ from fastenum import fastenum
 from flatland.core.env_observation_builder import AgentHandle
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.env_utils import AgentTransitionData
-from flatland.envs.step_utils.states import StateTransitionSignals
 
 RewardT = TypeVar('RewardT')
 EntryPointT = TypeVar('EntryPointT')
@@ -188,17 +188,23 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # tests call step_reward() directly with agent_transition_data=None when a scenario doesn't
         # involve any per-step signal (e.g. a hand-constructed already-DONE/off-map agent, or a plain
         # dwelling/departure bookkeeping call) - treat as "normal, unimpeded movement, no special signal
-        # this step" (movement_allowed=True keeps is_stopped_now False below, matching the old code's
-        # implicit behavior of never actually dereferencing agent_transition_data in those scenarios).
-        agent_transition_data = agent_transition_data or AgentTransitionData(None, None, StateTransitionSignals(movement_allowed=True))
-        # some tests construct AgentTransitionData directly with state_transition_signal=None when they
-        # don't care about motion-check signals for that call - same "no special signal" fallback as above.
-        sts = agent_transition_data.state_transition_signal or StateTransitionSignals(movement_allowed=True)
+        # this step" (action_valid=True, resource_check=True reproduce movement_allowed=True below,
+        # matching the old code's implicit behavior of never actually dereferencing
+        # agent_transition_data in those scenarios).
+        agent_transition_data = agent_transition_data or AgentTransitionData(None, None, action_valid=True, resource_check=True)
+        in_malfunction = agent.malfunction_handler.in_malfunction
+        stop_action_given = agent_transition_data.action == RailEnvActions.STOP_MOVING
+        # new_speed_zero mirrors rail_env.py's own _is_speed_zero(candidate_speed) - candidate_speed is
+        # None for the "no signal" fallback above, and None == 0.0 is False, matching that fallback's intent.
+        new_speed_zero = agent_transition_data.candidate_speed == 0.0
+        # movement_allowed = action_valid and resource_check (rail_env.py's own formula - see
+        # RailEnvStateMachineWrapper, which recomputes it identically for the state machine).
+        movement_allowed = agent_transition_data.action_valid and agent_transition_data.resource_check
         is_on_map = agent.current_entry_point is not None
         # mirrors TrainStateMachine._handle_moving's own MOVING->STOPPED transition condition, using only
         # this step's signals - a state-machine-independent equivalent of agent.state == TrainState.STOPPED
         # (on-map, not malfunctioning, only MOVING/STOPPED remain).
-        is_stopped_now = is_on_map and not sts.in_malfunction and ((sts.stop_action_given and sts.new_speed_zero) or not sts.movement_allowed)
+        is_stopped_now = is_on_map and not in_malfunction and ((stop_action_given and new_speed_zero) or not movement_allowed)
         # agent_transition_data.speed is this step's pre-update speed (see rail_env.py's (8) FETCH
         # CONFLICT RESOLUTION) - a state-machine-independent equivalent of
         # agent.state_machine.previous_state == TrainState.MOVING.
@@ -227,7 +233,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
             # with a STOP_MOVING action (e.g. STOP_MOVING evaluated as invalid upon facing a symmetric switch) would
             # be misclassified as voluntary and skip the penalty.
             # Only penalize stops imposed by the env (motion check conflict or invalid action), not controlled stops.
-            voluntary_stop = sts.stop_action_given and sts.new_speed_zero and sts.movement_allowed
+            voluntary_stop = stop_action_given and new_speed_zero and movement_allowed
             if not voluntary_stop:
                 # agent_transition_data.speed has speed after action is applied at start of step(), not set to 0 upon motion check.
                 # - if braking, reduced speed
@@ -247,7 +253,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # keys so an invalid action (today, only possible at a symmetric switch) can be told
                 # apart from an actual conflict with another agent.
                 penalty = -1 * agent_transition_data.speed * self.collision_factor
-                if not sts.action_valid:
+                if not agent_transition_data.action_valid:
                     d[DefaultPenalties.INVALID_ACTION.value] = penalty
                 elif not agent_transition_data.resource_check:
                     d[DefaultPenalties.COLLISION.value] = penalty

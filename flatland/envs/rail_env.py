@@ -32,7 +32,7 @@ from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGener
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
 from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH, SpeedCounter
-from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.step_utils.states import TrainState
 from flatland.utils import seeding
 
 TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
@@ -236,9 +236,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         else:
             self.effects_generator = make_multi_effects_generator(effects_generator, mf)
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(self.get_num_agents())}
-        for i_agent in range(self.get_num_agents()):
-            self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None) for i in range(self.get_num_agents())}
 
         self.distance_map = distance_map
 
@@ -364,9 +362,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # Empty the episode store of agent positions
         self.cur_episode = []
 
-        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(self.get_num_agents())}
-        for i_agent in range(self.get_num_agents()):
-            self.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
+        self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None) for i in range(self.get_num_agents())}
 
         info_dict = self.get_info_dict()
         # Return the new observation vectors for each agent
@@ -492,14 +488,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # Invariant: both None off-map, both set and different on-map).
 
             # (1) STATE TRANSITION SIGNALS
-            stop_action_given = action == RailEnvActions.STOP_MOVING
             in_malfunction = agent.malfunction_handler.in_malfunction
-            movement_action_given = RailEnvActions.is_moving_action(action)
-            # design (issue #280): earliest_departure_reached is signalled one step earlier,
-            # so the WAITING -> READY_TO_DEPART transition it drives in
-            # the state machine completes in N-1, so the agens is READY_TO_DEPART in step N and can enter
-            # the grid in step N
-            earliest_departure_reached = agent.earliest_departure <= self._elapsed_steps + 1
             state = agent.state
 
             # (2) CANDIDATE ENTRY POINT: action validity - need both by speed update (3a) and position update (3b) below
@@ -585,25 +574,16 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             current_resource = self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point)
             new_resource = self.resource_map.get_resource(candidate_entry_point, candidate_next_entry_point)
 
-            # (5) GATHER STATE TRANSITION SIGNALS
-            # Malfunction starts when in_malfunction is set to true (inverse of malfunction_counter_complete)
-            self.temp_transition_data[i_agent].state_transition_signal.in_malfunction = agent.malfunction_handler.in_malfunction
-            # Earliest departure reached - Train is allowed to move now
-            self.temp_transition_data[i_agent].state_transition_signal.earliest_departure_reached = self._elapsed_steps + 1 >= agent.earliest_departure
-            # Stop action given
-            self.temp_transition_data[i_agent].state_transition_signal.stop_action_given = stop_action_given
-            # Movement action given
-            self.temp_transition_data[i_agent].state_transition_signal.movement_action_given = movement_action_given
-            # Target reached - we only know after state and positions update - see handle_done_state below
-            self.temp_transition_data[i_agent].state_transition_signal.target_reached = None  # we only know after motion check
-
+            # (5) GATHER STATE TRANSITION SIGNALS - action_valid is the one signal genuinely irreducible
+            # to other stored/derivable data (see RailEnvStateMachineWrapper, which reconstructs the rest
+            # of StateTransitionSignals from agent/candidate_speed/resource_check/action instead of a
+            # snapshot here): it depends on this step's pre-step cell_exit/candidate_entry_point_independent,
+            # both already gone by the time anything downstream could recompute it.
             # action_valid allowed if both
             # - action leading to valid next cell
             # - inside cell or at end of cell and no conflict with other trains
-            self.temp_transition_data[i_agent].state_transition_signal.action_valid = action_valid
-            self.temp_transition_data[i_agent].state_transition_signal.movement_allowed = action_valid  # remainder we only know after motion check!
-            # New desired speed zero?
-            self.temp_transition_data[i_agent].state_transition_signal.new_speed_zero = self._is_speed_zero(candidate_speed)
+            self.temp_transition_data[i_agent].action_valid = action_valid
+            self.temp_transition_data[i_agent].action = action
 
             self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
 
@@ -640,16 +620,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
             # MotionCheck (see (3b.2bis)/(3b.5)/(3b.6)), so resource_check here is trivially granted
-            # regardless of whether its target is actually free - movement_allowed (and so the state
-            # machine's STOPPED/MALFUNCTION->MOVING promotion) is granted optimistically on the
+            # regardless of whether its target is actually free - movement_allowed (action_valid and
+            # resource_check - see RailEnvStateMachineWrapper, which recomputes it the same way, and so
+            # the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted optimistically on the
             # operator's request. Position/distance stay deferred either way (see (10a)/(10b)'s
             # speed==0 handling) - if the target is genuinely still occupied, the *next* step (now
             # pre-speed > 0) attempts the crossing for real via (3b.5), gets denied by MotionCheck's
             # real (non-self-loop) resolution, and the state machine demotes back to STOPPED then
             # (see _handle_moving's `not movement_allowed` branch in state_machine.py) - one step of
             # MOVING with no actual progress, rather than never promoting at all.
-            movement_allowed = agent_transition_data.state_transition_signal.action_valid and resource_check
-            agent_transition_data.state_transition_signal.movement_allowed = movement_allowed
             agent_transition_data.resource_check = resource_check
 
             # (10a) POSITION UPDATE
@@ -732,20 +711,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self._check_speed_distance_speedup_postconditions(action_dict, pre_step_snapshot)
             self._check_position_update_postconditions(action_dict, pre_step_snapshot)
 
-        # Hook for RailEnvStateMachineWrapper: agent.state/agent.state_machine bookkeeping needs to run
-        # here, after position/speed/reward/done are finalized for this step but strictly before
-        # _get_observations()/get_info_dict() below - obs_builder/predictor implementations (e.g.
-        # TreeObsForRailEnv, ShortestPathPredictorForRailEnv) do read agent.state, and need it to reflect
-        # *this* step's position, not the previous step's (a plain post-`step()` wrapper hook, run only
-        # after this method returns, would leave the two one step out of phase - see
-        # RailEnvStateMachineWrapper's own comment). No-op unless wrapped.
-        self._finalize_step_state_machine_hook()
-
         return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()
-
-    def _finalize_step_state_machine_hook(self):
-        """ No-op here - overridden by RailEnvStateMachineWrapper's mixin. """
-        pass
 
     def _check_malfunction_state_postcondition(self):
         """
@@ -757,10 +723,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             if agent.state == TrainState.DONE:
                 continue
             assert (agent.state in (TrainState.MALFUNCTION, TrainState.MALFUNCTION_OFF_MAP)) == agent.malfunction_handler.in_malfunction
-
-    @lru_cache()
-    def _is_speed_zero(self, candidate_speed: Fraction) -> bool:
-        return candidate_speed == 0.0
 
     @lru_cache()
     def _fast_state_position_sync_check(self, state, entry_point, remove_agents_at_target):

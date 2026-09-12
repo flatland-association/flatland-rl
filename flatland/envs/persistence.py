@@ -13,7 +13,6 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 
 msgpack_numpy.patch()
-from flatland.envs.step_utils.states import StateTransitionSignals
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
@@ -327,9 +326,7 @@ class RailEnvPersister(object):
         if dev_obs_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
 
-        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None) for i in range(env.get_num_agents())}
-        for i_agent in range(env.get_num_agents()):
-            env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None) for i in range(env.get_num_agents())}
 
         dones = env_dict.get("dones", None)
         if dones is not None:
