@@ -12,6 +12,7 @@ from flatland.envs.line_generators import LineGenerator
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnvActions, RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import RailGenerator
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.step_utils.speed_counter import SpeedCounter
@@ -221,6 +222,7 @@ def create_and_save_env(file_name: str, line_generator: LineGenerator, rail_gene
                   number_of_agents=10,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   remove_agents_at_target=True)
+    env = RailEnvStateMachineWrapper(env)
     env.reset(True, True)
     # env.save(file_name)
     RailEnvPersister.save(env, file_name)

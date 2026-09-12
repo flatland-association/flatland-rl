@@ -3,6 +3,7 @@ from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _f
                                        _sanitize_entry_point, load_env_agent, virtual_entry_point, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
@@ -23,6 +24,7 @@ def test_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_shortest_path = env.agents[0].get_shortest_path(env.distance_map)
@@ -41,6 +43,7 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -55,6 +58,7 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -69,6 +73,7 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -83,6 +88,7 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -224,6 +230,7 @@ def test_virtual_entry_point():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     agent = env.agents[0]
 

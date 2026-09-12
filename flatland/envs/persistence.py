@@ -196,6 +196,11 @@ class RailEnvPersister(object):
         height = len(llGrid)
         width = len(llGrid[0])
 
+        # local import: avoids a circular import (persistence <- timetable_generators <- rail_env, all
+        # loaded as a side effect of rail_env.py's own top-level `import timetable_generators`, before
+        # AbstractRailEnv is defined in this same rail_env module).
+        from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
+
         if obs_builder is None:
             obs_builder = DummyObservationBuilder()
         env = rail_env.RailEnv(
@@ -208,6 +213,7 @@ class RailEnvPersister(object):
             record_steps=True,
             rewards=rewards,
         )
+        env = RailEnvStateMachineWrapper(env)
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
 
         env.obs_builder.reset(env)

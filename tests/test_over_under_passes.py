@@ -7,6 +7,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -27,6 +28,7 @@ def test_diamond_crossing_without_over_and_underpasses(rendering: bool = False):
         obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
         record_steps=True
     )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset()
     env._max_episode_steps = 555
@@ -116,6 +118,7 @@ def test_diamond_crossing_with_over_and_underpasses(rendering: bool = False):
         obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
         record_steps=True
     )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset()
     env._max_episode_steps = 555
@@ -203,6 +206,7 @@ def test_diamond_crossing_with_over_and_underpasses_head_on(rendering: bool = Fa
         obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
         record_steps=True
     )
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env._max_episode_steps = 5
 

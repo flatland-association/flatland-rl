@@ -9,6 +9,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
@@ -60,6 +61,7 @@ def test_multi_speed_init():
                   # fix random_seed where all agents have different initial_position
                   random_seed=4,
                   number_of_agents=3)
+    env = RailEnvStateMachineWrapper(env)
 
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
@@ -126,6 +128,7 @@ def test_multispeed_actions_no_malfunction_no_blocking():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     env._max_episode_steps = 1000
@@ -242,6 +245,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                   random_seed=1,
                   rewards=DefaultRewards()
                   )
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     CRASH_PENALTY = 5
     env.rewards.crash_penalty_factor = CRASH_PENALTY
@@ -456,6 +460,7 @@ def test_multispeed_actions_malfunction_no_blocking():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
@@ -649,6 +654,7 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART

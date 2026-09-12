@@ -10,6 +10,7 @@ from flatland.envs.malfunction_generators import ParamMalfunctionGen, Malfunctio
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator, SparseRailGen, RailGenerator, RailGeneratorProduct
 from flatland.envs.rewards import Rewards
 
@@ -36,6 +37,7 @@ def env_generator(n_agents=7,
                   braking_delta=-1.0,
                   rewards: Rewards = None,
                   effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                  skip_state_machine_update: bool = True,
                   ) -> Tuple[RailEnv, Dict, Dict]:
     """
     Create an env with a given spec using `sparse_rail_generator`.
@@ -90,6 +92,12 @@ def env_generator(n_agents=7,
         Rewards function. Defaults to `DefaultRewards`.
     effects_generator : EffectsGenerator[RailEnv]
         Effects generator. Defaults to `None`.
+    skip_state_machine_update : bool
+        Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+        `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+        flow is unaffected either way. Pass `False` to wrap the returned env so `agent.state`/
+        `agent.state_machine` stay up to date (purely informational - `get_info_dict()`'s `state`/
+        `action_required` fields).
     Returns
     -------
     RailEnv
@@ -135,6 +143,8 @@ def env_generator(n_agents=7,
         rewards=rewards,
         effects_generator=effects_generator,
     )
+    if not skip_state_machine_update:
+        env = RailEnvStateMachineWrapper(env)
     observations, info = env.reset(random_seed=seed)
     if post_seed is not None:
         env.reset(random_seed=post_seed, regenerate_rail=False, regenerate_schedule=False)
@@ -177,6 +187,7 @@ def env_generator_legacy(
     braking_delta=-1.0,
     rewards: Rewards = None,
     effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+    skip_state_machine_update: bool = True,
 ) -> Tuple[RailEnv, Dict, Dict]:
     """
     Old deprecated behavior of stateful rail_generator: ignore seed passed from env int rail_generator, draw from random generator initialised every time by its own seed.
@@ -218,6 +229,8 @@ def env_generator_legacy(
         rewards=rewards,
         effects_generator=effects_generator,
     )
+    if not skip_state_machine_update:
+        env = RailEnvStateMachineWrapper(env)
     observations, info = env.reset(random_seed=seed)
     if post_seed is not None:
         env.reset(random_seed=post_seed, regenerate_rail=False, regenerate_schedule=False)

@@ -20,6 +20,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
 
 
@@ -55,6 +56,7 @@ class EditorMVC:
                 number_of_agents=nAgents,
                 obs_builder_object=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv())
             )
+            env = RailEnvStateMachineWrapper(env)
 
         env.reset()
 

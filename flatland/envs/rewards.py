@@ -252,7 +252,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 elif not agent_transition_data.resource_check:
                     d[DefaultPenalties.COLLISION.value] = penalty
 
-        if agent_transition_data.just_reached_target:
+        # agent.arrival_time is set to exactly elapsed_steps by AbstractRailEnv.handle_done_state() the
+        # one step an agent reaches its target - a state-machine-independent "just reached this step" check.
+        if agent.arrival_time == elapsed_steps:
             self._agent_done_or_max_episode_steps_reward(agent, distance_map, elapsed_steps, d)
         return d
 
@@ -506,7 +508,7 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         # N.B. enforces penalization before/after malfunction, off-map and just-arrived (on-map, not
         # malfunctioning and not just done is exactly MOVING or STOPPED - a stopped agent's
         # speed_counter.speed is already 0, so this doesn't need to single out MOVING specifically).
-        just_reached_target = agent_transition_data is not None and agent_transition_data.just_reached_target
+        just_reached_target = agent.arrival_time == elapsed_steps
         current_speed = agent.speed_counter.speed if (
             agent.current_entry_point is not None and not agent.malfunction_handler.in_malfunction and not just_reached_target
         ) else 0

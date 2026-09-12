@@ -16,10 +16,12 @@ from flatland.env_generation.env_generator import env_generator, env_generator_l
 from flatland.envs.agent_utils import EnvAgent, with_direction, _sanitize_entry_point
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
+from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
 from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -39,6 +41,7 @@ def test_save_load():
     env = RailEnv(width=30, height=30,
                   rail_generator=sparse_rail_generator(seed=1),
                   line_generator=sparse_line_generator(), number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     def _position(agent: EnvAgent) -> Optional[Tuple[int, int]]:
@@ -76,6 +79,7 @@ def test_save_load_mpk():
     env = RailEnv(width=30, height=30,
                   rail_generator=sparse_rail_generator(seed=1),
                   line_generator=sparse_line_generator(), number_of_agents=2)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     os.makedirs("tmp", exist_ok=True)
@@ -131,6 +135,7 @@ def test_rail_environment_single_agent(show=False):
         rail_env = RailEnv(width=3, height=3, rail_generator=rail_from_grid_transition_map(rail),
                            line_generator=sparse_line_generator(), number_of_agents=1,
                            obs_builder_object=GlobalObsForRailEnv())
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     else:
         rail_env, env_dict = RailEnvPersister.load_new("test_env_loop.pkl", "env_data.tests")
         rail_map = rail_env.rail.grid
@@ -274,6 +279,7 @@ def test_dead_end():
                        rail_generator=rail_from_grid_transition_map(rail, optionals),
                        line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
+    rail_env = RailEnvStateMachineWrapper(rail_env)
 
     # We try the entry point in the 4 directions:
     rail_env.reset()
@@ -312,6 +318,7 @@ def test_dead_end():
                        rail_generator=rail_from_grid_transition_map(rail, optionals),
                        line_generator=sparse_line_generator(), number_of_agents=1,
                        obs_builder_object=GlobalObsForRailEnv())
+    rail_env = RailEnvStateMachineWrapper(rail_env)
 
     rail_env.reset()
     rail_env.agents = [
@@ -330,6 +337,7 @@ def test_get_entry_directions():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     def _assert(position, expected):
@@ -372,6 +380,7 @@ def test_rail_env_reset():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # env.save(file_name)
@@ -396,6 +405,7 @@ def test_rail_env_reset():
     env3 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
                    line_generator=line_from_file(file_name), number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env3 = RailEnvStateMachineWrapper(env3)
     env3.reset(False, True)
     rails_loaded = env3.rail.grid
     agents_loaded = env3.agents
@@ -412,6 +422,7 @@ def test_rail_env_reset():
     env4 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
                    line_generator=line_from_file(file_name), number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env4 = RailEnvStateMachineWrapper(env4)
     env4.reset(True, False)
     rails_loaded = env4.rail.grid
     agents_loaded = env4.agents
@@ -427,7 +438,7 @@ def test_rail_env_reset():
 
 
 def test_load_new_random_states():
-    env, _, _ = env_generator(seed=42, )
+    env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
 
     # env loaded has random state of env AFTER reset since generator use the same
     # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
@@ -442,11 +453,12 @@ def test_load_new_random_states():
 
 
 def test_clone_from_random_states():
-    env, _, _ = env_generator(seed=42, )
+    env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
 
     # env loaded has random state of env AFTER reset since generator use the same
     # TODO https://github.com/flatland-association/flatland-rl/issues/242 revise design - keep random state in generators separate (malfunction, rail etc. have their own)
     clone = RailEnv(30, 30)
+    clone = RailEnvStateMachineWrapper(clone)
     clone.clone_from(env, obs_builder=TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50)))
     assert all(env.np_random.get_state()[1] == clone.np_random.get_state()[1])
 
@@ -457,9 +469,10 @@ def test_clone_from_random_states():
 
 
 def test_clone_from_with_random_policy():
-    env, _, _ = env_generator(seed=42, )
+    env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
 
     clone = RailEnv(30, 30)
+    clone = RailEnvStateMachineWrapper(clone)
     clone.clone_from(env)
 
     # use Trajectory API for comparison
@@ -475,7 +488,7 @@ def test_clone_from_with_random_policy():
 
 
 def test_speed_after_malfunction():
-    env, _, _ = env_generator_legacy(seed=42, n_agents=1, malfunction_interval=1)
+    env, _, _ = env_generator_legacy(seed=42, n_agents=1, malfunction_interval=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 10)
     agent = env.agents[0]
 
@@ -515,7 +528,7 @@ def test_speed_after_malfunction():
 
 
 def test_speed_after_malfunction_full_acceleration_braking():
-    env, _, _ = env_generator_legacy(seed=42, n_agents=1, malfunction_interval=1)
+    env, _, _ = env_generator_legacy(seed=42, n_agents=1, malfunction_interval=1, skip_state_machine_update=False)
     agent = env.agents[0]
 
     assert agent.speed_counter.max_speed == Fraction(1, 2)
@@ -567,7 +580,7 @@ def test_symmetric_switch_stop_action():
     one, since there is no other agent to conflict with - and only on that one transition step, not
     on every retry of the same denied action.
     """
-    env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR), skip_state_machine_update=False)
 
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
@@ -671,7 +684,7 @@ def test_symmetric_switch_move_forward_action():
     BaseDefaultRewards.step_reward) - never a COLLISION one, since there is no other agent to
     conflict with - once per genuine entering attempt, not once per retry.
     """
-    env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR), skip_state_machine_update=False)
 
     assert (np.count_nonzero(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west) > 0)
     print(np.argwhere(env.rail.grid == RailEnvTransitionsEnum.symmetric_switch_from_west))
@@ -861,6 +874,7 @@ def test_candidate_speed_and_distance_match_genuine_crossing():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
@@ -924,6 +938,7 @@ def test_candidate_speed_and_distance_match_resource_check_denial():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     agent_a, agent_b = env.agents[0], env.agents[1]
@@ -980,6 +995,7 @@ def test_done_candidate_entry_point_independent_is_stale_not_a_live_reservation(
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=GlobalObsForRailEnv(),
                   rewards=BaseDefaultRewards(collision_factor=1.0))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env._max_episode_steps = 1000
     _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 1), TrainState.MOVING,
@@ -1046,6 +1062,7 @@ def test_blocked_agent_cannot_redirect_via_later_action():
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   random_seed=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     agent0, agent1 = env.agents[0], env.agents[1]
     agent0.initial_entry_point = ((3, 8), 3)
@@ -1121,7 +1138,7 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
     speed 1 and acceleration delta 0.5, issuing MOVE_FORWARD from the very first step. Tracks
     entry point, speed and state as the agent accelerates and crosses several entry points.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
@@ -1201,7 +1218,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     delta equal to max speed (1): the agent reaches max speed in a single accelerating step, so
     distance resets to 0 cleanly on every crossing from then on (no fractional cruise distance).
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
@@ -1303,7 +1320,7 @@ def test_map_entry(with_malfunction, earliest_departure):
     - Final step (MOVE_FORWARD): already at max speed, so the agent crosses into the next entry
       point, distance wraps back to 0 completing the crossing, speed stays at max speed.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0)
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
@@ -1369,7 +1386,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     at max speed (instead of 0.5 for delta 0.5, or 0 for a full delta) - the cruise distance is
     1 - (max_speed % acceleration_delta)-driven and differs per delta.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(3, 10)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
@@ -1454,7 +1471,7 @@ def test_malfunction_off_map_state_transitions_to_moving():
     departure is already reached), the agent enters the grid directly at its initial
     entry point, skipping READY_TO_DEPART.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
     agent.earliest_departure = 2
@@ -1545,7 +1562,7 @@ def test_action_required_false_during_malfunction():
       distance + speed reaches the boundary again this same step, action_required True.
     - Step 8 (MOVE_FORWARD): crosses into the next cell, distance wraps to 0, action_required False again.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0)
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2))
@@ -1656,6 +1673,7 @@ def test_action_required_at_full_segment_length(with_malfunction):
     env = RailEnv(width=6, height=5,
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset(random_seed=42)
     env._max_episode_steps = 100
 
@@ -1702,7 +1720,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart():
     (earliest departure is already reached) but no movement/stop action is given, the agent
     becomes READY_TO_DEPART, staying off map.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
     agent.earliest_departure = 2
@@ -1746,7 +1764,7 @@ def test_malfunction_off_map_state_transitions_to_ready_to_depart_with_stop_acti
     (earliest departure is already reached) with only a stop action given, the agent stays off map,
     ready to depart.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
     agent.earliest_departure = 2
@@ -1788,7 +1806,7 @@ def test_malfunction_state_transitions_to_moving():
     while on the map and moving, issuing MOVE_FORWARD throughout. Once the malfunction clears, the
     agent resumes moving, re-accelerating from 0 exactly like a fresh departure.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
 
@@ -1856,7 +1874,7 @@ def test_malfunction_state_transitions_to_stopped():
     while on the map and moving, issuing STOP_MOVING throughout. Once the malfunction clears, no
     movement action was given, so the agent stops in place rather than resuming.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
 
@@ -1906,7 +1924,7 @@ def test_malfunction_state_transitions_to_stopped_do_nothing():
     STOP_MOVING: once the malfunction clears, DO_NOTHING is not treated as a movement action either,
     so the agent stops in place rather than resuming.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1)
+    env, _, _ = env_generator(seed=42, n_agents=1, skip_state_machine_update=False)
     env.acceleration_delta = Fraction(1, 2)
     agent = env.agents[0]
 
@@ -1973,6 +1991,7 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     env.braking_delta = Fraction(-1)
@@ -2070,6 +2089,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     agent_a, agent_b = env.agents[0], env.agents[1]
@@ -2155,6 +2175,7 @@ def test_platoon_of_four_agents_starts_and_advances_together_without_force_stops
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     C1, C2, C3, C4, C5, C6, C7 = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7, 6, 5, 4, 3, 2)]
@@ -2249,6 +2270,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     cells = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7, 6, 5, 4, 3, 2)]
@@ -2338,6 +2360,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=4, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     env.braking_delta = Fraction(-1)
@@ -2470,6 +2493,7 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2, random_seed=1,
                   rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.acceleration_delta = Fraction(1)
     C1, C2 = [((3, c), Grid4TransitionsEnum.WEST) for c in (8, 7)]
@@ -2506,55 +2530,75 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
         assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
-def test_skip_state_machine_update_matches_default_control_flow():
+def test_railenvwrapper_matches_unwrapped_control_flow():
     """
-    Two identically-seeded/configured 5-agent envs on a 30x30 sparse map with frequent
-    malfunctions (malfunction_interval=15) - one default (skip_state_machine_update=False), one
-    with skip_state_machine_update=True - stepped with the same 80 random actions per agent.
+    Three identically-seeded/configured 5-agent envs on a 30x30 sparse map with frequent
+    malfunctions (malfunction_interval=15) - unwrapped, RailEnvStateMachineWrapper(env) (default state
+    tracking), RailEnvStateMachineWrapper(env, skip_state_machine_update=True) (wrapped but a no-op) -
+    stepped with the same 80 random actions per agent.
 
-    - Every step, both envs agree exactly on each agent's position (current_entry_point/
+    - Every step, all three envs agree exactly on each agent's position (current_entry_point/
       next_entry_point/target_entry_point), arrival_time, speed/distance, malfunction counter,
-      rewards and dones: skip_state_machine_update never changes step()'s own control flow.
-    - agent.state itself stays frozen at its pre-skip value on the skip_state_machine_update=True
-      env for the whole run, while the default env's agents visibly progress through states -
-      showing the skip is real (not a no-op) without it affecting any of the above.
+      rewards and dones: RailEnvStateMachineWrapper never changes step()'s own control flow either way.
+    - agent.state itself stays at its never-touched initial value on both the unwrapped and the
+      skip_state_machine_update=True envs for the whole run, while the default-wrapped env's
+      agents visibly progress through states - showing the wrapper's tracking is real (not a
+      no-op) without it affecting any of the above.
     """
     seed = 123
     n_agents = 5
-    env, _, _ = env_generator(n_agents=n_agents, x_dim=30, y_dim=30, seed=seed,
-                              malfunction_duration_min=2, malfunction_duration_max=4, malfunction_interval=15)
-    env_skip, _, _ = env_generator(n_agents=n_agents, x_dim=30, y_dim=30, seed=seed,
-                                   malfunction_duration_min=2, malfunction_duration_max=4, malfunction_interval=15)
-    env_skip.skip_state_machine_update = True
 
-    initial_states = [agent.state for agent in env_skip.agents]
-    any_state_diverged_on_default_env = False
+    def make_env():
+        return RailEnv(
+            width=30, height=30,
+            rail_generator=sparse_rail_generator(max_num_cities=3, seed=seed),
+            line_generator=sparse_line_generator(),
+            number_of_agents=n_agents,
+            malfunction_generator=ParamMalfunctionGen(MalfunctionParameters(min_duration=2, max_duration=4, malfunction_rate=1.0 / 15)),
+        )
+
+    env = make_env()
+    env.reset(random_seed=seed)
+    env_wrapped = RailEnvStateMachineWrapper(make_env())
+    env_wrapped.reset(random_seed=seed)
+    env_wrapped_skip = RailEnvStateMachineWrapper(make_env(), skip_state_machine_update=True)
+    env_wrapped_skip.reset(random_seed=seed)
+
+    initial_states = [agent.state for agent in env.agents]
+    any_state_diverged_on_wrapped_env = False
 
     rng = np.random.RandomState(seed)
     for _ in range(80):
         action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
         _, reward, done, _ = env.step(action_dict)
-        _, reward_skip, done_skip, _ = env_skip.step(action_dict)
+        _, reward_wrapped, done_wrapped, _ = env_wrapped.step(action_dict)
+        _, reward_wrapped_skip, done_wrapped_skip, _ = env_wrapped_skip.step(action_dict)
 
         for a in range(n_agents):
             agent = env.agents[a]
-            agent_skip = env_skip.agents[a]
-            assert agent_skip.current_entry_point == agent.current_entry_point
-            assert agent_skip.next_entry_point == agent.next_entry_point
-            assert agent_skip.target_entry_point == agent.target_entry_point
-            assert agent_skip.arrival_time == agent.arrival_time
-            assert agent_skip.speed_counter.speed == agent.speed_counter.speed
-            assert agent_skip.speed_counter.distance == agent.speed_counter.distance
-            assert agent_skip.malfunction_handler.in_malfunction == agent.malfunction_handler.in_malfunction
-            assert reward_skip[a] == reward[a]
-            assert done_skip[a] == done[a]
+            agent_wrapped = env_wrapped.agents[a]
+            agent_wrapped_skip = env_wrapped_skip.agents[a]
+            for other in (agent_wrapped, agent_wrapped_skip):
+                assert other.current_entry_point == agent.current_entry_point
+                assert other.next_entry_point == agent.next_entry_point
+                assert other.target_entry_point == agent.target_entry_point
+                assert other.arrival_time == agent.arrival_time
+                assert other.speed_counter.speed == agent.speed_counter.speed
+                assert other.speed_counter.distance == agent.speed_counter.distance
+                assert other.malfunction_handler.in_malfunction == agent.malfunction_handler.in_malfunction
+            assert reward_wrapped[a] == reward[a]
+            assert reward_wrapped_skip[a] == reward[a]
+            assert done_wrapped[a] == done[a]
+            assert done_wrapped_skip[a] == done[a]
 
-            assert agent_skip.state == initial_states[a]
-            if agent.state != initial_states[a]:
-                any_state_diverged_on_default_env = True
+            assert agent.state == initial_states[a]
+            assert agent_wrapped_skip.state == initial_states[a]
+            if agent_wrapped.state != initial_states[a]:
+                any_state_diverged_on_wrapped_env = True
 
-        assert done_skip["__all__"] == done["__all__"]
+        assert done_wrapped["__all__"] == done["__all__"]
+        assert done_wrapped_skip["__all__"] == done["__all__"]
         if done["__all__"]:
             break
 
-    assert any_state_diverged_on_default_env
+    assert any_state_diverged_on_wrapped_env
