@@ -2504,3 +2504,57 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
         assert agent_f.speed_counter.distance == f_distance
         assert rewards[0][DefaultPenalties.COLLISION.value] == 0
         assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
+
+
+def test_skip_state_machine_update_matches_default_control_flow():
+    """
+    Two identically-seeded/configured 5-agent envs on a 30x30 sparse map with frequent
+    malfunctions (malfunction_interval=15) - one default (skip_state_machine_update=False), one
+    with skip_state_machine_update=True - stepped with the same 80 random actions per agent.
+
+    - Every step, both envs agree exactly on each agent's position (current_entry_point/
+      next_entry_point/target_entry_point), arrival_time, speed/distance, malfunction counter,
+      rewards and dones: skip_state_machine_update never changes step()'s own control flow.
+    - agent.state itself stays frozen at its pre-skip value on the skip_state_machine_update=True
+      env for the whole run, while the default env's agents visibly progress through states -
+      showing the skip is real (not a no-op) without it affecting any of the above.
+    """
+    seed = 123
+    n_agents = 5
+    env, _, _ = env_generator(n_agents=n_agents, x_dim=30, y_dim=30, seed=seed,
+                              malfunction_duration_min=2, malfunction_duration_max=4, malfunction_interval=15)
+    env_skip, _, _ = env_generator(n_agents=n_agents, x_dim=30, y_dim=30, seed=seed,
+                                   malfunction_duration_min=2, malfunction_duration_max=4, malfunction_interval=15)
+    env_skip.skip_state_machine_update = True
+
+    initial_states = [agent.state for agent in env_skip.agents]
+    any_state_diverged_on_default_env = False
+
+    rng = np.random.RandomState(seed)
+    for _ in range(80):
+        action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
+        _, reward, done, _ = env.step(action_dict)
+        _, reward_skip, done_skip, _ = env_skip.step(action_dict)
+
+        for a in range(n_agents):
+            agent = env.agents[a]
+            agent_skip = env_skip.agents[a]
+            assert agent_skip.current_entry_point == agent.current_entry_point
+            assert agent_skip.next_entry_point == agent.next_entry_point
+            assert agent_skip.target_entry_point == agent.target_entry_point
+            assert agent_skip.arrival_time == agent.arrival_time
+            assert agent_skip.speed_counter.speed == agent.speed_counter.speed
+            assert agent_skip.speed_counter.distance == agent.speed_counter.distance
+            assert agent_skip.malfunction_handler.in_malfunction == agent.malfunction_handler.in_malfunction
+            assert reward_skip[a] == reward[a]
+            assert done_skip[a] == done[a]
+
+            assert agent_skip.state == initial_states[a]
+            if agent.state != initial_states[a]:
+                any_state_diverged_on_default_env = True
+
+        assert done_skip["__all__"] == done["__all__"]
+        if done["__all__"]:
+            break
+
+    assert any_state_diverged_on_default_env
