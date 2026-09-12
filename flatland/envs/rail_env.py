@@ -407,13 +407,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             self.dones["__all__"] = True
 
-    def handle_done_state(self, agent, candidate_entry_point):
+    def handle_done_state(self, agent, candidate_entry_point, just_reached_target):
         """
         Any updates to agent to be made in Done state.
 
         candidate_entry_point : the entry point reached
+        just_reached_target : whether the agent's candidate transition reached a target entry point
+                               and was accepted this step (duplicates state_machine.update_if_reached()'s
+                               own check, computed independently of agent.state - see AgentTransitionData
+                               .just_reached_target)
         """
-        if agent.state == TrainState.DONE and agent.arrival_time is None:
+        if just_reached_target and agent.arrival_time is None:
             agent.arrival_time = self._elapsed_steps
             # capture which specific target alternative was reached - see EnvAgent.target_entry_point.
             agent.target_entry_point = candidate_entry_point
@@ -625,7 +629,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             resource_check = self.resource_check.check_resource(i_agent)
 
-            if not agent.speed_counter.is_cell_exit() and agent.state.is_on_map_state():
+            if not agent.speed_counter.is_cell_exit() and agent.current_entry_point is not None:
                 assert resource_check == True
 
             # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
@@ -648,6 +652,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
             # (10a) POSITION UPDATE
             done = agent.target_entry_point is not None
+            target_reached = candidate_entry_point in agent.targets
+            # duplicates update_if_reached()'s own state-machine-internal check, so control flow below
+            # (handle_done_state) doesn't need to read agent.state back out of the state machine.
+            agent_transition_data.just_reached_target = resource_check and not done and target_reached
 
             # candidates discarded if not resource check -> keep previous configuration (no-op)
             if not resource_check:
@@ -658,7 +666,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # of remove_agents_at_target for exactly this reason (nulling it out early would break
             # conflict registration for another agent contesting the same target cell this step) -
             # the removal itself can only be applied here, once resource_check is resolved.
-            elif self.remove_agents_at_target and (done or candidate_entry_point in agent.targets):
+            elif self.remove_agents_at_target and (done or target_reached):
                 agent.current_entry_point = None
                 agent.next_entry_point = None
                 if not done:
@@ -708,8 +716,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 agent.speed_counter.set(new_speed, new_distance)
 
             # (11) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
-            self.handle_done_state(agent, candidate_entry_point)
-            have_all_agents_ended &= (agent.state == TrainState.DONE)
+            self.handle_done_state(agent, candidate_entry_point, agent_transition_data.just_reached_target)
+            # target_entry_point is set exactly once, permanently, the first step an agent reaches DONE
+            # (see handle_done_state()) - a position-based done proxy that doesn't need agent.state.
+            have_all_agents_ended &= (agent.target_entry_point is not None)
 
             # (12) UPDATE REWARDS
             self.rewards_dict[i_agent] = self.rewards.cumulate(
