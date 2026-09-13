@@ -454,7 +454,11 @@ def test_energy_efficiency_smoothniss_in_morl():
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.36, -0.16))
 
-    agent.speed_counter.set(_pseudo_fractional(0.6), Fraction(0))
+    # speed_counter.speed is pinned at 0 for the whole malfunction, not just at entry - the real
+    # invariant _candidate_speed's own malfunction branch enforces on-map (see
+    # test_flatland_envs_rail_env.py::test_speed_after_malfunction) - not left at its pre-malfunction
+    # value as this test previously (incorrectly) modeled it.
+    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     agent.malfunction_handler.malfunction_down_counter = 1
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, 0, -0.36))
