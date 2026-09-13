@@ -474,7 +474,6 @@ class EnvAgent(Generic[EntryPointT]):
     @classmethod
     def apply_timetable(cls, agents: List["EnvAgent"], timetable: Timetable) -> List["EnvAgent"]:
         for agent_i, agent in enumerate(agents):
-            # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: should we set state to READY_TO_DEPART if earliest_departure == 0? See `test_known_flatland_bugs.test_earliest_departure_zero_bug`.
             agent.earliest_departure = timetable.earliest_departures[agent_i][0]
             agent.latest_arrival = timetable.latest_arrivals[agent_i][-1]
             agent.waypoints_earliest_departure = timetable.earliest_departures[agent_i]
