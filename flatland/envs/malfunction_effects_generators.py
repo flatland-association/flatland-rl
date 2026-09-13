@@ -104,9 +104,25 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         if self._condition is not None:
             # A condition may read agent.state_machine.state (e.g. on_map_state_condition,
             # condition_stopped_intermediate_and_range, condition_stopped_cells_and_range,
-            # IntermediateStopMalfunctionEffectsGenerator._condition), which stays frozen at its
-            # __init__ default unless env is wrapped via RailEnvStateMachineWrapper - fail fast here
-            # rather than silently generating malfunctions off stale state.
+            # IntermediateStopMalfunctionEffectsGenerator._condition). This hook runs at (0b), before
+            # this step's state transition is computed (that happens later, inside
+            # RailEnvStateMachineWrapper's one-shot _get_observations swap) - so agent.state_machine.
+            # state here necessarily still reflects the *previous* step's settled outcome.
+            # EnvAgent.derived_state() can't stand in for it: it only reads *current* attributes, and
+            # agent.malfunction_handler.in_malfunction has already been advanced for *this* step (via
+            # update_counter() at (0a), right before this hook runs) - one step ahead of what
+            # state_machine.state reflects. A malfunction ending on step N is therefore seen by
+            # derived_state() as "no longer malfunctioning" (and, if on-map with speed 0, STOPPED) a
+            # full step before the real state machine would agree - which, combined with a condition
+            # matching STOPPED-at-a-waypoint, retriggers a new malfunction immediately instead of
+            # waiting for a genuine fresh stop. Confirmed the hard way: substituting derived_state()
+            # here inflated test_intermediate_stop_malfunction_effects_generator from 3 malfunctions
+            # to 545 via exactly this malfunction-end/restart oscillation. So this one path genuinely
+            # needs the wrapped, settled state machine - fail fast rather than silently generate
+            # malfunctions off stale data. Checked here (not once per episode in on_episode_start):
+            # test_make_multi_malfunction_condition builds an intentionally-unwrapped env with a
+            # condition set but never calls step(), so the guard must only fire when a condition is
+            # actually about to be evaluated, not merely configured.
             from flatland.envs.rail_env_state_machine_wrapper import assert_state_machine_active
             assert_state_machine_active(env)
         if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
