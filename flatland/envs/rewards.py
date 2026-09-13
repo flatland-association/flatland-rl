@@ -570,9 +570,9 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         entry_point = agent.target_entry_point if agent.target_entry_point is not None else agent.current_entry_point
         if entry_point is not None and entry_point not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][entry_point].append(elapsed_steps)
-            # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
-            # have actually been at a target entry point - so old_entry_point being None here (e.g. a
-            # zero-distance journey reaching DONE on the very first on-map step) does not mean the target wasn't
+            # N.B. handle_done_state() only ever sets target_entry_point when the agent has actually
+            # reached a target entry point - so old_entry_point being None here (e.g. a zero-distance
+            # journey reaching DONE on the very first on-map step) does not mean the target wasn't
             # really reached; it just means there's no real "previous stop" to book a departure against.
             if agent.old_entry_point is not None:
                 self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)

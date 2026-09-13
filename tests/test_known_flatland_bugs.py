@@ -157,8 +157,9 @@ def test_earliest_departure_zero_bug_FIXED() -> None:
 def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
     """
     When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
-    take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
-    but the state is still saying the agent is in a malfunction."""
+    take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
+    before new malfunctions are generated, so malfunction_handler.in_malfunction and state stay consistent
+    with each other throughout - including on the last step of the malfunction."""
     rail_env = RailEnv(
         width=30,
         height=30,
@@ -204,8 +205,9 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
 def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
     """
     When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
-    take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
-    but the state is still saying the agent is in a malfunction."""
+    take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
+    before new malfunctions are generated, so malfunction_handler.in_malfunction and state stay consistent
+    with each other throughout - including on the last step of the malfunction."""
     rail_env = RailEnv(
         width=30,
         height=30,

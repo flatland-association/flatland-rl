@@ -731,16 +731,19 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             assert resource_check == True
 
         # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
-        # MotionCheck (see (3b.2bis)/(3b.5)/(3b.6)), so resource_check here is trivially granted
-        # regardless of whether its target is actually free - movement_allowed (action_valid and
-        # resource_check - see RailEnvStateMachineWrapper, which recomputes it the same way, and so
-        # the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted optimistically on the
-        # operator's request. Position/distance stay deferred either way (see (10a)/(10b)'s
-        # speed==0 handling) - if the target is genuinely still occupied, the *next* step (now
-        # pre-speed > 0) attempts the crossing for real via (3b.5), gets denied by MotionCheck's
-        # real (non-self-loop) resolution, and the state machine demotes back to STOPPED then
-        # (see _handle_moving's `not movement_allowed` branch in state_machine.py) - one step of
-        # MOVING with no actual progress, rather than never promoting at all.
+        # MotionCheck (candidate_entry_point/candidate_next_entry_point unchanged from
+        # current_entry_point/next_entry_point - see _candidate_entry_points'/_candidate_speed's
+        # malfunction/keep-moving-mid-cell/acceleration-or-start-moving branches), so resource_check
+        # here is trivially granted regardless of whether its target is actually free - movement_allowed
+        # (action_valid and resource_check - see RailEnvStateMachineWrapper, which recomputes it the
+        # same way, and so the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted
+        # optimistically on the operator's request. Position/distance stay deferred either way (see
+        # (10a)/(10b)'s speed==0 handling) - if the target is genuinely still occupied, the *next* step
+        # (now pre-speed > 0) attempts the crossing for real via _candidate_entry_points'
+        # on_map_cell_transition branch, gets denied by MotionCheck's real (non-self-loop) resolution,
+        # and the state machine demotes back to STOPPED then (see _handle_moving's `not
+        # movement_allowed` branch in state_machine.py) - one step of MOVING with no actual progress,
+        # rather than never promoting at all.
         agent_transition_data.resource_check = resource_check
 
         # (10a) POSITION UPDATE

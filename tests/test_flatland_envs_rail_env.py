@@ -2364,8 +2364,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
       the exact same env.step() call - not staggered - while D's own state/position/distance stay
       unchanged, for all three speed variants.
     - Rewards: D's own MOVING->STOPPED transition (the step it first settles) is a voluntary stop
-      (STOP_MOVING given, speed reaches 0, movement_allowed stays True - see
-      BaseDefaultRewards.step_reward) - no penalty. A, B and C's later, simultaneous MOVING->STOPPED
+      (STOP_MOVING given, speed reaches 0) - no penalty. A, B and C's later, simultaneous MOVING->STOPPED
       transition at convergence is env-forced (denied by D no longer vacating the cell ahead) -
       charged a COLLISION penalty of max_speed times collision_factor each, never INVALID_ACTION,
       since MOVE_FORWARD is a structurally valid action throughout.
