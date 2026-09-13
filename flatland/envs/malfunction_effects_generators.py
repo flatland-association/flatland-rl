@@ -101,6 +101,14 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         self._condition = resolve_type(condition, condition_pkg, condition_cls)
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
+        if self._condition is not None:
+            # A condition may read agent.state_machine.state (e.g. on_map_state_condition,
+            # condition_stopped_intermediate_and_range, condition_stopped_cells_and_range,
+            # IntermediateStopMalfunctionEffectsGenerator._condition), which stays frozen at its
+            # __init__ default unless env is wrapped via RailEnvStateMachineWrapper - fail fast here
+            # rather than silently generating malfunctions off stale state.
+            from flatland.envs.rail_env_state_machine_wrapper import assert_state_machine_active
+            assert_state_machine_active(env)
         if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
             return env
         if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:

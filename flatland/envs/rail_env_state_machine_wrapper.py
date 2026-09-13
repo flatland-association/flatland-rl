@@ -44,6 +44,28 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     return env
 
 
+def is_state_machine_active(env: AbstractRailEnv) -> bool:
+    """
+    True iff `env` has been wrapped via `RailEnvStateMachineWrapper` and isn't configured to skip its
+    per-step update - i.e. `agent.state`/`agent.state_machine` are actually kept live for `env`, rather
+    than frozen at their `__init__` default forever.
+    """
+    return isinstance(env, _StateMachineUpdateMixin) and not env.skip_state_machine_update
+
+
+def assert_state_machine_active(env: AbstractRailEnv) -> None:
+    """
+    Fail fast for a caller that reads `agent.state`/`agent.state_machine` from `env`'s agents without
+    having wrapped `env` via `RailEnvStateMachineWrapper` (or having wrapped it with
+    `skip_state_machine_update=True`) - without this, those attributes silently stay frozen at their
+    `__init__` default instead of raising.
+    """
+    assert is_state_machine_active(env), (
+        "agent.state/agent.state_machine are not live on this env - wrap it via "
+        "RailEnvStateMachineWrapper(env) (skip_state_machine_update=False, the default) before use."
+    )
+
+
 class _StateMachineUpdateMixin:
     """ Only ever applied to an instance via `RailEnvStateMachineWrapper` - never instantiated/subclassed directly. """
 
