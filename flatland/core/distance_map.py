@@ -132,11 +132,11 @@ class AgentSourceTargetDistanceMap(
         return shortest_paths
 
     def _shortest_path_for_agent(self, agent: EnvAgent, max_depth: Optional[int] = None):
-        if agent.state.is_off_map_state():
+        if agent.derived_state().is_off_map_state():
             entry_point = agent.initial_entry_point
-        elif agent.state.is_on_map_state():
+        elif agent.derived_state().is_on_map_state():
             entry_point = agent.current_entry_point
-        elif agent.state == TrainState.DONE:
+        elif agent.derived_state() == TrainState.DONE:
             return None
         else:
             return None

@@ -1,10 +1,14 @@
+import numpy as np
+import pytest
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_entry_points,
                                        _sanitize_entry_point, load_env_agent, virtual_entry_point, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
-from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
@@ -13,6 +17,52 @@ from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line
 from flatland.utils.simple_rail import make_oval_rail
+
+
+@pytest.mark.parametrize("seed", [1, 42, 99, 123, 2024])
+def test_derived_state_matches_state_on_wrapped_env(seed):
+    """
+    5 agents on a 30x30 sparse map with frequent malfunctions (malfunction_rate=1/15), wrapped via
+    RailEnvStateMachineWrapper so agent.state is genuinely live - stepped with 100 random actions per
+    agent.
+
+    - Right after reset() and after every one of the 100 steps, every agent's
+      agent.derived_state(elapsed_steps=env._elapsed_steps) exactly matches the real (live) agent.state -
+      including MALFUNCTION/MALFUNCTION_OFF_MAP (from malfunction_handler.in_malfunction),
+      MOVING/STOPPED (from speed_counter.speed), and WAITING/READY_TO_DEPART (from earliest_departure
+      vs. elapsed_steps), not just the coarser on-map/off-map/done categories other callers need.
+    - derived_state() called with no elapsed_steps still matches on-map/malfunction states exactly, and
+      still agrees with state.is_off_map_state() while off-map (it just can't tell WAITING from
+      READY_TO_DEPART without elapsed_steps, so it always reports WAITING for that pair).
+    """
+    n_agents = 5
+    env = RailEnv(
+        width=30, height=30,
+        rail_generator=sparse_rail_generator(max_num_cities=3, seed=seed),
+        line_generator=sparse_line_generator(),
+        number_of_agents=n_agents,
+        malfunction_generator=ParamMalfunctionGen(
+            MalfunctionParameters(min_duration=2, max_duration=4, malfunction_rate=1.0 / 15)),
+    )
+    env = RailEnvStateMachineWrapper(env)
+    env.reset(random_seed=seed)
+
+    def _assert_equivalent():
+        for agent in env.agents:
+            assert agent.derived_state(elapsed_steps=env._elapsed_steps) == agent.state, \
+                (agent.handle, agent.derived_state(elapsed_steps=env._elapsed_steps), agent.state)
+            assert agent.derived_state().is_off_map_state() == agent.state.is_off_map_state()
+            assert agent.derived_state().is_on_map_state() == agent.state.is_on_map_state()
+            assert (agent.derived_state() == TrainState.DONE) == (agent.state == TrainState.DONE)
+
+    _assert_equivalent()
+    rng = np.random.RandomState(seed)
+    for _ in range(100):
+        if env.dones["__all__"]:
+            break
+        action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
+        env.step(action_dict)
+        _assert_equivalent()
 
 
 def test_shortest_paths():

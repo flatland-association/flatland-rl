@@ -96,7 +96,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         self.location_has_agent_ready_to_depart = {}
 
         for _agent in self.env.agents:
-            if not _agent.state.is_off_map_state() and \
+            if not _agent.derived_state(self.env._elapsed_steps).is_off_map_state() and \
                 _agent.current_entry_point is not None:
                 _agent_position = _agent.current_entry_point[0]
                 self.location_has_agent[tuple(_agent_position)] = 1
@@ -106,7 +106,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                     _agent.malfunction_handler.malfunction_down_counter
 
             # [NIMISH] WHAT IS THIS
-            if _agent.state.is_off_map_state() and \
+            if _agent.derived_state(self.env._elapsed_steps).is_off_map_state() and \
                 _agent.initial_entry_point[0]:
                 self.location_has_agent_ready_to_depart.setdefault(tuple(_agent.initial_entry_point[0]), 0)
                 self.location_has_agent_ready_to_depart[tuple(_agent.initial_entry_point[0])] += 1
@@ -344,7 +344,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                                 self._reverse_dir(
                                     self.predicted_dir[predicted_time][ca])] == 1 and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].derived_state() == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                     # Look for conflicting paths at distance num_step-1
                     elif int_position in fast_delete(self.predicted_pos[pre_step], handle):
@@ -354,7 +354,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                                 and cell_transitions[self._reverse_dir(self.predicted_dir[pre_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].derived_state() == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
                     # Look for conflicting paths at distance num_step+1
                     elif int_position in fast_delete(self.predicted_pos[post_step], handle):
@@ -364,7 +364,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                                 self.predicted_dir[post_step][ca])] == 1 \
                                 and tot_dist < potential_conflict:  # noqa: E125
                                 potential_conflict = tot_dist
-                            if self.env.agents[ca].state == TrainState.DONE and tot_dist < potential_conflict:
+                            if self.env.agents[ca].derived_state() == TrainState.DONE and tot_dist < potential_conflict:
                                 potential_conflict = tot_dist
 
             if position in self.location_has_target and position != agent_target:
@@ -579,7 +579,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
             other_agent: EnvAgent = self.env.agents[i]
 
             # ignore other agents not in the grid any more
-            if other_agent.state == TrainState.DONE:
+            if other_agent.derived_state() == TrainState.DONE:
                 continue
 
             obs_targets[next(iter(other_agent.targets))[0]][1] = 1
@@ -593,7 +593,7 @@ class GlobalObsForRailEnv(ObservationBuilder["RailEnv", Tuple[np.ndarray, np.nda
                 obs_agents_state[other_agent_position][2] = other_agent.malfunction_handler.malfunction_down_counter
                 obs_agents_state[other_agent_position][3] = other_agent.speed_counter.speed
             # fifth channel: all ready to depart on this position
-            if other_agent.state.is_off_map_state():
+            if other_agent.derived_state(self.env._elapsed_steps).is_off_map_state():
                 obs_agents_state[other_agent.initial_entry_point[0]][4] += 1
         assert np.count_nonzero(~np.isfinite(self.rail_obs)) == 0, self.rail_obs
         assert np.count_nonzero(np.isnan(self.rail_obs)) == 0, self.rail_obs

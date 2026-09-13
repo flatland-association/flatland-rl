@@ -463,6 +463,63 @@ class EnvAgent(Generic[EntryPointT]):
         warnings.warn("Not recommended to set the state with this function unless completely required")
         self.state_machine.set_state(state)
 
+    def derived_state(self, elapsed_steps: Optional[int] = None) -> TrainState:
+        """
+        A `TrainState`-shaped view derived purely from this agent's own attributes (`current_entry_point`/
+        `target_entry_point`/`malfunction_handler`/`speed_counter`/`earliest_departure`) - never from
+        `agent.state`/`agent.state_machine`. Unlike `state` above, this is correct whether or not the env
+        is wrapped via `RailEnvStateMachineWrapper` (see its own docstring) - `state_machine.state` itself
+        is only ever kept live when wrapped. Use this so an obs_builder/predictor that reads `agent.state`
+        for correctness works on an unwrapped env too - see `tests/test_flatland_envs_agent_utils.py`'s
+        `test_derived_state_matches_state_on_wrapped_env` for a step-by-step equivalence check against the
+        real (wrapped) `state`.
+
+        Covers all 7 `TrainState` values, mirroring `TrainStateMachine`'s own transition conditions
+        (`flatland/envs/step_utils/state_machine.py`) exactly:
+
+        - `DONE`: `target_entry_point is not None` - set exactly once, permanently, the step an agent
+          reaches DONE (see `AbstractRailEnv.handle_done_state()`).
+        - `MALFUNCTION_OFF_MAP` / `MALFUNCTION`: `malfunction_handler.in_malfunction` - on-map decided by
+          `current_entry_point`, exactly mirroring `_handle_malfunction_off_map`/`_handle_moving`/
+          `_handle_stopped`'s shared `in_malfunction` branch (checked with higher priority than
+          moving/stopped, matching a malfunctioning agent's speed always being forced to 0 - see
+          `_candidate_speed`'s own malfunction branch in `rail_env.py`).
+        - `MOVING` / `STOPPED`: on-map, not malfunctioning - `speed_counter.speed > 0` exactly mirrors
+          `_handle_moving`'s own MOVING->STOPPED transition condition (a stopped agent's committed speed
+          is always 0, a moving agent's is always positive - see `rewards.py`'s own `is_stopped_now`
+          comment for the same state-machine-independent equivalence, derived there from this step's
+          transition signals instead of the settled `speed_counter` value used here).
+        - `READY_TO_DEPART` / `WAITING`: off-map, not malfunctioning - needs `elapsed_steps` (not itself
+          an agent attribute) to reproduce `_handle_waiting`'s own `earliest_departure_reached =
+          earliest_departure <= elapsed_steps + 1` formula (see `RailEnvStateMachineWrapper`'s own
+          historical comment on the "+1") - and requires `elapsed_steps >= 1`: `reset()` never runs
+          `RailEnvStateMachineWrapper`'s per-step update hook, so state stays at its `WAITING` init
+          default (regardless of `earliest_departure`) until the first real `step()` call actually
+          evaluates a transition. Pass the env's `_elapsed_steps` in when available (e.g. from an
+          obs_builder/predictor's own `self.env`); omitting it (`None`) can't distinguish the two and
+          conservatively returns `WAITING` - still correct for any caller that only needs
+          `is_off_map_state()`, just not for one that needs the finer distinction.
+
+        Parameters
+        ----------
+        elapsed_steps : int, optional
+            The env's current `_elapsed_steps`, needed only to distinguish `WAITING` from
+            `READY_TO_DEPART`. Irrelevant to every other returned state.
+        """
+        if self.target_entry_point is not None:
+            return TrainState.DONE
+        if self.current_entry_point is None:
+            if self.malfunction_handler.in_malfunction:
+                return TrainState.MALFUNCTION_OFF_MAP
+            if elapsed_steps is not None and elapsed_steps >= 1 and self.earliest_departure <= elapsed_steps + 1:
+                return TrainState.READY_TO_DEPART
+            return TrainState.WAITING
+        if self.malfunction_handler.in_malfunction:
+            return TrainState.MALFUNCTION
+        if self.speed_counter.speed is not None and self.speed_counter.speed > 0:
+            return TrainState.MOVING
+        return TrainState.STOPPED
+
     @property
     def malfunction_data(self):
         raise ValueError("agent.malunction_data is deprecated, please use agent.malfunction_hander instead")
