@@ -515,7 +515,6 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         float, float, float]:
         default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
 
-        # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: speed_counter currently is not set to 0 during malfunctions.
         # N.B. enforces penalization before/after malfunction, off-map and just-arrived (on-map, not
         # malfunctioning and not just done is exactly MOVING or STOPPED - a stopped agent's
         # speed_counter.speed is already 0, so this doesn't need to single out MOVING specifically).
