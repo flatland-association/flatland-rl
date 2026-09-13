@@ -10,8 +10,8 @@ from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import BaseDefaultRewards, DefaultRewards, PunctualityRewards
 from flatland.trajectories.policy_runner import PolicyRunner
@@ -47,7 +47,6 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
                     grid_env.rail.get_transitions(((r, c), d))) == 2:
                     assert RailEnvActions.MOVE_FORWARD in graph_env.rail.g.nodes[u]["prohibited_actions"]
                     assert RailEnvActions.DO_NOTHING in graph_env.rail.g.nodes[u]["prohibited_actions"]
-                    # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: no braking on symmetric switches?
                     assert RailEnvActions.STOP_MOVING in graph_env.rail.g.nodes[u]["prohibited_actions"]
                 else:
                     assert RailEnvActions.MOVE_FORWARD not in graph_env.rail.g.nodes[u]["prohibited_actions"]
