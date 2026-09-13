@@ -13,8 +13,8 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -1161,8 +1161,7 @@ def test_collision_penalty_when_braking_interrupted_by_conflict():
 
 
 def test_invalid_action_penalty_on_invalid_action_stop():
-    """Invalid action (e.g. DO_NOTHING on symmetric switch) -> env intervenes -> penalized.
-    See https://github.com/flatland-association/flatland-rl/issues/280 for the open design question."""
+    """Invalid action (e.g. DO_NOTHING on symmetric switch) -> env intervenes -> penalized."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
