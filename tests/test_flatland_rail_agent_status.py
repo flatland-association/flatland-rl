@@ -10,6 +10,7 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.speed_counter import SpeedCounter, SEGMENT_LENGTH
@@ -25,6 +26,7 @@ def test_initial_status():
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     env._max_episode_steps = 1000
@@ -140,6 +142,7 @@ def test_status_done_remove():
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=True)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
@@ -325,6 +328,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     env = RailEnv(width=2, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env._max_episode_steps = 1000
     _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 1), TrainState.MOVING,
@@ -381,6 +385,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env._max_episode_steps = 1000
     _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 1), TrainState.MOVING,

@@ -11,6 +11,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator, empty_rail_generator
 from flatland.utils.editor_interfaces import AbstractModel, AbstractView
 
@@ -318,6 +319,7 @@ class EditorModel(AbstractModel):
         if env is None:
             self.env = RailEnv(width=self.regen_size_width, height=self.regen_size_height, rail_generator=fnMethod,
                                number_of_agents=nAgents, obs_builder_object=TreeObsForRailEnv(max_depth=2))
+            self.env = RailEnvStateMachineWrapper(self.env)
         else:
             self.env = env
         self.env.reset(regenerate_rail=True)

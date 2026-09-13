@@ -13,6 +13,7 @@ from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.timetable_utils import Line, TimetableUtils
@@ -152,6 +153,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             malfunction_generator=malfunction_generator,
             rewards=rewards,
         )
+        graph_env = RailEnvStateMachineWrapper(graph_env)
         graph_env.reset(random_seed=seed)
         return graph_env
 

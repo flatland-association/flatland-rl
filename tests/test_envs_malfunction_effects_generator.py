@@ -21,7 +21,8 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
                                   max_duration=888,
                                   # all cells
                                   condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-                              ))
+                              ),
+                              skip_state_machine_update=False)
     env.reset()
 
     for _ in range(150):
@@ -51,7 +52,8 @@ def test_no_effect_conditional_stopped_cells_and_range_malfunction_effects_gener
             max_duration=888,
             # all cells
             condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-        ))
+        ),
+        skip_state_machine_update=False)
     env.reset()
 
     for _ in range(150):
@@ -74,7 +76,8 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
             min_duration=888,
             max_duration=888,
             condition=condition_stopped_intermediate_and_range(0, 9999999),
-        ))
+        ),
+        skip_state_machine_update=False)
     env.reset()
 
     _run_with_sthortest_path(env=env, rendering=rendering, num_steps=400)
@@ -139,7 +142,8 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
         n_cities=3,
         n_agents=3,
         malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
-        effects_generator=conditional_malfunction_effects_generator)
+        effects_generator=conditional_malfunction_effects_generator,
+        skip_state_machine_update=False)
     env.reset()
 
     num_steps_run = 150
@@ -231,6 +235,7 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
         y_dim=50,
         malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
         effects_generator=conditional_malfunction_effects_generator,
+        skip_state_machine_update=False,
     )
     env.reset()
 

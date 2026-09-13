@@ -18,6 +18,7 @@ from flatland.envs.observations import GlobalObsForRailEnv, TreeObsForRailEnv, N
 from flatland.envs.observations_perturbed import perturbation_tree_observation_builder_wrapper
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
@@ -32,6 +33,7 @@ def test_global_obs():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=GlobalObsForRailEnv())
+    env = RailEnvStateMachineWrapper(env)
 
     global_obs, info = env.reset()
 
@@ -105,6 +107,7 @@ def test_reward_function_conflict(rendering=False):
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     obs_builder: TreeObsForRailEnv = env.obs_builder
     env.reset()
 
@@ -199,6 +202,7 @@ def test_reward_function_waiting(rendering=False):
                   line_generator=sparse_line_generator(), number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   remove_agents_at_target=False, random_seed=1)
+    env = RailEnvStateMachineWrapper(env)
     obs_builder: TreeObsForRailEnv = env.obs_builder
     env.reset()
 

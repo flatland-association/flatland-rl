@@ -15,6 +15,7 @@ from flatland.envs.line_generators import SparseLineGen
 from flatland.envs.malfunction_generators import MalfunctionParameters, NoMalfunctionGen, ParamMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.step_utils.states import TrainState
@@ -35,6 +36,7 @@ def init_test_rail_env(speed: float) -> RailEnv:
         random_seed=1234,
         **args,
     )
+    rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
     return rail_env
 
@@ -166,6 +168,7 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
+    rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
 
     for ii in range(7):
@@ -212,6 +215,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
+    rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
 
     for ii in range(7):
@@ -268,6 +272,7 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=321,
     )
+    rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=321)
 
     for agent in rail_env.agents:
@@ -301,6 +306,7 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=2334,
     )
+    rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=2334)
 
     for ii in range(18):

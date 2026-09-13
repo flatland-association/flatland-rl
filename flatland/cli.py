@@ -10,6 +10,7 @@ import redis
 
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.evaluators.service import FlatlandRemoteEvaluationService, FLATLAND_RL_SERVICE_ID
 from flatland.utils.rendertools import RenderTool
@@ -30,6 +31,7 @@ def demo(args=None):
         ),
         line_generator=sparse_line_generator(),
         number_of_agents=5)
+    env = RailEnvStateMachineWrapper(env)
 
     env._max_episode_steps = int(15 * (env.width + env.height))
     env_renderer = RenderTool(env)

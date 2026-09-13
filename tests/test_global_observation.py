@@ -4,6 +4,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import GlobalObsForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.step_utils.states import TrainState
 
@@ -23,6 +24,7 @@ def test_get_global_observation():
                                                                             ),
                   line_generator=sparse_line_generator(speed_ration_map), number_of_agents=number_of_agents,
                   obs_builder_object=GlobalObsForRailEnv())
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART

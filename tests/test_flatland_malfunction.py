@@ -12,6 +12,7 @@ from flatland.envs.agent_utils import _sanitize_entry_point, virtual_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
@@ -78,6 +79,7 @@ def test_malfunction_process():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
+    env = RailEnvStateMachineWrapper(env)
     obs, info = env.reset(False, False, random_seed=10)
     for a_idx in range(len(env.agents)):
         env_agent = env.agents[a_idx]
@@ -149,6 +151,7 @@ def test_malfunction_process_statistically():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(True, True, random_seed=10)
     env._max_episode_steps = 1000
@@ -196,6 +199,7 @@ def test_malfunction_before_entry():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
+    env = RailEnvStateMachineWrapper(env)
     env.reset(False, False, random_seed=10)
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
 
@@ -230,6 +234,7 @@ def test_malfunction_values_and_behavior():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   obs_builder_object=SingleAgentNavigationObs()
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -264,6 +269,7 @@ def test_initial_malfunction():
                   # Malfunction data generator
                   obs_builder_object=SingleAgentNavigationObs()
                   )
+    env = RailEnvStateMachineWrapper(env)
     # reset to initialize agents_static
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
@@ -349,6 +355,7 @@ def test_initial_malfunction_stop_moving():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=SingleAgentNavigationObs())
+    env = RailEnvStateMachineWrapper(env)
     env.reset(False, False, random_seed=10)
 
     env._max_episode_steps = 1000
@@ -483,6 +490,7 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
         env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                       line_generator=sparse_line_generator(), number_of_agents=1,
                       obs_builder_object=SingleAgentNavigationObs())
+        env = RailEnvStateMachineWrapper(env)
         env.reset(False, False, random_seed=10)
         env._max_episode_steps = 1000
         agent = env.agents[0]
@@ -538,6 +546,7 @@ def test_stop_moving_wraps_overshoot_beyond_boundary():
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=SingleAgentNavigationObs())
+    env = RailEnvStateMachineWrapper(env)
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
     env.acceleration_delta = Fraction(1, 2)
@@ -586,6 +595,7 @@ def test_initial_malfunction_do_nothing():
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   # Malfunction data generator
                   )
+    env = RailEnvStateMachineWrapper(env)
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 1000
 
@@ -680,6 +690,7 @@ def tests_random_interference_from_outside():
     rail, rail_map, optionals = make_simple_rail2()
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(max_speed=0.33)
     env.reset(False, False, random_seed=10)
@@ -707,6 +718,7 @@ def tests_random_interference_from_outside():
     np.random.seed(1234)
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(max_speed=0.33)
     env.reset(False, False, random_seed=10)
@@ -742,6 +754,7 @@ def test_last_malfunction_step():
 
     env = RailEnv(width=25, height=30, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(seed=2), number_of_agents=1, random_seed=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     env.agents[0].speed_counter = SpeedCounter(max_speed=1. / 3.)
     env.agents[0].initial_entry_point = ((6, 6), 2)

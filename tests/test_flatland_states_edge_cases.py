@@ -7,6 +7,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import malfunction_from_params, MalfunctionParameters
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.states import TrainState
@@ -33,6 +34,7 @@ def test_return_to_ready_to_depart():
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 100
@@ -69,6 +71,7 @@ def test_ready_to_depart_to_ready_to_depart_with_stop_action():
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 100
@@ -108,6 +111,7 @@ def test_malfunction_no_phase_through():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -144,6 +148,7 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -219,6 +224,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -269,6 +275,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -348,6 +355,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   rewards=DefaultRewards(collision_factor=2.0),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -435,6 +443,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   rewards=DefaultRewards(collision_factor=2.0),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -495,6 +504,7 @@ def test_malfunction_to_moving_instead_of_stopped():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -563,6 +573,7 @@ def test_stop_and_go():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
+    env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
