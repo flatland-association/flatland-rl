@@ -79,6 +79,28 @@ flags it as unused.
   `benchmarks/benchmark_k_shortest_paths_profiling.ipynb`): `tox -e py3.13-profiling` /
   `tox -e py3.13-profiling-get-k-shortest-paths` — use Python 3.13, not 3.12 (see the Cython section below for
   why the LOCAL_Cython results are otherwise silently missing from the generated plots).
+- **Line-by-line profiling** (ad hoc, not wired into tox/the notebooks above — a manual `line_profiler`
+  workflow for drilling into a specific hot function found via the cumulative-time profiling above): add a
+  `@profile` decorator (`from line_profiler import profile`) to the function(s) to inspect, then run the
+  target script under `kernprof` instead of `python` directly - e.g. for
+  `examples/flatland_performance_profiling.py`:
+  ```
+  kernprof -l examples/flatland_performance_profiling.py
+  ```
+  This produces a `<script>.lprof` file next to the script (here,
+  `examples/flatland_performance_profiling.py.lprof`) - view it with:
+  ```
+  python -m line_profiler -rm examples/flatland_performance_profiling.py.lprof
+  ```
+  (`-r` rich/aligned formatting, `-m` a trailing per-function summary). Per-line `% Time` is only meaningful
+  relative to *that function's own* total - a function called only once or twice (e.g. at episode start) can
+  show a misleadingly huge share of a single-step profiling run; prefer running enough steps that per-line
+  hit counts reflect steady-state repetition, not one-time setup cost, before trusting a percentage. `pip
+  install line_profiler` if the environment doesn't have it - it is **not** currently a `requirements-dev.txt`
+  dependency, so `@profile`/`from line_profiler import profile` left in committed code breaks every import of
+  that module wherever `line_profiler` isn't installed (it has no builtin no-op fallback unless run under
+  `kernprof`, which injects `profile` itself); treat both the import and the decorator as temporary
+  instrumentation to remove again before committing, not a permanent addition.
 
 ## Architecture
 
