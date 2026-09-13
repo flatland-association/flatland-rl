@@ -13,6 +13,14 @@ class AgentTransitionData:
     candidate_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_next_entry_point: Tuple[Tuple[int, int], int] = None
     candidate_distance: Optional[Fraction] = None
+    # pre-step distance (mirrors speed above) - stored so loop 2's "candidate discarded, on-map" branch
+    # can reuse it instead of re-reading agent.speed_counter.distance a second time.
+    distance: Optional[Fraction] = None
+    # loop 1's agent.speed_counter.is_cell_exit() result (mirrors speed/distance above) - stored so loop 2's
+    # resource_check assertion can reuse it instead of calling is_cell_exit() a second time. Not the same as
+    # the raw cell_exit formula computed independently inside the 3 _candidate_ methods (rail_env.py's collect
+    # phase) - is_cell_exit() returns True off-map, the raw formula returns False off-map (see rail_env.py).
+    is_cell_exit: bool = False
     resource_check: bool = False
     # whether this agent was already done *before* this step (pre-step value, like speed above) -
     # RailEnvStateMachineWrapper's post-step update_if_reached() gate needs this after step() returns, when

@@ -6,7 +6,7 @@ import random
 import warnings
 from fractions import Fraction
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar, NamedTuple, FrozenSet
+from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar, NamedTuple
 
 import numpy as np
 
@@ -497,8 +497,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # _candidate_entry_points/_candidate_speed/_candidate_distance below, via the post-step checks)
             candidate_entry_point_independent = pre_step_snapshot.candidate_entry_point_independents[i_agent]
 
-            # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches)
-            action_valid = not agent.speed_counter.is_cell_exit() or candidate_entry_point_independent is not None
+            # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches) -
+            # loop1_is_cell_exit stored below (agent_transition_data.is_cell_exit) so loop 2's
+            # resource_check assertion can reuse it instead of calling is_cell_exit() again.
+            loop1_is_cell_exit = agent.speed_counter.is_cell_exit()
+            action_valid = not loop1_is_cell_exit or candidate_entry_point_independent is not None
 
             # (3a) SPEED UPDATE / (3b) POSITION UPDATE / (3c) CANDIDATE DISTANCE - delegated to the
             # shared, pre-step-only candidate_ methods (also used by the post-step checks) instead of
@@ -511,34 +514,56 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             distance = agent.speed_counter.distance
             done = agent.target_entry_point is not None
             agent_targets = frozenset(agent.targets)
+
+            # Boolean flags shared by all 3 _candidate_ methods below - each one previously recomputed
+            # the same formula from scratch; computed once here and passed in instead. cell_exit is the
+            # raw formula (speed > 0 and about to cross the segment boundary) - NOT the same as
+            # agent.speed_counter.is_cell_exit() above (loop1_is_cell_exit), which returns True off-map;
+            # this raw formula returns False off-map. Do not conflate the two.
+            off_map = agent.current_entry_point is None
+            cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+            target_reached = not off_map and cell_exit and agent.next_entry_point in agent_targets
+            transition_invalid = candidate_entry_point_independent is None
+            action_invalid_on_rail = transition_invalid and not off_map
+            invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+            stopped = speed == 0
+
             candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
                 action=action,
                 initial_entry_point=agent.initial_entry_point,
                 current_entry_point=agent.current_entry_point,
                 next_entry_point=agent.next_entry_point,
-                speed=speed,
-                distance=distance,
                 done=done,
                 in_malfunction=in_malfunction,
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 earliest_departure=agent.earliest_departure,
-                agent_targets=agent_targets,
+                off_map=off_map,
+                cell_exit=cell_exit,
+                target_reached=target_reached,
+                transition_invalid=transition_invalid,
+                action_invalid_on_rail=action_invalid_on_rail,
+                invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             )
+            # stay_off_map: the broader condition _candidate_entry_points' own docstring documents as
+            # producing candidate_entry_point is None (Done, Malfunction off map, or
+            # off_map_no_departure) - only available once candidate_entry_point (above) is known, unlike
+            # the other hoisted flags.
+            stay_off_map = candidate_entry_point is None
             candidate_speed = self._candidate_speed(
                 speed=speed,
-                distance=distance,
                 action=action,
-                current_entry_point=agent.current_entry_point,
-                next_entry_point=agent.next_entry_point,
                 done=done,
-                candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
-                candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=agent_targets,
                 agent_max_speed=agent_max_speed,
                 acceleration_delta=self.acceleration_delta,
                 braking_delta=self.braking_delta,
+                off_map=off_map,
+                cell_exit=cell_exit,
+                target_reached=target_reached,
+                invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+                stopped=stopped,
+                stay_off_map=stay_off_map,
             )
             # (3c) CANDIDATE DISTANCE - computed once here for the distribute phase's (10b) to read,
             # mirroring (3a)'s candidate_speed (previously only the post-step checks called
@@ -546,14 +571,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             candidate_distance = self._candidate_distance(
                 speed=speed,
                 distance=distance,
-                current_entry_point=agent.current_entry_point,
-                next_entry_point=agent.next_entry_point,
                 done=done,
-                candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
-                candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=agent_targets,
                 remove_agents_at_target=self.remove_agents_at_target,
+                off_map=off_map,
+                cell_exit=cell_exit,
+                target_reached=target_reached,
+                invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+                stopped=stopped,
+                stay_off_map=stay_off_map,
             )
 
             if self.check_step_pre_post_conditions:
@@ -585,7 +611,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self.temp_transition_data[i_agent].action_valid = action_valid
             self.temp_transition_data[i_agent].action = action
 
-            self.temp_transition_data[i_agent].speed = agent.speed_counter.speed
+            self.temp_transition_data[i_agent].speed = speed
+            self.temp_transition_data[i_agent].distance = distance
+            self.temp_transition_data[i_agent].is_cell_exit = loop1_is_cell_exit
+            # loop 2 re-reads this same agent.target_entry_point is not None check further below (before
+            # handle_done_state() can change it for this agent) - stored here instead of recomputed there.
+            self.temp_transition_data[i_agent].done = done
 
             # design: actions applied at cell entry -- carry this step's attempted target and
             # look-ahead candidate via per-step scratch data; the distribute phase decides whether to promote
@@ -615,7 +646,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
             resource_check = self.resource_check.check_resource(i_agent)
 
-            if not agent.speed_counter.is_cell_exit() and agent.current_entry_point is not None:
+            if not agent_transition_data.is_cell_exit and agent.current_entry_point is not None:
                 assert resource_check == True
 
             # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
@@ -632,10 +663,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             agent_transition_data.resource_check = resource_check
 
             # (10a) POSITION UPDATE
-            done = agent.target_entry_point is not None
-            # RailEnvStateMachineWrapper's post-step update_if_reached() gate needs this after step() returns,
-            # when agent.target_entry_point may already reflect a DONE transition that happened this step.
-            agent_transition_data.done = done
+            # identical to loop 1's own done = agent.target_entry_point is not None, already stored into
+            # agent_transition_data.done there (nothing between loop 1's write and this read mutates
+            # this agent's target_entry_point - handle_done_state() below is what would, and it hasn't
+            # run yet this iteration). RailEnvStateMachineWrapper's post-step update_if_reached() gate
+            # needs agent_transition_data.done after step() returns too, when agent.target_entry_point
+            # may already reflect a DONE transition that happened this step.
+            done = agent_transition_data.done
 
             # candidates discarded if not resource check -> keep previous configuration (no-op).
             # candidates accepted -> current/next_entry_point updated unconditionally, even if this
@@ -667,7 +701,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # happens only after the whole collect-phase loop above completes - the candidate_
                 # methods are single-agent and have no visibility into other agents' candidates.
                 new_speed = ZERO_FRACTION
-                new_distance = SpeedCounter.distance_without_crossing(agent.speed_counter.distance, agent.speed_counter.speed)
+                # agent.speed_counter.distance/.speed still hold their pre-step values here (see comment
+                # above) - identical to agent_transition_data.distance/.speed, already stored by loop 1.
+                new_distance = SpeedCounter.distance_without_crossing(
+                    agent_transition_data.distance, agent_transition_data.speed)
                 agent.speed_counter.set(new_speed, new_distance)
             else:
                 # candidates accepted - distance is exactly candidate_distance in every case (already
@@ -848,19 +885,34 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         for h in pre_step.speeds.keys():
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
+            # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()).
+            speed = pre_step.speeds[h]
+            distance = pre_step.distances[h]
+            current_entry_point = pre_step.current_entry_points[h]
+            next_entry_point = pre_step.next_entry_points[h]
+            candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
+            off_map = current_entry_point is None
+            cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+            target_reached = not off_map and cell_exit and next_entry_point in agent.targets
+            transition_invalid = candidate_entry_point_independent is None
+            action_invalid_on_rail = transition_invalid and not off_map
+            invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
             candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
                 action=action,
                 initial_entry_point=agent.initial_entry_point,
-                current_entry_point=pre_step.current_entry_points[h],
-                next_entry_point=pre_step.next_entry_points[h],
-                speed=pre_step.speeds[h],
-                distance=pre_step.distances[h],
+                current_entry_point=current_entry_point,
+                next_entry_point=next_entry_point,
                 done=pre_step.dones[h],
                 in_malfunction=pre_step.in_malfunctions[h],
                 elapsed_steps=self._elapsed_steps,
-                candidate_entry_point_independent=pre_step.candidate_entry_point_independents[h],
+                candidate_entry_point_independent=candidate_entry_point_independent,
                 earliest_departure=agent.earliest_departure,
-                agent_targets=frozenset(agent.targets),
+                off_map=off_map,
+                cell_exit=cell_exit,
+                target_reached=target_reached,
+                transition_invalid=transition_invalid,
+                action_invalid_on_rail=action_invalid_on_rail,
+                invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             )
             # candidates discarded in distribute phase -> previous configuration
             if not self.temp_transition_data[h].resource_check:
@@ -883,15 +935,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def _candidate_entry_points(action: RailEnvActions,
                                 current_entry_point: Optional[EntryPointT],
                                 next_entry_point: Optional[EntryPointT],
-                                speed: Optional[Fraction],
-                                distance: Optional[Fraction],
                                 done: bool,
                                 in_malfunction: bool,
                                 elapsed_steps: int,
                                 candidate_entry_point_independent: Optional[EntryPointT],
                                 earliest_departure: int,
-                                agent_targets: FrozenSet[EntryPointT],
                                 initial_entry_point: EntryPointT,
+                                off_map: bool,
+                                cell_exit: bool,
+                                target_reached: bool,
+                                transition_invalid: bool,
+                                action_invalid_on_rail: bool,
+                                invalid_action_at_cell_exit: bool,
                                 ) -> Tuple[Optional[EntryPointT], Optional[EntryPointT]]:
         """
         The (optimistic) candidate entry points of collect phase
@@ -921,7 +976,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         See design_by_contract.md's Table 2.
         """
-        off_map = current_entry_point is None
+        # off_map/cell_exit/target_reached/transition_invalid/action_invalid_on_rail/
+        # invalid_action_at_cell_exit are hoisted params, computed once in step()'s loop 1 and shared
+        # across all 3 _candidate_ methods - see rail_env.py's step() for their shared definitions.
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
         # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
         # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
@@ -934,12 +991,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             ready_to_depart = not done and (earliest_departure == 0)  # no "step 0" exists, so this is the base case
         else:
             ready_to_depart = not done and (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
-        transition_invalid = candidate_entry_point_independent is None
-        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
-        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
-        # The off-map departure check below needs the raw transition_invalid instead, since off_map
-        # is true by construction there.
-        action_invalid_on_rail = transition_invalid and not off_map
         # required_action_invalid_or_not_required_or_no_movement: why an off-map agent doesn't depart
         # this step - one of three disjoint reasons: not yet ready to depart (action not required
         # yet), ready to depart but no moving action given (action required, but not attempted), or a
@@ -953,13 +1004,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # predicate only, like map_entry above - not done/not in_malfunction are applied
         # separately at the branch below.
         off_map_no_departure = off_map and required_action_invalid_or_not_required_or_no_movement
-        # cell_exit requires speed > 0, not just distance + speed >= SEGMENT_LENGTH - shared
-        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
-        # A STOPPED agent (speed == 0) banked exactly at a boundary is never, by itself, "at a cell
-        # exit" - it must first be given a moving action and actually start moving again before a fresh
-        # crossing attempt (and cell_exit) can apply.
-        cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-        target_reached = not off_map and cell_exit and next_entry_point in agent_targets
         on_map_cell_transition = not off_map and cell_exit and not action_invalid_on_rail
 
         # The branches below are pairwise disjoint: each condition already excludes - structurally,
@@ -1010,8 +1054,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if on_map_cell_transition and not done and not in_malfunction and not target_reached:
             return next_entry_point, candidate_entry_point_independent
         # invalid action at cell exit
-        if (not off_map and cell_exit and action_invalid_on_rail and not done
-            and not in_malfunction and not target_reached):
+        # N.B. action_invalid_on_rail already implies not off_map, so invalid_action_at_cell_exit
+        # (action_invalid_on_rail and cell_exit) alone is equivalent to the original
+        # `not off_map and cell_exit and action_invalid_on_rail`.
+        if invalid_action_at_cell_exit and not done and not in_malfunction and not target_reached:
             return current_entry_point, next_entry_point
         # keep moving mid-cell
         if not done and not in_malfunction and not off_map and not cell_exit:
@@ -1023,15 +1069,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     # runs is consistently lower with the cache removed - the per-call argument-hashing/eviction overhead
     # outweighs the modest savings from occasional hits.
     @staticmethod
-    def _candidate_speed(speed: Optional[Fraction], distance: Optional[Fraction],
+    def _candidate_speed(speed: Optional[Fraction],
                          action: RailEnvActions,
-                         current_entry_point: Optional[EntryPointT], next_entry_point: Optional[EntryPointT],
                          done: bool,
-                         candidate_entry_point: Optional[EntryPointT], in_malfunction: bool,
-                         candidate_entry_point_independent: Optional[EntryPointT],
-                         agent_targets: FrozenSet[EntryPointT],
+                         in_malfunction: bool,
                          agent_max_speed: Fraction, acceleration_delta: Fraction,
-                         braking_delta: Fraction) -> Optional[Fraction]:
+                         braking_delta: Fraction,
+                         off_map: bool,
+                         cell_exit: bool,
+                         target_reached: bool,
+                         invalid_action_at_cell_exit: bool,
+                         stopped: bool,
+                         stay_off_map: bool) -> Optional[Fraction]:
         """
         The (optimistic) candidate speed of collect phase
         (actions invalid in the grid if cell transition is imminent lead to speed 0)
@@ -1039,28 +1088,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
+
+        off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
+        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
+        rail_env.py's step() for their shared definitions.
         """
-        off_map = current_entry_point is None
-        # cell_exit requires speed > 0, not just distance + speed >= SEGMENT_LENGTH - shared
-        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
-        # A STOPPED agent (speed == 0) banked exactly at a boundary is never, by itself, "at a cell
-        # exit" - it must first be given a moving action and actually start moving again before a fresh
-        # crossing attempt (and cell_exit) can apply.
-        cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-        # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
-        # just an equivalent check on the already-resolved candidate_entry_point.
-        target_reached = not off_map and cell_exit and next_entry_point in agent_targets
         done_or_target_reached = done or target_reached
-        transition_invalid = candidate_entry_point_independent is None
-        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
-        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
-        action_invalid_on_rail = transition_invalid and not off_map
-        invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
-        stopped = speed == 0
-        # stay_off_map: the broader condition _candidate_entry_points documents as producing
-        # candidate_entry_point is None (Done, Malfunction off map, or off_map_no_departure - see its
-        # own docstring), consumed here rather than re-derived.
-        stay_off_map = candidate_entry_point is None
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
         no_earlier_case_applies = (not done_or_target_reached and not in_malfunction and not off_map
                                    and not invalid_action_at_cell_exit)
@@ -1141,11 +1174,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     @staticmethod
     @lru_cache()
     def _candidate_distance(speed: Optional[Fraction], distance: Optional[Fraction],
-                            current_entry_point: Optional[EntryPointT], next_entry_point: Optional[EntryPointT],
-                            done: bool, candidate_entry_point: Optional[EntryPointT],
-                            in_malfunction: bool, candidate_entry_point_independent: Optional[EntryPointT],
-                            agent_targets: FrozenSet[EntryPointT],
-                            remove_agents_at_target: bool) -> Optional[Fraction]:
+                            done: bool,
+                            in_malfunction: bool,
+                            remove_agents_at_target: bool,
+                            off_map: bool,
+                            cell_exit: bool,
+                            target_reached: bool,
+                            invalid_action_at_cell_exit: bool,
+                            stopped: bool,
+                            stay_off_map: bool) -> Optional[Fraction]:
         """
         The (optimistic) candidate distance of collect phase
         (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
@@ -1153,31 +1190,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
-        """
-        # same off_map proxy as _candidate_speed (current_entry_point, not distance) - the
-        # two always agree by the on/off-map invariant, but reading the same variable in both keeps
-        # this method's formulas textually identical to _candidate_speed's, not just logically so.
-        off_map = current_entry_point is None
-        # cell_exit requires speed > 0, not just distance + speed >= SEGMENT_LENGTH - shared
-        # by all three _candidate_ methods and SpeedCounter.is_cell_exit() (see design_by_contract.md).
-        # A STOPPED agent (speed == 0) banked exactly at a boundary is never, by itself, "at a cell
-        # exit" - it must first be given a moving action and actually start moving again before a fresh
-        # crossing attempt (and cell_exit) can apply.
-        cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-        # same formula as _candidate_entry_points' own target_reached (see design_by_contract.md) - not
-        # just an equivalent check on the already-resolved candidate_entry_point.
-        target_reached = not off_map and cell_exit and next_entry_point in agent_targets
-        transition_invalid = candidate_entry_point_independent is None
-        # action_invalid_on_rail: transition_invalid narrowed to on-map context (see Table 2b) - a
-        # "rail" transition-validity check is only meaningful once the agent is actually on the rail.
-        action_invalid_on_rail = transition_invalid and not off_map
-        invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
-        stopped = speed == 0
-        # stay_off_map: the broader condition _candidate_entry_points documents as producing
-        # candidate_entry_point is None (Done, Malfunction off map, or off_map_no_departure - see its
-        # own docstring), consumed here rather than re-derived.
-        stay_off_map = candidate_entry_point is None
 
+        off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
+        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
+        rail_env.py's step() for their shared definitions. Note this narrows the lru_cache key from the
+        original (which included current_entry_point/next_entry_point/candidate_entry_point/
+        candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
+        booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
+        """
         # The branches below are pairwise disjoint: each condition already excludes - structurally,
         # or via an explicit `not ...` term - every other branch, so evaluating them in any order
         # returns the same result. What each branch excludes, and how:
@@ -1265,31 +1285,48 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             else:
                 action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
+                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # recomputed from the pre-step snapshot here since this runs after step() completed.
+                distance = pre_step.distances[h]
+                current_entry_point = pre_step.current_entry_points[h]
+                next_entry_point = pre_step.next_entry_points[h]
+                done = pre_step.dones[h]
+                in_malfunction = pre_step.in_malfunctions[h]
+                off_map = current_entry_point is None
+                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                target_reached = not off_map and cell_exit and next_entry_point in agent.targets
+                transition_invalid = candidate_entry_point_independent is None
+                action_invalid_on_rail = transition_invalid and not off_map
+                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
                 candidate_entry_point, _ = self._candidate_entry_points(
                     action=action,
                     initial_entry_point=agent.initial_entry_point,
-                    current_entry_point=pre_step.current_entry_points[h],
-                    next_entry_point=pre_step.next_entry_points[h],
-                    speed=speed,
-                    distance=pre_step.distances[h],
-                    done=pre_step.dones[h],
-                    in_malfunction=pre_step.in_malfunctions[h],
+                    current_entry_point=current_entry_point,
+                    next_entry_point=next_entry_point,
+                    done=done,
+                    in_malfunction=in_malfunction,
                     elapsed_steps=self._elapsed_steps,
                     candidate_entry_point_independent=candidate_entry_point_independent,
                     earliest_departure=agent.earliest_departure,
-                    agent_targets=frozenset(agent.targets),
+                    off_map=off_map,
+                    cell_exit=cell_exit,
+                    target_reached=target_reached,
+                    transition_invalid=transition_invalid,
+                    action_invalid_on_rail=action_invalid_on_rail,
+                    invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                 )
                 assert agent.speed_counter.distance == self._candidate_distance(
                     speed=speed,
-                    distance=pre_step.distances[h],
-                    current_entry_point=pre_step.current_entry_points[h],
-                    next_entry_point=pre_step.next_entry_points[h],
-                    done=pre_step.dones[h],
-                    candidate_entry_point=candidate_entry_point,
-                    in_malfunction=pre_step.in_malfunctions[h],
-                    candidate_entry_point_independent=candidate_entry_point_independent,
-                    agent_targets=frozenset(agent.targets),
+                    distance=distance,
+                    done=done,
+                    in_malfunction=in_malfunction,
                     remove_agents_at_target=self.remove_agents_at_target,
+                    off_map=off_map,
+                    cell_exit=cell_exit,
+                    target_reached=target_reached,
+                    invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+                    stopped=(speed == 0),
+                    stay_off_map=(candidate_entry_point is None),
                 )
 
         # speed update postcondition
@@ -1307,42 +1344,58 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # candidates accepted in distribute phase
             else:
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
+                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # recomputed from the pre-step snapshot here since this runs after step() completed.
+                distance = pre_step.distances[h]
+                current_entry_point = pre_step.current_entry_points[h]
+                next_entry_point = pre_step.next_entry_points[h]
+                done = pre_step.dones[h]
+                in_malfunction = pre_step.in_malfunctions[h]
+                off_map = current_entry_point is None
+                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                target_reached = not off_map and cell_exit and next_entry_point in agent.targets
+                transition_invalid = candidate_entry_point_independent is None
+                action_invalid_on_rail = transition_invalid and not off_map
+                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
                 candidate_entry_point, _ = self._candidate_entry_points(
                     action=action,
                     initial_entry_point=agent.initial_entry_point,
-                    current_entry_point=pre_step.current_entry_points[h],
-                    next_entry_point=pre_step.next_entry_points[h],
-                    speed=speed,
-                    distance=pre_step.distances[h],
-                    done=pre_step.dones[h],
-                    in_malfunction=pre_step.in_malfunctions[h],
+                    current_entry_point=current_entry_point,
+                    next_entry_point=next_entry_point,
+                    done=done,
+                    in_malfunction=in_malfunction,
                     elapsed_steps=self._elapsed_steps,
                     candidate_entry_point_independent=candidate_entry_point_independent,
                     earliest_departure=agent.earliest_departure,
-                    agent_targets=frozenset(agent.targets),
+                    off_map=off_map,
+                    cell_exit=cell_exit,
+                    target_reached=target_reached,
+                    transition_invalid=transition_invalid,
+                    action_invalid_on_rail=action_invalid_on_rail,
+                    invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                 )
                 # _candidate_speed never returns None (see its own docstring) - the real post-step speed
                 # is None instead exactly when removed at target or still/again off map, mirroring
                 # _check_position_update_postconditions's own remove_agents_at_target guard.
-                if self.remove_agents_at_target and (pre_step.dones[h] or candidate_entry_point in agent.targets):
+                if self.remove_agents_at_target and (done or candidate_entry_point in agent.targets):
                     assert agent.speed_counter.speed is None
                 elif candidate_entry_point is None:
                     assert agent.speed_counter.speed is None
                 else:
                     assert agent.speed_counter.speed == self._candidate_speed(
                         speed=speed,
-                        distance=pre_step.distances[h],
                         action=action,
-                        current_entry_point=pre_step.current_entry_points[h],
-                        next_entry_point=pre_step.next_entry_points[h],
-                        done=pre_step.dones[h],
-                        candidate_entry_point=candidate_entry_point,
-                        in_malfunction=pre_step.in_malfunctions[h],
-                        candidate_entry_point_independent=candidate_entry_point_independent,
-                        agent_targets=frozenset(agent.targets),
+                        done=done,
+                        in_malfunction=in_malfunction,
                         agent_max_speed=agent.speed_counter.max_speed,
                         acceleration_delta=self.acceleration_delta,
                         braking_delta=self.braking_delta,
+                        off_map=off_map,
+                        cell_exit=cell_exit,
+                        target_reached=target_reached,
+                        invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+                        stopped=(speed == 0),
+                        stay_off_map=(candidate_entry_point is None),
                     )
 
     def _infrastructure_representation(self, entry_point: EntryPointT) -> str:

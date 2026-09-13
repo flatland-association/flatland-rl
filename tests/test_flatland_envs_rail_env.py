@@ -26,7 +26,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties
-from flatland.envs.step_utils.speed_counter import SpeedCounter, _cap_speed
+from flatland.envs.step_utils.speed_counter import SEGMENT_LENGTH, SpeedCounter, _cap_speed
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
@@ -814,13 +814,25 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
 
     candidate_entry_point_independent = env.rail.apply_action_independent(
         action, next_entry_point if next_entry_point is not None else agent.initial_entry_point)
+    # mirrors RailEnv.step()'s own loop 1 hoisted-flag derivation (see rail_env.py's step()) - the
+    # _candidate_ methods take these as params rather than recomputing them internally.
+    off_map = current_entry_point is None
+    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+    target_reached = not off_map and cell_exit and next_entry_point in agent.targets
+    transition_invalid = candidate_entry_point_independent is None
+    action_invalid_on_rail = transition_invalid and not off_map
+    invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
         action=action, initial_entry_point=agent.initial_entry_point, current_entry_point=current_entry_point,
-        next_entry_point=next_entry_point, speed=speed, distance=distance,
+        next_entry_point=next_entry_point,
         done=done, in_malfunction=in_malfunction, elapsed_steps=env._elapsed_steps + 1,
         candidate_entry_point_independent=candidate_entry_point_independent,
-        earliest_departure=agent.earliest_departure, agent_targets=frozenset(agent.targets),
+        earliest_departure=agent.earliest_departure,
+        off_map=off_map, cell_exit=cell_exit, target_reached=target_reached,
+        transition_invalid=transition_invalid, action_invalid_on_rail=action_invalid_on_rail,
+        invalid_action_at_cell_exit=invalid_action_at_cell_exit,
     )
+    stay_off_map = candidate_entry_point is None
 
     _, rewards, _, _ = env.step(action_dict)
 
@@ -832,14 +844,12 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         expected_distance = env._candidate_distance(
             speed=speed,
             distance=distance,
-            current_entry_point=current_entry_point,
-            next_entry_point=next_entry_point,
             done=done,
-            candidate_entry_point=candidate_entry_point,
             in_malfunction=in_malfunction,
-            candidate_entry_point_independent=candidate_entry_point_independent,
-            agent_targets=frozenset(agent.targets),
             remove_agents_at_target=env.remove_agents_at_target,
+            off_map=off_map, cell_exit=cell_exit, target_reached=target_reached,
+            invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+            stopped=(speed == 0), stay_off_map=stay_off_map,
         )
         if env.remove_agents_at_target and (done or candidate_entry_point in agent.targets):
             expected_speed = None
@@ -847,15 +857,14 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
             expected_speed = None
         else:
             expected_speed = env._candidate_speed(
-                speed=speed, distance=distance, action=action,
-                current_entry_point=current_entry_point, next_entry_point=next_entry_point,
-                done=done,
-                candidate_entry_point=candidate_entry_point, in_malfunction=in_malfunction,
-                candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=frozenset(agent.targets),
+                speed=speed, action=action,
+                done=done, in_malfunction=in_malfunction,
                 agent_max_speed=agent.speed_counter.max_speed,
                 acceleration_delta=env.acceleration_delta,
                 braking_delta=env.braking_delta,
+                off_map=off_map, cell_exit=cell_exit, target_reached=target_reached,
+                invalid_action_at_cell_exit=invalid_action_at_cell_exit,
+                stopped=(speed == 0), stay_off_map=stay_off_map,
             )
     assert agent.speed_counter.speed == expected_speed, (agent.speed_counter.speed, expected_speed)
     assert agent.speed_counter.distance == expected_distance, (agent.speed_counter.distance, expected_distance)
