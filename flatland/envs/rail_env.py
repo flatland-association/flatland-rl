@@ -498,8 +498,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             candidate_entry_point_independent = pre_step_snapshot.candidate_entry_point_independents[i_agent]
 
             # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches)
-            cell_exit = agent.speed_counter.is_cell_exit()
-            action_valid = not cell_exit or candidate_entry_point_independent is not None
+            action_valid = not agent.speed_counter.is_cell_exit() or candidate_entry_point_independent is not None
 
             # (3a) SPEED UPDATE / (3b) POSITION UPDATE / (3c) CANDIDATE DISTANCE - delegated to the
             # shared, pre-step-only candidate_ methods (also used by the post-step checks) instead of
