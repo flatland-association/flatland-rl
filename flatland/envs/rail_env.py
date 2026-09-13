@@ -511,6 +511,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             speed = agent.speed_counter.speed
             distance = agent.speed_counter.distance
             done = agent.target_entry_point is not None
+            agent_targets = frozenset(agent.targets)
             candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
                 action=action,
                 initial_entry_point=agent.initial_entry_point,
@@ -523,7 +524,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 earliest_departure=agent.earliest_departure,
-                agent_targets=frozenset(agent.targets),
+                agent_targets=agent_targets,
             )
             candidate_speed = self._candidate_speed(
                 speed=speed,
@@ -535,7 +536,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
                 candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=frozenset(agent.targets),
+                agent_targets=agent_targets,
                 agent_max_speed=agent_max_speed,
                 acceleration_delta=self.acceleration_delta,
                 braking_delta=self.braking_delta,
@@ -552,7 +553,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point=candidate_entry_point,
                 in_malfunction=in_malfunction,
                 candidate_entry_point_independent=candidate_entry_point_independent,
-                agent_targets=frozenset(agent.targets),
+                agent_targets=agent_targets,
                 remove_agents_at_target=self.remove_agents_at_target,
             )
 
@@ -1008,7 +1009,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return next_entry_point, candidate_entry_point_independent
         # invalid action at cell exit
         if (not off_map and cell_exit and action_invalid_on_rail and not done
-                and not in_malfunction and not target_reached):
+            and not in_malfunction and not target_reached):
             return current_entry_point, next_entry_point
         # keep moving mid-cell
         if not done and not in_malfunction and not off_map and not cell_exit:
@@ -1113,11 +1114,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return Fraction(0)
         # invalid action at cell exit
         if (invalid_action_at_cell_exit and not done and not target_reached and not in_malfunction
-                and not off_map):
+            and not off_map):
             return Fraction(0)
         # acceleration or start moving
         if (action == RailEnvActions.MOVE_FORWARD or (stopped and RailEnvActions.is_moving_action(action))) \
-                and no_earlier_case_applies:
+            and no_earlier_case_applies:
             # speed is None while WAITING (not yet departing this step) -
             # speed_after_acceleration(None, ...) == None matches that case too.
             return SpeedCounter.speed_after_acceleration(speed, agent_max_speed, acceleration_delta)
@@ -1128,7 +1129,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return SpeedCounter.speed_after_braking(speed, braking_delta)
         # keep moving mid-cell
         if no_earlier_case_applies and (
-                action == RailEnvActions.DO_NOTHING or (not stopped and RailEnvActions.is_left_right_action(action))):
+            action == RailEnvActions.DO_NOTHING or (not stopped and RailEnvActions.is_left_right_action(action))):
             return speed
         raise ValueError("no _candidate_speed branch matched - branches are exhaustive by construction")
 
@@ -1221,7 +1222,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return None
         # invalid action at cell exit
         if (invalid_action_at_cell_exit and not done and not target_reached and not in_malfunction
-                and not off_map):
+            and not off_map):
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (10b)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
@@ -1229,11 +1230,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return SpeedCounter.distance_without_crossing(distance, speed)
         # stopped
         if (stopped and not done and not target_reached and not off_map and not in_malfunction
-                and not invalid_action_at_cell_exit):
+            and not invalid_action_at_cell_exit):
             return distance
         #  keep moving mid-cell
         if (not stopped and not done and not target_reached and not off_map and not in_malfunction
-                and not invalid_action_at_cell_exit):
+            and not invalid_action_at_cell_exit):
             return SpeedCounter.distance_after_crossing(distance, speed)
         raise ValueError("no _candidate_distance branch matched - branches are exhaustive by construction")
 

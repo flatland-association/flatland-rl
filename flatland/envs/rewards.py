@@ -195,8 +195,10 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         in_malfunction = agent.malfunction_handler.in_malfunction
         stop_action_given = agent_transition_data.action == RailEnvActions.STOP_MOVING
         # new_speed_zero mirrors rail_env.py's own _is_speed_zero(candidate_speed) - candidate_speed is
-        # None for the "no signal" fallback above, and None == 0.0 is False, matching that fallback's intent.
-        new_speed_zero = agent_transition_data.candidate_speed == 0.0
+        # None for the "no signal" fallback above, and None == 0 is False, matching that fallback's intent.
+        # Compare against int 0, not float 0.0: Fraction.__eq__ takes a much slower path for a float
+        # operand (must losslessly convert it first) than for an int - profiled at ~13x the cost here.
+        new_speed_zero = agent_transition_data.candidate_speed == 0
         # movement_allowed = action_valid and resource_check (rail_env.py's own formula - see
         # RailEnvStateMachineWrapper, which recomputes it identically for the state machine).
         movement_allowed = agent_transition_data.action_valid and agent_transition_data.resource_check
