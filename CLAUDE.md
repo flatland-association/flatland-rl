@@ -131,14 +131,25 @@ a node-id string for graph.
 
 `RailEnv`/`AbstractRailEnv` (`rail_env.py`) is the env facade, generic over `(TransitionMap, ResourceMap,
 EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
-assignment), `timetable_generators.py` (departure/arrival windows). Per `step()`, for each agent: derive the
-desired next entry point from the action via the `step_utils` state machine (`TrainState`/
-`TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
-`(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
-conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
-state/position, then `handle_done_state()`, then rewards, per agent, in that order. `EnvAgent` (`agent_utils.py`)
-holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
-via the distance map's shortest paths.
+assignment), `timetable_generators.py` (departure/arrival windows). `step()` runs two per-agent phases,
+both state-machine-independent - `collect()` derives each agent's candidate next entry point/speed/distance
+purely from its pre-step position/speed and the given action (`_candidate_entry_points`/`_candidate_speed`/
+`_candidate_distance` - see `design_by_contract.md`), never from `agent.state`, and registers the
+`(current_resource, new_resource)` pair (via `resource_map.get_resource(...)`) with `agent_chains.py`'s
+`MotionCheck`; once every agent's pair is registered, `MotionCheck.find_conflicts()` resolves cross-agent
+conflicts (head-on swaps, same-target collisions) for the whole step at once. `distribute()` then, per agent,
+resolves its candidate against that conflict resolution, commits position/speed/distance, calls
+`handle_done_state()`, and computes the reward. `EnvAgent` (`agent_utils.py`) holds per-agent state;
+`observations.py`/`predictions.py` build the observation returned to policies, typically via the distance
+map's shortest paths.
+
+`agent.state`/`agent.state_machine` (`TrainState`/`TrainStateMachine`, `step_utils/state_machine.py`) are not
+touched by `AbstractRailEnv.step()` itself at all - they're opt-in, layered on afterward by
+`RailEnvStateMachineWrapper` (`rail_env_state_machine_wrapper.py`), which patches a env instance so its
+`step()` also runs the state machine's bookkeeping (reconstructing `StateTransitionSignals` from the
+`AgentTransitionData` `collect()`/`distribute()` already produced) before observations are built. An
+obs_builder/predictor that reads `agent.state` for correctness (not just `get_info_dict()`'s informational
+fields) needs the env wrapped; one that doesn't can skip the wrapper entirely.
 
 `handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_entry_point`
 and, if `remove_agents_at_target` (the default), clears `agent.current_entry_point` to `None` — so on the

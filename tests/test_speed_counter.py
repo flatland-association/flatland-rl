@@ -325,9 +325,9 @@ def test_set_is_cell_entry_true_for_genuine_crossing_from_banked_boundary():
     """A MOVING agent bootstraps at speed=1 onto the map, is denied/braked to a stop exactly at the next
     cell boundary (banking distance == SEGMENT_LENGTH), is later promoted back to MOVING while still
     banked (distance unchanged), then genuinely completes its crossing into the next cell. is_cell_entry
-    correctly reports True for that last step - set() derives it from old vs. new distance, not from
-    new_distance < speed (the old step()'s formula, which wrongly reported False at exactly this boundary
-    - see Phase 0's xfail test this replaces)."""
+    correctly reports True for that last step: set() derives it from old vs. new distance crossing the
+    segment boundary, which correctly distinguishes a genuine crossing from an agent parked exactly at
+    the boundary."""
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
     sc.set(sc.speed, Fraction(0))  # bootstrap onto the map: distance -> 0, speed -> 1
     sc.set(speed=0, distance=Fraction(1))  # denied/braked exactly at the boundary: distance -> 1 (banked), speed -> 0

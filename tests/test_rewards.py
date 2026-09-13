@@ -439,8 +439,8 @@ def test_energy_efficiency_smoothniss_in_morl():
     # distance is irrelevant to this test (only speed feeds the energy-efficiency-smoothness reward
     # below) - held at a fixed placeholder throughout rather than tracking set()'s real distance
     # progression. current_entry_point/malfunction_down_counter are the state-machine-independent signals
-    # BasicMultiObjectiveRewards' current_speed now reads (on-map and not malfunctioning), set here
-    # consistently with the state_machine.set_state() calls they used to stand in for.
+    # BasicMultiObjectiveRewards' current_speed reads (on-map and not malfunctioning) - set consistently
+    # alongside the state_machine.set_state() calls below so both stay in agreement.
     agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
     agent.state_machine.set_state(TrainState.WAITING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, 0, 0)
@@ -456,8 +456,7 @@ def test_energy_efficiency_smoothniss_in_morl():
 
     # speed_counter.speed is pinned at 0 for the whole malfunction, not just at entry - the real
     # invariant _candidate_speed's own malfunction branch enforces on-map (see
-    # test_flatland_envs_rail_env.py::test_speed_after_malfunction) - not left at its pre-malfunction
-    # value as this test previously (incorrectly) modeled it.
+    # test_flatland_envs_rail_env.py::test_speed_after_malfunction).
     agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     agent.malfunction_handler.malfunction_down_counter = 1

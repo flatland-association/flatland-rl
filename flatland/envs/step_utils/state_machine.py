@@ -182,28 +182,6 @@ class TrainStateMachine:
 
         Either way, action_required only ever reports this step's already-settled outcome, never a
         lookahead onto the next step's malfunction-counter mutation.
-
-        design: MALFUNCTION and MALFUNCTION_OFF_MAP used to be asymmetric here even when
-        earliest_departure was already reached for both - both transition straight into MOVING on the
-        very step their malfunction ends (given a movement action that same step, see
-        _handle_malfunction/_handle_malfunction_off_map above), but action_required used to disagree
-        about the steps leading up to that while still malfunctioning: an on-map MALFUNCTION agent
-        banked at a cell boundary (distance == SEGMENT_LENGTH from a denied crossing before the
-        malfunction hit) used to read action_required True for every remaining malfunctioning step -
-        misleadingly, since movement_action_given has no effect while in_malfunction is still True
-        regardless of what action_required says - while MALFUNCTION_OFF_MAP correctly read False for
-        the entire malfunction (an off-map agent has no distance/speed to bank against SEGMENT_LENGTH).
-
-        This asymmetry is now resolved - not by revising today's action_required formula above, which
-        is unchanged - but by SpeedCounter.is_cell_exit()'s own speed > 0 guard (see
-        design_by_contract.md): since in_malfunction always forces speed to 0, is_cell_exit() - and so
-        action_required - now reads False throughout any on-map MALFUNCTION too, symmetric with
-        MALFUNCTION_OFF_MAP, only flipping True again once the malfunction clears and a movement action
-        promotes the agent back to MOVING. Confirmed empirically: with earliest_departure already
-        reached (0) going in, both a MALFUNCTION_OFF_MAP agent and an on-map MALFUNCTION agent banked
-        at a boundary now report action_required False/False/True across a 3-step malfunction (last
-        step already MOVING again - see test_action_required_at_full_segment_length's malfunction
-        variant for the on-map side).
         """
 
         current_state = self._state

@@ -71,8 +71,8 @@ class _StateMachineUpdateMixin:
         (`flatland/envs/step_utils/state_machine.py`): every transition method,
         `update_if_reached()`, and `state_position_sync_check()` read only their explicit arguments/
         `self.st_signals`, never another agent nor anything `step()` mutates later - so running all
-        of it in a single pass here (rather than interleaved per-agent inside `step()`'s own per-agent
-        loop, as it used to be) is behaviorally equivalent.
+        of it in a single pass here, rather than interleaved per-agent inside `step()`'s own per-agent
+        loop, is behaviorally equivalent.
 
         The `StateTransitionSignals` fed into the state machine below are reconstructed here rather than
         carried directly: `stop_action_given`/`movement_action_given` are pure functions of
@@ -106,9 +106,9 @@ class _StateMachineUpdateMixin:
                 # +1: earliest_departure_reached is deliberately signalled one step early (see
                 # rail_env.py's own historical comment on this formula) so the WAITING ->
                 # READY_TO_DEPART transition it drives completes in step N-1 - self._elapsed_steps
-                # is not re-incremented between step()'s per-agent loop and this hook (both run within
+                # is not re-incremented between collect()/distribute() and this hook (both run within
                 # the same step() call, after step()'s own single, top-of-function increment), so this
-                # must match loop 1's original formula exactly, not compensate for any further increment.
+                # must match collect()'s formula exactly, not compensate for any further increment.
                 earliest_departure_reached=agent.earliest_departure <= self._elapsed_steps + 1,
                 stop_action_given=agent_transition_data.action == RailEnvActions.STOP_MOVING,
                 movement_action_given=RailEnvActions.is_moving_action(agent_transition_data.action),

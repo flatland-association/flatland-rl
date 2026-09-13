@@ -527,7 +527,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def collect(self, agent: EnvAgent, action: RailEnvActions,
                 candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Any, Any]:
         """
-        Collect phase for a single agent (step()'s former loop 1 body): derive this step's candidate
+        Collect phase for a single agent: derive this step's candidate
         entry point/speed/distance unilaterally from the agent's pre-step state and the given action
         alone - including for an invalid action, which itself just yields a zeroed/unchanged candidate
         (e.g. candidate_speed = 0) rather than skipping computation entirely. The distribute phase
@@ -560,10 +560,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         # (2) CANDIDATE ENTRY POINT: action validity - need both by speed update (3a) and position update (3b) below
         # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches) -
-        # loop1_is_cell_exit stored below (agent_transition_data.is_cell_exit) so the distribute
+        # collected_is_cell_exit stored below (agent_transition_data.is_cell_exit) so the distribute
         # phase's resource_check assertion can reuse it instead of calling is_cell_exit() again.
-        loop1_is_cell_exit = agent.speed_counter.is_cell_exit()
-        action_valid = not loop1_is_cell_exit or candidate_entry_point_independent is not None
+        collected_is_cell_exit = agent.speed_counter.is_cell_exit()
+        action_valid = not collected_is_cell_exit or candidate_entry_point_independent is not None
 
         # (3a) SPEED UPDATE / (3b) POSITION UPDATE / (3c) CANDIDATE DISTANCE - delegated to the
         # shared, pre-step-only candidate_ methods (also used by the post-step checks) instead of
@@ -580,7 +580,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # Boolean flags shared by all 3 _candidate_ methods below - each one previously recomputed
         # the same formula from scratch; computed once here and passed in instead. cell_exit is the
         # raw formula (speed > 0 and about to cross the segment boundary) - NOT the same as
-        # agent.speed_counter.is_cell_exit() above (loop1_is_cell_exit), which returns True off-map;
+        # agent.speed_counter.is_cell_exit() above (collected_is_cell_exit), which returns True off-map;
         # this raw formula returns False off-map. Do not conflate the two.
         off_map = agent.current_entry_point is None
         transition_invalid = candidate_entry_point_independent is None
@@ -692,7 +692,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         agent_transition_data.speed = speed
         agent_transition_data.distance = distance
-        agent_transition_data.is_cell_exit = loop1_is_cell_exit
+        agent_transition_data.is_cell_exit = collected_is_cell_exit
         # the distribute phase re-reads this same agent.target_entry_point is not None check (before
         # handle_done_state() can change it for this agent) - stored here instead of recomputed there.
         agent_transition_data.done = done
@@ -711,7 +711,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
     def distribute(self, agent: EnvAgent, agent_transition_data: env_utils.AgentTransitionData):
         """
-        Distribute phase for a single agent (step()'s former loop 2 body): resolve this step's
+        Distribute phase for a single agent: resolve this step's
         collect-phase candidate against the resource check's conflict resolution (already run for
         every agent, via self.resource_check.find_conflicts(), by the time this is called), commit
         position/speed/distance, handle DONE, and compute this step's reward.
@@ -954,7 +954,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         for h, snap in pre_step.agents.items():
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
-            # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()).
+            # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()).
             speed = snap.speed
             distance = snap.distance
             current_entry_point = snap.current_entry_point
@@ -1053,8 +1053,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         See design_by_contract.md's Table 2.
         """
         # off_map/cell_exit/target_reached/transition_invalid/action_invalid_on_rail/
-        # invalid_action_at_cell_exit are hoisted params, computed once in step()'s loop 1 and shared
-        # across all 3 _candidate_ methods - see rail_env.py's step() for their shared definitions.
+        # invalid_action_at_cell_exit are hoisted params, computed once in collect() and shared
+        # across all 3 _candidate_ methods - see rail_env.py's collect() for their shared definitions.
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
         # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
         # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
@@ -1176,8 +1176,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
         off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
-        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
-        rail_env.py's step() for their shared definitions.
+        params, computed once in collect() and shared across all 3 _candidate_ methods - see
+        rail_env.py's collect() for their shared definitions.
         """
         done_or_target_reached = done or target_reached
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
@@ -1288,8 +1288,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
         off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
-        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
-        rail_env.py's step() for their shared definitions. Note this narrows the lru_cache key from the
+        params, computed once in collect() and shared across all 3 _candidate_ methods - see
+        rail_env.py's collect() for their shared definitions. Note this narrows the lru_cache key from the
         original (which included current_entry_point/next_entry_point/candidate_entry_point/
         candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
         booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
@@ -1389,7 +1389,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             else:
                 action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
-                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
                 distance = snap.distance
                 current_entry_point = snap.current_entry_point
@@ -1456,7 +1456,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # candidates accepted in distribute phase
             else:
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
-                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
                 distance = snap.distance
                 current_entry_point = snap.current_entry_point

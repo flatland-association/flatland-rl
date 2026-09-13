@@ -238,8 +238,8 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
 
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=0 - agent 1 now dispatches straight into MOVING on its own
-    # very first step, collapsing what used to be a 3-step scenario into a single step.
+    # design (issue #280): earliest_departure=0 - agent 1 dispatches straight into MOVING on its own
+    # very first step.
     env.agents[1].earliest_departure = 0
 
     # step 1
@@ -290,7 +290,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     # design (issue #280): earliest_departure=0 - agent 1 is READY_TO_DEPART already on its own first step
-    # (DO_NOTHING here, so it doesn't yet dispatch), collapsing what used to be a 3-step scenario into 2.
+    # (DO_NOTHING here, so it doesn't yet dispatch).
     env.agents[1].earliest_departure = 0
 
     # step 1

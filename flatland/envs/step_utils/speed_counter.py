@@ -267,7 +267,7 @@ class SpeedCounter:
         distance_after_crossing above regardless of the action - STOP_MOVING cannot itself hold a
         crossing back once resource_check has approved it.
 
-        See rail_env.py's `movement_allowed` design note (loop 2, right before the state machine step)
+        See rail_env.py's `movement_allowed` design note (distribute(), right before the state machine step)
         for a related but distinct policy choice this formula does *not* itself decide: whether a
         STOPPED/MALFUNCTION agent is even *allowed* to promote to MOVING while its target is still
         occupied at the moment of promotion. The current design grants that promotion optimistically
