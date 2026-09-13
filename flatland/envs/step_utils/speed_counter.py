@@ -135,7 +135,10 @@ class SpeedCounter:
         # distance is None, regardless of what was passed, so a caller's off-map placeholder speed
         # (e.g. _candidate_speed's own "stay off map" branch, which always returns Fraction(0) rather
         # than None - see its docstring) can never leave the two inconsistent.
-        self._speed = (_cap_speed(self._max_speed, _pseudo_fractional(speed))
+        # speed is always already a Fraction at every real call site (candidate_speed, Fraction(0)) -
+        # _pseudo_fractional's float-tolerance conversion never actually fires here, but its lru_cache
+        # wrapper still costs ~6x a plain isinstance check for a no-op cache hit (profiled) - skip it.
+        self._speed = (_cap_speed(self._max_speed, speed if isinstance(speed, Fraction) else _pseudo_fractional(speed))
                        if (speed is not None and distance is not None) else None)
 
     def stop(self) -> None:
