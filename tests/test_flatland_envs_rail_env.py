@@ -607,7 +607,6 @@ def test_symmetric_switch_stop_action():
     assert agent.current_entry_point[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
