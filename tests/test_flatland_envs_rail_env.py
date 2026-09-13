@@ -815,13 +815,21 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     candidate_entry_point_independent = env.rail.apply_action_independent(
         action, next_entry_point if next_entry_point is not None else agent.initial_entry_point)
     # mirrors RailEnv.step()'s own loop 1 hoisted-flag derivation (see rail_env.py's step()) - the
-    # _candidate_ methods take these as params rather than recomputing them internally.
+    # _candidate_ methods take these as params rather than recomputing them internally. Gated on
+    # off_map alone (see step()'s own comment) - cell_exit/target_reached/etc. are never needed
+    # off-map by any of the 3 candidate_ methods' branch logic.
     off_map = current_entry_point is None
-    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-    target_reached = not off_map and cell_exit and next_entry_point in agent.targets
     transition_invalid = candidate_entry_point_independent is None
-    action_invalid_on_rail = transition_invalid and not off_map
-    invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+    if off_map:
+        cell_exit = False
+        target_reached = False
+        action_invalid_on_rail = False
+        invalid_action_at_cell_exit = False
+    else:
+        cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+        target_reached = cell_exit and next_entry_point in agent.targets
+        action_invalid_on_rail = transition_invalid
+        invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
     candidate_entry_point, candidate_next_entry_point = env._candidate_entry_points(
         action=action, initial_entry_point=agent.initial_entry_point, current_entry_point=current_entry_point,
         next_entry_point=next_entry_point,

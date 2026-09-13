@@ -521,11 +521,29 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # agent.speed_counter.is_cell_exit() above (loop1_is_cell_exit), which returns True off-map;
             # this raw formula returns False off-map. Do not conflate the two.
             off_map = agent.current_entry_point is None
-            cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-            target_reached = not off_map and cell_exit and agent.next_entry_point in agent_targets
             transition_invalid = candidate_entry_point_independent is None
-            action_invalid_on_rail = transition_invalid and not off_map
-            invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+            # cell_exit is real (uncached) Fraction arithmetic - the single biggest per-call cost of
+            # the 3 candidate_ methods (16-21% of each, per profiling). Every off_map branch in all 3
+            # methods is structurally independent of cell_exit/target_reached/invalid_action_at_cell_exit
+            # (verified against their branch logic - see the plan doc), so skip computing it whenever
+            # off_map already tells us it can't matter. Branch-frequency sampling across 4 scenarios
+            # (baseline/long-horizon/dense/malfunction-heavy) showed off_map is 55-87% of calls, so this
+            # is a real, workload-independent majority, not a one-scenario artifact. Gate strictly on
+            # off_map alone (never additionally on in_malfunction): in_malfunction doesn't split cleanly
+            # by off_map (a malfunctioning agent can be on- or off-map), and target_reached is checked
+            # with higher priority than the malfunction branch in all 3 methods, so an on-map
+            # malfunctioning agent still needs a correctly-computed cell_exit/target_reached even though
+            # the malfunction branch is what ultimately fires.
+            if off_map:
+                cell_exit = False
+                target_reached = False
+                action_invalid_on_rail = False
+                invalid_action_at_cell_exit = False
+            else:
+                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                target_reached = cell_exit and agent.next_entry_point in agent_targets
+                action_invalid_on_rail = transition_invalid
+                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
             stopped = speed == 0
 
             candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
@@ -892,11 +910,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             next_entry_point = pre_step.next_entry_points[h]
             candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
             off_map = current_entry_point is None
-            cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-            target_reached = not off_map and cell_exit and next_entry_point in agent.targets
             transition_invalid = candidate_entry_point_independent is None
-            action_invalid_on_rail = transition_invalid and not off_map
-            invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+            # see step()'s own comment for why this is gated on off_map alone.
+            if off_map:
+                cell_exit = False
+                target_reached = False
+                action_invalid_on_rail = False
+                invalid_action_at_cell_exit = False
+            else:
+                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                target_reached = cell_exit and next_entry_point in agent.targets
+                action_invalid_on_rail = transition_invalid
+                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
             candidate_entry_point, candidate_next_entry_point = self._candidate_entry_points(
                 action=action,
                 initial_entry_point=agent.initial_entry_point,
@@ -1293,11 +1318,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 done = pre_step.dones[h]
                 in_malfunction = pre_step.in_malfunctions[h]
                 off_map = current_entry_point is None
-                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-                target_reached = not off_map and cell_exit and next_entry_point in agent.targets
                 transition_invalid = candidate_entry_point_independent is None
-                action_invalid_on_rail = transition_invalid and not off_map
-                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+                # see step()'s own comment for why this is gated on off_map alone.
+                if off_map:
+                    cell_exit = False
+                    target_reached = False
+                    action_invalid_on_rail = False
+                    invalid_action_at_cell_exit = False
+                else:
+                    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                    target_reached = cell_exit and next_entry_point in agent.targets
+                    action_invalid_on_rail = transition_invalid
+                    invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
                 candidate_entry_point, _ = self._candidate_entry_points(
                     action=action,
                     initial_entry_point=agent.initial_entry_point,
@@ -1352,11 +1384,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 done = pre_step.dones[h]
                 in_malfunction = pre_step.in_malfunctions[h]
                 off_map = current_entry_point is None
-                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
-                target_reached = not off_map and cell_exit and next_entry_point in agent.targets
                 transition_invalid = candidate_entry_point_independent is None
-                action_invalid_on_rail = transition_invalid and not off_map
-                invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
+                # see step()'s own comment for why this is gated on off_map alone.
+                if off_map:
+                    cell_exit = False
+                    target_reached = False
+                    action_invalid_on_rail = False
+                    invalid_action_at_cell_exit = False
+                else:
+                    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                    target_reached = cell_exit and next_entry_point in agent.targets
+                    action_invalid_on_rail = transition_invalid
+                    invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
                 candidate_entry_point, _ = self._candidate_entry_points(
                     action=action,
                     initial_entry_point=agent.initial_entry_point,
