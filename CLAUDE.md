@@ -195,6 +195,16 @@ itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondit
 post-step value against the same formula. Change the math in one place, not independently in `step()` and in
 the postcondition check that verifies it.
 
+`design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
+`AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect
+phase - the per-agent, per-step derivation of the optimistic candidate entry point/speed/distance that the
+distribute phase's resource check then accepts or discards): a table of every case (done/target reached/
+malfunction/map entry/off-map-no-departure/on-map cell transition/invalid action at cell exit/keep-moving) against
+each method's own formula and returned value, plus the shared preconditions/postconditions each branch's
+condition is built from. The methods' own docstrings/comments point back into it (e.g. "See design_by_contract.md's
+Table 2") rather than re-deriving the same branch-exclusion reasoning inline - read it before changing any of the
+three methods' branch conditions, not just the code.
+
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
 `AbstractRailEnv.step()` itself calls `_check_pre_post_invariants()` and `_capture_pre_step_snapshot()` up front, and
