@@ -40,17 +40,35 @@ ResourceMapT = TypeVar('ResourceMapT', bound=ResourceMap)
 EntryPointT = TypeVar('EntryPointT')
 
 
+class PreStepAgentSnapshot(NamedTuple):
+    """ One agent's state captured before `step()` runs, for
+    `AbstractRailEnv._check_speed_distance_speedup_postconditions()`/`_check_position_update_postconditions()`
+    to verify the post-step update against. Postcondition-check-only - see PreStepSnapshot below for
+    why candidate_entry_point_independent isn't part of this bundle. """
+    speed: Optional[Fraction]
+    current_entry_point: Optional[EntryPointT]
+    next_entry_point: Optional[EntryPointT]
+    done: bool
+    in_malfunction: bool
+    distance: Optional[Fraction]
+
+
 class PreStepSnapshot(NamedTuple):
-    """ Per-agent state captured before `step()` runs, for
-    `AbstractRailEnv._check_speed_distance_speedup_postconditions()` to verify the post-step speed update
-    against. """
-    speeds: Dict[int, Optional[Fraction]]
-    current_entry_points: Dict[int, Optional[EntryPointT]]
-    next_entry_points: Dict[int, Optional[EntryPointT]]
-    dones: Dict[int, bool]
-    in_malfunctions: Dict[int, bool]
-    distances: Dict[int, Optional[Fraction]]
+    """
+    candidate_entry_point_independents is a flat dict (column-oriented, keyed by handle) since it's
+    the one field the collect phase's own (2) CANDIDATE ENTRY POINT block needs unconditionally,
+    regardless of check_step_pre_post_conditions - bundling it into agents below would force building
+    one PreStepAgentSnapshot per agent (a real per-agent object-construction cost - measured ~5-8% wall
+    clock, see the git history around this class) even when check_step_pre_post_conditions is False and
+    every other field of that bundle goes unused.
+
+    agents is row-oriented (one PreStepAgentSnapshot per agent, `agents[h].speed`) rather than
+    column-oriented (one dict per field, `speeds[h]`) since every consumer of these six fields - both
+    post-step checks below - reads all six for the same agent together; empty (`{}`) whenever
+    check_step_pre_post_conditions is False, since nothing reads it then.
+    """
     candidate_entry_point_independents: Dict[int, Optional[EntryPointT]]
+    agents: Dict[int, PreStepAgentSnapshot]
 
 
 class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPointT]):
@@ -847,16 +865,18 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         own malfunction counter update/roll - the same value the collect phase's own `in_malfunction` read sees -
         rather than the previous step's already-stale ending malfunction status.
 
-        candidate_entry_point_independents is computed here (rather than by each of its several
-        callers - step()'s own (2), _candidate_entry_points, _candidate_speed, _candidate_distance) so
-        self.rail.apply_action_independent() runs exactly once per agent per step, not once per caller.
+        Each agent's candidate_entry_point_independent is computed here (rather than by each of its
+        several consumers - step()'s own (2), _candidate_entry_points, _candidate_speed,
+        _candidate_distance) so self.rail.apply_action_independent() runs exactly once per agent per
+        step, not once per caller. Kept as its own flat dict (PreStepSnapshot.candidate_entry_point_independents),
+        not bundled into the per-agent agents mapping below, since it's needed unconditionally while
+        everything in agents is postcondition-check-only - see PreStepSnapshot's own docstring.
 
-        N.B. ugly but deliberate: candidate_entry_point_independents is filled in unconditionally
-        (step()'s own (2) block needs it regardless of check_step_pre_post_conditions), but the other six
-        fields are only ever read by the post-step checks below - so when check_step_pre_post_conditions
-        is False, they're left empty rather than paying for six wasted per-agent dict builds every step
-        (see e.g. examples/flatland_performance_profiling.py's get_rail_env(), which disables checks
-        specifically to profile step()'s own cost).
+        agents (PreStepSnapshot.agents) is left `{}` when check_step_pre_post_conditions is False,
+        rather than one PreStepAgentSnapshot per agent with placeholder values - constructing that
+        object per agent turned out to be measurably expensive (see PreStepSnapshot's docstring) for a
+        bundle nothing reads in that case (see e.g. examples/flatland_performance_profiling.py's
+        get_rail_env(), which disables checks specifically to profile step()'s own cost).
         """
         candidate_entry_point_independents = {
             agent.handle: self.rail.apply_action_independent(
@@ -866,23 +886,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             for agent in self.agents
         }
         if not self.check_step_pre_post_conditions:
-            return PreStepSnapshot(
-                speeds={},
-                current_entry_points={},
-                next_entry_points={},
-                dones={},
-                in_malfunctions={},
-                distances={},
-                candidate_entry_point_independents=candidate_entry_point_independents,
-            )
+            return PreStepSnapshot(candidate_entry_point_independents=candidate_entry_point_independents, agents={})
         return PreStepSnapshot(
-            speeds={agent.handle: agent.speed_counter.speed for agent in self.agents},
-            current_entry_points={agent.handle: agent.current_entry_point for agent in self.agents},
-            next_entry_points={agent.handle: agent.next_entry_point for agent in self.agents},
-            dones={agent.handle: agent.target_entry_point is not None for agent in self.agents},
-            in_malfunctions={agent.handle: agent.malfunction_handler.in_malfunction for agent in self.agents},
-            distances={agent.handle: agent.speed_counter.distance for agent in self.agents},
             candidate_entry_point_independents=candidate_entry_point_independents,
+            agents={
+                agent.handle: PreStepAgentSnapshot(
+                    speed=agent.speed_counter.speed,
+                    current_entry_point=agent.current_entry_point,
+                    next_entry_point=agent.next_entry_point,
+                    done=agent.target_entry_point is not None,
+                    in_malfunction=agent.malfunction_handler.in_malfunction,
+                    distance=agent.speed_counter.distance,
+                )
+                for agent in self.agents
+            },
         )
 
     def _check_off_on_map_invariant(self, current_entry_point: EntryPointT, next_entry_point: EntryPointT):
@@ -900,14 +917,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Verify, for every agent, that this step's position update matches the expected transition given the
         pre-step snapshot captured.
         """
-        for h in pre_step.speeds.keys():
+        for h, snap in pre_step.agents.items():
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
             # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()).
-            speed = pre_step.speeds[h]
-            distance = pre_step.distances[h]
-            current_entry_point = pre_step.current_entry_points[h]
-            next_entry_point = pre_step.next_entry_points[h]
+            speed = snap.speed
+            distance = snap.distance
+            current_entry_point = snap.current_entry_point
+            next_entry_point = snap.next_entry_point
             candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
             off_map = current_entry_point is None
             transition_invalid = candidate_entry_point_independent is None
@@ -927,8 +944,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 initial_entry_point=agent.initial_entry_point,
                 current_entry_point=current_entry_point,
                 next_entry_point=next_entry_point,
-                done=pre_step.dones[h],
-                in_malfunction=pre_step.in_malfunctions[h],
+                done=snap.done,
+                in_malfunction=snap.in_malfunction,
                 elapsed_steps=self._elapsed_steps,
                 candidate_entry_point_independent=candidate_entry_point_independent,
                 earliest_departure=agent.earliest_departure,
@@ -941,10 +958,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             )
             # candidates discarded in distribute phase -> previous configuration
             if not self.temp_transition_data[h].resource_check:
-                assert agent.current_entry_point == pre_step.current_entry_points[h]
-                assert agent.next_entry_point == pre_step.next_entry_points[h]
+                assert agent.current_entry_point == snap.current_entry_point
+                assert agent.next_entry_point == snap.next_entry_point
             # target reached and removed
-            elif self.remove_agents_at_target and (pre_step.dones[h] or candidate_entry_point in agent.targets):
+            elif self.remove_agents_at_target and (snap.done or candidate_entry_point in agent.targets):
                 assert agent.current_entry_point is None
                 assert agent.next_entry_point is None
             # candidates accepted in distribute phase
@@ -1322,16 +1339,17 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         pre-step snapshot.
         """
         # distance update postcondition
-        for h, speed in pre_step.speeds.items():
+        for h, snap in pre_step.agents.items():
+            speed = snap.speed
             agent = self.agents[h]
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             # (distance_without_crossing(None, None) == None covers the off-map map-entry-failed case
-            # the same way as the on-map case, since distances[h] is None exactly when the agent was
+            # the same way as the on-map case, since snap.distance is None exactly when the agent was
             # off map pre-step)
             if not self.temp_transition_data[h].resource_check:
                 assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
-                    pre_step.distances[h], speed)
+                    snap.distance, speed)
 
             # candidates accepted in distribute phase
             else:
@@ -1339,11 +1357,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
                 # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
-                distance = pre_step.distances[h]
-                current_entry_point = pre_step.current_entry_points[h]
-                next_entry_point = pre_step.next_entry_points[h]
-                done = pre_step.dones[h]
-                in_malfunction = pre_step.in_malfunctions[h]
+                distance = snap.distance
+                current_entry_point = snap.current_entry_point
+                next_entry_point = snap.next_entry_point
+                done = snap.done
+                in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
                 transition_invalid = candidate_entry_point_independent is None
                 # see step()'s own comment for why this is gated on off_map alone.
@@ -1389,13 +1407,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 )
 
         # speed update postcondition
-        for h, speed in pre_step.speeds.items():
+        for h, snap in pre_step.agents.items():
+            speed = snap.speed
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
 
             # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
             if not self.temp_transition_data[h].resource_check:
-                if pre_step.current_entry_points[h] is None:
+                if snap.current_entry_point is None:
                     # rejected map entry - agent stays off map, speed stays None
                     assert agent.speed_counter.speed is None
                 else:
@@ -1405,11 +1424,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
                 # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
-                distance = pre_step.distances[h]
-                current_entry_point = pre_step.current_entry_points[h]
-                next_entry_point = pre_step.next_entry_points[h]
-                done = pre_step.dones[h]
-                in_malfunction = pre_step.in_malfunctions[h]
+                distance = snap.distance
+                current_entry_point = snap.current_entry_point
+                next_entry_point = snap.next_entry_point
+                done = snap.done
+                in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
                 transition_invalid = candidate_entry_point_independent is None
                 # see step()'s own comment for why this is gated on off_map alone.
