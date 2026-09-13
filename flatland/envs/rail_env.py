@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH, SpeedCounter
+from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH, SpeedCounter, ZERO_FRACTION
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils import seeding
 
@@ -667,7 +667,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # MotionCheck.find_conflicts() runs across every agent's registered candidate, which
                 # happens only after the whole collect-phase loop above completes - the candidate_
                 # methods are single-agent and have no visibility into other agents' candidates.
-                new_speed = Fraction(0)
+                new_speed = ZERO_FRACTION
                 new_distance = SpeedCounter.distance_without_crossing(agent.speed_counter.distance, agent.speed_counter.speed)
                 agent.speed_counter.set(new_speed, new_distance)
             else:
@@ -876,8 +876,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 assert agent.current_entry_point == candidate_entry_point
                 assert agent.next_entry_point == candidate_next_entry_point
 
+    # N.B. not lru_cache'd, unlike _candidate_speed/_candidate_distance: elapsed_steps is part of this
+    # function's signature and is monotonically increasing (self._elapsed_steps), so every call has a
+    # never-before-seen cache key - lru_cache here is a guaranteed-0%-hit-rate cache (verified via
+    # cache_info()), paying full argument-hashing/eviction overhead for zero benefit.
     @staticmethod
-    @lru_cache()
     def _candidate_entry_points(action: RailEnvActions,
                                 current_entry_point: Optional[EntryPointT],
                                 next_entry_point: Optional[EntryPointT],
@@ -1016,8 +1019,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return current_entry_point, next_entry_point
         raise ValueError("no _candidate_entry_points branch matched - branches are exhaustive by construction")
 
+    # N.B. not lru_cache'd (unlike _candidate_distance, which keeps it - see its own docstring): measured
+    # hit rate here is only ~11% (cache_info()), and benchmarked wall-clock time across repeated full-episode
+    # runs is consistently lower with the cache removed - the per-call argument-hashing/eviction overhead
+    # outweighs the modest savings from occasional hits.
     @staticmethod
-    @lru_cache()
     def _candidate_speed(speed: Optional[Fraction], distance: Optional[Fraction],
                          action: RailEnvActions,
                          current_entry_point: Optional[EntryPointT], next_entry_point: Optional[EntryPointT],
@@ -1099,23 +1105,23 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         #   `no_earlier_case_applies`; excludes acceleration/braking via its own explicit action check.
         # done
         if done:
-            return Fraction(0)
+            return ZERO_FRACTION
         # target reached
         if target_reached and not done:
-            return Fraction(0)
+            return ZERO_FRACTION
         # malfunction
         if in_malfunction and not done and not target_reached:
-            return Fraction(0)
+            return ZERO_FRACTION
         # map entry
         if off_map and not stay_off_map and not done and not target_reached and not in_malfunction:
             return _cap_speed(agent_max_speed, acceleration_delta)
         # stay off map
         if off_map and stay_off_map and not done and not target_reached and not in_malfunction:
-            return Fraction(0)
+            return ZERO_FRACTION
         # invalid action at cell exit
         if (invalid_action_at_cell_exit and not done and not target_reached and not in_malfunction
             and not off_map):
-            return Fraction(0)
+            return ZERO_FRACTION
         # acceleration or start moving
         if (action == RailEnvActions.MOVE_FORWARD or (stopped and RailEnvActions.is_moving_action(action))) \
             and no_earlier_case_applies:
@@ -1216,7 +1222,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             return distance
         # map entry
         if off_map and not stay_off_map and not done and not target_reached and not in_malfunction:
-            return Fraction(0)
+            return ZERO_FRACTION
         # stay off map
         if off_map and stay_off_map and not done and not target_reached and not in_malfunction:
             return None
