@@ -74,7 +74,6 @@ def test_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_shortest_path = env.agents[0].get_shortest_path(env.distance_map)
@@ -93,7 +92,6 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -108,7 +106,6 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -123,7 +120,6 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
@@ -138,7 +134,6 @@ def test_travel_time_on_shortest_paths():
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map),
                   number_of_agents=2)
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     agent0_travel_time = env.agents[0].get_travel_time_on_shortest_path(env.distance_map)
