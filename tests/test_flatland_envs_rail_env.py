@@ -514,7 +514,6 @@ def test_speed_after_malfunction():
     distance = agent.speed_counter.distance
     assert speed == Fraction(0)
     while agent.state.is_malfunction_state():
-        # TODO revise design: set speed to 0 during malfunction?
         assert agent.speed_counter.speed == speed
         assert agent.speed_counter.distance == distance
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
