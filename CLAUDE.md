@@ -49,7 +49,7 @@ flags it as unused.
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
 - **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
+  160, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
   `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
   'true' }}`) — unset means disabled — but the config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
