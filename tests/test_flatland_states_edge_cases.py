@@ -13,10 +13,13 @@ from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 
+from tests.conftest import assert_state
+
 pytestmark = pytest.mark.cython_ext
 
 
-def test_return_to_ready_to_depart():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_return_to_ready_to_depart(wrapped):
     """
     When going from ready to depart to malfunction off map, if do nothing is provided, should return to ready to depart
     """
@@ -34,7 +37,8 @@ def test_return_to_ready_to_depart():
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 100
@@ -45,15 +49,16 @@ def test_return_to_ready_to_depart():
     env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
     env.step({0: RailEnvActions.DO_NOTHING})
 
-    assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
 
     for _ in range(2):
         env.step({0: RailEnvActions.DO_NOTHING})
 
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
 
-def test_ready_to_depart_to_ready_to_depart_with_stop_action():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_ready_to_depart_to_ready_to_depart_with_stop_action(wrapped):
     """
     When going from ready to depart to malfunction off map, if stopped is provided, should stay ready to depart
     """
@@ -71,7 +76,8 @@ def test_ready_to_depart_to_ready_to_depart_with_stop_action():
                   number_of_agents=1,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
     env._max_episode_steps = 100
@@ -79,21 +85,22 @@ def test_ready_to_depart_to_ready_to_depart_with_stop_action():
     for _ in range(3):
         env.step({0: RailEnvActions.STOP_MOVING})
 
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
     env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
     env.step({0: RailEnvActions.STOP_MOVING})
 
-    assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
 
     for _ in range(2):
         env.step({0: RailEnvActions.STOP_MOVING})
 
     # design: disallow entering the map stopped
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
 
-def test_malfunction_no_phase_through():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_no_phase_through(wrapped):
     """
     A moving train shouldn't phase through a malfunctioning train
     """
@@ -111,7 +118,8 @@ def test_malfunction_no_phase_through():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -126,11 +134,12 @@ def test_malfunction_no_phase_through():
     for _ in range(4):
         env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
 
-    assert env.agents[0].state == TrainState.STOPPED
+    assert_state(env, env.agents[0], wrapped, TrainState.STOPPED)
     assert env.agents[0].current_entry_point[0] == (3, 6)
 
 
-def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction(wrapped):
     """
     MALFUNCTION_OFF_MAP getting into map must respect without motion check.
     """
@@ -148,7 +157,8 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -170,10 +180,10 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
     assert env.agents[1].current_entry_point is None
-    assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
 
     assert env.agents[1].malfunction_handler.malfunction_down_counter == 2
 
@@ -181,10 +191,10 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
 
     assert env.agents[1].current_entry_point is None
-    assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
     assert env.agents[1].malfunction_handler.malfunction_down_counter == 1
 
     # step 3
@@ -194,14 +204,15 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction():
     # boundary this step, so STOP_MOVING completes the in-flight crossing before halting - same as
     # DO_NOTHING/MOVE_FORWARD would - landing one cell past (6, 6) rather than blocking in place.
     assert env.agents[0].current_entry_point[0] == (5, 6)
-    assert env.agents[0].state == TrainState.STOPPED
+    assert_state(env, env.agents[0], wrapped, TrainState.STOPPED)
 
     # design: disallow entering the map stopped
     assert env.agents[1].current_entry_point is None
-    assert env.agents[1].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
 
 
-def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached(wrapped):
     """
     Avoid adding agent to motion check as it can hinder other agents having earliest_departure_reached to start.
 
@@ -224,7 +235,8 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -246,13 +258,14 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
     assert env.agents[1].current_entry_point[0] == (6, 6)
-    assert env.agents[1].state == TrainState.MOVING
+    assert_state(env, env.agents[1], wrapped, TrainState.MOVING)
 
 
-def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action(wrapped):
     """
     Avoid adding agent to motion check as it can hinder other agents having earliest_departure_reached to start.
 
@@ -275,7 +288,8 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -297,24 +311,101 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
 
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
 
     assert env.agents[1].current_entry_point is None
-    assert env.agents[1].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
 
     # step 2
     env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.MOVE_FORWARD})
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
 
     assert env.agents[1].current_entry_point[0] == (6, 6)
-    assert env.agents[1].state == TrainState.MOVING
+    assert_state(env, env.agents[1], wrapped, TrainState.MOVING)
 
 
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_ending_exactly_one_step_before_earliest_departure_stays_off_map(wrapped):
+    """
+    Regression test for PR #517 review comment r3965564459.
+
+    Same setup as test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action
+    (agent 0: earliest_departure=3, malfunction ending on step 2), but agent 0 sends MOVE_FORWARD on
+    step 2 instead of DO_NOTHING. _candidate_entry_points' own ready_to_depart (no +1: earliest_departure
+    <= elapsed_steps) still says False at elapsed_steps=2, so agent 0's real position stays off map
+    (current_entry_point is None) regardless of wrapping - _candidate_entry_points never reads
+    agent.state/state_machine.
+
+    Before StateTransitionSignals grew its own ready_to_depart field (mirroring
+    _candidate_entry_points' formula exactly), _handle_malfunction_off_map promoted straight to MOVING
+    off of earliest_departure_reached alone (deliberately +1, one step early) whenever a movement
+    action was given - even though action_valid/resource_check being True for an off-map self-loop
+    (see collect()'s action_valid, MotionCheck.check_resource's no_resource/hold_resource cases) says
+    nothing about readiness. That produced agent.state == MOVING while current_entry_point was still
+    None, which state_position_sync_check rejected. With ready_to_depart now gating that promotion,
+    the agent instead correctly lands in READY_TO_DEPART this step - consistent with its real,
+    still-off-map position - and only promotes to MOVING once ready_to_depart itself agrees (see
+    test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on_departure for that
+    case, where the real formula and earliest_departure_reached agree from the start).
+
+    Parametrized over whether the env is wrapped in RailEnvStateMachineWrapper: unwrapped,
+    agent.state/state_machine are never touched at all (see RailEnvStateMachineWrapper's own
+    docstring) - EnvAgent.derived_state() is the production, state-machine-independent equivalent,
+    and already only ever reads earliest_departure_reached (the +1 formula) for its own
+    READY_TO_DEPART/WAITING branch (it doesn't have a MALFUNCTION_OFF_MAP-specific direct-to-MOVING
+    shortcut to begin with), so it was never susceptible to this bug in the first place.
+    """
+    stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
+                                            min_duration=0,  # Minimal duration of malfunction
+                                            max_duration=0  # Max duration of malfunction
+                                            )
+
+    rail, _, optionals = make_simple_rail()
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
+                  number_of_agents=1,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  )
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
+
+    env.reset(False, False, random_seed=10)
+
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
+    env.agents[0].earliest_departure = 3
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
+
+    # step 1
+    env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert env.agents[0].current_entry_point is None
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
+
+    # step 2: malfunction ends this step (counter 1 -> 0) exactly on the step where
+    # earliest_departure (3) == elapsed_steps (2) + 1 - no longer crashes.
+    env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert env.agents[0].current_entry_point is None
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
+    if wrapped:
+        signals = env.agents[0].state_machine.state_transition_signals
+        assert signals.in_malfunction is False
+        assert signals.earliest_departure_reached is True
+        assert signals.ready_to_depart is False
+        assert signals.movement_action_given is True
+        assert signals.action_valid is True
+        assert signals.movement_allowed is True
+
+
+@pytest.mark.parametrize("wrapped", [True, False])
 @pytest.mark.parametrize("malfunctioning", ["none", "agent_0", "agent_1", "both"])
-def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
+def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning, wrapped):
     """
     Two agents share both initial entry point (6, 6) and earliest_departure=2. Design: when both are
     simultaneously eligible to depart into the same cell, the motion check resolves the conflict by
@@ -355,7 +446,8 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   rewards=DefaultRewards(collision_factor=2.0),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -366,8 +458,8 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
 
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
-    assert env.agents[1].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
+    assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
 
     if malfunctioning in ("agent_0", "both"):
         env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
@@ -383,29 +475,30 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     assert rewards[1] == 0
 
     if malfunctioning == "none":
-        assert env.agents[0].state == TrainState.MOVING
+        assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
         assert env.agents[0].current_entry_point[0] == (6, 6)
-        assert env.agents[1].state == TrainState.READY_TO_DEPART
+        assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
         assert env.agents[1].current_entry_point is None
     elif malfunctioning == "agent_0":
-        assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[0].current_entry_point is None
-        assert env.agents[1].state == TrainState.MOVING
+        assert_state(env, env.agents[1], wrapped, TrainState.MOVING)
         assert env.agents[1].current_entry_point[0] == (6, 6)
     elif malfunctioning == "agent_1":
-        assert env.agents[0].state == TrainState.MOVING
+        assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
         assert env.agents[0].current_entry_point[0] == (6, 6)
-        assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[1].current_entry_point is None
     else:  # both
-        assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[0].current_entry_point is None
-        assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[1].current_entry_point is None
 
 
+@pytest.mark.parametrize("wrapped", [True, False])
 @pytest.mark.parametrize("malfunctioning", ["none", "agent_0", "agent_1", "both"])
-def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on_departure(malfunctioning):
+def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on_departure(malfunctioning, wrapped):
     """
     Same setup as test_same_cell_same_earliest_departure_dispatch_conflict (two agents sharing initial
     entry point (6, 6) and earliest_departure=2), but here the parametrized agent(s) are already
@@ -443,7 +536,8 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   rewards=DefaultRewards(collision_factor=2.0),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -460,15 +554,15 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
     # step 1
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     if malfunctioning in ("agent_0", "both"):
-        assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
     else:
-        assert env.agents[0].state == TrainState.READY_TO_DEPART
+        assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
     if malfunctioning in ("agent_1", "both"):
-        assert env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert env.agents[1].malfunction_handler.malfunction_down_counter == 1
     else:
-        assert env.agents[1].state == TrainState.READY_TO_DEPART
+        assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
 
     # step 2 (the departure step - malfunction already ended for any parametrized agent)
     _, rewards, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
@@ -480,13 +574,14 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
 
     # agent 0 always wins, regardless of which agent(s) were malfunctioning - agent 1 is denied and
     # lands in READY_TO_DEPART, never back in MALFUNCTION_OFF_MAP.
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[1].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[1], wrapped, TrainState.READY_TO_DEPART)
     assert env.agents[1].current_entry_point is None
 
 
-def test_malfunction_to_moving_instead_of_stopped():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_to_moving_instead_of_stopped(wrapped):
     """
     MALFUNCTION to MOVING without going to STOPPED unnecessarily
     """
@@ -504,7 +599,8 @@ def test_malfunction_to_moving_instead_of_stopped():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -522,13 +618,13 @@ def test_malfunction_to_moving_instead_of_stopped():
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
@@ -540,7 +636,7 @@ def test_malfunction_to_moving_instead_of_stopped():
     env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MALFUNCTION
+    assert_state(env, env.agents[0], wrapped, TrainState.MALFUNCTION)
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
     # design: distance update with pre-step speed.
@@ -549,13 +645,14 @@ def test_malfunction_to_moving_instead_of_stopped():
     # step 4
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # design: distance update with pre-step speed.
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
 
 
-def test_stop_and_go():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_stop_and_go(wrapped):
     """
     Test stop and go.
     """
@@ -573,7 +670,8 @@ def test_stop_and_go():
                   number_of_agents=2,
                   malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
                   )
-    env = RailEnvStateMachineWrapper(env)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
 
     env.reset(False, False, random_seed=10)
 
@@ -591,13 +689,13 @@ def test_stop_and_go():
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point is None
-    assert env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(env, env.agents[0], wrapped, TrainState.READY_TO_DEPART)
 
     # step 2
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     # N.B. no movement in first time step after READY_TO_DEPART or MALFUNCTION_OFF_MAP!
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.0)
@@ -606,7 +704,7 @@ def test_stop_and_go():
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.2)
 
@@ -614,7 +712,7 @@ def test_stop_and_go():
     env.step({0: RailEnvActions.STOP_MOVING, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.STOPPED
+    assert_state(env, env.agents[0], wrapped, TrainState.STOPPED)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.0)
     # design: distance update with pre-step speed.
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.4)
@@ -623,6 +721,6 @@ def test_stop_and_go():
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
 
     assert env.agents[0].current_entry_point[0] == (6, 6)
-    assert env.agents[0].state == TrainState.MOVING
+    assert_state(env, env.agents[0], wrapped, TrainState.MOVING)
     assert np.isclose(float(env.agents[0].speed_counter.speed), 0.2)
     assert np.isclose(float(env.agents[0].speed_counter.distance), 0.4)

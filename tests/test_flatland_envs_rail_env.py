@@ -2551,7 +2551,8 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
         assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
 
-def test_railenvwrapper_matches_unwrapped_control_flow():
+@pytest.mark.parametrize("seed", [1, 42, 99, 123, 2024])
+def test_railenvwrapper_matches_unwrapped_control_flow(seed):
     """
     Three identically-seeded/configured 5-agent envs on a 30x30 sparse map with frequent
     malfunctions (malfunction_interval=15) - unwrapped, RailEnvStateMachineWrapper(env) (default state
@@ -2565,8 +2566,10 @@ def test_railenvwrapper_matches_unwrapped_control_flow():
       skip_state_machine_update=True envs for the whole run, while the default-wrapped env's
       agents visibly progress through states - showing the wrapper's tracking is real (not a
       no-op) without it affecting any of the above.
+
+    Parametrized over the same seed grid as test_derived_state_matches_state_on_wrapped_env
+    (agent_utils.py) - 5x's this test's random-scenario coverage for the price of one more axis.
     """
-    seed = 123
     n_agents = 5
 
     def make_env():
