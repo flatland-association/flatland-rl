@@ -313,6 +313,87 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
     assert env.agents[1].state == TrainState.MOVING
 
 
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_malfunction_ending_exactly_one_step_before_earliest_departure_stays_off_map(wrapped):
+    """
+    Regression test for PR #517 review comment r3965564459.
+
+    Same setup as test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_moving_action
+    (agent 0: earliest_departure=3, malfunction ending on step 2), but agent 0 sends MOVE_FORWARD on
+    step 2 instead of DO_NOTHING. _candidate_entry_points' own ready_to_depart (no +1: earliest_departure
+    <= elapsed_steps) still says False at elapsed_steps=2, so agent 0's real position stays off map
+    (current_entry_point is None) regardless of wrapping - _candidate_entry_points never reads
+    agent.state/state_machine.
+
+    Before StateTransitionSignals grew its own ready_to_depart field (mirroring
+    _candidate_entry_points' formula exactly), _handle_malfunction_off_map promoted straight to MOVING
+    off of earliest_departure_reached alone (deliberately +1, one step early) whenever a movement
+    action was given - even though action_valid/resource_check being True for an off-map self-loop
+    (see collect()'s action_valid, MotionCheck.check_resource's no_resource/hold_resource cases) says
+    nothing about readiness. That produced agent.state == MOVING while current_entry_point was still
+    None, which state_position_sync_check rejected. With ready_to_depart now gating that promotion,
+    the agent instead correctly lands in READY_TO_DEPART this step - consistent with its real,
+    still-off-map position - and only promotes to MOVING once ready_to_depart itself agrees (see
+    test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on_departure for that
+    case, where the real formula and earliest_departure_reached agree from the start).
+
+    Parametrized over whether the env is wrapped in RailEnvStateMachineWrapper: unwrapped,
+    agent.state/state_machine are never touched at all (see RailEnvStateMachineWrapper's own
+    docstring) - EnvAgent.derived_state() is the production, state-machine-independent equivalent,
+    and already only ever reads earliest_departure_reached (the +1 formula) for its own
+    READY_TO_DEPART/WAITING branch (it doesn't have a MALFUNCTION_OFF_MAP-specific direct-to-MOVING
+    shortcut to begin with), so it was never susceptible to this bug in the first place.
+    """
+    stochastic_data = MalfunctionParameters(malfunction_rate=0,  # Rate of malfunction occurence
+                                            min_duration=0,  # Minimal duration of malfunction
+                                            max_duration=0  # Max duration of malfunction
+                                            )
+
+    rail, _, optionals = make_simple_rail()
+
+    env = RailEnv(width=25,
+                  height=30,
+                  rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(seed=10),
+                  number_of_agents=1,
+                  malfunction_generator_and_process_data=malfunction_from_params(stochastic_data),
+                  )
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
+
+    env.reset(False, False, random_seed=10)
+
+    env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
+    env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
+    env.agents[0].earliest_departure = 3
+    env.agents[0].malfunction_handler._set_malfunction_down_counter(2)
+
+    # step 1
+    env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert env.agents[0].current_entry_point is None
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 1
+    if wrapped:
+        assert env.agents[0].state == TrainState.MALFUNCTION_OFF_MAP
+    else:
+        assert env.agents[0].derived_state(elapsed_steps=env._elapsed_steps) == TrainState.MALFUNCTION_OFF_MAP
+
+    # step 2: malfunction ends this step (counter 1 -> 0) exactly on the step where
+    # earliest_departure (3) == elapsed_steps (2) + 1 - no longer crashes.
+    env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert env.agents[0].current_entry_point is None
+    if wrapped:
+        assert env.agents[0].state == TrainState.READY_TO_DEPART
+        signals = env.agents[0].state_machine.state_transition_signals
+        assert signals.in_malfunction is False
+        assert signals.earliest_departure_reached is True
+        assert signals.ready_to_depart is False
+        assert signals.movement_action_given is True
+        assert signals.action_valid is True
+        assert signals.movement_allowed is True
+    else:
+        assert env.agents[0].derived_state(elapsed_steps=env._elapsed_steps) == TrainState.READY_TO_DEPART
+
+
 @pytest.mark.parametrize("malfunctioning", ["none", "agent_0", "agent_1", "both"])
 def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     """

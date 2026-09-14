@@ -104,6 +104,15 @@ class _StateMachineUpdateMixin:
 
         for agent in self.agents:
             agent_transition_data = self.temp_transition_data[agent.handle]
+            # ready_to_depart mirrors rail_env.py's _candidate_entry_points' own formula exactly (no
+            # +1 - "is it READY_TO_DEPART this exact step", not the deliberately-one-step-early
+            # earliest_departure_reached below) - see _handle_malfunction_off_map's own use of this
+            # distinction (PR #517 review comment r3965564459: earliest_departure_reached alone can be
+            # True a full step before the real candidate is actually allowed to depart).
+            if self._elapsed_steps == 1:
+                ready_to_depart = not agent_transition_data.done and agent.earliest_departure == 0
+            else:
+                ready_to_depart = not agent_transition_data.done and agent.earliest_departure <= self._elapsed_steps
             agent.state_machine.set_transition_signals(StateTransitionSignals(
                 in_malfunction=agent.malfunction_handler.in_malfunction,
                 # +1: earliest_departure_reached is deliberately signalled one step early (see
@@ -118,6 +127,7 @@ class _StateMachineUpdateMixin:
                 movement_allowed=agent_transition_data.action_valid and agent_transition_data.resource_check,
                 new_speed_zero=agent_transition_data.candidate_speed == 0.0,
                 action_valid=agent_transition_data.action_valid,
+                ready_to_depart=ready_to_depart,
             ))
             agent.state_machine.step()
             # update_if_reached() is a state_machine-internal mutation only - rail_env.py's own
