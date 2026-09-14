@@ -9,21 +9,24 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     """
     Patches `env`'s class in place so its `step()` also updates `agent.state`/`agent.state_machine`.
 
-    `AbstractRailEnv.step()` never reads/writes `agent.state`/`agent.state_machine` itself (position/
-    speed/reward/done are unaffected either way, wrapped or not) - it ends with
-    `return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()`, and an
-    obs_builder/predictor that does read `agent.state` (e.g. `TreeObsForRailEnv`,
-    `ShortestPathPredictorForRailEnv`) needs it to already reflect *this* step's position by the time
-    `_get_observations()` runs, not the previous step's. `_StateMachineUpdateMixin.step()` below achieves
-    this without `AbstractRailEnv` needing any dedicated extension point: it temporarily replaces the
-    instance's own `_get_observations` with a one-shot wrapper before delegating to `super().step()` -
-    the one-shot wrapper restores the original `_get_observations`, runs the state machine update, then
-    calls the (now restored) real `_get_observations()` - so by the time `AbstractRailEnv.step()`'s own
-    return statement evaluates `self._get_observations()` (left of `self.get_info_dict()` in that same
-    tuple expression, hence evaluated first), `agent.state` is already up to date for both. Without
-    wrapping, `agent.state`/`agent.state_machine` are never touched at all - an obs_builder/predictor
-    that depends on `agent.state` for correctness (not just `get_info_dict()`'s purely-informational
-    `state`/`action_required` fields) needs the env wrapped to behave correctly.
+    `AbstractRailEnv.step()` never reads/writes `agent.state`/`agent.state_machine` itself - position/
+    speed/reward/done control flow, `get_info_dict()`'s `state`/`action_required` fields, and every
+    built-in obs builder/predictor are all derived instead via `EnvAgent.derived_state()`
+    (`agent_utils.py`), which reconstructs the equivalent `TrainState` purely from other, always-live
+    agent attributes - unaffected either way, wrapped or not (see its own docstring for the one timing
+    subtlety this has, and when a caller needs to work around it rather than just calling it directly).
+    This wrapper exists only for a caller that needs `agent.state`/`agent.state_machine` themselves -
+    real `TrainStateMachine` transition/signal internals, not just a `TrainState` value - such as a
+    test asserting on state-machine behavior directly, or the `Replay`/`run_replay_config` test
+    framework. `_StateMachineUpdateMixin.step()` below achieves this without `AbstractRailEnv` needing
+    any dedicated extension point: it temporarily replaces the instance's own `_get_observations` with
+    a one-shot wrapper before delegating to `super().step()` - the one-shot wrapper restores the
+    original `_get_observations`, runs the state machine update, then calls the (now restored) real
+    `_get_observations()` - so by the time `AbstractRailEnv.step()`'s own return statement evaluates
+    `self._get_observations()` (left of `self.get_info_dict()` in that same tuple expression, hence
+    evaluated first), `agent.state` is already up to date for both. Without wrapping, `agent.state`/
+    `agent.state_machine` are never touched at all - permanently frozen at their `__init__` default
+    (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
 
     Idempotent: wrapping an already-wrapped env just updates `skip_state_machine_update` in place
     rather than double-wrapping. Returns the same instance (not a copy), for chaining convenience.
@@ -42,28 +45,6 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
         env.__class__ = base_cls
     env.skip_state_machine_update = skip_state_machine_update
     return env
-
-
-def is_state_machine_active(env: AbstractRailEnv) -> bool:
-    """
-    True iff `env` has been wrapped via `RailEnvStateMachineWrapper` and isn't configured to skip its
-    per-step update - i.e. `agent.state`/`agent.state_machine` are actually kept live for `env`, rather
-    than frozen at their `__init__` default forever.
-    """
-    return isinstance(env, _StateMachineUpdateMixin) and not env.skip_state_machine_update
-
-
-def assert_state_machine_active(env: AbstractRailEnv) -> None:
-    """
-    Fail fast for a caller that reads `agent.state`/`agent.state_machine` from `env`'s agents without
-    having wrapped `env` via `RailEnvStateMachineWrapper` (or having wrapped it with
-    `skip_state_machine_update=True`) - without this, those attributes silently stay frozen at their
-    `__init__` default instead of raising.
-    """
-    assert is_state_machine_active(env), (
-        "agent.state/agent.state_machine are not live on this env - wrap it via "
-        "RailEnvStateMachineWrapper(env) (skip_state_machine_update=False, the default) before use."
-    )
 
 
 class _StateMachineUpdateMixin:

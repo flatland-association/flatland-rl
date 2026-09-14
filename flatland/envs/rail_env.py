@@ -162,9 +162,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     -----
     step() never reads or writes agent.state/agent.state_machine - control flow (candidate position/
     speed/distance, resource conflict resolution, DONE detection) is derived purely from position/
-    signals. agent.state/agent.state_machine (and so get_info_dict()'s 'state'/'action_required'
-    fields) are left untouched unless the env is wrapped via
-    `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`.
+    speed/malfunction signals via `EnvAgent.derived_state()`, which get_info_dict()'s 'state'/
+    'action_required' fields use too - so both stay correct whether or not the env is wrapped via
+    `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`. That wrapper now exists
+    only for a caller that needs agent.state/agent.state_machine themselves (real state-machine
+    semantics, e.g. `TrainStateMachine` transition/signal internals), not for anything production code
+    or get_info_dict() needs.
     """
 
     def __init__(self,
@@ -402,18 +405,21 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     speed - Speed of the train
                     state - State from the trains's state machine
 
-        'action_required' and 'state' are derived from agent.state_machine/agent.state - meaningless
-        unless the env is wrapped via
-        `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper` (see class docstring).
+        'action_required' and 'state' are derived via `agent.derived_state()` - safe to call here
+        regardless of whether the env is wrapped via
+        `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`, since both call sites
+        (the end of `step()`'s own return tuple, and `reset()`) run after this step's (or, at `reset()`,
+        this episode's initial) position/speed have already settled - see `derived_state()`'s own
+        docstring for the general safe/unsafe timing distinction.
         """
         info_dict = {
-            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit())
+            'action_required': {i: RailEnv.action_required(agent.derived_state(self._elapsed_steps), agent.speed_counter.is_cell_exit())
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
             },
             'speed': {i: agent.speed_counter.speed for i, agent in enumerate(self.agents)},
-            'state': {i: agent.state for i, agent in enumerate(self.agents)}
+            'state': {i: agent.derived_state(self._elapsed_steps) for i, agent in enumerate(self.agents)}
         }
         return info_dict
 
