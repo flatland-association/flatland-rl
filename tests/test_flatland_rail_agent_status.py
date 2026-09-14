@@ -245,7 +245,7 @@ def test_status_done_remove():
 
 def _make_straight_rail(n_cells: int):
     """
-    The smallest possible topology offering a genuine target cell to cross into: a straight,
+    The smallest possible topology offering a  target cell to cross into: a straight,
     switch-free corridor of `n_cells` cells, dead end - straight* - dead end (a plain 2-cell corridor
     for n_cells=2, no straight tiles needed in between at all).
 
@@ -254,7 +254,7 @@ def _make_straight_rail(n_cells: int):
     case via an actual RailEnv rather than by calling the formula directly - this matters because the
     formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (10b) runs,
     agent.state is already DONE (see (10a)'s update_if_reached(), called before (10b)), so
-    _candidate_distance's own "done" branch is the one that applies (not its ordinary "genuine
+    _candidate_distance's own "done" branch is the one that applies (not its ordinary "
     crossing" branch, which would wrap distance via distance_after_crossing) - it calls
     distance_without_crossing directly.
     """
@@ -357,7 +357,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
 
     Why 2 agents: with max_speed=1, banking needs a denied crossing - either an invalid action or a
     resource_check denial. A switch-free corridor has no invalid action to give (a no-choice cell treats
-    every movement action as the same single transition - verified empirically), and a genuine switch
+    every movement action as the same single transition - verified empirically), and a  switch
     would cost more cells than a second agent does. So agent 1 is a stationary blocker sitting exactly
     where agent 0 wants to go, forcing a real resource_check denial instead.
 
@@ -372,12 +372,12 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     - step 1: agent 0 given DO_NOTHING (stays STOPPED, distance still 1). Agent 1 given its first
       movement action - optimistically promoted STOPPED->MOVING (self-loop, distance stays 0, speed
       ramps to 1).
-    - step 2: agent 0 still DO_NOTHING (unchanged). Agent 1's pre_speed is now genuinely 1 - its real
+    - step 2: agent 0 still DO_NOTHING (unchanged). Agent 1's pre_speed is now 1 - its real
       crossing B->C succeeds uncontested (agent 0 isn't contesting B this step), reaching its own target
       C with pre_distance=0, pre_speed=1, sum=1 exactly (zero excess) - agent 1 is now DONE, B is free.
     - step 3: agent 0 given MOVE_FORWARD - optimistically promoted STOPPED->MOVING (self-loop, distance
       stays at its banked value of 1, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
-    - step 4: agent 0's pre_speed is now genuinely 1 again, with pre_distance still 1 (banked) - its real
+    - step 4: agent 0's pre_speed is now 1 again, with pre_distance still 1 (banked) - its real
       crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=1,
       pre_speed=1, sum=2 - a full SEGMENT_LENGTH of momentum discarded by the cap.
     """

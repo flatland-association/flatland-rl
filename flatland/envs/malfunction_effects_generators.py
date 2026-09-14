@@ -1,4 +1,4 @@
-from typing import Callable, List, Union
+from typing import Callable, Dict, List, Union
 
 import flatland.envs.malfunction_generators as mfg
 from flatland.core.effects_generator import EffectsGenerator
@@ -47,11 +47,14 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 
 # TODO https://github.com/flatland-association/flatland-rl/issues/242 generalize serialization
 
-MalfunctionCondition = Callable[["EnvAgent", int], bool]
+# Third argument: in_malfunction as of the end of the *previous* step - see
+# ConditionalMalfunctionEffectsGenerator._previous_in_malfunction and EnvAgent.derived_state()'s own
+# docstring for why a condition can't just read agent.malfunction_handler.in_malfunction directly.
+MalfunctionCondition = Callable[["EnvAgent", int, bool], bool]
 
 
-def on_map_state_condition(env_agent: EnvAgent, elapsed_steps: int) -> bool:
-    return env_agent.state_machine.state.is_on_map_state()
+def on_map_state_condition(env_agent: EnvAgent, elapsed_steps: int, previous_in_malfunction: bool) -> bool:
+    return env_agent.derived_state(in_malfunction=previous_in_malfunction).is_on_map_state()
 
 
 class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
@@ -99,21 +102,25 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
         self._num_malfunctions = 0
         self._condition = resolve_type(condition, condition_pkg, condition_cls)
+        self._previous_in_malfunction: Dict[int, bool] = {}
+
+    def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
+        self._previous_in_malfunction = {}
+        return env
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         if self._earliest_condition is not None and env._elapsed_steps < self._earliest_condition:
             return env
-        if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
-            return env
         for agent in env.agents:
-            if self._condition is None or self._condition(agent, env._elapsed_steps):
+            previous_in_malfunction = self._previous_in_malfunction.get(agent.handle, False)
+            if (self._max_num_malfunctions is None or self._num_malfunctions < self._max_num_malfunctions) and \
+                    (self._condition is None or self._condition(agent, env._elapsed_steps, previous_in_malfunction)):
                 in_malfunction_before = agent.malfunction_handler.in_malfunction
                 agent.malfunction_handler.generate_malfunction(self._malfunction_generator, env.np_random)
                 in_malfunction_after = agent.malfunction_handler.in_malfunction
                 if in_malfunction_after and not in_malfunction_before:
                     self._num_malfunctions += 1
-                    if self._max_num_malfunctions is not None and self._num_malfunctions >= self._max_num_malfunctions:
-                        return env
+            self._previous_in_malfunction[agent.handle] = agent.malfunction_handler.in_malfunction
         return env
 
     def __getstate__(self):
@@ -149,9 +156,9 @@ def make_multi_malfunction_condition(conditions: List[MalfunctionCondition]) -> 
 
     """
 
-    def _condition(agent: "EnvAgent", elapsed_steps: int):
+    def _condition(agent: "EnvAgent", elapsed_steps: int, previous_in_malfunction: bool):
         for c in conditions:
-            if c(agent, elapsed_steps):
+            if c(agent, elapsed_steps, previous_in_malfunction):
                 return True
         return False
 
@@ -176,10 +183,11 @@ def condition_stopped_intermediate_and_range(start_step_incl: int, end_step_excl
 
     """
 
-    def _condition(agent: "EnvAgent", elapsed_steps: int):
+    def _condition(agent: "EnvAgent", elapsed_steps: int, previous_in_malfunction: bool):
         position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
         return ((position in {w.position for ws in agent.waypoints[1:-1] for w in ws})
-                and agent.state_machine.state == TrainState.STOPPED and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
+                and agent.derived_state(in_malfunction=previous_in_malfunction) == TrainState.STOPPED
+                and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
 
     return _condition
 
@@ -202,9 +210,9 @@ def condition_stopped_cells_and_range(start_step_incl: int, end_step_excl: int, 
 
     """
 
-    def _condition(agent: "EnvAgent", elapsed_steps: int):
+    def _condition(agent: "EnvAgent", elapsed_steps: int, previous_in_malfunction: bool):
         position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
-        return (position in cells and agent.state_machine.state == TrainState.STOPPED
+        return (position in cells and agent.derived_state(in_malfunction=previous_in_malfunction) == TrainState.STOPPED
                 and elapsed_steps >= start_step_incl and elapsed_steps < end_step_excl)
 
     return _condition
@@ -216,8 +224,8 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
     """
 
     @staticmethod
-    def _condition(agent: "EnvAgent", *args, **kwargs):
-        if agent.state_machine.state != TrainState.STOPPED:
+    def _condition(agent: "EnvAgent", elapsed_steps: int, previous_in_malfunction: bool):
+        if agent.derived_state(in_malfunction=previous_in_malfunction) != TrainState.STOPPED:
             return False
         stops = {(wp.position, wp.direction) for wps in agent.waypoints for wp in wps}
         return agent.current_entry_point in stops

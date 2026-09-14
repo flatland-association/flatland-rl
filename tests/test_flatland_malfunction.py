@@ -172,7 +172,7 @@ def test_malfunction_process_statistically():
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
             # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
             # shift by 1 while a malfunction is active or just ended (previous entry nonzero); a value that is 0
-            # both here and in the previous entry is a genuine steady idle step and must stay 0.
+            # both here and in the previous entry is a  steady idle step and must stay 0.
             expected = agent_malfunction_list[agent_idx][step]
             prev = agent_malfunction_list[agent_idx][step - 1] if step > 0 else 0
             if expected > 0 or prev > 0:
@@ -476,13 +476,11 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
     STOP_MOVING and DO_NOTHING have the identical pre-step speed at the moment the agent's accumulated
     distance reaches the cell boundary, so per the "distance always advances by pre-step speed" design
     this tick's distance/position update is identical regardless of which action is given - only the
-    speed that applies from the NEXT tick onward differs (fixed: issue #178, design D2a). The gating
-    condition in rail_env.py step()'s (3b.5) POSITION UPDATE used to special-case
-    `stop_action_given and candidate_speed == 0` and block the crossing outright for STOP_MOVING
-    (candidate_entry_point was never even set to the next cell); it's now gated purely on
-    `is_cell_exit`/`candidate_entry_point_independent`, same as every other action, so STOP_MOVING
-    completes the crossing exactly like DO_NOTHING does - it just ends the tick STOPPED (already inside
-    the newly-entered cell) rather than blocked short of it.
+    speed that applies from the NEXT tick onward differs (design D2a, issue #178). The crossing itself
+    is gated purely on whether the agent's distance/speed reach the cell boundary and the action leads
+    to a valid transition, the same for every action - so STOP_MOVING completes the crossing exactly
+    like DO_NOTHING does - it just ends the tick STOPPED (already inside the newly-entered cell) rather
+    than blocked short of it.
     """
 
     def build_env_at_critical_step():

@@ -238,8 +238,8 @@ def test_malfunction_motion_check_order_when_earliest_departure_is_not_reached()
 
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=0 - agent 1 now dispatches straight into MOVING on its own
-    # very first step, collapsing what used to be a 3-step scenario into a single step.
+    # design (issue #280): earliest_departure=0 - agent 1 dispatches straight into MOVING on its own
+    # very first step.
     env.agents[1].earliest_departure = 0
 
     # step 1
@@ -290,7 +290,7 @@ def test_malfunction_motion_check_order_when_earliest_departure_reached_but_not_
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
     # design (issue #280): earliest_departure=0 - agent 1 is READY_TO_DEPART already on its own first step
-    # (DO_NOTHING here, so it doesn't yet dispatch), collapsing what used to be a 3-step scenario into 2.
+    # (DO_NOTHING here, so it doesn't yet dispatch).
     env.agents[1].earliest_departure = 0
 
     # step 1
@@ -318,7 +318,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     """
     Two agents share both initial entry point (6, 6) and earliest_departure=2. Design: when both are
     simultaneously eligible to depart into the same cell, the motion check resolves the conflict by
-    agent index - agent 0 wins regardless of the tie being genuinely symmetric (unlike the
+    agent index - agent 0 wins regardless of the tie being symmetric (unlike the
     motion-check-order tests above, where a lower-index agent winning is the bug being guarded against,
     here both agents are equally eligible, so index order is the actual, intended tie-break). The loser
     incurs no collision penalty: the collision penalty (see BaseDefaultRewards.step_reward) only fires
@@ -327,13 +327,13 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     Parametrized over which agent(s) malfunction right at the departure step: a malfunctioning agent is
     excluded from the motion check entirely (see rail_env.py's (3b.2), which takes priority over (3b.3)'s
     map-entry branch), so it can never block the other agent - whichever agent does NOT malfunction
-    dispatches into (6, 6) unblocked, exactly as agent 0 would in the unparametrized "none" case.
+    enters into (6, 6) unblocked, exactly as agent 0 would in the unparametrized "none" case.
 
     - Setup: malfunction_down_counter=2 injected (for the malfunctioning agent(s)) right before the
       departure step - observed in_malfunction=True for that one step.
     - Step 1 (both MOVE_FORWARD): both agents reach READY_TO_DEPART, still off map.
     - Step 2 (both MOVE_FORWARD, the departure step): outcome depends on malfunctioning:
-      - "none": agent 0 dispatches into MOVING at (6, 6); agent 1 stays READY_TO_DEPART, denied.
+      - "none": agent 0 dispatches into MOVING at (6, 6); agent 1 stays READY_TO_DEPART, entry denied.
       - "agent_0": agent 0 goes to MALFUNCTION_OFF_MAP instead of contesting the cell; agent 1
         dispatches into MOVING at (6, 6) unblocked.
       - "agent_1": symmetric - agent 1 goes to MALFUNCTION_OFF_MAP; agent 0 dispatches unblocked.
@@ -413,7 +413,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
     step (earliest_departure=2) rather than starting on it. Design (issue #280): a malfunction ending
     with earliest_departure already reached goes straight from MALFUNCTION_OFF_MAP into MOVING on a
     movement action - or, if the cell is contested, into READY_TO_DEPART instead of back into
-    MALFUNCTION_OFF_MAP, since the malfunction has genuinely already ended by then (see
+    MALFUNCTION_OFF_MAP, since the malfunction has already ended by then (see
     _handle_malfunction_off_map above). Same asserted properties as the sibling test: agent 0 (lower
     index) always wins the departure conflict regardless of which agent(s) were malfunctioning, and
     neither agent's reward carries a collision penalty.

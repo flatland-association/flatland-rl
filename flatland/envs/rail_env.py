@@ -162,9 +162,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     -----
     step() never reads or writes agent.state/agent.state_machine - control flow (candidate position/
     speed/distance, resource conflict resolution, DONE detection) is derived purely from position/
-    signals. agent.state/agent.state_machine (and so get_info_dict()'s 'state'/'action_required'
-    fields) are left untouched unless the env is wrapped via
-    `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`.
+    speed/malfunction signals via `EnvAgent.derived_state()`, which get_info_dict()'s 'state'/
+    'action_required' fields use too - so both stay correct whether or not the env is wrapped via
+    `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`. That wrapper now exists
+    only for a caller that needs agent.state/agent.state_machine themselves (real state-machine
+    semantics, e.g. `TrainStateMachine` transition/signal internals), not for anything production code
+    or get_info_dict() needs.
     """
 
     def __init__(self,
@@ -296,12 +299,37 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     @staticmethod
     def action_required(agent_state, is_cell_entry):
         """
-        Check if an agent needs to provide an action
+        Reports whether an agent needs an action supplied for it in the next `env.step()` call.
+
+        A pure function of the two arguments passed in  - this function just evaluates the four cases below against whatever
+        `agent_state`/`is_cell_entry` it's given from `derived_state()` .
+
+        Neither purely state-derived nor purely distance/speed-derived - `agent_state` gates which of
+        four cases applies, and only one of them actually consults `is_cell_entry` (despite its name,
+        callers pass `agent.speed_counter.is_cell_exit()` here, not `SpeedCounter.is_cell_entry` - a
+        pre-existing naming mismatch between this parameter and the value passed for it):
+        - WAITING / MALFUNCTION_OFF_MAP (off map, not yet eligible to move): always False, regardless
+          of anything else.
+        - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
+        - MOVING / STOPPED / MALFUNCTION (on map): collapses to `is_cell_entry` alone (speed > 0 and
+          distance + speed >= SEGMENT_LENGTH - see design_by_contract.md) - identical for all three
+          on-map states, with no special case for MALFUNCTION. Since this requires speed > 0, it reads
+          False for any on-map agent parked at speed 0, regardless of distance - including a
+          STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance == SEGMENT_LENGTH, e.g.
+          after a denied crossing). This makes "malfunctioning agents never need an action" a
+          state-level guarantee - a malfunctioning agent's speed is always forced to 0, so this branch
+          is always False throughout any malfunction, on map or off - see
+          test_action_required_false_during_malfunction and test_action_required_at_full_segment_length
+          in test_flatland_envs_rail_env.py.
+        - DONE (terminal - neither on map nor off map): always False, even with
+          remove_agents_at_target=False leaving the agent parked at a real position - `is_cell_entry`
+          is never consulted either way, since DONE is excluded from the on-map branch above.
 
         Parameters
         ----------
-        agent: RailEnvAgent
-        Agent we want to check
+        agent_state: TrainState
+        is_cell_entry: bool
+            despite the name, this is the caller's is_cell_exit() value - see above.
 
         Returns
         -------
@@ -402,18 +430,21 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     speed - Speed of the train
                     state - State from the trains's state machine
 
-        'action_required' and 'state' are derived from agent.state_machine/agent.state - meaningless
-        unless the env is wrapped via
-        `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper` (see class docstring).
+        'action_required' and 'state' are derived via `agent.derived_state()` - safe to call here
+        regardless of whether the env is wrapped via
+        `flatland.envs.rail_env_state_machine_wrapper.RailEnvStateMachineWrapper`, since both call sites
+        (the end of `step()`'s own return tuple, and `reset()`) run after this step's (or, at `reset()`,
+        this episode's initial) position/speed have already settled - see `derived_state()`'s own
+        docstring for the general safe/unsafe timing distinction.
         """
         info_dict = {
-            'action_required': {i: RailEnv.action_required(agent.state, agent.speed_counter.is_cell_exit())
+            'action_required': {i: RailEnv.action_required(agent.derived_state(self._elapsed_steps), agent.speed_counter.is_cell_exit())
                                 for i, agent in enumerate(self.agents)},
             'malfunction': {
                 i: agent.malfunction_handler.malfunction_down_counter for i, agent in enumerate(self.agents)
             },
             'speed': {i: agent.speed_counter.speed for i, agent in enumerate(self.agents)},
-            'state': {i: agent.state for i, agent in enumerate(self.agents)}
+            'state': {i: agent.derived_state(self._elapsed_steps) for i, agent in enumerate(self.agents)}
         }
         return info_dict
 
@@ -527,7 +558,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def collect(self, agent: EnvAgent, action: RailEnvActions,
                 candidate_entry_point_independent: Optional[EntryPointT]) -> Tuple[Any, Any]:
         """
-        Collect phase for a single agent (step()'s former loop 1 body): derive this step's candidate
+        Collect phase for a single agent: derive this step's candidate
         entry point/speed/distance unilaterally from the agent's pre-step state and the given action
         alone - including for an invalid action, which itself just yields a zeroed/unchanged candidate
         (e.g. candidate_speed = 0) rather than skipping computation entirely. The distribute phase
@@ -560,10 +591,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         # (2) CANDIDATE ENTRY POINT: action validity - need both by speed update (3a) and position update (3b) below
         # mid cell or valid transition (only invalid actions are non-L/R on symmetric switches) -
-        # loop1_is_cell_exit stored below (agent_transition_data.is_cell_exit) so the distribute
+        # collected_is_cell_exit stored below (agent_transition_data.is_cell_exit) so the distribute
         # phase's resource_check assertion can reuse it instead of calling is_cell_exit() again.
-        loop1_is_cell_exit = agent.speed_counter.is_cell_exit()
-        action_valid = not loop1_is_cell_exit or candidate_entry_point_independent is not None
+        collected_is_cell_exit = agent.speed_counter.is_cell_exit()
+        action_valid = not collected_is_cell_exit or candidate_entry_point_independent is not None
 
         # (3a) SPEED UPDATE / (3b) POSITION UPDATE / (3c) CANDIDATE DISTANCE - delegated to the
         # shared, pre-step-only candidate_ methods (also used by the post-step checks) instead of
@@ -580,7 +611,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # Boolean flags shared by all 3 _candidate_ methods below - each one previously recomputed
         # the same formula from scratch; computed once here and passed in instead. cell_exit is the
         # raw formula (speed > 0 and about to cross the segment boundary) - NOT the same as
-        # agent.speed_counter.is_cell_exit() above (loop1_is_cell_exit), which returns True off-map;
+        # agent.speed_counter.is_cell_exit() above (collected_is_cell_exit), which returns True off-map;
         # this raw formula returns False off-map. Do not conflate the two.
         off_map = agent.current_entry_point is None
         transition_invalid = candidate_entry_point_independent is None
@@ -679,7 +710,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         current_resource = self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point)
         new_resource = self.resource_map.get_resource(candidate_entry_point, candidate_next_entry_point)
 
-        # (5) GATHER STATE TRANSITION SIGNALS - action_valid is the one signal genuinely irreducible
+        # (5) GATHER STATE TRANSITION SIGNALS - action_valid is the one signal irreducible
         # to other stored/derivable data (see RailEnvStateMachineWrapper, which reconstructs the rest
         # of StateTransitionSignals from agent/candidate_speed/resource_check/action instead of a
         # snapshot here): it depends on this step's pre-step cell_exit/candidate_entry_point_independent,
@@ -692,7 +723,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         agent_transition_data.speed = speed
         agent_transition_data.distance = distance
-        agent_transition_data.is_cell_exit = loop1_is_cell_exit
+        agent_transition_data.is_cell_exit = collected_is_cell_exit
         # the distribute phase re-reads this same agent.target_entry_point is not None check (before
         # handle_done_state() can change it for this agent) - stored here instead of recomputed there.
         agent_transition_data.done = done
@@ -711,7 +742,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
     def distribute(self, agent: EnvAgent, agent_transition_data: env_utils.AgentTransitionData):
         """
-        Distribute phase for a single agent (step()'s former loop 2 body): resolve this step's
+        Distribute phase for a single agent: resolve this step's
         collect-phase candidate against the resource check's conflict resolution (already run for
         every agent, via self.resource_check.find_conflicts(), by the time this is called), commit
         position/speed/distance, handle DONE, and compute this step's reward.
@@ -731,16 +762,19 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             assert resource_check == True
 
         # design (D1/D2): a STOPPED/MALFUNCTION agent given a movement action self-loops into
-        # MotionCheck (see (3b.2bis)/(3b.5)/(3b.6)), so resource_check here is trivially granted
-        # regardless of whether its target is actually free - movement_allowed (action_valid and
-        # resource_check - see RailEnvStateMachineWrapper, which recomputes it the same way, and so
-        # the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted optimistically on the
-        # operator's request. Position/distance stay deferred either way (see (10a)/(10b)'s
-        # speed==0 handling) - if the target is genuinely still occupied, the *next* step (now
-        # pre-speed > 0) attempts the crossing for real via (3b.5), gets denied by MotionCheck's
-        # real (non-self-loop) resolution, and the state machine demotes back to STOPPED then
-        # (see _handle_moving's `not movement_allowed` branch in state_machine.py) - one step of
-        # MOVING with no actual progress, rather than never promoting at all.
+        # MotionCheck (candidate_entry_point/candidate_next_entry_point unchanged from
+        # current_entry_point/next_entry_point - see _candidate_entry_points'/_candidate_speed's
+        # malfunction/keep-moving-mid-cell/acceleration-or-start-moving branches), so resource_check
+        # here is trivially granted regardless of whether its target is actually free - movement_allowed
+        # (action_valid and resource_check - see RailEnvStateMachineWrapper, which recomputes it the
+        # same way, and so the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted
+        # optimistically on the operator's request. Position/distance stay deferred either way (see
+        # (10a)/(10b)'s speed==0 handling) - if the target is still occupied, the *next* step
+        # (now pre-speed > 0) attempts the crossing for real via _candidate_entry_points'
+        # on_map_cell_transition branch, gets denied by MotionCheck's real (non-self-loop) resolution,
+        # and the state machine demotes back to STOPPED then (see _handle_moving's `not
+        # movement_allowed` branch in state_machine.py) - one step of MOVING with no actual progress,
+        # rather than never promoting at all.
         agent_transition_data.resource_check = resource_check
 
         # (10a) POSITION UPDATE
@@ -951,7 +985,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         for h, snap in pre_step.agents.items():
             agent = self.agents[h]
             action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
-            # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()).
+            # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()).
             speed = snap.speed
             distance = snap.distance
             current_entry_point = snap.current_entry_point
@@ -1050,8 +1084,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         See design_by_contract.md's Table 2.
         """
         # off_map/cell_exit/target_reached/transition_invalid/action_invalid_on_rail/
-        # invalid_action_at_cell_exit are hoisted params, computed once in step()'s loop 1 and shared
-        # across all 3 _candidate_ methods - see rail_env.py's step() for their shared definitions.
+        # invalid_action_at_cell_exit are hoisted params, computed once in collect() and shared
+        # across all 3 _candidate_ methods - see rail_env.py's collect() for their shared definitions.
         # (3b.3) map entry: derived purely from pre-step values/action, deliberately not from state.
         # ready_to_depart reproduces "is state already READY_TO_DEPART this step" without reading state -
         # NOT the same as state_transition_signal.earliest_departure_reached (elapsed_steps + 1), which is
@@ -1173,8 +1207,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
         off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
-        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
-        rail_env.py's step() for their shared definitions.
+        params, computed once in collect() and shared across all 3 _candidate_ methods - see
+        rail_env.py's collect() for their shared definitions.
         """
         done_or_target_reached = done or target_reached
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
@@ -1206,7 +1240,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         #   `no_earlier_case_applies`'s own `not invalid_action_at_cell_exit`. cell_exit requires
         #   speed > 0, so this branch can never be true while stopped - a STOPPED agent given a
         #   moving action always falls through to acceleration below instead, regardless of whether
-        #   that action is itself structurally valid; a fresh, genuine re-attempt at the boundary
+        #   that action is itself structurally valid; a fresh,  re-attempt at the boundary
         #   (this time with speed > 0) is what gets denied here, not the promotion step itself.
         # - acceleration or start moving: excludes done/target reached/malfunction/off_map/invalid
         #   action at cell exit via `no_earlier_case_applies`; disjoint from braking since STOP_MOVING
@@ -1285,8 +1319,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
         off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
-        params, computed once in step()'s loop 1 and shared across all 3 _candidate_ methods - see
-        rail_env.py's step() for their shared definitions. Note this narrows the lru_cache key from the
+        params, computed once in collect() and shared across all 3 _candidate_ methods - see
+        rail_env.py's collect() for their shared definitions. Note this narrows the lru_cache key from the
         original (which included current_entry_point/next_entry_point/candidate_entry_point/
         candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
         booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
@@ -1313,12 +1347,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # - invalid action at cell exit: excludes done/target reached/malfunction/off_map via its
         #   own explicit terms; structurally exclusive with stopped/default via their own
         #   `not invalid_action_at_cell_exit`. cell_exit requires speed > 0, so this branch can
-        #   never be true while stopped - a fresh, genuine re-attempt at the boundary (speed > 0)
+        #   never be true while stopped - a fresh,  re-attempt at the boundary (speed > 0)
         #   is what gets denied here, not a STOPPED agent's mere promotion/resumption (handled by the
         #   stopped branch instead).
         # - stopped: excludes done/target reached/malfunction/off_map/invalid action at cell exit
         #   via its own explicit terms; mutually exclusive with default via `stopped` vs. `not stopped`.
-        # - default (still mid-cell, or genuinely crossing at the boundary with a valid action):
+        # - default (still mid-cell, or crossing at the boundary with a valid action):
         #   same done/target reached/malfunction/off_map/invalid action at cell exit exclusions as
         #   stopped, with `not stopped` vs. `stopped`.
         # Checked in decreasing empirical frequency (same rationale as _candidate_entry_points/
@@ -1386,7 +1420,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             else:
                 action = RailEnvActions.from_value(action_dict.get(h, RailEnvActions.DO_NOTHING))
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
-                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
                 distance = snap.distance
                 current_entry_point = snap.current_entry_point
@@ -1453,7 +1487,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # candidates accepted in distribute phase
             else:
                 candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
-                # mirrors step()'s loop 1 hoisted-flag derivation (see rail_env.py's step()) -
+                # mirrors collect()'s hoisted-flag derivation (see rail_env.py's collect()) -
                 # recomputed from the pre-step snapshot here since this runs after step() completed.
                 distance = snap.distance
                 current_entry_point = snap.current_entry_point

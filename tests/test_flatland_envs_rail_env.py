@@ -514,7 +514,6 @@ def test_speed_after_malfunction():
     distance = agent.speed_counter.distance
     assert speed == Fraction(0)
     while agent.state.is_malfunction_state():
-        # TODO revise design: set speed to 0 during malfunction?
         assert agent.speed_counter.speed == speed
         assert agent.speed_counter.distance == distance
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
@@ -574,7 +573,7 @@ def test_symmetric_switch_stop_action():
     Document agent behaviour when choosing an invalid action upon entering a symmetric switch:
     entry point and next entry point must always advance together (see the invariant documented
     in RailEnv.step()), so the crossing into the switch is denied and the agent is forced to a
-    stop at the cell boundary, until a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) is given. The
+    stop at the cell boundary, until a valid action (MOVE_LEFT/MOVE_RIGHT) is given. The
     forced MOVING->STOPPED transition that denies the crossing draws an INVALID_ACTION penalty
     (pre-step speed times collision_factor, see BaseDefaultRewards.step_reward) - never a COLLISION
     one, since there is no other agent to conflict with - and only on that one transition step, not
@@ -607,7 +606,6 @@ def test_symmetric_switch_stop_action():
     assert agent.current_entry_point[1] == 1
     assert agent.state == TrainState.MOVING
     assert agent.speed_counter.speed == Fraction(1, 2)
-    # TODO revise design: no distance travelled upon entering the grid despite state MOVING!
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({})
@@ -658,7 +656,7 @@ def test_symmetric_switch_stop_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # now genuinely moving (pre-step speed > 0) - this step actually completes the crossing, no denial.
+    # now moving (pre-step speed > 0) - this step actually completes the crossing, no denial.
     _, rewards, _, _ = env.step({agent.handle: RailEnvActions.MOVE_RIGHT})
     assert agent.current_entry_point == ((15, 15), 1)
     assert agent.next_entry_point == ((16, 15), 2)
@@ -677,12 +675,12 @@ def test_symmetric_switch_move_forward_action():
     stop at the cell boundary. A moving-action retry (MOVE_FORWARD, still invalid at this switch)
     is optimistically promoted back to MOVING regardless (SpeedCounter.is_cell_exit() requires
     speed > 0, so a STOPPED/banked agent never blocks its own promotion - see design_by_contract.md),
-    but its genuine next re-attempt at the boundary is denied and penalized again; a non-moving
-    STOP_MOVING retry never promotes at all. Only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT)
+    but its  next re-attempt at the boundary is denied and penalized again; a non-moving
+    STOP_MOVING retry never promotes at all. Only a valid action (MOVE_LEFT/MOVE_RIGHT)
     lets the agent actually enter the switch. Each MOVING->STOPPED transition that denies a crossing
     draws an INVALID_ACTION penalty (pre-step speed times collision_factor, see
     BaseDefaultRewards.step_reward) - never a COLLISION one, since there is no other agent to
-    conflict with - once per genuine entering attempt, not once per retry.
+    conflict with - once per  entering attempt, not once per retry.
     """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR), skip_state_machine_update=False)
 
@@ -759,7 +757,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # retrying the same invalid action now genuinely re-attempts the crossing (speed > 0 going
+    # retrying the same invalid action now re-attempts the crossing (speed > 0 going
     # into this step, so is_cell_exit is true again) - denied again, forced back to STOPPED, and
     # charged a fresh INVALID_ACTION penalty: this is a new entering attempt, not a retry of the
     # previous one.
@@ -772,7 +770,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == -1 * Fraction(1, 2) * COLLISION_FACTOR
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # only a genuinely valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
+    # only a valid action (MOVE_LEFT/MOVE_RIGHT) lets the agent actually enter the switch.
     # design: stopped->moving with pre-speed 0, travelling no distance. An optimistic STOPPED->MOVING
     # resumption, not a forced stop - no penalty.
     _, rewards, _, _ = env.step({agent.handle: RailEnvActions.MOVE_LEFT})
@@ -784,7 +782,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # now genuinely moving (pre-step speed > 0) - this step actually completes the crossing, no denial.
+    # now moving (pre-step speed > 0) - this step actually completes the crossing, no denial.
     _, rewards, _, _ = env.step({agent.handle: RailEnvActions.MOVE_LEFT})
     assert agent.current_entry_point == ((15, 15), 1)
     assert agent.next_entry_point == ((14, 15), 0)
@@ -879,7 +877,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     return resource_check, rewards[agent.handle]
 
 
-def test_candidate_speed_and_distance_match_genuine_crossing():
+def test_candidate_speed_and_distance_match_crossing():
     """Single MOVING agent on L=(3,8) of make_simple_rail's row-3 corridor, at max_speed=1, halfway
     across L (distance 0.5) - MOVE_FORWARD completes the crossing into R this step (no other agent to
     contest it, resource_check trivially granted): the real post-step speed/distance exactly match
@@ -904,8 +902,8 @@ def test_candidate_speed_and_distance_match_genuine_crossing():
 
     resource_check, rewards = _assert_speed_distance_match_candidates(env, agent, {0: RailEnvActions.MOVE_FORWARD})
     assert resource_check
-    assert agent.current_entry_point != L  # the crossing genuinely completed
-    # a genuine, granted crossing is not a forced stop - no collision/invalid-action penalty
+    assert agent.current_entry_point != L  # the crossing completed
+    # a granted crossing is not a forced stop - no collision/invalid-action penalty
     assert rewards[DefaultPenalties.COLLISION.value] == 0
     assert rewards[DefaultPenalties.INVALID_ACTION.value] == 0
 
@@ -996,7 +994,7 @@ def test_done_candidate_entry_point_independent_is_stale_not_a_live_reservation(
       cell boundary (crosses into B in one step). Agent 1 stays off map, READY_TO_DEPART with
       earliest_departure=0 and initial_entry_point B.
     - Step 0: both agents contest resource B in the same step - agent 0 crossing A->B, agent 1 departing
-      directly onto B - so agent 0 genuinely occupies B (agent 1's own initial cell) as this step is
+      directly onto B - so agent 0 occupies B (agent 1's own initial cell) as this step is
       resolved. MotionCheck's same-target tie-break favors the lower handle: agent 0 wins, reaches its
       target B, and (remove_agents_at_target) is immediately DONE with current_entry_point already None
       by the end of this step. Agent 1 loses the conflict - motion_check.stopped names it as blocked,
@@ -1004,7 +1002,7 @@ def test_done_candidate_entry_point_independent_is_stale_not_a_live_reservation(
       this checkable) draws no collision/invalid-action penalty for the denial.
     - Step 1: agent 1 retries the identical departure action - granted this time with no denial, even
       though the pre-step snapshot still computes a transition from agent 0's (now DONE) initial cell A:
-      that lookup is never consulted for a DONE agent's own resource, so it leaves B genuinely free -
+      that lookup is never consulted for a DONE agent's own resource, so it leaves B free -
       agent 1 ends up on exactly its own initial cell.
     """
     rail, optionals = _make_straight_rail(3)
@@ -1028,11 +1026,11 @@ def test_done_candidate_entry_point_independent_is_stale_not_a_live_reservation(
     assert agent0.next_entry_point[0] == agent1.initial_entry_point[0]
 
     _, rewards_dict, _, _ = env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    # agent 0 genuinely occupied B (agent 1's initial cell) while this conflicting step was resolved,
+    # agent 0 occupied B (agent 1's initial cell) while this conflicting step was resolved,
     # even though it is DONE and removed (current_entry_point back to None) by the time step() returns
     assert env.temp_transition_data[agent0.handle].candidate_entry_point[0] == agent1.initial_entry_point[0]
     assert agent0.state == TrainState.DONE
-    assert agent0.current_entry_point is None  # removed - B genuinely free now
+    assert agent0.current_entry_point is None  # removed - B free now
     assert agent1.state == TrainState.READY_TO_DEPART  # denied - lower-handle agent 0 won the conflict
     assert agent1.current_entry_point is None
     assert agent1.handle in env.resource_check.stopped  # motion_check itself names agent 1 as blocked
@@ -1086,7 +1084,7 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     agent1.initial_entry_point = ((3, 5), 3)
     agent0.earliest_departure = 0
     agent1.earliest_departure = 0
-    # agent 1 must genuinely stay parked at (3, 5) to block agent 0: at max_speed 1, its pre-step
+    # agent 1 must stay parked at (3, 5) to block agent 0: at max_speed 1, its pre-step
     # momentum on departure (distance 0, speed 1) would already reach the cell boundary on the very
     # next step, so STOP_MOVING would complete an in-flight crossing out of (3, 5) instead of
     # holding it there (see the STOP_MOVING boundary-crossing fix, issue #178 design D2a). A slower
@@ -1096,7 +1094,7 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     # regardless of any pre-existing _speed, so it was never read anyway.
     agent1.speed_counter._max_speed = Fraction(1, 2)
 
-    # MOVE_LEFT from the switch at (3, 6) is a genuine, valid redirect onto the southward branch -
+    # MOVE_LEFT from the switch at (3, 6) is a valid redirect onto the southward branch -
     # confirms the escape route agent 0 will be denied further down is real, not just invalid input.
     assert env.rail.apply_action_independent(RailEnvActions.MOVE_LEFT, ((3, 6), 3)) == ((4, 6), 2)
 
@@ -1120,10 +1118,10 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     # design (D1/D2): a STOPPED agent given a movement action is optimistically promoted to MOVING
     # on the operator's request (see rail_env.py's (3b.2bis)/movement_allowed design note) even
     # though its target is still occupied - position/distance stay unchanged either way (D1). The
-    # *following* step then genuinely attempts the crossing for real, is denied again by MotionCheck
+    # *following* step then attempts the crossing for real, is denied again by MotionCheck
     # (agent 1 still parked at (3, 5)), and the state machine demotes back to STOPPED - so the state
     # alternates MOVING/STOPPED every retry for as long as agent 1 blocks it, never actually moving.
-    # The optimistic STOPPED->MOVING resumption is free (nothing re-contested yet); each genuine
+    # The optimistic STOPPED->MOVING resumption is free (nothing re-contested yet); each
     # re-attempt (MOVING->STOPPED) is charged the same full collision penalty again.
     for expected_state, expected_collision in [
         (TrainState.MOVING, 0),
@@ -1560,7 +1558,7 @@ def test_action_required_false_during_malfunction():
     Single agent, max speed 1/2, acceleration delta equal to max speed, earliest_departure=0. Design:
     info['action_required'] (RailEnv.action_required()) is False for a malfunctioning agent, both off
     map (MALFUNCTION_OFF_MAP) and on map (MALFUNCTION) - contrasted here against the same agent's
-    action_required alternating True/False while genuinely MOVING, to show the malfunction periods
+    action_required alternating True/False while MOVING, to show the malfunction periods
     aren't just incidentally False for some unrelated reason (e.g. always being mid-cell).
 
     - Setup: malfunction_down_counter=3 injected before the very first step - the agent malfunctions
@@ -1568,7 +1566,7 @@ def test_action_required_false_during_malfunction():
     - Steps 1-2 (MOVE_FORWARD, in_malfunction): MALFUNCTION_OFF_MAP, still off map, action_required False.
     - Step 3 (malfunction clears): dispatches straight into MOVING at distance 0 - at half max speed,
       distance 0 does not yet reach the cell boundary, so action_required is False here too (not yet
-      due to malfunction - genuinely not at a cell exit).
+      due to malfunction - not at a cell exit).
     - Step 4 (MOVE_FORWARD): distance reaches 1/2, the cell boundary - action_required True, contrasting
       with the malfunction periods above and below.
     - A second malfunction (down_counter=3) is injected right at this boundary (distance 1/2).
@@ -1668,7 +1666,7 @@ def test_action_required_at_full_segment_length(with_malfunction):
       what lets this promotion happen even though MOVE_FORWARD is still structurally invalid at this
       switch (see test_symmetric_switch_move_forward_action). Both variants end up MOVING here, speed
       > 0 again, distance still pinned at the boundary (the promotion itself travels no distance), so
-      is_cell_exit and action_required both read True again - a further genuine re-attempt on the next
+      is_cell_exit and action_required both read True again - a further  re-attempt on the next
       step would be denied and force-stopped once more.
     """
     transitions = RailEnvTransitions()
@@ -1989,17 +1987,18 @@ COLLISION_FACTOR = 250.0
 def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor():
     """
     Agent A on L=(3,8), agent B on R=(3,7) - adjacent cells of make_simple_rail's row-3 corridor, both
-    heading west, max speed 1.
+    heading west. A's max speed is 1; B's is overridden to 1/2, so it accelerates to only half A's speed.
 
-    - Setup: A departs onto L, B departs onto R, both at distance 0, speed 1. B is then braked to a
-      stop before it can leave R, parking it there at distance 1/2, speed 0.
+    - Setup: A departs onto L at distance 0, speed 1; B departs onto R at distance 0, speed 1/2 (its
+      own lower max speed). B is then braked to a stop before it can leave R, parking it there at
+      distance 1/2, speed 0.
     - A reaches the L->R boundary and tries to cross into R: denied, since B still occupies it. A's
       position stays on L, its distance pins at the boundary (1.0), its speed is forced back to 0, and
       the attempt is charged the full collision penalty (pre-attempt speed 1 times the collision
       factor).
     - Retrying MOVE_FORWARD from there: position never leaves L, distance stays pinned at 1.0. A retry
       that only optimistically resumes MOVING (not yet re-contesting the boundary) costs nothing; a
-      retry that genuinely re-contests the boundary is denied again and charged the full collision
+      retry that re-contests the boundary is denied again and charged the full collision
       penalty again.
     - B's position, speed and distance on R stay untouched throughout.
     """
@@ -2025,18 +2024,24 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     # B's own max speed is lower than A's (still off map, so only _max_speed needs overriding - see
     # test_blocked_agent_cannot_redirect_via_later_action for why _speed must stay None here): this
     # keeps it mid-cell (distance < 1) rather than already at the cell boundary when it is braked
-    # below, so STOP_MOVING genuinely parks it on R instead of letting an already-banked crossing
+    # below, so STOP_MOVING parks it on R instead of letting an already-banked crossing
     # complete first.
     agent_b.speed_counter._max_speed = Fraction(1, 2)
+
+    # both agents off map before the first step - no speed/distance yet.
+    assert agent_a.current_entry_point is None
+    assert agent_a.speed_counter.speed is None
+    assert agent_b.current_entry_point is None
+    assert agent_b.speed_counter.speed is None
 
     # WAITING -> READY_TO_DEPART -> MOVING: two steps of MOVE_FORWARD to get both agents onto the map.
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent_a.current_entry_point == L
-    assert agent_a.speed_counter.speed == Fraction(1)
+    assert agent_a.speed_counter.speed == Fraction(1)  # A's max speed
     assert agent_a.speed_counter.distance == Fraction(0)
     assert agent_b.current_entry_point == R
-    assert agent_b.speed_counter.speed == Fraction(1, 2)
+    assert agent_b.speed_counter.speed == Fraction(1, 2)  # B's own (lower) max speed, not A's
     assert agent_b.speed_counter.distance == Fraction(0)
 
     # B brakes to a stop on R (still mid-cell, so it doesn't cross first); A, at speed 1, reaches the
@@ -2056,7 +2061,7 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # Retrying while B stays parked on R never gets A any further: its position never leaves L. Each
-    # retry first optimistically resumes MOVING (nothing re-contested yet -> no penalty), then genuinely
+    # retry first optimistically resumes MOVING (nothing re-contested yet -> no penalty), then
     # re-attempts the boundary as STOPPED again (denied again -> full collision penalty again).
     for expected_state, expected_collision in [
         (TrainState.MOVING, 0),
@@ -2097,7 +2102,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
       penalty only for the 1.0-speed variant, proportionally less for the slower ones (0.2x/0.5x
       collision_factor).
     - Two more retries: MOVE_FORWARD first optimistically resumes MOVING at the same constant speed
-      without yet re-contesting the boundary (no penalty), then genuinely re-attempts it as STOPPED
+      without yet re-contesting the boundary (no penalty), then re-attempts it as STOPPED
       again (denied again, same speed * collision_factor penalty) - position and distance stay exactly
       as pinned throughout.
     """
@@ -2155,7 +2160,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # two more retries at the boundary: optimistic MOVING resumption (no penalty, nothing re-contested
-    # yet) alternating with a genuine re-attempt, denied again at the same speed - position and distance
+    # yet) alternating with a  re-attempt, denied again at the same speed - position and distance
     # never move from where they were pinned.
     for expected_state, expected_collision in [
         (TrainState.MOVING, 0),
@@ -2224,7 +2229,7 @@ def test_platoon_of_four_agents_starts_and_advances_together_without_force_stops
         assert rewards[h][DefaultPenalties.COLLISION.value] == 0
         assert rewards[h][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # from here, every agent is genuinely at (or, every other step, still short of) its own boundary in
+    # from here, every agent is at (or, every other step, still short of) its own boundary in
     # lockstep with the others; whenever they cross, they all cross together - nobody is ever force-
     # stopped, and the whole platoon ends up three cells further along, on C4, C5, C6, C7.
     for expected_distance, expected_cells in [
@@ -2317,7 +2322,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
         assert rewards[h][DefaultPenalties.COLLISION.value] == 0
         assert rewards[h][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # from here, every agent is genuinely at (or, on the steps in between, still short of) its own
+    # from here, every agent is at (or, on the steps in between, still short of) its own
     # boundary in lockstep with the others; whenever they cross, they all cross together - nobody is
     # ever force-stopped.
     for expected_distance, n_cells_advanced in expected_steps:
@@ -2344,7 +2349,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
     # crossing is already in flight and still completes (see
     # test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor's STOP_MOVING
     # discussion) - the leader (and, moving with it in lockstep, A/B/C too) still advances one more cell
-    # on this step before the leader genuinely holds still from the next step on.
+    # on this step before the leader holds still from the next step on.
     (Fraction(1), [(Fraction(0), 1), (Fraction(0), 2)], 3, [Fraction(0)], Fraction(0)),
 ], ids=["speed-0.2", "speed-0.5", "speed-1.0"])
 def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
@@ -2361,13 +2366,12 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
       keep being told to move forward. The number of steps before A/B/C catch up to their own boundary
       differs by speed: immediate for 0.5 and 1.0, one extra "still approaching" step first for 0.2.
     - Speed 1.0 detail: D is exactly at its own boundary the moment it is told to stop, so that crossing
-      is already in flight and still completes that step before D genuinely holds still.
+      is already in flight and still completes that step before D holds still.
     - Convergence: A, B and C all transition to STOPPED with distance pinned at 1.0 ("end of cell") in
       the exact same env.step() call - not staggered - while D's own state/position/distance stay
       unchanged, for all three speed variants.
     - Rewards: D's own MOVING->STOPPED transition (the step it first settles) is a voluntary stop
-      (STOP_MOVING given, speed reaches 0, movement_allowed stays True - see
-      BaseDefaultRewards.step_reward) - no penalty. A, B and C's later, simultaneous MOVING->STOPPED
+      (STOP_MOVING given, speed reaches 0) - no penalty. A, B and C's later, simultaneous MOVING->STOPPED
       transition at convergence is env-forced (denied by D no longer vacating the cell ahead) -
       charged a COLLISION penalty of max_speed times collision_factor each, never INVALID_ACTION,
       since MOVE_FORWARD is a structurally valid action throughout.
@@ -2386,7 +2390,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
     # place all four directly nose-to-tail on the first four cells, already MOVING at the shared max
     # speed with distance 0 (freshly cruising) - see
     # test_platoon_of_four_agents_starts_and_advances_together_without_force_stops for how a platoon
-    # reaches this state from a genuine standstill.
+    # reaches this state from a  standstill.
     for agent, cell in zip(env.agents, cells[:4]):
         agent.current_entry_point = cell
         agent._set_state(TrainState.MOVING)

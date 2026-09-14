@@ -49,7 +49,7 @@ flags it as unused.
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
 - **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
+  160, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
   `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
   'true' }}`) — unset means disabled — but the config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
@@ -131,14 +131,39 @@ a node-id string for graph.
 
 `RailEnv`/`AbstractRailEnv` (`rail_env.py`) is the env facade, generic over `(TransitionMap, ResourceMap,
 EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
-assignment), `timetable_generators.py` (departure/arrival windows). Per `step()`, for each agent: derive the
-desired next entry point from the action via the `step_utils` state machine (`TrainState`/
-`TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
-`(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
-conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
-state/position, then `handle_done_state()`, then rewards, per agent, in that order. `EnvAgent` (`agent_utils.py`)
-holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
-via the distance map's shortest paths.
+assignment), `timetable_generators.py` (departure/arrival windows). `step()` runs two per-agent phases,
+both state-machine-independent - `collect()` derives each agent's candidate next entry point/speed/distance
+purely from its pre-step position/speed and the given action (`_candidate_entry_points`/`_candidate_speed`/
+`_candidate_distance` - see `design_by_contract.md`), never from `agent.state`, and registers the
+`(current_resource, new_resource)` pair (via `resource_map.get_resource(...)`) with `agent_chains.py`'s
+`MotionCheck`; once every agent's pair is registered, `MotionCheck.find_conflicts()` resolves cross-agent
+conflicts (head-on swaps, same-target collisions) for the whole step at once. `distribute()` then, per agent,
+resolves its candidate against that conflict resolution, commits position/speed/distance, calls
+`handle_done_state()`, and computes the reward. `EnvAgent` (`agent_utils.py`) holds per-agent state;
+`observations.py`/`predictions.py` build the observation returned to policies, typically via the distance
+map's shortest paths.
+
+`agent.state`/`agent.state_machine` (`TrainState`/`TrainStateMachine`, `step_utils/state_machine.py`) are not
+touched by `AbstractRailEnv.step()` itself at all - they're opt-in, layered on afterward by
+`RailEnvStateMachineWrapper` (`rail_env_state_machine_wrapper.py`), which patches an env instance so its
+`step()` also runs the state machine's bookkeeping (reconstructing `StateTransitionSignals` from the
+`AgentTransitionData` `collect()`/`distribute()` already produced) before observations are built. Nothing in
+production code needs this wrapper any more: `EnvAgent.derived_state(elapsed_steps=None, in_malfunction=None)`
+(`agent_utils.py`) reconstructs the equivalent `TrainState` purely from `current_entry_point`/
+`target_entry_point`/`malfunction_handler.in_malfunction`/`speed_counter.speed`/`earliest_departure` - no
+wrapping required - and is what `get_info_dict()`'s `state`/`action_required` fields,
+`RecordStepsEffectsGenerator`, and every built-in obs builder/predictor use. `derived_state()`'s own docstring
+spells out the one timing subtlety this has: it's only safe to call from a point in `step()` *after* the
+distribute loop has committed this step's position/speed (e.g. `on_episode_step_end`, `get_info_dict()`, any
+read between `step()` calls) - not from `on_episode_step_start`, where `malfunction_handler.in_malfunction`
+has already advanced for the current step while `current_entry_point`/`speed_counter.speed` still reflect the
+previous one; a caller needing to read state from that unsafe point (e.g.
+`ConditionalMalfunctionEffectsGenerator`'s STOPPED-gated conditions) must track its own
+"as of the end of the previous step" snapshot instead, and pass it via `derived_state()`'s `in_malfunction`
+override. `RailEnvStateMachineWrapper` itself is now reserved for code that genuinely needs
+`agent.state`/`agent.state_machine` themselves (real `TrainStateMachine` transition/signal internals) - the
+dedicated wrapper unit test and the `Replay`/`run_replay_config` test framework (`tests/test_utils.py`) and
+tests built on it, plus `tests/test_known_flatland_bugs.py`'s direct state-machine regression tests.
 
 `handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_entry_point`
 and, if `remove_agents_at_target` (the default), clears `agent.current_entry_point` to `None` — so on the
@@ -343,6 +368,10 @@ how `step()`, `TrainStateMachine`, or `MotionCheck` internally arrive at that ou
   documented", "discovered by running it", or similar. State the behavior as fact; if a value was surprising or
   needed to be checked against a real run rather than derived by hand, that belongs in conversation with whoever
   asked for the test, not in the docstring.
+- Avoid ornate intensifier words (`genuinely`, `genuine`, `truly`, `actually`) and internal-implementation
+  cross-references (a specific `rail_env.py` step label like "(3b.5)", an intermediate helper's name) - see the
+  repo-wide docstring/comment/markdown-doc conventions in "Conventions" below, which this test-docstring guidance
+  is a specific case of.
 - A non-obvious setup trick (e.g. why a blocking agent needs a reduced max speed to avoid completing an in-flight
   crossing before it can be braked) gets its own bullet or an inline comment at the point it matters, phrased as
   the fact itself ("the leader is exactly at its own boundary ... so that crossing is already in flight and still
@@ -431,3 +460,24 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
   makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
   unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".
+- Never rewrite or override wording the user has personally edited in a file without asking first - not even
+  to fix a real inaccuracy spotted in it. Flag the concern and ask; do not silently correct it inline (and
+  never fold such a correction into the same commit as an unrelated requested change, as if it were
+  uncontroversial). The user's own edits to their own file take precedence over an unrequested improvement.
+- Avoid ornate intensifier words in docstrings, comments, and markdown docs - `genuinely`, `genuine`, `truly`,
+  `actually`, `really`, `completely`/`completely free`, and similar filler that doesn't add information over the
+  plain statement. Say what happens directly ("reaches speed 1", "B is free", "the crossing completed"), not
+  "genuinely reaches speed 1"/"B is genuinely free"/"the crossing genuinely completed". If a value or transition
+  is surprising enough to need emphasis, say the concrete fact that makes it surprising (a number, a state name,
+  a contrast with the reader's likely assumption) instead of reaching for an adverb.
+- Docstrings/comments/markdown docs that describe *behavior* (a test's scenario, a design note, a review-findings
+  or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
+  points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,
+  avoid: internal numbered step labels from a specific function's control flow (e.g. a docstring citing
+  `rail_env.py`'s own "(3b.5)" or "(10b)" markers by number - fine as an in-file comment right next to the code
+  it labels, since that neighborhood renumbers together, but a *separate* docstring/doc citing it by number goes
+  stale silently the moment that function is refactored and the label moves or disappears); intermediate variable
+  names or helper-method names that aren't part of the public contract being documented; and the refactoring/
+  commit history behind the current code ("added by commit X", "this used to be Y before the Z refactor", "fixed
+  in PR #NNN") - that belongs in the commit message and PR description, not in code comments/docstrings/design
+  docs, which should describe the current behavior as fact, not its provenance.

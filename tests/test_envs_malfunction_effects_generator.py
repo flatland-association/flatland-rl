@@ -21,12 +21,12 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
                                   max_duration=888,
                                   # all cells
                                   condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-                              ),
-                              skip_state_machine_update=False)
+                              ))
     env.reset()
 
     for _ in range(150):
-        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
+        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.derived_state(env._elapsed_steps) == TrainState.MOVING else RailEnvActions.MOVE_FORWARD
+                  for agent in env.agents})
 
     initial_positions = {agent.initial_entry_point[0] for agent in env.agents}
     in_malfunction = [agent for agent in env.agents if agent.malfunction_handler.in_malfunction]
@@ -52,12 +52,12 @@ def test_no_effect_conditional_stopped_cells_and_range_malfunction_effects_gener
             max_duration=888,
             # all cells
             condition=condition_stopped_cells_and_range(0, 9999999, [(r, c) for r in range(30) for c in range(30)])
-        ),
-        skip_state_machine_update=False)
+        ))
     env.reset()
 
     for _ in range(150):
-        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
+        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.derived_state(env._elapsed_steps) == TrainState.MOVING else RailEnvActions.MOVE_FORWARD
+                  for agent in env.agents})
 
     # no malfunction generated although condition applies as above
     for agent in env.agents:
@@ -76,8 +76,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
             min_duration=888,
             max_duration=888,
             condition=condition_stopped_intermediate_and_range(0, 9999999),
-        ),
-        skip_state_machine_update=False)
+        ))
     env.reset()
 
     _run_with_sthortest_path(env=env, rendering=rendering, num_steps=400)
@@ -112,19 +111,20 @@ def test_make_multi_malfunction_condition():
         [condition_stopped_intermediate_and_range(44, 99),
          condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_entry_point[0]])])
 
-    env.agents[0].state_machine.set_state(TrainState.STOPPED)
+    # derived_state() reports STOPPED for an on-map (current_entry_point is not None), non-malfunctioning
+    # (previous_in_malfunction=False) agent with no positive speed - matches a freshly-departed agent's
+    # speed_counter (None) here, no need to also force the real state machine into STOPPED.
     direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
     env.agents[0].current_entry_point = (env.agents[0].initial_entry_point[0], direction)
-    assert cond(env.agents[0], 55)
-    assert not cond(env.agents[0], 33)
-    assert not cond(env.agents[0], 100)
+    assert cond(env.agents[0], 55, False)
+    assert not cond(env.agents[0], 33, False)
+    assert not cond(env.agents[0], 100, False)
 
-    env.agents[0].state_machine.set_state(TrainState.STOPPED)
     direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
     env.agents[0].current_entry_point = (env.agents[0].waypoints[1][0].position, direction)
-    assert cond(env.agents[0], 55)
-    assert not cond(env.agents[0], 33)
-    assert not cond(env.agents[0], 100)
+    assert cond(env.agents[0], 55, False)
+    assert not cond(env.agents[0], 33, False)
+    assert not cond(env.agents[0], 100, False)
 
 
 def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
@@ -142,8 +142,7 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
         n_cities=3,
         n_agents=3,
         malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
-        effects_generator=conditional_malfunction_effects_generator,
-        skip_state_machine_update=False)
+        effects_generator=conditional_malfunction_effects_generator)
     env.reset()
 
     num_steps_run = 150
@@ -173,7 +172,7 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
         for agent in env.agents:
             if agent.current_entry_point is None:
                 actions[agent.handle] = RailEnvActions.MOVE_FORWARD
-            elif agent.state == TrainState.DONE:
+            elif agent.target_entry_point is not None:
                 continue
             else:
 
@@ -235,7 +234,6 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
         y_dim=50,
         malfunction_interval=sys.maxsize,  # disable conventional malfunction generator
         effects_generator=conditional_malfunction_effects_generator,
-        skip_state_machine_update=False,
     )
     env.reset()
 
@@ -272,4 +270,4 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
 
     assert conditional_malfunction_effects_generator._num_malfunctions == 3
     for agent in env.agents:
-        assert agent.state == TrainState.DONE
+        assert agent.target_entry_point is not None

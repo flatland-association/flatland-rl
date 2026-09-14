@@ -9,7 +9,6 @@ from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, empty_rail_generator
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
@@ -33,7 +32,6 @@ def test_rail_from_grid_transition_map():
     n_agents = 2
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
-    env = RailEnvStateMachineWrapper(env)
     env.reset(False, False)
     assert len(set([a.initial_entry_point[0] for a in env.agents])) == n_agents
 
@@ -68,7 +66,6 @@ def tests_rail_from_file():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=3,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
     RailEnvPersister.save(env, file_name)
     dist_map_shape = np.shape(env.distance_map.get())
@@ -79,7 +76,6 @@ def tests_rail_from_file():
                   line_generator=line_from_file(file_name),
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
     rails_loaded = env.rail.grid
     agents_loaded = env.agents
@@ -105,7 +101,6 @@ def tests_rail_from_file():
     env2 = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                    rail_generator=rail_from_grid_transition_map(rail, optionals), line_generator=sparse_line_generator(),
                    number_of_agents=3, obs_builder_object=GlobalObsForRailEnv())
-    env2 = RailEnvStateMachineWrapper(env2)
     env2.reset()
     #env2.save(file_name_2)
     RailEnvPersister.save(env2, file_name_2)
@@ -116,7 +111,6 @@ def tests_rail_from_file():
     env2 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name_2),
                    line_generator=line_from_file(file_name_2), number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv())
-    env2 = RailEnvStateMachineWrapper(env2)
     env2.reset()
     rails_loaded_2 = env2.rail.grid
     agents_loaded_2 = env2.agents
@@ -137,7 +131,6 @@ def tests_rail_from_file():
     env3 = RailEnv(width=1, height=1, rail_generator=rail_from_file(file_name),
                    line_generator=line_from_file(file_name), number_of_agents=1,
                    obs_builder_object=GlobalObsForRailEnv())
-    env3 = RailEnvStateMachineWrapper(env3)
     env3.reset()
     rails_loaded_3 = env3.rail.grid
     agents_loaded_3 = env3.agents
@@ -161,7 +154,6 @@ def tests_rail_from_file():
                    number_of_agents=1,
                    obs_builder_object=TreeObsForRailEnv(max_depth=2),
                    )
-    env4 = RailEnvStateMachineWrapper(env4)
     env4.reset()
     rails_loaded_4 = env4.rail.grid
     agents_loaded_4 = env4.agents

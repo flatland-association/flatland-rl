@@ -9,21 +9,24 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     """
     Patches `env`'s class in place so its `step()` also updates `agent.state`/`agent.state_machine`.
 
-    `AbstractRailEnv.step()` never reads/writes `agent.state`/`agent.state_machine` itself (position/
-    speed/reward/done are unaffected either way, wrapped or not) - it ends with
-    `return self._get_observations(), self.rewards_dict, self.dones, self.get_info_dict()`, and an
-    obs_builder/predictor that does read `agent.state` (e.g. `TreeObsForRailEnv`,
-    `ShortestPathPredictorForRailEnv`) needs it to already reflect *this* step's position by the time
-    `_get_observations()` runs, not the previous step's. `_StateMachineUpdateMixin.step()` below achieves
-    this without `AbstractRailEnv` needing any dedicated extension point: it temporarily replaces the
-    instance's own `_get_observations` with a one-shot wrapper before delegating to `super().step()` -
-    the one-shot wrapper restores the original `_get_observations`, runs the state machine update, then
-    calls the (now restored) real `_get_observations()` - so by the time `AbstractRailEnv.step()`'s own
-    return statement evaluates `self._get_observations()` (left of `self.get_info_dict()` in that same
-    tuple expression, hence evaluated first), `agent.state` is already up to date for both. Without
-    wrapping, `agent.state`/`agent.state_machine` are never touched at all - an obs_builder/predictor
-    that depends on `agent.state` for correctness (not just `get_info_dict()`'s purely-informational
-    `state`/`action_required` fields) needs the env wrapped to behave correctly.
+    `AbstractRailEnv.step()` never reads/writes `agent.state`/`agent.state_machine` itself - position/
+    speed/reward/done control flow, `get_info_dict()`'s `state`/`action_required` fields, and every
+    built-in obs builder/predictor are all derived instead via `EnvAgent.derived_state()`
+    (`agent_utils.py`), which reconstructs the equivalent `TrainState` purely from other, always-live
+    agent attributes - unaffected either way, wrapped or not (see its own docstring for the one timing
+    subtlety this has, and when a caller needs to work around it rather than just calling it directly).
+    This wrapper exists only for a caller that needs `agent.state`/`agent.state_machine` themselves -
+    real `TrainStateMachine` transition/signal internals, not just a `TrainState` value - such as a
+    test asserting on state-machine behavior directly, or the `Replay`/`run_replay_config` test
+    framework. `_StateMachineUpdateMixin.step()` below achieves this without `AbstractRailEnv` needing
+    any dedicated extension point: it temporarily replaces the instance's own `_get_observations` with
+    a one-shot wrapper before delegating to `super().step()` - the one-shot wrapper restores the
+    original `_get_observations`, runs the state machine update, then calls the (now restored) real
+    `_get_observations()` - so by the time `AbstractRailEnv.step()`'s own return statement evaluates
+    `self._get_observations()` (left of `self.get_info_dict()` in that same tuple expression, hence
+    evaluated first), `agent.state` is already up to date for both. Without wrapping, `agent.state`/
+    `agent.state_machine` are never touched at all - permanently frozen at their `__init__` default
+    (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
 
     Idempotent: wrapping an already-wrapped env just updates `skip_state_machine_update` in place
     rather than double-wrapping. Returns the same instance (not a copy), for chaining convenience.
@@ -71,14 +74,14 @@ class _StateMachineUpdateMixin:
         (`flatland/envs/step_utils/state_machine.py`): every transition method,
         `update_if_reached()`, and `state_position_sync_check()` read only their explicit arguments/
         `self.st_signals`, never another agent nor anything `step()` mutates later - so running all
-        of it in a single pass here (rather than interleaved per-agent inside `step()`'s own per-agent
-        loop, as it used to be) is behaviorally equivalent.
+        of it in a single pass here, rather than interleaved per-agent inside `step()`'s own per-agent
+        loop, is behaviorally equivalent.
 
         The `StateTransitionSignals` fed into the state machine below are reconstructed here rather than
         carried directly: `stop_action_given`/`movement_action_given` are pure functions of
         `AgentTransitionData.action`; `in_malfunction` is a live agent attribute;
         `earliest_departure_reached`/`new_speed_zero`/`movement_allowed` are cheap recomputations from
-        data `AgentTransitionData` already carries for other reasons. Only `action_valid` genuinely can't
+        data `AgentTransitionData` already carries for other reasons. Only `action_valid` can't
         be reconstructed after the fact (see its own field comment on `AgentTransitionData`) and so is
         the one signal actually snapshotted, alongside `action` itself, in `step()`'s collect phase.
 
@@ -106,9 +109,9 @@ class _StateMachineUpdateMixin:
                 # +1: earliest_departure_reached is deliberately signalled one step early (see
                 # rail_env.py's own historical comment on this formula) so the WAITING ->
                 # READY_TO_DEPART transition it drives completes in step N-1 - self._elapsed_steps
-                # is not re-incremented between step()'s per-agent loop and this hook (both run within
+                # is not re-incremented between collect()/distribute() and this hook (both run within
                 # the same step() call, after step()'s own single, top-of-function increment), so this
-                # must match loop 1's original formula exactly, not compensate for any further increment.
+                # must match collect()'s formula exactly, not compensate for any further increment.
                 earliest_departure_reached=agent.earliest_departure <= self._elapsed_steps + 1,
                 stop_action_given=agent_transition_data.action == RailEnvActions.STOP_MOVING,
                 movement_action_given=RailEnvActions.is_moving_action(agent_transition_data.action),

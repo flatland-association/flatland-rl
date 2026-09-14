@@ -65,15 +65,20 @@ for the exclusion reasoning), not load-bearing.
 _candidate_entry_points          _candidate_speed                 _candidate_distance
 ------------------------         ------------------------         ------------------------
 done                             done                              done
-target reached                   target reached                    target reached
-malfunction                      malfunction                       malfunction
-map entry                        map entry                         map entry
 off_map_no_departure             stay off map                      stay off map
-on-map cell transition           invalid action at cell exit       invalid action at cell exit
-invalid action at cell exit      acceleration or start moving      stopped
-keep moving mid-cell             braking                           keep moving mid-cell
-                                 keep moving mid-cell
+keep moving mid-cell             keep moving mid-cell              stopped
+on-map cell transition           acceleration or start moving      malfunction
+malfunction                      braking                           map entry
+map entry                        malfunction                       target reached
+target reached                   map entry                         invalid action at cell exit
+invalid action at cell exit      target reached
+                                 invalid action at cell exit
 ```
+
+Reordered by empirical branch frequency (`5a19eaf9`): `off_map_no_departure`/`stay off map` is the
+single largest branch across every profiled scenario (42-87% of calls), so it's checked right after
+`done` rather than last among the off-map-only branches - purely a performance reordering, not a
+semantic one (see the note above: every condition is self-contained, so this order is cosmetic).
 
 Each method's final branch (`keep moving mid-cell`) is an explicit `if`, not an implicit `else` - its
 condition is the exact logical complement of every branch above it, followed by a

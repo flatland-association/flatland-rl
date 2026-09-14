@@ -148,7 +148,7 @@ class TrajectoryEvaluator:
         if start_step == 0 and done:
             trains_arrived_episode = self.trajectory.trains_arrived_lookup()
             expected_success_rate = trains_arrived_episode['success_rate']
-            actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+            actual_success_rate = sum([agent.target_entry_point is not None for agent in env.agents]) / n_agents
             print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
 
             assert np.isclose(expected_success_rate, actual_success_rate)

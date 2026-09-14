@@ -182,7 +182,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
         self.departures: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
-        # entry points where the agent was ever recorded on-map and genuinely halted (not malfunctioning)
+        # entry points where the agent was ever recorded on-map and halted (not malfunctioning)
         # - a state-machine-independent equivalent of "was ever TrainState.STOPPED here".
         self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
 
@@ -244,11 +244,11 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # - if braking, reduced speed
                 # - if not braking, still full speed
                 # - if invalid action, speed set to 0
-                # design (issue #280): yes, an invalid action is penalized - once per genuine entering
+                # design (issue #280): yes, an invalid action is penalized - once per  entering
                 # attempt (a MOVING->STOPPED transition that denies the crossing). A STOPPED agent given
                 # a non-moving retry of the same denied action (e.g. STOP_MOVING resolving to the same
                 # invalid look-ahead) never promotes and so never re-charges; but a STOPPED agent given a
-                # genuinely moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
+                # moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
                 # requires speed > 0, see design_by_contract.md, so a STOPPED/banked agent never blocks its
                 # own promotion), and if the resulting fresh attempt is denied again, that is itself a new
                 # MOVING->STOPPED transition and is charged again.
@@ -515,7 +515,6 @@ class BasicMultiObjectiveRewards(DefaultRewards, Rewards[Tuple[float, float, flo
         float, float, float]:
         default_reward = super().step_reward(agent=agent, agent_transition_data=agent_transition_data, distance_map=distance_map, elapsed_steps=elapsed_steps)
 
-        # TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: speed_counter currently is not set to 0 during malfunctions.
         # N.B. enforces penalization before/after malfunction, off-map and just-arrived (on-map, not
         # malfunctioning and not just done is exactly MOVING or STOPPED - a stopped agent's
         # speed_counter.speed is already 0, so this doesn't need to single out MOVING specifically).
@@ -571,9 +570,9 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         entry_point = agent.target_entry_point if agent.target_entry_point is not None else agent.current_entry_point
         if entry_point is not None and entry_point not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][entry_point].append(elapsed_steps)
-            # N.B. DONE is only ever reached via TrainStateMachine.update_if_reached(), which requires the agent to
-            # have actually been at a target entry point - so old_entry_point being None here (e.g. a
-            # zero-distance journey reaching DONE on the very first on-map step) does not mean the target wasn't
+            # N.B. handle_done_state() only ever sets target_entry_point when the agent has actually
+            # reached a target entry point - so old_entry_point being None here (e.g. a zero-distance
+            # journey reaching DONE on the very first on-map step) does not mean the target wasn't
             # really reached; it just means there's no real "previous stop" to book a departure against.
             if agent.old_entry_point is not None:
                 self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)

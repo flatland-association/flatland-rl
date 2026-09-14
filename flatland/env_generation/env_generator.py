@@ -95,9 +95,9 @@ def env_generator(n_agents=7,
     skip_state_machine_update : bool
         Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
         `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
-        flow is unaffected either way. Pass `False` to wrap the returned env so `agent.state`/
-        `agent.state_machine` stay up to date (purely informational - `get_info_dict()`'s `state`/
-        `action_required` fields).
+        flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+        derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+        `agent.state_machine` themselves (real state-machine semantics).
     Returns
     -------
     RailEnv

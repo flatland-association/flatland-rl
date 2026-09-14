@@ -49,7 +49,7 @@ class DummyPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.ndarray]]
         prediction_dict = {}
 
         for agent in agents:
-            if not agent.state.is_on_map_state():
+            if not agent.derived_state(self.env._elapsed_steps).is_on_map_state():
                 # TODO make this generic
                 continue
             action_priorities = [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]

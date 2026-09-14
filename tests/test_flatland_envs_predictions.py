@@ -10,7 +10,6 @@ from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv, Node
 from flatland.envs.predictions import DummyPredictorForRailEnv, ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -31,7 +30,6 @@ def test_dummy_predictor(rendering=False):
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=DummyPredictorForRailEnv(max_depth=10)),
                   )
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # set initial position and direction for testing...
@@ -126,7 +124,6 @@ def test_shortest_path_predictor(rendering=False):
                   number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # set the initial position
@@ -261,7 +258,6 @@ def test_shortest_path_predictor_conflicts(rendering=False):
                   number_of_agents=2,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()),
                   )
-    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # set the initial position

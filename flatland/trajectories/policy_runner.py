@@ -90,7 +90,7 @@ class PolicyRunner:
         if self.done:
             if self.callbacks is not None:
                 self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
-            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
+            actual_success_rate = sum([agent.target_entry_point is not None for agent in self.env.agents]) / self.n_agents
             # not persisted yet, need to get df from collected buffer
             collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
             normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
@@ -523,7 +523,6 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=False,
         )
     else:
         env, _, _ = env_generator(
@@ -543,7 +542,6 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=False,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:

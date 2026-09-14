@@ -349,7 +349,7 @@ def test_multispeed_actions_no_malfunction_blocking():
         # each block follows the same 3-step pattern: (a) real crossing attempt denied (agent 0 still
         # occupies the target) -> forced STOPPED, distance banks to the boundary; (b) given a movement
         # action again, optimistically promoted back to MOVING (self-loop, distance unchanged - see
-        # rail_env.py's movement_allowed design note); (c) now genuinely pre-speed > 0, the crossing is
+        # rail_env.py's movement_allowed design note); (c) now pre-speed > 0, the crossing is
         # attempted for real again and this time succeeds (agent 0 has since vacated the target).
         ReplayConfig(
             replay=[
@@ -383,7 +383,7 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # now genuinely pre-speed > 0 - agent 0 has since vacated (3,8), crossing succeeds.
+                # now pre-speed > 0 - agent 0 has since vacated (3,8), crossing succeeds.
                 Replay(  # 4
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,

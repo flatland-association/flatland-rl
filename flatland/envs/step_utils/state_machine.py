@@ -144,66 +144,8 @@ class TrainStateMachine:
 
         By the time this call returns, self.state is the settled outcome of this very step() call -
         callers reading agent.state right after env.step() returns are seeing "what happened this
-        step", not a preview of the next one. MALFUNCTION/MALFUNCTION_OFF_MAP transitions honor this:
-        rail_env.py's step() decrements malfunction_handler's down-counter and rolls any new
-        malfunction (MalfunctionEffectsGenerator.on_episode_step_start) at the very start of the same
-        env.step() call (see rail_env.py's _check_malfunction_state_postcondition).
-
-        This still leaves an asymmetry worth knowing about: the counter itself is genuinely external to
-        this step()-then-reflect contract - it is mutated by an outside generator as an *input* to this
-        step's transition, not produced as this step's *output* the way self.state is. A controller can
-        read agent.malfunction_handler.malfunction_down_counter/in_malfunction directly (plain public
-        attributes, no special access contract), and doing so exposes this step's already-updated
-        counter value - but neither that counter nor self.state can tell the controller that the
-        *next* env.step() call is about to end the malfunction, since the decrement/roll that decides
-        that only happens at the start of that next call, not this one.
-
-        RailEnv.action_required() (rail_env.py) is neither purely state-derived nor purely
-        distance/speed-derived - self.state gates which of four cases applies, and only one of them
-        actually consults distance/speed:
-        - WAITING / MALFUNCTION_OFF_MAP (off map, not yet eligible to move): always False, regardless
-          of anything else.
-        - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
-        - MOVING / STOPPED / MALFUNCTION (on map): collapses to SpeedCounter.is_cell_exit() alone
-          (speed > 0 and distance + speed >= SEGMENT_LENGTH - see design_by_contract.md) - identical
-          for all three on-map states, with no special case for MALFUNCTION. Since is_cell_exit()
-          requires speed > 0, it reads False for any on-map agent parked at speed 0, regardless of
-          distance - including a STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance
-          == SEGMENT_LENGTH, e.g. after a denied crossing). This makes "malfunctioning agents never
-          need an action" a genuine state-level guarantee - in_malfunction always forces speed to 0
-          (see _candidate_speed's own malfunction branch in rail_env.py), so is_cell_exit() is always
-          False throughout any malfunction, on map or off - see
-          test_action_required_false_during_malfunction and
-          test_action_required_at_full_segment_length in test_flatland_envs_rail_env.py.
-        - DONE (terminal - neither on map nor off map per TrainState.is_on_map_state()/
-          is_off_map_state()): always False, even with remove_agents_at_target=False leaving the agent
-          parked at a real position - is_cell_exit() is never consulted either way, since DONE is
-          excluded from the on-map branch above.
-
-        Either way, action_required only ever reports this step's already-settled outcome, never a
-        lookahead onto the next step's malfunction-counter mutation.
-
-        design: MALFUNCTION and MALFUNCTION_OFF_MAP used to be asymmetric here even when
-        earliest_departure was already reached for both - both transition straight into MOVING on the
-        very step their malfunction ends (given a movement action that same step, see
-        _handle_malfunction/_handle_malfunction_off_map above), but action_required used to disagree
-        about the steps leading up to that while still malfunctioning: an on-map MALFUNCTION agent
-        banked at a cell boundary (distance == SEGMENT_LENGTH from a denied crossing before the
-        malfunction hit) used to read action_required True for every remaining malfunctioning step -
-        misleadingly, since movement_action_given has no effect while in_malfunction is still True
-        regardless of what action_required says - while MALFUNCTION_OFF_MAP correctly read False for
-        the entire malfunction (an off-map agent has no distance/speed to bank against SEGMENT_LENGTH).
-
-        This asymmetry is now resolved - not by revising today's action_required formula above, which
-        is unchanged - but by SpeedCounter.is_cell_exit()'s own speed > 0 guard (see
-        design_by_contract.md): since in_malfunction always forces speed to 0, is_cell_exit() - and so
-        action_required - now reads False throughout any on-map MALFUNCTION too, symmetric with
-        MALFUNCTION_OFF_MAP, only flipping True again once the malfunction clears and a movement action
-        promotes the agent back to MOVING. Confirmed empirically: with earliest_departure already
-        reached (0) going in, both a MALFUNCTION_OFF_MAP agent and an on-map MALFUNCTION agent banked
-        at a boundary now report action_required False/False/True across a 3-step malfunction (last
-        step already MOVING again - see test_action_required_at_full_segment_length's malfunction
-        variant for the on-map side).
+        step", not a preview of the next one. rail_env.py's step() decrements malfunction_handler's down-counter
+        and rolls any new malfunction at the very start of the same env.step() call from an external effects generator.
         """
 
         current_state = self._state

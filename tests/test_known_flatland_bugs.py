@@ -157,8 +157,9 @@ def test_earliest_departure_zero_bug_FIXED() -> None:
 def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
     """
     When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
-    take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
-    but the state is still saying the agent is in a malfunction."""
+    take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
+    before new malfunctions are generated, so malfunction_handler.in_malfunction and state stay consistent
+    with each other throughout - including on the last step of the malfunction."""
     rail_env = RailEnv(
         width=30,
         height=30,
@@ -204,8 +205,9 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
 def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
     """
     When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
-    take an action and move (in the next ts). The malfunction_handler specifies that the agent is not in a malfunction
-    but the state is still saying the agent is in a malfunction."""
+    take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
+    before new malfunctions are generated, so malfunction_handler.in_malfunction and state stay consistent
+    with each other throughout - including on the last step of the malfunction."""
     rail_env = RailEnv(
         width=30,
         height=30,
@@ -351,8 +353,12 @@ def test_two_trains_on_same_cell_bug_FIXED():
     pre-final-action situation - captured once via `RailEnvPersister.save()` after running the original
     30-step buildup - and applies only that final action.
     """
+    # skip_state_machine_update=False: this test asserts on agent.state after the final step() below, not
+    # just on the loaded snapshot's state (which is correct either way, since it's restored verbatim from
+    # the pickle - see agent_utils.py's load_env_agent()) - so agent.state must stay live across that step().
     rail_env, _ = RailEnvPersister.load_new(
-        str(Path(__file__).parent / "test_two_trains_on_same_cell_bug_FIXED_snapshot.pkl"))
+        str(Path(__file__).parent / "test_two_trains_on_same_cell_bug_FIXED_snapshot.pkl"),
+        skip_state_machine_update=False)
 
     agent_0 = rail_env.agents[0]
     agent_4 = rail_env.agents[4]

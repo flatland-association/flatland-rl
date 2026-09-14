@@ -13,8 +13,8 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -30,7 +30,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 def _stopped_here_transition_data() -> AgentTransitionData:
-    """Per-step signal for "the agent genuinely halted here this step" (see BaseDefaultRewards.step_reward's
+    """Per-step signal for "the agent halted here this step" (see BaseDefaultRewards.step_reward's
     is_stopped_now) - the state-machine-independent replacement for setting agent.state = TrainState.STOPPED
     directly. candidate_speed=Fraction(0) makes new_speed_zero True; action_valid=True and resource_check=True
     make movement_allowed True (both recomputed by step_reward() itself, not stored directly)."""
@@ -439,8 +439,8 @@ def test_energy_efficiency_smoothniss_in_morl():
     # distance is irrelevant to this test (only speed feeds the energy-efficiency-smoothness reward
     # below) - held at a fixed placeholder throughout rather than tracking set()'s real distance
     # progression. current_entry_point/malfunction_down_counter are the state-machine-independent signals
-    # BasicMultiObjectiveRewards' current_speed now reads (on-map and not malfunctioning), set here
-    # consistently with the state_machine.set_state() calls they used to stand in for.
+    # BasicMultiObjectiveRewards' current_speed reads (on-map and not malfunctioning) - set consistently
+    # alongside the state_machine.set_state() calls below so both stay in agreement.
     agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
     agent.state_machine.set_state(TrainState.WAITING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, 0, 0)
@@ -454,7 +454,10 @@ def test_energy_efficiency_smoothniss_in_morl():
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.36, -0.16))
 
-    agent.speed_counter.set(_pseudo_fractional(0.6), Fraction(0))
+    # speed_counter.speed is pinned at 0 for the whole malfunction, not just at entry - the real
+    # invariant _candidate_speed's own malfunction branch enforces on-map (see
+    # test_flatland_envs_rail_env.py::test_speed_after_malfunction).
+    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     agent.malfunction_handler.malfunction_down_counter = 1
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, 0, -0.36))
@@ -959,7 +962,7 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
 
 
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    """`state` is STOPPED (a genuine halt at `waypoint`) or MOVING (rolling through it without stopping) -
+    """`state` is STOPPED (a  halt at `waypoint`) or MOVING (rolling through it without stopping) -
     is_stopped_now is derived purely from this step's signals (see BaseDefaultRewards.step_reward), so the
     two need distinct signal combinations rather than sharing one hardcoded set."""
     agent.old_entry_point = (old.position, old.direction)
@@ -1161,8 +1164,7 @@ def test_collision_penalty_when_braking_interrupted_by_conflict():
 
 
 def test_invalid_action_penalty_on_invalid_action_stop():
-    """Invalid action (e.g. DO_NOTHING on symmetric switch) -> env intervenes -> penalized.
-    See https://github.com/flatland-association/flatland-rl/issues/280 for the open design question."""
+    """Invalid action (e.g. DO_NOTHING on symmetric switch) -> env intervenes -> penalized."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
@@ -1180,7 +1182,7 @@ def test_invalid_action_penalty_on_invalid_action_stop():
 def test_invalid_action_penalty_on_invalid_stop_action():
     """STOP_MOVING itself evaluates as invalid (e.g. facing a symmetric switch, which has no straight-through
     transition -- see RailGridTransitionMap._check_action_new) -> env intervenes -> penalized, not "voluntary",
-    even though stop_action_given and new_speed_zero are both true, same as a genuinely voluntary stop."""
+    even though stop_action_given and new_speed_zero are both true, same as a voluntary stop."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 
@@ -1317,7 +1319,7 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # 6th step: agent 0 now has genuine pre-step speed and makes its own real attempt into (3,4),
+    # 6th step: agent 0 now has non-zero pre-step speed and makes its own real attempt into (3,4),
     # denied for real (agent 1 is now mid-settling, holding (3,4) via self-loop) -> a fresh penalty
     # for agent 0 instead - and so on, alternating forever for as long as the deadlock persists.
     _, rewards, _, _ = env.step(forward)
