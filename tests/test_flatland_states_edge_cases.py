@@ -333,7 +333,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
       departure step - observed in_malfunction=True for that one step.
     - Step 1 (both MOVE_FORWARD): both agents reach READY_TO_DEPART, still off map.
     - Step 2 (both MOVE_FORWARD, the departure step): outcome depends on malfunctioning:
-      - "none": agent 0 dispatches into MOVING at (6, 6); agent 1 stays READY_TO_DEPART, denied.
+      - "none": agent 0 dispatches into MOVING at (6, 6); agent 1 stays READY_TO_DEPART, entry denied.
       - "agent_0": agent 0 goes to MALFUNCTION_OFF_MAP instead of contesting the cell; agent 1
         dispatches into MOVING at (6, 6) unblocked.
       - "agent_1": symmetric - agent 1 goes to MALFUNCTION_OFF_MAP; agent 0 dispatches unblocked.
