@@ -299,12 +299,37 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     @staticmethod
     def action_required(agent_state, is_cell_entry):
         """
-        Check if an agent needs to provide an action
+        Reports whether an agent needs an action supplied for it in the next `env.step()` call.
+
+        A pure function of the two arguments passed in  - this function just evaluates the four cases below against whatever
+        `agent_state`/`is_cell_entry` it's given from `derived_state()` .
+
+        Neither purely state-derived nor purely distance/speed-derived - `agent_state` gates which of
+        four cases applies, and only one of them actually consults `is_cell_entry` (despite its name,
+        callers pass `agent.speed_counter.is_cell_exit()` here, not `SpeedCounter.is_cell_entry` - a
+        pre-existing naming mismatch between this parameter and the value passed for it):
+        - WAITING / MALFUNCTION_OFF_MAP (off map, not yet eligible to move): always False, regardless
+          of anything else.
+        - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
+        - MOVING / STOPPED / MALFUNCTION (on map): collapses to `is_cell_entry` alone (speed > 0 and
+          distance + speed >= SEGMENT_LENGTH - see design_by_contract.md) - identical for all three
+          on-map states, with no special case for MALFUNCTION. Since this requires speed > 0, it reads
+          False for any on-map agent parked at speed 0, regardless of distance - including a
+          STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance == SEGMENT_LENGTH, e.g.
+          after a denied crossing). This makes "malfunctioning agents never need an action" a
+          state-level guarantee - a malfunctioning agent's speed is always forced to 0, so this branch
+          is always False throughout any malfunction, on map or off - see
+          test_action_required_false_during_malfunction and test_action_required_at_full_segment_length
+          in test_flatland_envs_rail_env.py.
+        - DONE (terminal - neither on map nor off map): always False, even with
+          remove_agents_at_target=False leaving the agent parked at a real position - `is_cell_entry`
+          is never consulted either way, since DONE is excluded from the on-map branch above.
 
         Parameters
         ----------
-        agent: RailEnvAgent
-        Agent we want to check
+        agent_state: TrainState
+        is_cell_entry: bool
+            despite the name, this is the caller's is_cell_exit() value - see above.
 
         Returns
         -------
