@@ -368,6 +368,10 @@ how `step()`, `TrainStateMachine`, or `MotionCheck` internally arrive at that ou
   documented", "discovered by running it", or similar. State the behavior as fact; if a value was surprising or
   needed to be checked against a real run rather than derived by hand, that belongs in conversation with whoever
   asked for the test, not in the docstring.
+- Avoid ornate intensifier words (`genuinely`, `genuine`, `truly`, `actually`) and internal-implementation
+  cross-references (a specific `rail_env.py` step label like "(3b.5)", an intermediate helper's name) - see the
+  repo-wide docstring/comment/markdown-doc conventions in "Conventions" below, which this test-docstring guidance
+  is a specific case of.
 - A non-obvious setup trick (e.g. why a blocking agent needs a reduced max speed to avoid completing an in-flight
   crossing before it can be braked) gets its own bullet or an inline comment at the point it matters, phrased as
   the fact itself ("the leader is exactly at its own boundary ... so that crossing is already in flight and still
@@ -456,3 +460,20 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
   makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
   unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".
+- Avoid ornate intensifier words in docstrings, comments, and markdown docs - `genuinely`, `genuine`, `truly`,
+  `actually`, `really`, `completely`/`completely free`, and similar filler that doesn't add information over the
+  plain statement. Say what happens directly ("reaches speed 1", "B is free", "the crossing completed"), not
+  "genuinely reaches speed 1"/"B is genuinely free"/"the crossing genuinely completed". If a value or transition
+  is surprising enough to need emphasis, say the concrete fact that makes it surprising (a number, a state name,
+  a contrast with the reader's likely assumption) instead of reaching for an adverb.
+- Docstrings/comments/markdown docs that describe *behavior* (a test's scenario, a design note, a review-findings
+  or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
+  points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,
+  avoid: internal numbered step labels from a specific function's control flow (e.g. a docstring citing
+  `rail_env.py`'s own "(3b.5)" or "(10b)" markers by number - fine as an in-file comment right next to the code
+  it labels, since that neighborhood renumbers together, but a *separate* docstring/doc citing it by number goes
+  stale silently the moment that function is refactored and the label moves or disappears); intermediate variable
+  names or helper-method names that aren't part of the public contract being documented; and the refactoring/
+  commit history behind the current code ("added by commit X", "this used to be Y before the Z refactor", "fixed
+  in PR #NNN") - that belongs in the commit message and PR description, not in code comments/docstrings/design
+  docs, which should describe the current behavior as fact, not its provenance.
