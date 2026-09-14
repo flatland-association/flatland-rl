@@ -81,7 +81,7 @@ class _StateMachineUpdateMixin:
         carried directly: `stop_action_given`/`movement_action_given` are pure functions of
         `AgentTransitionData.action`; `in_malfunction` is a live agent attribute;
         `earliest_departure_reached`/`new_speed_zero`/`movement_allowed` are cheap recomputations from
-        data `AgentTransitionData` already carries for other reasons. Only `action_valid` genuinely can't
+        data `AgentTransitionData` already carries for other reasons. Only `action_valid` can't
         be reconstructed after the fact (see its own field comment on `AgentTransitionData`) and so is
         the one signal actually snapshotted, alongside `action` itself, in `step()`'s collect phase.
 

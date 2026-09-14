@@ -30,7 +30,7 @@ from tests.trajectories.test_policy_runner import RandomPolicy
 
 
 def _stopped_here_transition_data() -> AgentTransitionData:
-    """Per-step signal for "the agent genuinely halted here this step" (see BaseDefaultRewards.step_reward's
+    """Per-step signal for "the agent halted here this step" (see BaseDefaultRewards.step_reward's
     is_stopped_now) - the state-machine-independent replacement for setting agent.state = TrainState.STOPPED
     directly. candidate_speed=Fraction(0) makes new_speed_zero True; action_valid=True and resource_check=True
     make movement_allowed True (both recomputed by step_reward() itself, not stored directly)."""
@@ -1182,7 +1182,7 @@ def test_invalid_action_penalty_on_invalid_action_stop():
 def test_invalid_action_penalty_on_invalid_stop_action():
     """STOP_MOVING itself evaluates as invalid (e.g. facing a symmetric switch, which has no straight-through
     transition -- see RailGridTransitionMap._check_action_new) -> env intervenes -> penalized, not "voluntary",
-    even though stop_action_given and new_speed_zero are both true, same as a genuinely voluntary stop."""
+    even though stop_action_given and new_speed_zero are both true, same as a voluntary stop."""
     rewards = BaseDefaultRewards(collision_factor=COLLISION_FACTOR)
     agent, distance_map = _moving_agent()
 

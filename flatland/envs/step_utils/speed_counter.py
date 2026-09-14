@@ -129,7 +129,7 @@ class SpeedCounter:
         # hold or grow it), so "new < old" is unambiguously a crossing, not mid-cell noise. Unlike the
         # old step()'s new_distance < speed (which reduces to old_distance < SEGMENT_LENGTH under
         # crossing_completed, wrongly False for an agent banked exactly at the boundary that resumes and
-        # genuinely crosses), this needs no separate crossing_completed flag at all.
+        # crosses), this needs no separate crossing_completed flag at all.
         self._is_cell_entry = (
             (self._distance is None and distance is not None)
             or (self._distance is not None and distance is not None and distance < self._distance)
@@ -203,7 +203,7 @@ class SpeedCounter:
         i.e. how far into the new cell the train's momentum actually reaches. This is the only one of
         the four formulas that ever transitions the agent's current_entry_point/next_entry_point into a
         new cell (see RailEnv.step()'s (10a)/(10b)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
-        MOVE_RIGHT while genuinely MOVING (pre-step speed > 0), or an explicit STOP_MOVING if the
+        MOVE_RIGHT while MOVING (pre-step speed > 0), or an explicit STOP_MOVING if the
         crossing was already in flight before the brake takes effect (see speed_after_braking above) -
         the action itself never matters once resource_check has granted the crossing.
 
@@ -229,7 +229,7 @@ class SpeedCounter:
         boundary - it just isn't credited with crossing it, so it's parked exactly there instead of
         past it. This is real physical distance actually covered this step (pre_speed is always > 0 in
         every case below - a MOVING agent's pre-step speed can never be 0), not a frozen/no-op value;
-        contrast with an agent whose pre-step speed genuinely was 0 this step (STOPPED, or STOPPED/
+        contrast with an agent whose pre-step speed was 0 this step (STOPPED, or STOPPED/
         MALFUNCTION promoted to MOVING this step), whose distance is asserted unchanged at its pre-step
         value by a completely different invariant branch (see (D1) in
         _check_speed_distance_speedup_postconditions), not by this formula.
@@ -263,7 +263,7 @@ class SpeedCounter:
         are the environment overriding the operator's request against its will, physically identical
         (a real, momentum-carrying train braked to a stop right at the boundary), so both get the same
         consequence. A granted STOP_MOVING never lands here on its own: if resource_check grants a
-        genuinely in-flight crossing (is_cell_exit() already true pre-step), the crossing completes via
+        in-flight crossing (is_cell_exit() already true pre-step), the crossing completes via
         distance_after_crossing above regardless of the action - STOP_MOVING cannot itself hold a
         crossing back once resource_check has approved it.
 
@@ -273,7 +273,7 @@ class SpeedCounter:
         occupied at the moment of promotion. The current design grants that promotion optimistically
         regardless (self-loop, no penalty yet) and only pays the price - a resource_check denial via
         this very formula, plus whatever penalty a Rewards implementation attaches to it - once the
-        agent's own pre-step speed is genuinely positive and it makes a real attempt. E.g. in a platoon:
+        agent's own pre-step speed is positive and it makes a real attempt. E.g. in a platoon:
         a follower given a movement action while its leader's cell is still occupied is promoted to
         MOVING for free (no penalty this step, since no resource contention is ever checked for a
         self-looping agent); if the leader has vacated that cell by the time the follower's real attempt

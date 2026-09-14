@@ -149,7 +149,7 @@ class TrainStateMachine:
         malfunction (MalfunctionEffectsGenerator.on_episode_step_start) at the very start of the same
         env.step() call (see rail_env.py's _check_malfunction_state_postcondition).
 
-        This still leaves an asymmetry worth knowing about: the counter itself is genuinely external to
+        This still leaves an asymmetry worth knowing about: the counter itself is external to
         this step()-then-reflect contract - it is mutated by an outside generator as an *input* to this
         step's transition, not produced as this step's *output* the way self.state is. A controller can
         read agent.malfunction_handler.malfunction_down_counter/in_malfunction directly (plain public

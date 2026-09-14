@@ -685,7 +685,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         current_resource = self.resource_map.get_resource(agent.current_entry_point, agent.next_entry_point)
         new_resource = self.resource_map.get_resource(candidate_entry_point, candidate_next_entry_point)
 
-        # (5) GATHER STATE TRANSITION SIGNALS - action_valid is the one signal genuinely irreducible
+        # (5) GATHER STATE TRANSITION SIGNALS - action_valid is the one signal irreducible
         # to other stored/derivable data (see RailEnvStateMachineWrapper, which reconstructs the rest
         # of StateTransitionSignals from agent/candidate_speed/resource_check/action instead of a
         # snapshot here): it depends on this step's pre-step cell_exit/candidate_entry_point_independent,
@@ -744,7 +744,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # (action_valid and resource_check - see RailEnvStateMachineWrapper, which recomputes it the
         # same way, and so the state machine's STOPPED/MALFUNCTION->MOVING promotion) is granted
         # optimistically on the operator's request. Position/distance stay deferred either way (see
-        # (10a)/(10b)'s speed==0 handling) - if the target is genuinely still occupied, the *next* step
+        # (10a)/(10b)'s speed==0 handling) - if the target is still occupied, the *next* step
         # (now pre-speed > 0) attempts the crossing for real via _candidate_entry_points'
         # on_map_cell_transition branch, gets denied by MotionCheck's real (non-self-loop) resolution,
         # and the state machine demotes back to STOPPED then (see _handle_moving's `not
@@ -1327,7 +1327,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         #   stopped branch instead).
         # - stopped: excludes done/target reached/malfunction/off_map/invalid action at cell exit
         #   via its own explicit terms; mutually exclusive with default via `stopped` vs. `not stopped`.
-        # - default (still mid-cell, or genuinely crossing at the boundary with a valid action):
+        # - default (still mid-cell, or crossing at the boundary with a valid action):
         #   same done/target reached/malfunction/off_map/invalid action at cell exit exclusions as
         #   stopped, with `not stopped` vs. `stopped`.
         # Checked in decreasing empirical frequency (same rationale as _candidate_entry_points/

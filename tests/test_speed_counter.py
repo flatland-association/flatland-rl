@@ -324,7 +324,7 @@ def test_stop_freezes_speed_without_touching_distance():
 def test_set_is_cell_entry_true_for_genuine_crossing_from_banked_boundary():
     """A MOVING agent bootstraps at speed=1 onto the map, is denied/braked to a stop exactly at the next
     cell boundary (banking distance == SEGMENT_LENGTH), is later promoted back to MOVING while still
-    banked (distance unchanged), then genuinely completes its crossing into the next cell. is_cell_entry
+    banked (distance unchanged), then completes its crossing into the next cell. is_cell_entry
     correctly reports True for that last step: set() derives it from old vs. new distance crossing the
     segment boundary, which correctly distinguishes a genuine crossing from an agent parked exactly at
     the boundary."""

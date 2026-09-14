@@ -182,7 +182,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
         self.departures: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
-        # entry points where the agent was ever recorded on-map and genuinely halted (not malfunctioning)
+        # entry points where the agent was ever recorded on-map and halted (not malfunctioning)
         # - a state-machine-independent equivalent of "was ever TrainState.STOPPED here".
         self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
 
@@ -248,7 +248,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # attempt (a MOVING->STOPPED transition that denies the crossing). A STOPPED agent given
                 # a non-moving retry of the same denied action (e.g. STOP_MOVING resolving to the same
                 # invalid look-ahead) never promotes and so never re-charges; but a STOPPED agent given a
-                # genuinely moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
+                # moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
                 # requires speed > 0, see design_by_contract.md, so a STOPPED/banked agent never blocks its
                 # own promotion), and if the resulting fresh attempt is denied again, that is itself a new
                 # MOVING->STOPPED transition and is charged again.

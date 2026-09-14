@@ -318,7 +318,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     """
     Two agents share both initial entry point (6, 6) and earliest_departure=2. Design: when both are
     simultaneously eligible to depart into the same cell, the motion check resolves the conflict by
-    agent index - agent 0 wins regardless of the tie being genuinely symmetric (unlike the
+    agent index - agent 0 wins regardless of the tie being symmetric (unlike the
     motion-check-order tests above, where a lower-index agent winning is the bug being guarded against,
     here both agents are equally eligible, so index order is the actual, intended tie-break). The loser
     incurs no collision penalty: the collision penalty (see BaseDefaultRewards.step_reward) only fires
@@ -413,7 +413,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict_malfunction_ends_on
     step (earliest_departure=2) rather than starting on it. Design (issue #280): a malfunction ending
     with earliest_departure already reached goes straight from MALFUNCTION_OFF_MAP into MOVING on a
     movement action - or, if the cell is contested, into READY_TO_DEPART instead of back into
-    MALFUNCTION_OFF_MAP, since the malfunction has genuinely already ended by then (see
+    MALFUNCTION_OFF_MAP, since the malfunction has already ended by then (see
     _handle_malfunction_off_map above). Same asserted properties as the sibling test: agent 0 (lower
     index) always wins the departure conflict regardless of which agent(s) were malfunctioning, and
     neither agent's reward carries a collision penalty.

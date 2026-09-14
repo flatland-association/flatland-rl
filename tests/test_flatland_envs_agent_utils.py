@@ -25,7 +25,7 @@ from flatland.utils.simple_rail import make_oval_rail
 def test_derived_state_matches_state_on_wrapped_env(seed):
     """
     5 agents on a 30x30 sparse map with frequent malfunctions (malfunction_rate=1/15), wrapped via
-    RailEnvStateMachineWrapper so agent.state is genuinely live - stepped with 100 random actions per
+    RailEnvStateMachineWrapper so agent.state is live - stepped with 100 random actions per
     agent.
 
     - Right after reset() and after every one of the 100 steps, every agent's
