@@ -228,37 +228,7 @@ class SpeedCounter:
         Physical motivation: the train's momentum this step still carries it right up to the cell
         boundary - it just isn't credited with crossing it, so it's parked exactly there instead of
         past it. This is real physical distance actually covered this step (pre_speed is always > 0 in
-        every case below - a MOVING agent's pre-step speed can never be 0), not a frozen/no-op value;
-        contrast with an agent whose pre-step speed was 0 this step (STOPPED, or STOPPED/
-        MALFUNCTION promoted to MOVING this step), whose distance is asserted unchanged at its pre-step
-        value by a completely different invariant branch (see (D1) in
-        _check_speed_distance_speedup_postconditions), not by this formula.
-
-        The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
-        all three only ever apply once `is_cell_exit()` was already true pre-step (i.e.
-        `distance + pre_speed >= SEGMENT_LENGTH`, which is exactly the min()'s other operand):
-        - an invalid action denies the crossing attempt at the cell boundary (e.g. going straight
-          through a symmetric switch, which only allows turning) - the operator's own mistaken
-          instruction, physically a real train braking hard right at the switch rather than derailing;
-        - resource_check denies the crossing to another agent (a real motion conflict - the track ahead
-          is physically occupied, so the train brakes to a stop just short of it, same as an emergency
-          stop signal);
-        - the agent reaches its target this step (remove_agents_at_target=False) - parked at the target,
-          capped since there is no further cell to wrap into.
-        The target-reached case always lands at exactly SEGMENT_LENGTH too, never below: RailEnv.step()'s
-        (3b.5) only ever turns a step into a genuine crossing attempt (the candidate entry point becoming
-        a *new* cell, which could then turn out to be the target) once `is_cell_exit()` already holds -
-        there is no path into this branch with `distance + pre_speed < SEGMENT_LENGTH`. What varies
-        between target-reached occurrences is only how much excess (`distance + pre_speed -
-        SEGMENT_LENGTH`) gets silently discarded by the cap - anywhere from zero (an exact-fitting
-        arrival) up to a full SEGMENT_LENGTH (e.g. a `max_speed` that doesn't evenly divide SEGMENT_LENGTH,
-        or an agent restarting from a previously banked-at-boundary position). See
-        tests/test_flatland_rail_agent_status.py::test_distance_without_crossing_reaches_segment_length_on_target_single_agent
-        and its _banked_restart sibling for worked, env-level examples of each - the effect only shows up
-        end-to-end because RailEnv.step()'s (10b) never reaches its ordinary MOVING crossing branch for a
-        target-reaching step (agent.state is already DONE there - see (10a)'s update_if_reached(), called
-        first), falling through to the DONE-but-not-removed fallback that calls this formula instead.
-
+        every case below - a MOVING agent's pre-step speed can never be 0).
         This formula is deliberately the *same* for an invalid action and a resource_check denial - both
         are the environment overriding the operator's request against its will, physically identical
         (a real, momentum-carrying train braked to a stop right at the boundary), so both get the same
@@ -267,21 +237,16 @@ class SpeedCounter:
         distance_after_crossing above regardless of the action - STOP_MOVING cannot itself hold a
         crossing back once resource_check has approved it.
 
-        See rail_env.py's `movement_allowed` design note (distribute(), right before the state machine step)
-        for a related but distinct policy choice this formula does *not* itself decide: whether a
-        STOPPED/MALFUNCTION agent is even *allowed* to promote to MOVING while its target is still
-        occupied at the moment of promotion. The current design grants that promotion optimistically
-        regardless (self-loop, no penalty yet) and only pays the price - a resource_check denial via
-        this very formula, plus whatever penalty a Rewards implementation attaches to it - once the
-        agent's own pre-step speed is positive and it makes a real attempt. E.g. in a platoon:
-        a follower given a movement action while its leader's cell is still occupied is promoted to
-        MOVING for free (no penalty this step, since no resource contention is ever checked for a
-        self-looping agent); if the leader has vacated that cell by the time the follower's real attempt
-        happens, no penalty ever accrues for that promotion at all. Only if the leader is *still* there
-        at the moment of the real attempt does the follower get force-stopped back to STOPPED with a
-        collision penalty via this formula - i.e. the same promotion event can end up either free or
-        penalized, depending purely on timing relative to the leader's own progress, not on whether the
-        target looked free at the moment the operator's movement action was given.
+        The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
+        all three only ever apply once `is_cell_exit()` was already true pre-step (i.e. distance at SEGMENT_LENGTH):
+        - an invalid action denies the crossing attempt at the cell boundary (e.g. going straight
+          through a symmetric switch, which only allows turning) - the operator's own mistaken
+          instruction, physically a real train braking hard right at the switch rather than derailing;
+        - resource_check denies the crossing to another agent (a real motion conflict - the track ahead
+          is physically occupied, so the train brakes to a stop just short of it, same as an emergency
+          stop signal);
+        - the agent reaches its target this step (remove_agents_at_target=False) - parked at the target,
+          capped since there is no further cell to wrap into.
         """
         if distance is None:
             return None
