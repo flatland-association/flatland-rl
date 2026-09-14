@@ -145,11 +145,25 @@ map's shortest paths.
 
 `agent.state`/`agent.state_machine` (`TrainState`/`TrainStateMachine`, `step_utils/state_machine.py`) are not
 touched by `AbstractRailEnv.step()` itself at all - they're opt-in, layered on afterward by
-`RailEnvStateMachineWrapper` (`rail_env_state_machine_wrapper.py`), which patches a env instance so its
+`RailEnvStateMachineWrapper` (`rail_env_state_machine_wrapper.py`), which patches an env instance so its
 `step()` also runs the state machine's bookkeeping (reconstructing `StateTransitionSignals` from the
-`AgentTransitionData` `collect()`/`distribute()` already produced) before observations are built. An
-obs_builder/predictor that reads `agent.state` for correctness (not just `get_info_dict()`'s informational
-fields) needs the env wrapped; one that doesn't can skip the wrapper entirely.
+`AgentTransitionData` `collect()`/`distribute()` already produced) before observations are built. Nothing in
+production code needs this wrapper any more: `EnvAgent.derived_state(elapsed_steps=None, in_malfunction=None)`
+(`agent_utils.py`) reconstructs the equivalent `TrainState` purely from `current_entry_point`/
+`target_entry_point`/`malfunction_handler.in_malfunction`/`speed_counter.speed`/`earliest_departure` - no
+wrapping required - and is what `get_info_dict()`'s `state`/`action_required` fields,
+`RecordStepsEffectsGenerator`, and every built-in obs builder/predictor use. `derived_state()`'s own docstring
+spells out the one timing subtlety this has: it's only safe to call from a point in `step()` *after* the
+distribute loop has committed this step's position/speed (e.g. `on_episode_step_end`, `get_info_dict()`, any
+read between `step()` calls) - not from `on_episode_step_start`, where `malfunction_handler.in_malfunction`
+has already advanced for the current step while `current_entry_point`/`speed_counter.speed` still reflect the
+previous one; a caller needing to read state from that unsafe point (e.g.
+`ConditionalMalfunctionEffectsGenerator`'s STOPPED-gated conditions) must track its own
+"as of the end of the previous step" snapshot instead, and pass it via `derived_state()`'s `in_malfunction`
+override. `RailEnvStateMachineWrapper` itself is now reserved for code that genuinely needs
+`agent.state`/`agent.state_machine` themselves (real `TrainStateMachine` transition/signal internals) - the
+dedicated wrapper unit test and the `Replay`/`run_replay_config` test framework (`tests/test_utils.py`) and
+tests built on it, plus `tests/test_known_flatland_bugs.py`'s direct state-machine regression tests.
 
 `handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_entry_point`
 and, if `remove_agents_at_target` (the default), clears `agent.current_entry_point` to `None` — so on the
