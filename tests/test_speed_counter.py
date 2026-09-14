@@ -43,7 +43,7 @@ def test_step_counter_speed025():
     assert np.isclose(float(sc.speed), 0.25)
 
     sc.set(sc.speed, Fraction(0))
-    assert sc.is_cell_entry == True  # wraps into the next cell (0.75 -> 0): genuine crossing
+    assert sc.is_cell_entry == True  # wraps into the next cell (0.75 -> 0):  crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
@@ -71,7 +71,7 @@ def test_step_counter_speed05():
     assert np.isclose(float(sc.speed), 0.5)
 
     sc.set(sc.speed, Fraction(0))
-    assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0): genuine crossing
+    assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0):  crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.0
     assert np.isclose(float(sc.speed), 0.5)
@@ -105,7 +105,7 @@ def test_step_counter_speed025_05():
     assert np.isclose(float(sc.speed), 0.5)
 
     sc.set(sc.speed, Fraction(0))
-    assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0): genuine crossing
+    assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0):  crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
@@ -151,7 +151,7 @@ def test_step_counter_speed025_03():
     assert np.isclose(float(sc.speed), 0.3)
 
     sc.set(sc.speed, Fraction(1, 10))
-    assert sc.is_cell_entry == True  # wraps into the next cell (0.8 -> 0.1): genuine crossing
+    assert sc.is_cell_entry == True  # wraps into the next cell (0.8 -> 0.1):  crossing
     assert sc.is_cell_exit() == False
     assert np.isclose(float(sc.distance), 0.1)
     assert np.isclose(float(sc.speed), 0.3)
@@ -321,12 +321,12 @@ def test_stop_freezes_speed_without_touching_distance():
     assert not sc.is_cell_entry  # force-stopped mid-cell, position frozen in place: still the same cell
 
 
-def test_set_is_cell_entry_true_for_genuine_crossing_from_banked_boundary():
+def test_set_is_cell_entry_true_for_crossing_from_banked_boundary():
     """A MOVING agent bootstraps at speed=1 onto the map, is denied/braked to a stop exactly at the next
     cell boundary (banking distance == SEGMENT_LENGTH), is later promoted back to MOVING while still
     banked (distance unchanged), then completes its crossing into the next cell. is_cell_entry
     correctly reports True for that last step: set() derives it from old vs. new distance crossing the
-    segment boundary, which correctly distinguishes a genuine crossing from an agent parked exactly at
+    segment boundary, which correctly distinguishes a  crossing from an agent parked exactly at
     the boundary."""
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
     sc.set(sc.speed, Fraction(0))  # bootstrap onto the map: distance -> 0, speed -> 1
@@ -334,7 +334,7 @@ def test_set_is_cell_entry_true_for_genuine_crossing_from_banked_boundary():
     assert sc.distance == Fraction(1)
     sc.set(speed=0.5, distance=Fraction(1))  # promoted back to MOVING while still banked: distance stays 1, speed -> 1/2
     assert sc.distance == Fraction(1)
-    sc.set(speed=0.5, distance=Fraction(1, 2))  # genuine crossing completes from the banked boundary
+    sc.set(speed=0.5, distance=Fraction(1, 2))  # crossing completes from the banked boundary
     assert sc.distance == Fraction(1, 2)
     assert sc.is_cell_entry  # the train's cell really did just change
 

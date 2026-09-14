@@ -172,7 +172,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
     # old pickle in line here rather than let a stale value violate _check_speed_distance_speedup_postconditions
     # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
-    # genuine mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
+    #  mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
     # entirely.
     if current_entry_point is None:
         agent_tuple.speed_counter.reset()
@@ -529,7 +529,7 @@ class EnvAgent(Generic[EntryPointT]):
           down-counter, while `current_entry_point`/`speed_counter.speed` still hold the *previous* step's
           committed values (this step's collect/distribute loops haven't run yet). A malfunction ending
           exactly this step is therefore visible a full step early - combined with a STOPPED-at-a-waypoint
-          condition, this retriggered a new malfunction immediately instead of waiting for a genuine fresh
+          condition, this retriggered a new malfunction immediately instead of waiting for a  fresh
           stop, inflating `test_intermediate_stop_malfunction_effects_generator` from 3 malfunctions to 545
           the one time this was tried naively. The `in_malfunction` parameter below exists for exactly this
           window: a caller with its own record of "in_malfunction as of the end of the previous step" (see

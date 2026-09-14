@@ -164,7 +164,7 @@ class SpeedCounter:
 
         Physical motivation: a real train's engine has a limited power/torque budget, so it cannot jump
         straight to its running speed - it accelerates gradually, gaining at most acceleration_delta of
-        speed per step, whether it is starting from a genuine standstill (STOPPED/READY_TO_DEPART -
+        speed per step, whether it is starting from a standstill (STOPPED/READY_TO_DEPART -
         MOVING, or a just-recovered MALFUNCTION) or already rolling and simply told to keep going faster
         (MOVE_FORWARD while MOVING). max_speed models the train's own top speed (or a speed restriction
         on this track section) that acceleration can never exceed.

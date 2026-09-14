@@ -173,7 +173,7 @@ class RailEnvPersister(object):
         Load environment with distance map from a file into new env.
 
         `obs_builder`, `rewards` and `effects_generator` are never part of the persisted state as such (only
-        `effects_generator` has a genuine persisted counterpart, restored from `env_dict`); if given, each of
+        `effects_generator` has a persisted counterpart, restored from `env_dict`); if given, each of
         the three always takes effect for the restored env, replacing rather than merging with any restored
         or default counterpart.
 

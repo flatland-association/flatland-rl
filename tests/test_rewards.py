@@ -962,7 +962,7 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
 
 
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    """`state` is STOPPED (a genuine halt at `waypoint`) or MOVING (rolling through it without stopping) -
+    """`state` is STOPPED (a  halt at `waypoint`) or MOVING (rolling through it without stopping) -
     is_stopped_now is derived purely from this step's signals (see BaseDefaultRewards.step_reward), so the
     two need distinct signal combinations rather than sharing one hardcoded set."""
     agent.old_entry_point = (old.position, old.direction)
@@ -1319,7 +1319,7 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
     assert rewards[1][DefaultPenalties.INVALID_ACTION.value] == 0
 
-    # 6th step: agent 0 now has genuine pre-step speed and makes its own real attempt into (3,4),
+    # 6th step: agent 0 now has non-zero pre-step speed and makes its own real attempt into (3,4),
     # denied for real (agent 1 is now mid-settling, holding (3,4) via self-loop) -> a fresh penalty
     # for agent 0 instead - and so on, alternating forever for as long as the deadlock persists.
     _, rewards, _, _ = env.step(forward)
