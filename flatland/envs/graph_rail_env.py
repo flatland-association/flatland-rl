@@ -112,6 +112,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         timetable_generator: Optional[TimetableGenerator] = None,
         seed: Optional[int] = None,
         rewards: Rewards = None,
+        skip_state_machine_update: bool = True,
     ) -> "GraphRailEnv":
         """
         Factory method to create a `GraphRailEnv` directly from a string-node graph and string-based
@@ -138,6 +139,12 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `ttg.ttgen_flatland2` (`earliest_departure=0`/`latest_arrival=1000` for every agent). Pass
             e.g. `lambda *a, **k: TimetableUtils.from_agents(source_agents, max_episode_steps)` to
             reuse an existing timetable instead (mirrors how `from_rail_env` reuses its source env's).
+        skip_state_machine_update : bool
+            Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+            `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+            flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+            derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+            `agent.state_machine` themselves (real state-machine semantics).
         """
         timetable_generator, agent_speeds = GraphRailEnv._resolve_from_graph_defaults(
             timetable_generator, agent_speeds, agent_waypoints)
@@ -153,7 +160,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             malfunction_generator=malfunction_generator,
             rewards=rewards,
         )
-        graph_env = RailEnvStateMachineWrapper(graph_env)
+        if not skip_state_machine_update:
+            graph_env = RailEnvStateMachineWrapper(graph_env)
         graph_env.reset(random_seed=seed)
         return graph_env
 

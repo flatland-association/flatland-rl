@@ -11,6 +11,7 @@ def load_flatland_environment_from_file(file_name: str,
                                         load_from_package: str = None,
                                         obs_builder_object: ObservationBuilder = None,
                                         record_steps=False,
+                                        skip_state_machine_update: bool = True,
                                         ) -> RailEnv:
     """
     Parameters
@@ -22,7 +23,12 @@ def load_flatland_environment_from_file(file_name: str,
         This requires that there are `__init__.py` files in the folder structure we load the file from.
     obs_builder_object: ObservationBuilder
         The obs builder for the `RailEnv` that is created.
-
+    skip_state_machine_update : bool
+        Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+        `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+        flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+        derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+        `agent.state_machine` themselves (real state-machine semantics).
 
     Returns
     -------
@@ -39,5 +45,6 @@ def load_flatland_environment_from_file(file_name: str,
                           obs_builder_object=obs_builder_object,
                           record_steps=record_steps,
                           )
-    environment = RailEnvStateMachineWrapper(environment)
+    if not skip_state_machine_update:
+        environment = RailEnvStateMachineWrapper(environment)
     return environment

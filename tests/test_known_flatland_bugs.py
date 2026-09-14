@@ -353,8 +353,12 @@ def test_two_trains_on_same_cell_bug_FIXED():
     pre-final-action situation - captured once via `RailEnvPersister.save()` after running the original
     30-step buildup - and applies only that final action.
     """
+    # skip_state_machine_update=False: this test asserts on agent.state after the final step() below, not
+    # just on the loaded snapshot's state (which is correct either way, since it's restored verbatim from
+    # the pickle - see agent_utils.py's load_env_agent()) - so agent.state must stay live across that step().
     rail_env, _ = RailEnvPersister.load_new(
-        str(Path(__file__).parent / "test_two_trains_on_same_cell_bug_FIXED_snapshot.pkl"))
+        str(Path(__file__).parent / "test_two_trains_on_same_cell_bug_FIXED_snapshot.pkl"),
+        skip_state_machine_update=False)
 
     agent_0 = rail_env.agents[0]
     agent_4 = rail_env.agents[4]

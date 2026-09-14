@@ -167,6 +167,7 @@ class RailEnvPersister(object):
                  obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator["RailEnv"]] = None,
+                 skip_state_machine_update: bool = True,
                  ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.
@@ -187,6 +188,12 @@ class RailEnvPersister(object):
             rewards for the restored env. Defaults to the env's own default rewards if not given.
         effects_generator : EffectsGenerator
             if given, replaces the effects generator restored from `env_dict` instead of being discarded.
+        skip_state_machine_update : bool
+            Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+            `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+            flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+            derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+            `agent.state_machine` themselves (real state-machine semantics).
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
@@ -212,7 +219,8 @@ class RailEnvPersister(object):
             record_steps=True,
             rewards=rewards,
         )
-        env = RailEnvStateMachineWrapper(env)
+        if not skip_state_machine_update:
+            env = RailEnvStateMachineWrapper(env)
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
 
         env.obs_builder.reset(env)
