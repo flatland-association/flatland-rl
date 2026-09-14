@@ -1987,10 +1987,11 @@ COLLISION_FACTOR = 250.0
 def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor():
     """
     Agent A on L=(3,8), agent B on R=(3,7) - adjacent cells of make_simple_rail's row-3 corridor, both
-    heading west, max speed 1.
+    heading west. A's max speed is 1; B's is overridden to 1/2, so it accelerates to only half A's speed.
 
-    - Setup: A departs onto L, B departs onto R, both at distance 0, speed 1. B is then braked to a
-      stop before it can leave R, parking it there at distance 1/2, speed 0.
+    - Setup: A departs onto L at distance 0, speed 1; B departs onto R at distance 0, speed 1/2 (its
+      own lower max speed). B is then braked to a stop before it can leave R, parking it there at
+      distance 1/2, speed 0.
     - A reaches the L->R boundary and tries to cross into R: denied, since B still occupies it. A's
       position stays on L, its distance pins at the boundary (1.0), its speed is forced back to 0, and
       the attempt is charged the full collision penalty (pre-attempt speed 1 times the collision
@@ -2027,14 +2028,20 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     # complete first.
     agent_b.speed_counter._max_speed = Fraction(1, 2)
 
+    # both agents off map before the first step - no speed/distance yet.
+    assert agent_a.current_entry_point is None
+    assert agent_a.speed_counter.speed is None
+    assert agent_b.current_entry_point is None
+    assert agent_b.speed_counter.speed is None
+
     # WAITING -> READY_TO_DEPART -> MOVING: two steps of MOVE_FORWARD to get both agents onto the map.
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     assert agent_a.current_entry_point == L
-    assert agent_a.speed_counter.speed == Fraction(1)
+    assert agent_a.speed_counter.speed == Fraction(1)  # A's max speed
     assert agent_a.speed_counter.distance == Fraction(0)
     assert agent_b.current_entry_point == R
-    assert agent_b.speed_counter.speed == Fraction(1, 2)
+    assert agent_b.speed_counter.speed == Fraction(1, 2)  # B's own (lower) max speed, not A's
     assert agent_b.speed_counter.distance == Fraction(0)
 
     # B brakes to a stop on R (still mid-cell, so it doesn't cross first); A, at speed 1, reaches the
