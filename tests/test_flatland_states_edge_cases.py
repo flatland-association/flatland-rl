@@ -327,7 +327,7 @@ def test_same_cell_same_earliest_departure_dispatch_conflict(malfunctioning):
     Parametrized over which agent(s) malfunction right at the departure step: a malfunctioning agent is
     excluded from the motion check entirely (see rail_env.py's (3b.2), which takes priority over (3b.3)'s
     map-entry branch), so it can never block the other agent - whichever agent does NOT malfunction
-    dispatches into (6, 6) unblocked, exactly as agent 0 would in the unparametrized "none" case.
+    enters into (6, 6) unblocked, exactly as agent 0 would in the unparametrized "none" case.
 
     - Setup: malfunction_down_counter=2 injected (for the malfunctioning agent(s)) right before the
       departure step - observed in_malfunction=True for that one step.
