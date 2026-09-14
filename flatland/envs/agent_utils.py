@@ -106,21 +106,23 @@ def virtual_entry_point(agent: "EnvAgent") -> Optional[Tuple[Tuple[int, int], in
     Returns the effective grid `(position, direction)` for `agent`, regardless of whether it is
     currently on the map - used by observations/predictions that need an entry point to compute
     against even for off-map or arrived agents:
-    - off map: `initial_entry_point`.
-    - on map: `current_entry_point`.
     - done (arrived, possibly already removed from the map): `agent.target_entry_point` - the
       specific entry point actually reached, so a real, rail-valid direction is returned instead of
       the `None` `direction` that `current_entry_point` would give once the agent is removed from
       the map.
-    - any other state (e.g. malfunctioning while still off map): `None`.
+    - on map (and not done): `current_entry_point`.
+    - off map (and not done): `initial_entry_point`.
+
+    Branches on `target_entry_point`/`current_entry_point` directly, not `agent.state` - unlike
+    `agent.state`, both are always live regardless of whether the env is wrapped via
+    `RailEnvStateMachineWrapper` (see `EnvAgent.derived_state()`'s own docstring for why `agent.state`
+    itself can't be relied on here).
     """
-    if agent.state.is_off_map_state():
-        return agent.initial_entry_point
-    elif agent.state.is_on_map_state():
-        return agent.current_entry_point
-    elif agent.state == TrainState.DONE:
+    if agent.target_entry_point is not None:
         return agent.target_entry_point
-    return None
+    if agent.current_entry_point is not None:
+        return agent.current_entry_point
+    return agent.initial_entry_point
 
 
 def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
@@ -160,10 +162,9 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
     # genuine mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
     # entirely.
-    state = agent_tuple.state_machine.state
-    if state.is_off_map_state():
+    if current_entry_point is None:
         agent_tuple.speed_counter.reset()
-    elif state == TrainState.MALFUNCTION:
+    elif agent_tuple.malfunction_handler.in_malfunction:
         agent_tuple.speed_counter.stop()
 
     return EnvAgent(
@@ -463,7 +464,7 @@ class EnvAgent(Generic[EntryPointT]):
         warnings.warn("Not recommended to set the state with this function unless completely required")
         self.state_machine.set_state(state)
 
-    def derived_state(self, elapsed_steps: Optional[int] = None) -> TrainState:
+    def derived_state(self, elapsed_steps: Optional[int] = None, in_malfunction: Optional[bool] = None) -> TrainState:
         """
         A `TrainState`-shaped view derived purely from this agent's own attributes (`current_entry_point`/
         `target_entry_point`/`malfunction_handler`/`speed_counter`/`earliest_departure`) - never from
@@ -473,6 +474,35 @@ class EnvAgent(Generic[EntryPointT]):
         for correctness works on an unwrapped env too - see `tests/test_flatland_envs_agent_utils.py`'s
         `test_derived_state_matches_state_on_wrapped_env` for a step-by-step equivalence check against the
         real (wrapped) `state`.
+
+        Every attribute this method reads is always internally
+        self-consistent (there's no torn read), but *which* step's outcome that combination of attributes
+        actually represents depends on *when*, relative to `AbstractRailEnv.step()`'s own internal phases,
+        this method is called - something no purely attribute-based method can know on its own:
+
+        - Safe (matches the real, settled state exactly, wrapped or not): any call site *after* `step()`'s
+          own position/speed commit - i.e. after its distribute loop ((10a)/(10b) in `rail_env.py`) has run
+          for this step. This covers observations/predictors/distance-map queries (built at the very end of
+          `step()`, after `RailEnvStateMachineWrapper`'s one-shot `_get_observations` swap has already run
+          the real transition when wrapped), `get_info_dict()` (same reasoning - `step()`'s own `return`
+          evaluates `self._get_observations()`, which triggers that swap, before `self.get_info_dict()`, in
+          the same tuple expression), an `EffectsGenerator.on_episode_step_end` hook (runs after distribute,
+          before that swap - `malfunction_handler.in_malfunction` hasn't changed since collect, so it's
+          consistent with the now-committed position/speed), and any read between calls to `step()`
+          (including right after `reset()`, where every attribute is simply at its fresh/initial value).
+        - Unsafe: an `EffectsGenerator.on_episode_step_start` hook. `rail_env.py`'s `step()` runs (0a)
+          `agent.malfunction_handler.update_counter()` for every agent *before* (0b)
+          `effects_generator.on_episode_step_start(self)` - so by the time a condition function reads
+          `malfunction_handler.in_malfunction` here, it already reflects *this* step's decremented
+          down-counter, while `current_entry_point`/`speed_counter.speed` still hold the *previous* step's
+          committed values (this step's collect/distribute loops haven't run yet). A malfunction ending
+          exactly this step is therefore visible a full step early - combined with a STOPPED-at-a-waypoint
+          condition, this retriggered a new malfunction immediately instead of waiting for a genuine fresh
+          stop, inflating `test_intermediate_stop_malfunction_effects_generator` from 3 malfunctions to 545
+          the one time this was tried naively. The `in_malfunction` parameter below exists for exactly this
+          window: a caller with its own record of "in_malfunction as of the end of the previous step" (see
+          `ConditionalMalfunctionEffectsGenerator._previous_in_malfunction`) can pass it in to get the
+          correct classification despite calling from an otherwise-unsafe point in the step.
 
         Covers all 7 `TrainState` values, mirroring `TrainStateMachine`'s own transition conditions
         (`flatland/envs/step_utils/state_machine.py`) exactly:
@@ -505,16 +535,22 @@ class EnvAgent(Generic[EntryPointT]):
         elapsed_steps : int, optional
             The env's current `_elapsed_steps`, needed only to distinguish `WAITING` from
             `READY_TO_DEPART`. Irrelevant to every other returned state.
+        in_malfunction : bool, optional
+            Override for `malfunction_handler.in_malfunction`, for a caller reading from an unsafe point in
+            `step()` (see above) that maintains its own "as of the end of the previous step" record instead
+            of relying on the live (already-advanced) attribute. Defaults to the live attribute.
         """
         if self.target_entry_point is not None:
             return TrainState.DONE
+        if in_malfunction is None:
+            in_malfunction = self.malfunction_handler.in_malfunction
         if self.current_entry_point is None:
-            if self.malfunction_handler.in_malfunction:
+            if in_malfunction:
                 return TrainState.MALFUNCTION_OFF_MAP
             if elapsed_steps is not None and elapsed_steps >= 1 and self.earliest_departure <= elapsed_steps + 1:
                 return TrainState.READY_TO_DEPART
             return TrainState.WAITING
-        if self.malfunction_handler.in_malfunction:
+        if in_malfunction:
             return TrainState.MALFUNCTION
         if self.speed_counter.speed is not None and self.speed_counter.speed > 0:
             return TrainState.MOVING
