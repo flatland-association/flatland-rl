@@ -7,7 +7,6 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.envs.line_generators import BaseLineGen
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line
 from flatland.utils import editor
@@ -48,7 +47,6 @@ def makeEnv(nAg=2, width=20, height=10, oSG=None):
                   number_of_agents=nAg,
                   line_generator=oSG,
                   obs_builder_object=obs.TreeObsForRailEnv(max_depth=1))
-    env = RailEnvStateMachineWrapper(env)
 
     envModel = editor.EditorModel(env)
     env.reset()
@@ -66,7 +64,6 @@ def makeEnv2(nAg=0, shape=(20, 10), llrcPaths=[], lrcStarts=[], lrcTargs=[], liD
                   remove_agents_at_target=remove_agents_at_target,
                   record_steps=True,
                   timetable_generator=ttg.ttgen_flatland2)
-    env = RailEnvStateMachineWrapper(env)
 
     envModel = editor.EditorModel(env)
     env.reset()
