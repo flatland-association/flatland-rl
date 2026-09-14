@@ -460,6 +460,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
   makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
   unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".
+- Never rewrite or override wording the user has personally edited in a file without asking first - not even
+  to fix a real inaccuracy spotted in it. Flag the concern and ask; do not silently correct it inline (and
+  never fold such a correction into the same commit as an unrelated requested change, as if it were
+  uncontroversial). The user's own edits to their own file take precedence over an unrequested improvement.
 - Avoid ornate intensifier words in docstrings, comments, and markdown docs - `genuinely`, `genuine`, `truly`,
   `actually`, `really`, `completely`/`completely free`, and similar filler that doesn't add information over the
   plain statement. Say what happens directly ("reaches speed 1", "B is free", "the crossing completed"), not
