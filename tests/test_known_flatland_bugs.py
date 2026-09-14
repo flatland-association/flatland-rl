@@ -7,6 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 import flatland
 from flatland.core.env_observation_builder import DummyObservationBuilder
@@ -19,9 +20,10 @@ from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrap
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.step_utils.states import TrainState
+from tests.conftest import derived_state, assert_state
 
 
-def init_test_rail_env(speed: float) -> RailEnv:
+def init_test_rail_env(speed: float, wrapped: bool = True) -> RailEnv:
     """Initialize a small environment for testing."""
     if speed == 1:
         args = {}
@@ -36,12 +38,14 @@ def init_test_rail_env(speed: float) -> RailEnv:
         random_seed=1234,
         **args,
     )
-    rail_env = RailEnvStateMachineWrapper(rail_env)
+    if wrapped:
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
     return rail_env
 
 
-def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN(wrapped) -> None:
     """
     TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: we could add +1 to "geometric" distance for off map states.
 
@@ -52,11 +56,11 @@ def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
     Although not strictly a bug, but something to be still aware of.
     """
 
-    env = init_test_rail_env(1)
+    env = init_test_rail_env(1, wrapped)
     env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
 
     agent = env.agents[0]
-    assert agent.state == TrainState.READY_TO_DEPART
+    assert_state(env, agent, wrapped, TrainState.READY_TO_DEPART)
     min_distance_off_map = env.distance_map.get()[
         agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
         agent.initial_entry_point[1]
@@ -64,7 +68,7 @@ def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
     off_map_position = agent.initial_entry_point[0]
 
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
+    assert_state(env, agent, wrapped, TrainState.MOVING)
     min_distance_on_map = env.distance_map.get()[
         agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
         agent.initial_entry_point[1]
@@ -74,7 +78,8 @@ def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN() -> None:
     assert min_distance_off_map == min_distance_on_map
 
 
-def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN(wrapped) -> None:
     """
     TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: we could add +1 to "geometric" distance for off map states.
 
@@ -84,13 +89,13 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
     needed to reach the target and especially when reasoning on whether the train can reach its target in time.
     Although not strictly a bug, but something to be still aware of.
     """
-    rail_env = init_test_rail_env(0.5)
+    rail_env = init_test_rail_env(0.5, wrapped)
 
     rail_env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
     rail_env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
 
     agent = rail_env.agents[0]
-    assert agent.state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, agent, wrapped, TrainState.READY_TO_DEPART)
     min_distance_off_map = rail_env.distance_map.get()[
         agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
         agent.initial_entry_point[1]
@@ -98,7 +103,7 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
     off_map_position = agent.initial_entry_point[0]
 
     rail_env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
+    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
     min_distance_on_map = rail_env.distance_map.get()[
         agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
         agent.initial_entry_point[1]
@@ -109,7 +114,8 @@ def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN() -> None:
 
 
 # pylint: disable=protected-access
-def test_earliest_departure_zero_bug_FIXED() -> None:
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_earliest_departure_zero_bug_FIXED(wrapped) -> None:
     """
     Trains that have earliest_departure=0 are dispatched directly into MOVING on the very first step() call
     given a movement action - they never observably visit READY_TO_DEPART first. Design (issue #280):
@@ -124,37 +130,38 @@ def test_earliest_departure_zero_bug_FIXED() -> None:
       matching the one-step gap between their earliest_departure values.
     """
 
-    env = init_test_rail_env(1)
+    env = init_test_rail_env(1, wrapped)
     assert env._elapsed_steps == 0
 
     agent_0, agent_1 = env.agents[0], env.agents[1]
 
     assert agent_1.earliest_departure == 0
-    assert agent_1.state == TrainState.WAITING
+    assert_state(env, agent_1, wrapped, TrainState.WAITING)
 
     assert agent_0.earliest_departure == 1
-    assert agent_0.state == TrainState.WAITING
+    assert_state(env, agent_0, wrapped, TrainState.WAITING)
 
     # Dispatch train 1 (earliest_departure=0) but not train 0 (earliest_departure=1).
     env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.MOVE_FORWARD})
     agent_0, agent_1 = env.agents[0], env.agents[1]
-    assert agent_0.state == TrainState.READY_TO_DEPART
+    assert_state(env, agent_0, wrapped, TrainState.READY_TO_DEPART)
     assert agent_0.current_entry_point is None
-    assert agent_1.state == TrainState.MOVING
+    assert_state(env, agent_1, wrapped, TrainState.MOVING)
     assert np.all(agent_1.current_entry_point[0] == agent_1.initial_entry_point[0])
 
     # Now dispatch train 0 too.
     env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
     agent_0, agent_1 = env.agents[0], env.agents[1]
-    assert agent_0.state == TrainState.MOVING
-    assert agent_1.state == TrainState.MOVING
+    assert_state(env, agent_0, wrapped, TrainState.MOVING)
+    assert_state(env, agent_1, wrapped, TrainState.MOVING)
 
     assert np.all(agent_0.current_entry_point[0] == agent_0.initial_entry_point[0])
 
     # Thus train 1 (earliest_departure=0) was dispatched one step earlier than train 0 (earliest_departure=1).
 
 
-def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED(wrapped):
     """
     When a train goes into a malfunction off-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
@@ -169,18 +176,19 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
-    rail_env = RailEnvStateMachineWrapper(rail_env)
+    if wrapped:
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
 
     for ii in range(7):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
 
     agent = rail_env.agents[0]
-    assert agent.state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, agent, wrapped, TrainState.READY_TO_DEPART)
 
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.DO_NOTHING})
-    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
 
@@ -188,7 +196,7 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
         rail_env.step({0: RailEnvActions.MOVE_FORWARD})
 
     # Here we can see the bug is fixed
-    assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
     assert agent.malfunction_handler.in_malfunction
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
@@ -196,13 +204,14 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED():
     assert agent.current_entry_point is None
 
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
+    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
     assert not agent.malfunction_handler.in_malfunction
     # Train is dispatched in the step the malfunction terminates
     assert agent.current_entry_point is not None
 
 
-def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED(wrapped):
     """
     When a train goes into a malfunction on-map then in the last ts of the malfunction the agent can actually
     take an action and move (in the next ts). The malfunction counter is decremented at the start of step(),
@@ -217,18 +226,19 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=1234,
     )
-    rail_env = RailEnvStateMachineWrapper(rail_env)
+    if wrapped:
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
 
     for ii in range(7):
         rail_env.step({0: RailEnvActions.MOVE_FORWARD})
 
     agent = rail_env.agents[0]
-    assert agent.state == TrainState.MOVING
+    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
 
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MALFUNCTION
+    assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION)
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
     old_pos = agent.current_entry_point[0]
@@ -238,7 +248,7 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
         rail_env.step({0: RailEnvActions.DO_NOTHING})
 
     # Here we can see the bug is fixed
-    assert agent.state == TrainState.MALFUNCTION
+    assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION)
     assert agent.malfunction_handler.in_malfunction
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
@@ -247,14 +257,14 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
 
     assert agent.speed_counter.speed == 0
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
+    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
     assert agent.current_entry_point[0] == (old_pos[0], old_pos[1])
     assert agent.speed_counter.speed == 1
     # design: distance update with pre-step speed.
     assert agent.speed_counter.distance == 0
 
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
-    assert agent.state == TrainState.MOVING
+    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
     # Train is moved in the step after the step where the malfunction terminates
     assert agent.current_entry_point != old_entry_point
     assert agent.current_entry_point[0] == (old_pos[0] + 1, old_pos[1])
@@ -262,7 +272,8 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED():
     assert agent.speed_counter.distance == 0
 
 
-def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK(wrapped):
     """Show that if two trains have the same spawning cell and the one with the higher ID goes into maintenance on the
     dispatch action. The spawning cell is NOT reserved, such that the train with the lower ID can dispatch."""
     rail_env = RailEnv(
@@ -274,7 +285,8 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=321,
     )
-    rail_env = RailEnvStateMachineWrapper(rail_env)
+    if wrapped:
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=321)
 
     for agent in rail_env.agents:
@@ -283,19 +295,19 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK():
     for ii in range(20):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
 
-    assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
-    assert rail_env.agents[3].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.MALFUNCTION_OFF_MAP)
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5 + 1
 
-    assert rail_env.agents[0].state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, rail_env.agents[0], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
-    assert rail_env.agents[0].state == TrainState.MOVING
-    assert rail_env.agents[0].state.is_on_map_state()
+    assert_state(rail_env, rail_env.agents[0], wrapped, TrainState.MOVING)
 
 
-def test_spawning_cell_reserved_if_id_is_higher_FIXED():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_spawning_cell_reserved_if_id_is_higher_FIXED(wrapped):
     """Show that if two trains have the same spawning cell and the one with the lower ID goes into maintenance on the
     dispatch action. The spawning cell IS reserved, such that the train with the higher ID cannot dispatch until the
     lower one dispatches!"""
@@ -308,27 +320,28 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED():
         rail_generator=sparse_rail_generator(backwards_compatibility_mode=True),
         random_seed=2334,
     )
-    rail_env = RailEnvStateMachineWrapper(rail_env)
+    if wrapped:
+        rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=2334)
 
     for ii in range(18):
         rail_env.step({})
 
-    assert rail_env.agents[1].state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, rail_env.agents[1], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({1: RailEnvActions.MOVE_FORWARD})
-    assert rail_env.agents[1].state == TrainState.MALFUNCTION_OFF_MAP
+    assert_state(rail_env, rail_env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated
     assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5 + 1
 
-    assert rail_env.agents[3].state == TrainState.READY_TO_DEPART
+    assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
 
     # FIXED: the train with higher ID can move:
-    assert rail_env.agents[3].state == TrainState.MOVING
-    assert rail_env.agents[3].state.is_on_map_state()
+    assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.MOVING)
 
 
-def test_two_trains_on_same_cell_bug_FIXED():
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_two_trains_on_same_cell_bug_FIXED(wrapped):
     """
     In case all the following are true:
     - the train is in a malfunction
@@ -353,20 +366,27 @@ def test_two_trains_on_same_cell_bug_FIXED():
     pre-final-action situation - captured once via `RailEnvPersister.save()` after running the original
     30-step buildup - and applies only that final action.
     """
-    # skip_state_machine_update=False: this test asserts on agent.state after the final step() below, not
-    # just on the loaded snapshot's state (which is correct either way, since it's restored verbatim from
-    # the pickle - see agent_utils.py's load_env_agent()) - so agent.state must stay live across that step().
+    # wrapped=skip_state_machine_update=False: this test asserts on derived_state() after the final step()
+    # below, not just on the loaded snapshot's state (which is correct either way, since it's restored
+    # verbatim from the pickle - see agent_utils.py's load_env_agent()) - so agent.state must stay live
+    # across that step() when wrapped, and derived_state() is used directly when not.
     rail_env, _ = RailEnvPersister.load_new(
         str(Path(__file__).parent / "test_two_trains_on_same_cell_bug_FIXED_snapshot.pkl"),
-        skip_state_machine_update=False)
+        skip_state_machine_update=not wrapped)
 
     agent_0 = rail_env.agents[0]
     agent_4 = rail_env.agents[4]
     agent_13 = rail_env.agents[13]
 
-    # Diagnostic: pin down the loaded snapshot's pre-final-action situation - the train with the
-    # lowest ID (agent 0) is in MALFUNCTION and still occupies the contested spawn cell (22, 7);
-    # trains 4 and 13 (which also spawn at (22, 7)) are still off-map / queued behind it.
+    # Diagnostic: pin down the loaded snapshot's pre-final-action situation, reading the raw restored
+    # agent.state verbatim (not derived_state()) - agent_4/agent_13's malfunction_down_counter
+    # already reads 0 here (in_malfunction already False) while their restored state is still
+    # MALFUNCTION_OFF_MAP/MALFUNCTION, a one-step-stale combination this snapshot was captured mid-way
+    # through (see RailEnvPersister.save()'s own timing) and only resolved by the next real step() -
+    # derived_state() would (correctly) disagree at this exact pre-step instant, so this diagnostic block
+    # intentionally checks the frozen value both wrapped and unwrapped restore identically, not the live
+    # invariant. The train with the lowest ID (agent 0) is in MALFUNCTION and still occupies the contested
+    # spawn cell (22, 7); trains 4 and 13 (which also spawn at (22, 7)) are still off-map / queued behind it.
     assert agent_0.initial_entry_point == ((22, 7), 0)
     assert agent_0.state == TrainState.MALFUNCTION
     assert agent_0.current_entry_point == ((22, 7), 0)
@@ -385,8 +405,11 @@ def test_two_trains_on_same_cell_bug_FIXED():
                    14: 4, 15: 4, 16: 4, 17: 2, 18: 4, 19: 2})
 
     # FIXED: Check that both train 4 and 13 are not on the same cell!
-    assert agent_4.state.is_off_map_state()
-    assert agent_13.state.is_on_map_state()
+    assert derived_state(rail_env, agent_4).is_off_map_state()
+    assert derived_state(rail_env, agent_13).is_on_map_state()
+    if wrapped:
+        assert agent_4.state.is_off_map_state()
+        assert agent_13.state.is_on_map_state()
     agent_4_position = agent_4.current_entry_point[0] if agent_4.current_entry_point is not None else None
     agent_13_position = agent_13.current_entry_point[0] if agent_13.current_entry_point is not None else None
     assert agent_4_position != agent_13_position

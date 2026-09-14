@@ -862,6 +862,21 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 continue
             assert (agent.state in (TrainState.MALFUNCTION, TrainState.MALFUNCTION_OFF_MAP)) == agent.malfunction_handler.in_malfunction
 
+    def _check_derived_state_matches_state_postcondition(self):
+        """
+        Guards against agent.state (the real TrainStateMachine transition, only kept live when
+        wrapped via RailEnvStateMachineWrapper) ever disagreeing with agent.derived_state() (the
+        state-machine-independent reconstruction from current_entry_point/speed_counter/
+        malfunction_handler/earliest_departure alone - see EnvAgent.derived_state()'s own docstring).
+        Strictly subsumes _check_malfunction_state_postcondition and
+        state_position_sync_check/_fast_state_position_sync_check (both narrower - one dimension of
+        this same TrainState each) - see PR #517 review comment r3965564459, where agent.state reached
+        MOVING a step before current_entry_point actually left None.
+        """
+        for agent in self.agents:
+            derived_state = agent.derived_state(elapsed_steps=self._elapsed_steps)
+            assert derived_state == agent.state, (agent.handle, derived_state, agent.state)
+
     @lru_cache()
     def _fast_state_position_sync_check(self, state, entry_point, remove_agents_at_target):
         """ Check for whether on map and off map states are matching with position being None """

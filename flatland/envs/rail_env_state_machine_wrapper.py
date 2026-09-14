@@ -141,3 +141,4 @@ class _StateMachineUpdateMixin:
 
         if self.check_step_pre_post_conditions:
             self._check_malfunction_state_postcondition()  # only holds after env.step()!
+            self._check_derived_state_matches_state_postcondition()  # only holds after env.step()!
