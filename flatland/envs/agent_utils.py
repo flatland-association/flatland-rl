@@ -1,5 +1,6 @@
 import sys
 import warnings
+from fractions import Fraction
 from typing import Tuple, NamedTuple, List, TypeVar, Generic, Optional, Set, Union
 
 import numpy as np
@@ -75,6 +76,17 @@ def _filter_valid_target_entry_points(rail: TransitionMap, waypoint_group: List[
         position = waypoint_group[0].position
         return [Waypoint(position, d) for d in Grid4TransitionsEnum if rail.is_valid_entry_point((position, d))]
     return [wp for wp in waypoint_group if rail.is_valid_entry_point((wp.position, wp.direction))]
+
+
+def _first_successor_entry_point(rail: TransitionMap, entry_point: "EntryPointT") -> Optional["EntryPointT"]:
+    """
+    An arbitrary (but deterministic) valid successor of `entry_point` on `rail`, or `None` if it has
+    none - used to backfill `next_entry_point` for an on-map agent reconstructed without one (e.g. a
+    legacy static-agent pickle), since the current_entry_point/next_entry_point invariant requires an
+    on-map agent to have a real, rail-valid successor, not just any non-`current_entry_point` value.
+    """
+    successors = sorted(rail.get_successor_entry_points(entry_point))
+    return _sanitize_entry_point(successors[0]) if successors else None
 
 
 def _agent_tuple_targets(agent_tuple: Agent) -> Set[Tuple[Tuple[int, int], Grid4TransitionsEnum]]:
@@ -386,18 +398,35 @@ class EnvAgent(Generic[EntryPointT]):
         for i, static_agent in enumerate(static_agents_data):
             initial_entry_point = (static_agent[0], static_agent[1])
             targets = {(static_agent[2], d) for d in Grid4TransitionsEnum}
+            # Legacy static agents are always placed on the map immediately (no off-map/departure
+            # phase existed in this format) - current_entry_point is set unconditionally below, so
+            # next_entry_point/speed_counter must be on-map-consistent too (see the
+            # current_entry_point/next_entry_point invariant asserted in load_env_agent, and the
+            # speed_counter contract in "Speed/distance are Fractions, and None while off map" in
+            # CLAUDE.md), rather than left at their off-map EnvAgent defaults (None/None). Only
+            # possible when a rail is given - callers without one (deprecated msgpack loaders) leave
+            # this to a later step, same as target filtering below.
+            next_entry_point = _first_successor_entry_point(rail, initial_entry_point) if rail is not None else None
             if len(static_agent) >= 6:
                 speed = static_agent[4]['speed']
                 speed = _pseudo_fractional(speed)
 
+                # on-map (see above): speed/distance must be concrete Fractions, not SpeedCounter's
+                # own off-map default of None/None - .set() (not the constructor, which always leaves
+                # distance None) is what actually establishes that pairing. moving=False -> stopped at
+                # its initial cell entry (distance 0); moving=True -> already underway at max_speed,
+                # same cell entry (this format has no partial within-cell distance to restore).
+                speed_counter = SpeedCounter(max_speed=speed)
+                speed_counter.set(speed if static_agent[3] else Fraction(0), Fraction(0))
                 agent = EnvAgent(
                     initial_entry_point=initial_entry_point,
                     current_entry_point=initial_entry_point,
+                    next_entry_point=next_entry_point,
                     old_entry_point=None,
                     # N.B. valid targets cleaned in _agents_from_line
                     targets=targets,
                     moving=static_agent[3],
-                    speed_counter=SpeedCounter(max_speed=speed), handle=i,
+                    speed_counter=speed_counter, handle=i,
                     waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,
                     waypoints_earliest_departure=[0, None],
@@ -405,14 +434,17 @@ class EnvAgent(Generic[EntryPointT]):
                     waypoints_latest_arrival=[None, sys.maxsize],
                 )
             else:
+                speed_counter = SpeedCounter(max_speed=1.0)
+                speed_counter.set(Fraction(0), Fraction(0))
                 agent = EnvAgent(
                     initial_entry_point=initial_entry_point,
                     current_entry_point=initial_entry_point,
+                    next_entry_point=next_entry_point,
                     old_entry_point=None,
                     # N.B. valid targets cleaned in _agents_from_line
                     targets={(static_agent[2], d) for d in Grid4TransitionsEnum},
                     moving=False,
-                    speed_counter=SpeedCounter(max_speed=1.0),
+                    speed_counter=speed_counter,
                     handle=i,
                     waypoints=[[Waypoint(*initial_entry_point)], [Waypoint(*target) for target in targets]],
                     earliest_departure=0,

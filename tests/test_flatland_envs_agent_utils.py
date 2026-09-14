@@ -1,3 +1,5 @@
+from fractions import Fraction
+
 import numpy as np
 import pytest
 
@@ -307,3 +309,52 @@ def test_virtual_entry_point():
     assert entry_point is not None
     assert entry_point in agent.targets
     assert entry_point == agent.target_entry_point
+
+
+def test_load_legacy_static_agent():
+    """
+    `EnvAgent.load_legacy_static_agent` reconstructs agents from the oldest, pre-EnvAgent pickle format
+    (a plain tuple per agent: position, direction, target, moving, and - only for the newer of the two
+    legacy shapes - a dict with the agent's speed) - it places every agent on the map immediately (this
+    format has no off-map/departure phase), so current_entry_point is set unconditionally.
+
+    - When a rail is given: next_entry_point is backfilled to a real, rail-valid successor of
+      current_entry_point (not left at EnvAgent's off-map default of None) - satisfying the
+      current_entry_point/next_entry_point invariant load_env_agent enforces on every other loader.
+      speed_counter.speed/distance are concrete Fractions (0 if not moving, the agent's speed if
+      moving), not SpeedCounter's own off-map default of None/None.
+    - Without a rail (the legacy msgpack loaders that defer rail-dependent fixups to a later step, same
+      as target filtering): next_entry_point stays None, deferred rather than guessed at.
+    """
+    rail, rail_map, optionals = make_oval_rail()
+    position, direction = (1, 4), 1
+    successors = rail.get_successor_entry_points((position, direction))
+    assert len(successors) > 0
+    target = (4, 4)
+
+    for moving in (True, False):
+        # newer legacy shape: (position, direction, target, moving, {"speed": ...}, <padding to len>=6>)
+        static_agents_data = [(position, direction, target, moving, {"speed": 0.5}, None)]
+        [agent] = EnvAgent.load_legacy_static_agent(static_agents_data, rail)
+        assert agent.current_entry_point == (position, direction)
+        assert agent.next_entry_point is not None
+        assert agent.next_entry_point != agent.current_entry_point
+        assert rail.is_successor(agent.current_entry_point, agent.next_entry_point)
+        assert agent.speed_counter.speed == (Fraction(1, 2) if moving else Fraction(0))
+        assert agent.speed_counter.distance == Fraction(0)
+
+        # older legacy shape: (position, direction, target, moving) - always reconstructed as stopped
+        static_agents_data = [(position, direction, target, moving)]
+        [agent] = EnvAgent.load_legacy_static_agent(static_agents_data, rail)
+        assert agent.current_entry_point == (position, direction)
+        assert agent.next_entry_point is not None
+        assert agent.next_entry_point != agent.current_entry_point
+        assert rail.is_successor(agent.current_entry_point, agent.next_entry_point)
+        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.speed_counter.distance == Fraction(0)
+
+    # without a rail: next_entry_point deferred (left None), same as target filtering
+    static_agents_data = [(position, direction, target, True, {"speed": 0.5}, None)]
+    [agent] = EnvAgent.load_legacy_static_agent(static_agents_data)
+    assert agent.current_entry_point == (position, direction)
+    assert agent.next_entry_point is None
