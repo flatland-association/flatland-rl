@@ -83,13 +83,17 @@ class _StateMachineUpdateMixin:
         """
         for agent in self.agents:
             in_malfunction = agent.malfunction_handler.in_malfunction
-            # design (issue #280): an earliest_departure=0 agent never goes through a
+            # design (issue #280): an agent with earliest_departure <= 1 never goes through a
             # state_machine.step() call before the very first step() runs - tweak state directly
             # here so it already sees READY_TO_DEPART instead of stale WAITING (symmetric with
             # MALFUNCTION_OFF_MAP's own straight-to-MOVING shortcut in _handle_malfunction_off_map).
+            # earliest_departure <= 1, not == 0: there's no step 0 in which the normal one-step-early
+            # earliest_departure_reached signal (elapsed_steps + 1, see below) could have fired for
+            # elapsed_steps == 0 to prepare state ahead of the first real step() call - both 0 and 1
+            # would have qualified there (0 <= 0 + 1 and 1 <= 0 + 1), so both get the same bootstrap.
             # State-machine-only - map entry itself is derived from earliest_departure/elapsed_steps
             # directly in _candidate_entry_points, never from agent.state.
-            if (self._elapsed_steps == 1 and agent.earliest_departure == 0
+            if (self._elapsed_steps == 1 and agent.earliest_departure <= 1
                     and not in_malfunction and agent.state == TrainState.WAITING):
                 agent.state_machine.set_state(TrainState.READY_TO_DEPART)
 
@@ -99,11 +103,10 @@ class _StateMachineUpdateMixin:
             # +1 - "is it READY_TO_DEPART this exact step", not the deliberately-one-step-early
             # earliest_departure_reached below) - see _handle_malfunction_off_map's own use of this
             # distinction (PR #517 review comment r3965564459: earliest_departure_reached alone can be
-            # True a full step before the real candidate is actually allowed to depart).
-            if self._elapsed_steps == 1:
-                ready_to_depart = not agent_transition_data.done and agent.earliest_departure == 0
-            else:
-                ready_to_depart = not agent_transition_data.done and agent.earliest_departure <= self._elapsed_steps
+            # True a full step before the real candidate is actually allowed to depart). Uniform
+            # across elapsed_steps, including the first call - see rail_env.py's own comment on why
+            # earliest_departure 0 and 1 alias there.
+            ready_to_depart = not agent_transition_data.done and agent.earliest_departure <= self._elapsed_steps
             agent.state_machine.set_transition_signals(StateTransitionSignals(
                 in_malfunction=agent.malfunction_handler.in_malfunction,
                 # +1: earliest_departure_reached is deliberately signalled one step early (see
