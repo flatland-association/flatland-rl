@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+import math
 import os
 import tempfile
 import time
@@ -10,6 +11,7 @@ from typing import Optional, Tuple
 import numpy as np
 import pytest
 
+from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.transition_map import GridTransitionMap
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
@@ -31,6 +33,7 @@ from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
 from flatland.utils.simple_rail import make_simple_rail
+from tests.conftest import assert_state
 from tests.test_flatland_rail_agent_status import _make_straight_rail, _place_agent_on_map
 from tests.trajectories.test_policy_runner import RandomPolicy
 
@@ -1296,11 +1299,14 @@ def test_earliest_departure_state_transitions_full_acceleration():
 
 @pytest.mark.parametrize("earliest_departure", [0, 1, 2, 5])
 @pytest.mark.parametrize("with_malfunction", [False, True], ids=["no_malfunction", "malfunction_off_map"])
-def test_map_entry(with_malfunction, earliest_departure):
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_map_entry(wrapped, with_malfunction, earliest_departure):
     """
     Single agent, max speed 1, acceleration delta equal to max speed, earliest_departure parametrized
     over 0/1/2/5. Parametrized over whether a malfunction is injected right as earliest_departure is
-    reached. Design (issue #280): both WAITING and MALFUNCTION_OFF_MAP go straight to MOVING on a
+    reached, and over wrapped (RailEnvStateMachineWrapper) vs. unwrapped - assert_state() checks
+    derived_state() either way and additionally the live agent.state when wrapped. Design (issue #280):
+    both WAITING and MALFUNCTION_OFF_MAP go straight to MOVING on a
     movement action once earliest_departure is reached, never observably visiting READY_TO_DEPART
     first - see _handle_malfunction_off_map's docstring and rail_env.py's step() first-step
     earliest_departure=0 tweak. Apart from the malfunction variant's extra delay, the two variants'
@@ -1335,13 +1341,13 @@ def test_map_entry(with_malfunction, earliest_departure):
     - Final step (MOVE_FORWARD): already at max speed, so the agent crosses into the next entry
       point, distance wraps back to 0 completing the crossing, speed stays at max speed.
     """
-    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0, skip_state_machine_update=False)
+    env, _, _ = env_generator(seed=42, n_agents=1, malfunction_interval=0, skip_state_machine_update=not wrapped)
     env.acceleration_delta = Fraction(1)
     agent = env.agents[0]
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1))
     agent.earliest_departure = earliest_departure
 
-    assert agent.state == TrainState.WAITING
+    assert_state(env, agent, wrapped, TrainState.WAITING)
     assert agent.current_entry_point is None
     assert agent.speed_counter.speed is None
     assert agent.speed_counter.distance is None
@@ -1349,7 +1355,7 @@ def test_map_entry(with_malfunction, earliest_departure):
     for _ in range(earliest_departure):
         env.step({agent.handle: RailEnvActions.DO_NOTHING})
     assert env._elapsed_steps == earliest_departure  # N
-    assert agent.state == (TrainState.WAITING if earliest_departure == 0 else TrainState.READY_TO_DEPART)
+    assert_state(env, agent, wrapped, TrainState.WAITING if earliest_departure == 0 else TrainState.READY_TO_DEPART)
     assert agent.current_entry_point is None
     assert agent.speed_counter.speed is None
     assert agent.speed_counter.distance is None
@@ -1361,7 +1367,7 @@ def test_map_entry(with_malfunction, earliest_departure):
 
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert env._elapsed_steps == earliest_departure + 1
-        assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert agent.current_entry_point is None
         assert agent.speed_counter.speed is None
         assert agent.speed_counter.distance is None
@@ -1369,7 +1375,7 @@ def test_map_entry(with_malfunction, earliest_departure):
 
         env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
         assert env._elapsed_steps == earliest_departure + 2
-        assert agent.state == TrainState.MALFUNCTION_OFF_MAP
+        assert_state(env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
         assert agent.current_entry_point is None
         assert agent.speed_counter.speed is None
         assert agent.speed_counter.distance is None
@@ -1377,7 +1383,7 @@ def test_map_entry(with_malfunction, earliest_departure):
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert env._elapsed_steps == earliest_departure + 1 + MALFUNCTION_DURATION  # w/o malfunction: N+1 / w malfunction (N+1) + M
-    assert agent.state == TrainState.MOVING
+    assert_state(env, agent, wrapped, TrainState.MOVING)
     first_entry_point = agent.current_entry_point
     assert first_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1388,10 +1394,134 @@ def test_map_entry(with_malfunction, earliest_departure):
     second_entry_point = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, first_entry_point)
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
     assert env._elapsed_steps == earliest_departure + (4 if with_malfunction else 2)
-    assert agent.state == TrainState.MOVING
+    assert_state(env, agent, wrapped, TrainState.MOVING)
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
+
+
+def _make_single_track_corridor(n_cells: int):
+    """
+    A dead-end - straight* - dead-end corridor of `n_cells` cells, with a station at each end oriented
+    so a train departs facing into the corridor - the only topology where "follow the shortest path"
+    and "always call MOVE_FORWARD" coincide exactly, with no switch ever to choose a direction at.
+    """
+    transitions = RailEnvTransitions()
+    cells = transitions.transition_list
+    dead_end = cells[7]
+    straight = transitions.rotate_transition(cells[1], 90)
+    opens_east = transitions.rotate_transition(dead_end, 270)
+    opens_west = transitions.rotate_transition(dead_end, 90)
+    row = [opens_east] + [straight] * (n_cells - 2) + [opens_west]
+    rail_map = np.array([row], dtype=np.uint16)
+    rail = RailGridTransitionMap(width=n_cells, height=1, transitions=transitions)
+    rail.grid = rail_map
+    agents_hints = {
+        'city_positions': [(0, 0), (0, n_cells - 1)],
+        'train_stations': [[((0, 0), Grid4TransitionsEnum.WEST)], [((0, n_cells - 1), Grid4TransitionsEnum.EAST)]],
+        'city_orientations': [Grid4TransitionsEnum.WEST, Grid4TransitionsEnum.EAST],
+    }
+    return rail, {'agents_hints': agents_hints}
+
+
+@pytest.mark.parametrize("n_cells,max_speed", [
+    pytest.param(5, Fraction(1), id="default_speed"),
+    pytest.param(5, Fraction(1, 2), id="half_speed"),
+    pytest.param(8, Fraction(1, 3), id="third_speed-longer_corridor"),
+])
+@pytest.mark.parametrize("earliest_departure", [0, 1, 2, 3, 5])
+@pytest.mark.parametrize("wrapped", [True, False])
+def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> None:
+    """
+    Design: the distance map gives the *geometric* distance from a position to the target - a number of
+    cells to cross, not a number of steps. For an on-map position this directly gives the remaining travel
+    time in steps at max_speed (`distance / max_speed`), since an on-map agent has already settled into
+    motion. For an off-map position (the distance map's own entry for an agent's initial entry point,
+    before departure), that geometric distance alone underestimates the number of steps to reach the
+    target by exactly one: the step the agent departs (off map to its initial on-map position) settles its
+    speed from a standing start without yet advancing its distance along the path. An earliest-arrival
+    estimate computed from an off-map distance therefore needs an explicit `+ 1` that the same estimate
+    computed from an on-map position doesn't.
+
+    A single agent on a switch-free corridor, given MOVE_FORWARD every step from the start - the only
+    route to its target, so this is exactly "follow the shortest path unhindered" (no other agent, no
+    switch to choose wrong).
+
+    The agent settles into motion (departs, `current_entry_point` becomes its initial entry point) at
+    the step whose count equals `max(earliest_departure, 1)` - `earliest_departure` itself for any value
+    of 1 or more, or the first step for `earliest_departure == 0` (there is no step 0 to depart in, so
+    0 and 1 both mean "depart at the first opportunity").
+
+    `distance / max_speed` alone only gives the remaining travel time once already cruising at
+    max_speed - it assumes max_speed from the very first moving step, which only holds when
+    `acceleration_delta >= max_speed` (departing directly at max_speed, one step to reach it - the case
+    exercised here, since every parametrization below uses the env's default `acceleration_delta ==
+    Fraction(1) >= max_speed`). In general, reaching max_speed from rest takes
+    `steps_to_max_speed = ceil(max_speed / acceleration_delta)` steps, during which the agent covers
+    `distance_during_acceleration = acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2`
+    - strictly less than `steps_to_max_speed * max_speed`, since every step but the last of the ramp runs
+    below max_speed (distance advances by the *pre-step* speed each step - see `SpeedCounter.set()`).
+    The naive `distance / max_speed` estimate doesn't know about this slower ramp, so it needs an
+    `acceleration_delay = (steps_to_max_speed - 1) - distance_during_acceleration / max_speed` correction
+    added on top - the extra time the ramp-up costs beyond cruising at max_speed the whole way. This is
+    `0` exactly when `acceleration_delta >= max_speed` (`steps_to_max_speed == 1`,
+    `distance_during_acceleration == 0`), reducing to the simple case above. The target is then reached
+    at exactly `max(earliest_departure, 1) + distance / max_speed + acceleration_delay`.
+    """
+    rail, optionals = _make_single_track_corridor(n_cells)
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(speed_ratio_map={max_speed: 1.0}), number_of_agents=1,
+                  obs_builder_object=DummyObservationBuilder(), remove_agents_at_target=True)
+    if wrapped:
+        env = RailEnvStateMachineWrapper(env)
+    env.reset(random_seed=1)
+    env._max_episode_steps = 1000
+    agent = env.agents[0]
+    agent.earliest_departure = earliest_departure
+
+    def _distance(entry_point, handle) -> Fraction:
+        # distance_map.get() returns a numpy float (always a whole cell count for a reachable entry
+        # point) - cast to an exact Fraction so it composes with speed_counter.distance/max_speed
+        # (also Fractions) without silent float rounding (1/3 isn't exactly representable in float,
+        # and that error compounds across repeated arithmetic below).
+        distance = env.distance_map.get()[
+            handle, entry_point[0][0], entry_point[0][1], entry_point[1]
+        ]
+        return Fraction(int(distance))
+
+    # See the docstring above for the derivation - 0 whenever acceleration_delta >= max_speed (every
+    # parametrization here), since steps_to_max_speed == 1 and distance_during_acceleration == 0 then.
+    acceleration_delta = env.acceleration_delta
+    steps_to_max_speed = math.ceil(max_speed / acceleration_delta)
+    distance_during_acceleration = acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
+    acceleration_delay = (steps_to_max_speed - 1) - distance_during_acceleration / max_speed
+
+    departure_step = max(earliest_departure, 1)
+    eta = departure_step + _distance(agent.initial_entry_point, agent.handle) / max_speed + acceleration_delay
+
+    for _ in range(1000):
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+        if env._elapsed_steps >= earliest_departure and agent.arrival_time is None:
+            assert agent.current_entry_point is not None
+        if env._elapsed_steps == departure_step or (env._elapsed_steps == 1 and departure_step == 0):
+             assert agent.current_entry_point == agent.initial_entry_point
+        if agent.current_entry_point is not None:
+            # on map, continuously fed MOVE_FORWARD, never malfunctioning - MOVING every step from
+            # departure through (but not including) arrival, when current_entry_point goes back to
+            # None (remove_agents_at_target=True) before this branch is even reached.
+            assert_state(env, agent, wrapped, TrainState.MOVING)
+            # _distance() is the geometric distance from current_entry_point's own cell entry - it
+            # doesn't know how far into that cell the agent has already crept (speed_counter.distance,
+            # fractional whenever max_speed < 1) - subtract that already-covered fraction before
+            # converting the remainder to time.
+            remaining_distance = _distance(agent.current_entry_point, agent.handle) - agent.speed_counter.distance
+            assert env._elapsed_steps + remaining_distance / max_speed == eta
+
+        if env.dones["__all__"]:
+            break
+
+    assert agent.arrival_time is not None, "agent never reached its target"
+    assert agent.arrival_time == eta
 
 
 def test_earliest_departure_state_transitions_partial_acceleration():
@@ -2016,11 +2146,13 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     R = ((3, 7), Grid4TransitionsEnum.WEST)
     agent_a.initial_entry_point = L
     agent_b.initial_entry_point = R
-    # design (issue #280): earliest_departure=1, not 0 - an earliest_departure=0 agent now dispatches
-    # directly on the very first movement action (see rail_env.py's step()), which would make the "two
-    # steps of MOVE_FORWARD to get onto the map" below only one; =1 keeps the original timing.
-    agent_a.earliest_departure = 1
-    agent_b.earliest_departure = 1
+    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
+    # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
+    # which would make the "two steps of MOVE_FORWARD to get onto the map" below only one; =2 keeps
+    # the original timing.
+    agent_a.earliest_departure = 2
+    agent_b.earliest_departure = 2
     # B's own max speed is lower than A's (still off map, so only _max_speed needs overriding - see
     # test_blocked_agent_cannot_redirect_via_later_action for why _speed must stay None here): this
     # keeps it mid-cell (distance < 1) rather than already at the cell boundary when it is braked

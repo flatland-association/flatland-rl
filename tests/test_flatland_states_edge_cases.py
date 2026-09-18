@@ -128,10 +128,13 @@ def test_malfunction_no_phase_through(wrapped):
 
     env.agents[1].malfunction_handler._set_malfunction_down_counter(10)
 
-    # design (issue #280): both agents depart one step earlier than before (default earliest_departure=0
-    # for this seed), so agent 0 is one cell further along by the time it catches up to agent 1 - one more
-    # step is needed here to land on the same STOPPED-behind-a-malfunctioning-train outcome.
-    for _ in range(4):
+    # design (issue #280): agent 1 has earliest_departure=0 for this seed and departs on the very first
+    # step, one step earlier than before. Agent 0 has earliest_departure=1: ready_to_depart no longer
+    # special-cases the first step (0 and 1 both alias to "ready at the first opportunity" there - see
+    # rail_env.py's _candidate_entry_points), so agent 0 now also departs one step earlier than before,
+    # not two - one fewer step is needed here to land on the same STOPPED-behind-a-malfunctioning-train
+    # outcome.
+    for _ in range(3):
         env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
 
     assert_state(env, env.agents[0], wrapped, TrainState.STOPPED)
@@ -164,14 +167,16 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction(wrapp
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=1, not 0 - an earliest_departure=0 agent now dispatches
-    # directly on the very first movement action (see rail_env.py's step()), which isn't the point of
-    # this test; =1 keeps the original two-real-steps-to-depart timing this test relies on.
-    env.agents[0].earliest_departure = 1
+    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
+    # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
+    # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this
+    # test relies on.
+    env.agents[0].earliest_departure = 2
 
     env.agents[1].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[1].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    env.agents[1].earliest_departure = 1
+    env.agents[1].earliest_departure = 2
     # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
     # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
     # values shift by 1 while the malfunction is active)
@@ -606,10 +611,12 @@ def test_malfunction_to_moving_instead_of_stopped(wrapped):
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=1, not 0 - an earliest_departure=0 agent now dispatches
-    # directly on the very first movement action (see rail_env.py's step()), which isn't the point of
-    # this test; =1 keeps the original two-real-steps-to-depart timing this test relies on.
-    env.agents[0].earliest_departure = 1
+    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
+    # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
+    # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this
+    # test relies on.
+    env.agents[0].earliest_departure = 2
     # design: speed is None while off map (agent hasn't departed yet) - only _max_speed applies here,
     # departure always (re-)accelerates from 0 regardless of any pre-set speed (see design D3).
     env.agents[0].speed_counter._max_speed = Fraction(1, 5)
@@ -677,10 +684,12 @@ def test_stop_and_go(wrapped):
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=1, not 0 - an earliest_departure=0 agent now dispatches
-    # directly on the very first movement action (see rail_env.py's step()), which isn't the point of
-    # this test; =1 keeps the original two-real-steps-to-depart timing this test relies on.
-    env.agents[0].earliest_departure = 1
+    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
+    # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
+    # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this
+    # test relies on.
+    env.agents[0].earliest_departure = 2
     # design: speed is None while off map (agent hasn't departed yet) - only _max_speed applies here,
     # departure always (re-)accelerates from 0 regardless of any pre-set speed (see design D3).
     env.agents[0].speed_counter._max_speed = Fraction(1, 5)
