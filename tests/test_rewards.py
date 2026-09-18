@@ -1412,7 +1412,7 @@ def _make_platoon_env(n_agents: int, start_columns, lead_max_speed: float = 1.0)
         agent.earliest_departure = 0
         agent.latest_arrival = 50
         agent.targets = {((3, 9), d) for d in Grid4TransitionsEnum}
-        agent.speed_counter = SpeedCounter(lead_max_speed if i == 0 else 1.0)
+        agent.speed_counter = SpeedCounter(max_speed=lead_max_speed if i == 0 else 1.0)
     return env
 
 

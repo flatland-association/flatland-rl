@@ -209,7 +209,7 @@ def test_load_env_agent_fallback_waypoints():
         arrival_time=None,
         old_direction=None,
         old_position=None,
-        speed_counter=SpeedCounter(1.0),
+        speed_counter=SpeedCounter(max_speed=1.0),
         action_saver=None,
         state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
         malfunction_handler=MalfunctionHandler(),
@@ -249,7 +249,7 @@ def test_agent_tuple_targets():
         return Agent(
             initial_position=(0, 0), initial_direction=Grid4TransitionsEnum(0), direction=Grid4TransitionsEnum(0),
             targets=targets, moving=False, earliest_departure=0, latest_arrival=100, handle=0, position=None,
-            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(1.0),
+            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(max_speed=1.0),
             action_saver=None, state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
             malfunction_handler=MalfunctionHandler(),
         )
