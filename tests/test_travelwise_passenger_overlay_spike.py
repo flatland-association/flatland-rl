@@ -195,13 +195,16 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     12 (see `LEG_EARLIEST_DEPARTURE[1]`) - so no two trains ever need station B - the only cell shared
     between the two routes - at the same time.
 
-    A `TravelwiseOverlayEnv` wraps this `RailEnv` (the "underlying env") together with the
-    `ShortestPathPolicy` that drives its four legs, and layers on a fifth agent - the overlay agent, a
-    passenger rather than a train - riding `OVERLAY_STOPS[0]` (A->B->C), sharing only the corridor's
-    topology with the underlying env - never its agents, timetable or motion checks, and never a real
-    `RailEnv`/`EnvAgent` of its own. The overlay agent never moves under its own action: it either
-    waits at one of its own stops for a train heading to its next stop, or - once one shows up - rides
-    that train's position exactly, one underlying-env agent at a time, boarding and alighting
+    A `TravelwiseOverlayEnv` wraps this `RailEnv` (the "underlying env") and layers on a fifth agent -
+    the overlay agent, a passenger rather than a train - riding `OVERLAY_STOPS[0]` (A->B->C), sharing
+    only the corridor's topology with the underlying env - never its agents, timetable or motion
+    checks, and never a real `RailEnv`/`EnvAgent` of its own. `TravelwiseOverlayEnv` implements the
+    `Environment` interface as a thin pass-through to the underlying env - `step()` takes an
+    `action_dict` for the underlying env's own four legs, exactly `RailEnv.step()`'s own contract - so
+    a `ShortestPathPolicy`, driven from the outside exactly as it would drive a plain `RailEnv`, is what
+    actually picks each leg's action every step. The overlay agent never moves under its own action: it
+    either waits at one of its own stops for a train heading to its next stop, or - once one shows up -
+    rides that train's position exactly, one underlying-env agent at a time, boarding and alighting
     automatically. Its `overlay_policy` (`SetPathPolicy`, ported from flatland-baselines) is still a
     required constructor argument, but is not currently exercised - `TravelwiseOverlayEnv` ignores
     overlay agents' own actions entirely while riding mode is in place.
@@ -240,10 +243,10 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
                                                  timetable_generator=_timetable_generator,
                                                  number_of_agents=len(LEG_WAYPOINTS),
                                                  obs_builder_object=FullEnvObservation()))
-    overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy(),
-                                   overlay_policy=SetPathPolicy(use_always_first_strategy=1),
+    policy = ShortestPathPolicy()
+    overlay = TravelwiseOverlayEnv(rail_env, overlay_policy=SetPathPolicy(use_always_first_strategy=1),
                                    overlay_stops=OVERLAY_STOPS)
-    overlay.reset()
+    obs, _ = overlay.reset()
 
     # the heading info wrapper's info dict already carries each leg's target waypoint right after
     # reset(), before any train has moved.
@@ -275,7 +278,8 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     overlay_position_by_step: Dict[int, Tuple[int, int]] = {}
     overlay_mode_by_step: Dict[int, Tuple] = {}
     while not overlay.done:
-        overlay.step()
+        actions = policy.act_many(overlay.get_agent_handles(), observations=list(obs.values()))
+        obs, _, _, _ = overlay.step(actions)
         step = overlay.rail_env._elapsed_steps
         assert overlay.rail_env_info['heading'] == LEG_TARGET_WAYPOINT
         for handle, agent in enumerate(overlay.rail_env.agents):
