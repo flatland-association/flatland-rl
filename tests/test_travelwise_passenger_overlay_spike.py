@@ -3,13 +3,17 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_heading_info_wrapper import RailEnvHeadingInfoWrapper
 from flatland.envs.rail_env_policies import ShortestPathPolicy
+from flatland.envs.rail_env_policy import RailEnvPolicy
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line, Timetable
@@ -62,6 +66,112 @@ def _timetable_generator(agents, distance_map, hints, np_random) -> Timetable:
                      max_episode_steps=max(LEG_EARLIEST_DEPARTURE.values()) + STATION_DISTANCE)
 
 
+def _always_first_waypoint_from_flexible_groups(waypoint_groups: List[List[Waypoint]]) -> List[List[Waypoint]]:
+    """
+    Reduces a list of waypoint-alternatives groups to a single, non-flexible path plan: every
+    intermediate group is narrowed to its first alternative (arbitrary but stable), while the *final*
+    group is passed through in full.
+    """
+    if len(waypoint_groups) == 0:
+        return []
+    return [[pp[0]] for pp in waypoint_groups[:-1]] + [waypoint_groups[-1]]
+
+
+class SetPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
+    """
+    Ported from flatland-baselines'
+    `flatland_baselines.deadlock_avoidance_heuristic.policy.set_path_policy.SetPathPolicy`, adapted to
+    this checkout's `EnvAgent` API (`agent.current_entry_point` in place of the pinned baselines
+    version's separate `agent.position`/`agent.direction`, `env.rail.apply_action_independent()` in
+    place of `env.rail.check_action_on_agent()`) and stripped of the baseline-specific `self.audit`/
+    `self.rail_env` debug hooks and the (unused here) segment-plotting debug path.
+
+    Works with `FullEnvObservation` only. Unlike `ShortestPathPolicy`, which paths straight from an
+    agent's start to its target ignoring anything in between, `SetPathPolicy` computes and caches each
+    agent's full path once - through every intermediate waypoint group in order when
+    `use_always_first_strategy` is set, straight start->target otherwise - and then just follows that
+    cached path, one cell per step.
+    """
+
+    def __init__(self, k_shortest_path_cutoff: int = None, use_always_first_strategy: int = None):
+        super().__init__()
+        self._set_paths: Dict[int, Tuple[Waypoint, ...]] = {}
+        self.k_shortest_path_cutoff = k_shortest_path_cutoff
+        self.use_always_first_strategy = use_always_first_strategy
+
+    def _act(self, env: RailEnv, agent: EnvAgent):
+        if agent.current_entry_point is None:
+            return RailEnvActions.MOVE_FORWARD
+
+        if len(self._set_paths[agent.handle]) == 0:
+            return RailEnvActions.DO_NOTHING
+
+        for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
+            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), agent.current_entry_point)
+            if result is not None:
+                new_position, new_direction = result
+                next_waypoint = self._set_paths[agent.handle][1]
+                if new_position == next_waypoint.position and new_direction == next_waypoint.direction:
+                    return a
+        raise Exception("Invalid state")
+
+    def act_many(self, handles: List[int], observations: List[RailEnv], **kwargs):
+        actions = {}
+        for handle, env in zip(handles, observations):
+            agent = env.agents[handle]
+            self._update_agent(agent, env)
+            actions[handle] = self._act(env, agent)
+        return actions
+
+    def _update_agent(self, agent: EnvAgent, env: RailEnv):
+        """ Build `_set_paths`. """
+        if agent.state == TrainState.DONE:
+            self._set_paths.pop(agent.handle, None)
+            return
+
+        if agent.handle not in self._set_paths:
+            if self.use_always_first_strategy:
+                waypoint_groups = _always_first_waypoint_from_flexible_groups(agent.waypoints)
+            else:
+                waypoint_groups = _always_first_waypoint_from_flexible_groups([agent.waypoints[0], agent.waypoints[-1]])
+            self._set_paths[agent.handle] = self._shortest_path_from_non_flexible_waypoints(waypoint_groups, env.rail)
+
+        if self._set_paths[agent.handle] is None or agent.current_entry_point is None:
+            return
+
+        position = agent.current_entry_point[0]
+        while len(self._set_paths[agent.handle]) > 0 and self._set_paths[agent.handle][0].position != position:
+            self._set_paths[agent.handle] = self._set_paths[agent.handle][1:]
+        assert self._set_paths[agent.handle][0].position == position
+
+    def _shortest_path_from_non_flexible_waypoints(self, waypoint_groups: List[List[Waypoint]], rail) -> List[Waypoint]:
+        """
+        Computes the shortest path built by routing the shortest path between non-flexible waypoints;
+        only the target may have flexibility.
+        """
+        p: List[Waypoint] = []
+        for g1, g2 in zip(waypoint_groups, waypoint_groups[1:]):
+            assert len(g1) == 1
+            p1 = g1[0]
+            if len(p) > 0:
+                assert p[-1] == p1, (p[-1], p1)
+
+            arrival_directions = {wp.direction for wp in g2}
+            target_direction = next(iter(arrival_directions)) if len(arrival_directions) == 1 else None
+
+            path_segment_candidates: List[Tuple[Waypoint]] = get_k_shortest_paths(
+                None, p1.position, p1.direction, g2[0].position, rail=rail,
+                target_direction=target_direction, cutoff=self.k_shortest_path_cutoff)
+            assert len(path_segment_candidates) > 0, f"Not found next path from {p1} to any of {g2}."
+            next_path_segment = path_segment_candidates[0]
+            assert g2[0].position == next_path_segment[-1].position
+            if len(p) > 0:
+                p += next_path_segment[1:]
+            else:
+                p += next_path_segment
+        return p
+
+
 def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     """
     Three stations A=(0,1), B=(0,4), C=(0,7) on one straight track, 3 cells apart. A `RailEnv` runs
@@ -72,20 +182,24 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
 
     A `TravelwiseOverlayEnv` wraps this `RailEnv` (the "underlying env") together with the
     `ShortestPathPolicy` that drives its four legs, and layers on a fifth, wholly independent train:
-    the overlay agent, running the full A->C span on its own separate `RailEnv` and its own
-    `ShortestPathPolicy`, sharing only the corridor's topology with the underlying env - never its
+    the overlay agent, running A->B->C - stopping at B on the way, not passing it straight through -
+    on its own separate `RailEnv`, driven by `SetPathPolicy` (ported from flatland-baselines) rather
+    than `ShortestPathPolicy`, sharing only the corridor's topology with the underlying env - never its
     agents, timetable or motion checks.
 
-    - A `ShortestPathPolicy` alone drives every train, underlying and overlay, from its start waypoint
-      to its target waypoint, one cell per step (speed 1, no malfunctions, no other traffic in the
-      way).
+    - A `ShortestPathPolicy` drives every one of the underlying env's four trains from its start
+      waypoint to its target waypoint, one cell per step (speed 1, no malfunctions, no other traffic
+      in the way).
     - Each underlying train stays off the track until its own earliest departure, appears at its start
       station on exactly that step, advances by exactly one cell per following step, and reaches its
       target - leaving the track immediately - exactly `STATION_DISTANCE` steps after departing,
       matching its timetabled latest arrival exactly.
-    - The overlay train follows the same pattern over the full A->C span (twice `STATION_DISTANCE`),
-      on its own earliest departure/latest arrival, entirely independent of the underlying env's own
-      schedule.
+    - The overlay train, driven instead by `SetPathPolicy(use_always_first_strategy=1)`, follows the
+      same one-cell-per-step pattern over its own A->B->C timetable (three waypoints, not two): it
+      reaches B exactly `STATION_DISTANCE` steps after its own earliest departure - the same step that
+      timetable entry lists as both B's earliest departure and its latest arrival, since nothing dwells
+      there - and C exactly `STATION_DISTANCE` steps after that, entirely independent of the underlying
+      env's own schedule.
     - No train, underlying or overlay, is ever stopped: the underlying env's headway leaves enough
       clearance that its four trains never contend for a cell, and the overlay train runs alone on its
       own separate env.
@@ -101,7 +215,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
                                                  timetable_generator=_timetable_generator,
                                                  number_of_agents=len(LEG_WAYPOINTS),
                                                  obs_builder_object=FullEnvObservation()))
-    overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy())
+    overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy(), overlay_policy=SetPathPolicy(use_always_first_strategy=1))
     overlay.reset()
 
     # the heading info wrapper's info dict already carries each leg's target waypoint right after
@@ -120,13 +234,23 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         assert agent.earliest_departure == LEG_EARLIEST_DEPARTURE[handle]
         assert agent.latest_arrival == LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE
 
-    # the overlay agent's own route/timetable: derived to span the underlying env's full corridor
-    # (A->C), on a fixed earliest departure clear of RailEnv's off-map departure timing edge cases.
+    # the overlay agent's own route/timetable: derived to span the underlying env's full corridor,
+    # stopping at every station it uses (A, B, C - not skipping over intermediate B), on a fixed
+    # earliest departure clear of RailEnv's off-map departure timing edge cases. No dwell at B: its
+    # earliest departure and latest arrival are the same step, the one it reaches B on.
+    assert overlay.overlay_stops == [STATION_A, STATION_B, STATION_C]
     assert overlay.overlay_start == STATION_A
     assert overlay.overlay_target == STATION_C
+    assert overlay.overlay_earliest_departures == [2, 2 + STATION_DISTANCE, None]
+    assert overlay.overlay_latest_arrivals == [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]
     assert overlay.overlay_earliest_departure == 2
     assert overlay.overlay_latest_arrival == 2 + 2 * STATION_DISTANCE
     overlay_agent = overlay.overlay_env.agents[0]
+    assert overlay_agent.waypoints == [[Waypoint(STATION_A, Grid4TransitionsEnum.EAST)],
+                                       [Waypoint(STATION_B, Grid4TransitionsEnum.EAST)],
+                                       [Waypoint(STATION_C, Grid4TransitionsEnum.EAST)]]
+    assert overlay_agent.waypoints_earliest_departure == [2, 2 + STATION_DISTANCE, None]
+    assert overlay_agent.waypoints_latest_arrival == [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]
     assert overlay_agent.earliest_departure == 2
     assert overlay_agent.latest_arrival == 2 + 2 * STATION_DISTANCE
 
