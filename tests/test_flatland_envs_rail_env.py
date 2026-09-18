@@ -853,7 +853,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
             done=done,
             in_malfunction=in_malfunction,
             remove_agents_at_target=env.remove_agents_at_target,
-            off_map=off_map, cell_exit=cell_exit, target_reached=target_reached,
+            off_map=off_map, target_reached=target_reached,
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             stopped=(speed == 0), stay_off_map=stay_off_map,
         )
@@ -868,7 +868,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
                 agent_max_speed=agent.speed_counter.max_speed,
                 acceleration_delta=env.acceleration_delta,
                 braking_delta=env.braking_delta,
-                off_map=off_map, cell_exit=cell_exit, target_reached=target_reached,
+                off_map=off_map, target_reached=target_reached,
                 invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                 stopped=(speed == 0), stay_off_map=stay_off_map,
             )

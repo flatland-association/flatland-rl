@@ -673,7 +673,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             acceleration_delta=self.acceleration_delta,
             braking_delta=self.braking_delta,
             off_map=off_map,
-            cell_exit=cell_exit,
             target_reached=target_reached,
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             stopped=stopped,
@@ -688,7 +687,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             in_malfunction=in_malfunction,
             remove_agents_at_target=self.remove_agents_at_target,
             off_map=off_map,
-            cell_exit=cell_exit,
             target_reached=target_reached,
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             stopped=stopped,
@@ -1212,7 +1210,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                          agent_max_speed: Fraction, acceleration_delta: Fraction,
                          braking_delta: Fraction,
                          off_map: bool,
-                         cell_exit: bool,
                          target_reached: bool,
                          invalid_action_at_cell_exit: bool,
                          stopped: bool,
@@ -1225,9 +1222,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
-        off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
+        off_map/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
         params, computed once in collect() and shared across all 3 _candidate_ methods - see
-        rail_env.py's collect() for their shared definitions.
+        rail_env.py's collect() for their shared definitions. Unlike _candidate_entry_points, this
+        method never reads cell_exit itself (only the already-derived target_reached/
+        invalid_action_at_cell_exit that are computed from it) - see design_by_contract.md's
+        cell_exit row.
         """
         done_or_target_reached = done or target_reached
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
@@ -1324,7 +1324,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             in_malfunction: bool,
                             remove_agents_at_target: bool,
                             off_map: bool,
-                            cell_exit: bool,
                             target_reached: bool,
                             invalid_action_at_cell_exit: bool,
                             stopped: bool,
@@ -1337,9 +1336,12 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Each branch's condition below is self-contained: it explicitly excludes every other branch
         it isn't already structurally disjoint from, so reordering the `if`s gives the same result.
 
-        off_map/cell_exit/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
+        off_map/target_reached/invalid_action_at_cell_exit/stopped/stay_off_map are hoisted
         params, computed once in collect() and shared across all 3 _candidate_ methods - see
-        rail_env.py's collect() for their shared definitions. Note this narrows the lru_cache key from the
+        rail_env.py's collect() for their shared definitions. Unlike _candidate_entry_points, this
+        method never reads cell_exit itself (only the already-derived target_reached/
+        invalid_action_at_cell_exit that are computed from it) - see design_by_contract.md's
+        cell_exit row. Note this narrows the lru_cache key from the
         original (which included current_entry_point/next_entry_point/candidate_entry_point/
         candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
         booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
@@ -1484,7 +1486,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     in_malfunction=in_malfunction,
                     remove_agents_at_target=self.remove_agents_at_target,
                     off_map=off_map,
-                    cell_exit=cell_exit,
                     target_reached=target_reached,
                     invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                     stopped=(speed == 0),
@@ -1562,7 +1563,6 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         acceleration_delta=self.acceleration_delta,
                         braking_delta=self.braking_delta,
                         off_map=off_map,
-                        cell_exit=cell_exit,
                         target_reached=target_reached,
                         invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                         stopped=(speed == 0),
