@@ -60,9 +60,10 @@ class TravelwiseOverlayEnv:
         self._overlay_obs = None
         self._rail_env_done = False
         self._overlay_done = False
+        self.rail_env_info: Optional[Dict] = None
 
     def reset(self):
-        self._rail_env_obs, rail_env_info = self.rail_env.reset()
+        self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
 
         start, target, direction = _derive_overlay_route(self.rail_env)
@@ -89,7 +90,7 @@ class TravelwiseOverlayEnv:
         self._overlay_obs, overlay_info = self.overlay_env.reset()
         self._overlay_done = False
 
-        return (self._rail_env_obs, self._overlay_obs), (rail_env_info, overlay_info)
+        return (self._rail_env_obs, self._overlay_obs), (self.rail_env_info, overlay_info)
 
     def step(self) -> Tuple[Dict, Dict]:
         """
@@ -100,7 +101,7 @@ class TravelwiseOverlayEnv:
         rail_env_dones = {'__all__': self._rail_env_done}
         if not self._rail_env_done:
             actions = self.policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()))
-            self._rail_env_obs, _, rail_env_dones, _ = self.rail_env.step(actions)
+            self._rail_env_obs, _, rail_env_dones, self.rail_env_info = self.rail_env.step(actions)
             self._rail_env_done = rail_env_dones['__all__']
 
         overlay_dones = {'__all__': self._overlay_done}
