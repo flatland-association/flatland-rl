@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
-    cached_cell_exit, _cached_cell_exit
+    cached_cell_exit
 
 
 # design: distance update with pre-step speed.
@@ -276,17 +276,23 @@ def test_cached_cap_speed_passthrough_within_range():
 
 
 def test_cached_cell_exit_true():
-    assert _cached_cell_exit(Fraction(3, 4), Fraction(1, 2)) == True
+    assert cached_cell_exit(Fraction(1, 2), Fraction(1, 2), Fraction(3, 4)) == True
 
 
 def test_cached_cell_exit_false():
-    assert _cached_cell_exit(Fraction(1, 4), Fraction(1, 4)) == False
+    assert cached_cell_exit(Fraction(1, 4), Fraction(1, 4), Fraction(1, 4)) == False
 
 
 def test_cached_cell_exit_caps_speed_at_max_speed():
     # naive (uncapped) distance(0.5) + speed(0.9) = 1.4 >= 1 -> would be True, but max_speed=0.3 caps the
     # effective speed to 0.3 first: 0.5 + 0.3 = 0.8 < 1 -> False.
     assert cached_cell_exit(Fraction(3, 10), Fraction(9, 10), Fraction(1, 2)) == False
+
+
+def test_cached_cell_exit_true_off_map():
+    # design: distance is None when off map - trivially "at a cell exit" (matches is_cell_exit()'s own
+    # convention), regardless of speed - short-circuits before _cap_speed, which can't handle speed=None.
+    assert cached_cell_exit(Fraction(1, 2), None, None) == True
 
 
 def test_step_crossing_not_completed_caps_at_boundary():

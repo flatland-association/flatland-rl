@@ -31,7 +31,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed, SEGMENT_LENGTH, SpeedCounter, ZERO_FRACTION
+from flatland.envs.step_utils.speed_counter import _cap_speed, cached_cell_exit, SpeedCounter, ZERO_FRACTION
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils import seeding
 
@@ -609,31 +609,34 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         agent_targets = frozenset(agent.targets)
 
         # Boolean flags shared by all 3 _candidate_ methods below - each one previously recomputed
-        # the same formula from scratch; computed once here and passed in instead. cell_exit is the
-        # raw formula (speed > 0 and about to cross the segment boundary) - NOT the same as
-        # agent.speed_counter.is_cell_exit() above (collected_is_cell_exit), which returns True off-map;
-        # this raw formula returns False off-map. Do not conflate the two.
+        # the same formula from scratch; computed once here and passed in instead. cell_exit uses the
+        # same formula and off-map convention (True off-map) as agent.speed_counter.is_cell_exit() above
+        # (collected_is_cell_exit) - both now go through SpeedCounter.cached_cell_exit(), the single
+        # shared implementation, not an independent reimplementation.
         off_map = agent.current_entry_point is None
         transition_invalid = candidate_entry_point_independent is None
-        # cell_exit is real (uncached) Fraction arithmetic - the single biggest per-call cost of
-        # the 3 candidate_ methods (16-21% of each, per profiling). Every off_map branch in all 3
-        # methods is structurally independent of cell_exit/target_reached/invalid_action_at_cell_exit
-        # (verified against their branch logic - see the plan doc), so skip computing it whenever
-        # off_map already tells us it can't matter. Branch-frequency sampling across 4 scenarios
-        # (baseline/long-horizon/dense/malfunction-heavy) showed off_map is 55-87% of calls, so this
-        # is a real, workload-independent majority, not a one-scenario artifact. Gate strictly on
-        # off_map alone (never additionally on in_malfunction): in_malfunction doesn't split cleanly
-        # by off_map (a malfunctioning agent can be on- or off-map), and target_reached is checked
-        # with higher priority than the malfunction branch in all 3 methods, so an on-map
-        # malfunctioning agent still needs a correctly-computed cell_exit/target_reached even though
-        # the malfunction branch is what ultimately fires.
+        # The off_map branch below is a fast-path equivalent to cached_cell_exit(agent_max_speed, None,
+        # None) (which also returns True off-map) - skipping the call entirely, not diverging from it,
+        # since off_map already tells us the answer without needing the lru_cache lookup. This matters:
+        # cached_cell_exit's on-map arithmetic is real (uncached-per-call) Fraction work - the single
+        # biggest per-call cost of the 3 candidate_ methods (16-21% of each, per profiling) - and
+        # branch-frequency sampling across 4 scenarios (baseline/long-horizon/dense/malfunction-heavy)
+        # showed off_map is 55-87% of calls, so skipping it there is a real, workload-independent
+        # majority, not a one-scenario artifact. target_reached/action_invalid_on_rail/
+        # invalid_action_at_cell_exit still need their own off_map special-casing regardless of
+        # cell_exit's value - see design_by_contract.md. Gate strictly on off_map alone (never
+        # additionally on in_malfunction): in_malfunction doesn't split cleanly by off_map (a
+        # malfunctioning agent can be on- or off-map), and target_reached is checked with higher
+        # priority than the malfunction branch in all 3 methods, so an on-map malfunctioning agent
+        # still needs a correctly-computed cell_exit/target_reached even though the malfunction branch
+        # is what ultimately fires.
         if off_map:
-            cell_exit = False
+            cell_exit = True
             target_reached = False
             action_invalid_on_rail = False
             invalid_action_at_cell_exit = False
         else:
-            cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+            cell_exit = cached_cell_exit(agent_max_speed, speed, distance)
             target_reached = cell_exit and agent.next_entry_point in agent_targets
             action_invalid_on_rail = transition_invalid
             invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1008,14 +1011,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
             off_map = current_entry_point is None
             transition_invalid = candidate_entry_point_independent is None
-            # see step()'s own comment for why this is gated on off_map alone.
+            # see collect()'s own comment for why this is gated on off_map alone, and for
+            # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
             if off_map:
-                cell_exit = False
+                cell_exit = True
                 target_reached = False
                 action_invalid_on_rail = False
                 invalid_action_at_cell_exit = False
             else:
-                cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
                 target_reached = cell_exit and next_entry_point in agent.targets
                 action_invalid_on_rail = transition_invalid
                 invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1444,14 +1448,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
                 transition_invalid = candidate_entry_point_independent is None
-                # see step()'s own comment for why this is gated on off_map alone.
+                # see collect()'s own comment for why this is gated on off_map alone, and for
+                # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
                 if off_map:
-                    cell_exit = False
+                    cell_exit = True
                     target_reached = False
                     action_invalid_on_rail = False
                     invalid_action_at_cell_exit = False
                 else:
-                    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
                     target_reached = cell_exit and next_entry_point in agent.targets
                     action_invalid_on_rail = transition_invalid
                     invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1511,14 +1516,15 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
                 transition_invalid = candidate_entry_point_independent is None
-                # see step()'s own comment for why this is gated on off_map alone.
+                # see collect()'s own comment for why this is gated on off_map alone, and for
+                # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
                 if off_map:
-                    cell_exit = False
+                    cell_exit = True
                     target_reached = False
                     action_invalid_on_rail = False
                     invalid_action_at_cell_exit = False
                 else:
-                    cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
                     target_reached = cell_exit and next_entry_point in agent.targets
                     action_invalid_on_rail = transition_invalid
                     invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
