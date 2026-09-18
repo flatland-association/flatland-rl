@@ -17,7 +17,7 @@ EntryPointT = TypeVar('EntryPointT')
 
 class Rewards(Generic[RewardT]):
     """
-    RewardT Function Interface.
+    Rewards Function Interface.
     """
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> RewardT:
@@ -120,7 +120,7 @@ class DefaultPenalties(fastenum.Enum):
 
 class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     r"""
-    RewardT Function.
+    Reward Function.
 
     This scoring function is designed to capture key operational metrics such as punctuality, efficiency in responding to disruptions, and safety.
 

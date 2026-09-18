@@ -6,7 +6,7 @@ ResourceT = TypeVar('ResourceT')
 
 class ResourceMap(Generic[EntryPointT, ResourceT]):
     """
-    ResourceT Map stores the single resource occupied while traversing the edge from `from_entry_point` to
+    Resource Map stores the single resource occupied while traversing the edge from `from_entry_point` to
     `to_entry_point` - the resource held is always the one at `from_entry_point` (the cell/node entered;
     `to_entry_point` is the neighbor entered once the edge is left, see `GraphTransitionMap`'s docstring
     for the `[u,v)` framing this mirrors), i.e. to be in the cell or level-free crossing cell in grid

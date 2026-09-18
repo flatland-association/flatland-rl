@@ -54,12 +54,21 @@ class TrainStateMachine:
         instead of being exempt from it.
         """
         if not self.st_signals.in_malfunction:
-            if self.st_signals.earliest_departure_reached:
+            # ready_to_depart (the real, no-+1 formula - see StateTransitionSignals) is required
+            # before promoting straight to MOVING: earliest_departure_reached alone (+1, deliberately
+            # one step early to drive WAITING->READY_TO_DEPART) can be True a full step before
+            # _candidate_entry_points itself actually lets the agent depart, which would otherwise
+            # promote to MOVING while current_entry_point is still None (PR #517 review comment
+            # r3965564459). Once ready_to_depart is True, movement_action_given/movement_allowed
+            # decide MOVING vs. READY_TO_DEPART exactly as _handle_ready_to_depart already does.
+            if self.st_signals.ready_to_depart:
                 # design: disallow entering the map stopped
                 if self.st_signals.movement_action_given and self.st_signals.movement_allowed:
                     self.next_state = TrainState.MOVING
                 else:
                     self.next_state = TrainState.READY_TO_DEPART
+            elif self.st_signals.earliest_departure_reached:
+                self.next_state = TrainState.READY_TO_DEPART
             else:
                 self.next_state = TrainState.WAITING
         else:
