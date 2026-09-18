@@ -1,8 +1,11 @@
+import copy
 from typing import Dict, List, Optional, Tuple
 
+from flatland.core.env import Environment
 from flatland.core.policy import Policy
 from flatland.envs.agent_utils import EntryPointT, _sanitize_entry_point
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
 # `RailEnv`'s off-map departure timing has documented/undocumented edge cases at earliest_departure 0
@@ -21,19 +24,23 @@ OVERLAY_EARLIEST_DEPARTURE = 2
 OverlayMode = Tuple[Optional[Tuple[int, int]], Optional[int]]
 
 
-class TravelwiseOverlayEnv:
+class TravelwiseOverlayEnv(Environment):
     """
     Layers a set of overlay agents over a `RailEnv` ("the underlying env"): the overlay agents share
     the underlying env's rail topology, but are otherwise wholly independent of it - separate agents,
     separate timetable, separate motion checks. Each overlay agent (handle `h`) follows its own fixed,
     ordered list of stops `overlay_stops[h]`.
 
-    Movement is not action-driven at all - `overlay_policy`'s actions are computed (still required to
-    be a `SetPathPolicy` configured to respect intermediate stops) but ignored; every step, each
-    overlay agent's position/mode is instead derived purely from the underlying env's agents and its
-    info dict's `heading` entry (see `RailEnvHeadingInfoWrapper`) in `_update_overlay_agents()`. An
-    overlay agent has exactly 3 modes, tracked in `overlay_mode[h]` as an `OverlayMode` (position,
-    handle) pair:
+    Implements the `Environment` interface as a thin pass-through to the underlying env: `step()`
+    takes an `action_dict` for the underlying env's own agents (exactly `RailEnv.step()`'s own contract
+    - `get_agent_handles()` returns the underlying env's handles, not the overlay agents') and returns
+    its `(obs, rewards, dones, info)` verbatim. Overlay agents never take an action of their own -
+    `overlay_policy`'s actions are computed (still required to be a `SetPathPolicy` configured to
+    respect intermediate stops) but ignored; every step, each overlay agent's position/mode is instead
+    derived purely from the just-stepped underlying env's agents and its info dict's `heading` entry
+    (see `RailEnvHeadingInfoWrapper`) in `_update_overlay_agents()`, as a side effect alongside the
+    pass-through return value - not itself part of the `Environment` contract. An overlay agent has
+    exactly 3 modes, tracked in `overlay_mode[h]` as an `OverlayMode` (position, handle) pair:
 
     1. off map (`(None, None)`) - before showing up at its first stop.
     2. on the overlay map, waiting (`(overlay_position, None)`) - standing at one of its own stops,
@@ -47,11 +54,12 @@ class TravelwiseOverlayEnv:
        `_is_overlay_agent_done()`).
     """
 
-    def __init__(self, rail_env: RailEnv, policy: Policy, overlay_policy: Policy, overlay_stops: Dict[int, List[Waypoint]]):
+    def __init__(self, rail_env: RailEnv, overlay_policy: Policy, overlay_stops: Dict[int, List[Waypoint]]):
+        super().__init__()
         self.rail_env = rail_env
-        self.policy = policy
         self.overlay_policy = overlay_policy
         self.overlay_stops = overlay_stops
+        self.action_space = self.rail_env.action_space
 
         self.overlay_earliest_departures: Optional[Dict[int, List[Optional[int]]]] = None
         self.overlay_latest_arrivals: Optional[Dict[int, List[Optional[int]]]] = None
@@ -74,7 +82,7 @@ class TravelwiseOverlayEnv:
         self._rail_env_done = False
         self.rail_env_info: Optional[Dict] = None
 
-    def reset(self):
+    def reset(self) -> Tuple[Dict, Dict]:
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
 
@@ -105,29 +113,51 @@ class TravelwiseOverlayEnv:
 
         return self._rail_env_obs, self.rail_env_info
 
-    def step(self) -> Tuple[Dict, Dict]:
+    def get_agent_handles(self) -> List[int]:
+        return self.rail_env.get_agent_handles()
+
+    def clone_from(self, env: 'TravelwiseOverlayEnv', **kwargs) -> None:
+        self.rail_env.clone_from(env.rail_env)
+        self.overlay_policy = env.overlay_policy
+        self.overlay_stops = env.overlay_stops
+        self.overlay_earliest_departures = copy.deepcopy(env.overlay_earliest_departures)
+        self.overlay_latest_arrivals = copy.deepcopy(env.overlay_latest_arrivals)
+        self.overlay_earliest_departure = copy.deepcopy(env.overlay_earliest_departure)
+        self.overlay_latest_arrival = copy.deepcopy(env.overlay_latest_arrival)
+        self.overlay_mode = copy.deepcopy(env.overlay_mode)
+        self._overlay_stop_index = copy.deepcopy(env._overlay_stop_index)
+        self.overlay_current_entry_point = copy.deepcopy(env.overlay_current_entry_point)
+        self.overlay_target_entry_point = copy.deepcopy(env.overlay_target_entry_point)
+        self.overlay_arrival_time = copy.deepcopy(env.overlay_arrival_time)
+        self._rail_env_obs = copy.deepcopy(env._rail_env_obs)
+        self._rail_env_done = env._rail_env_done
+        self.rail_env_info = copy.deepcopy(env.rail_env_info)
+
+    def step(self, action_dict: Dict[int, RailEnvActions]) -> Tuple[Dict, Dict, Dict, Dict]:
         """
-        Advances the underlying env with its own policy, then updates every overlay agent's mode/
-        position from the result (see `_update_overlay_agents()`). A finished underlying env is left
-        untouched (`RailEnv.step()` itself refuses a call once its episode is done); overlay agents
-        simply stop changing once there's nothing new to react to.
+        Delegates `action_dict` straight to the underlying env's own `step()` and returns its
+        `(obs, rewards, dones, info)` verbatim - overlay agents take no actions and aren't part of this
+        contract. Also updates every overlay agent's mode/position from the result as a side effect
+        (see `_update_overlay_agents()`). Once the underlying env is done, `RailEnv.step()` itself
+        refuses further calls - further calls here are a no-op instead, repeating the last observation/
+        info alongside empty rewards and an all-done `dones` dict.
 
         Returns
         -------
-        Tuple[Dict, Dict]
-            The underlying env's own `dones`, and an overlay `dones` dict (one entry per overlay
-            handle, `True` once that agent has ridden through to its last stop, plus `'__all__'`).
+        Tuple[Dict, Dict, Dict, Dict]
+            The underlying env's own `(obs, rewards, dones, info)`. An overlay agent's derived
+            position/mode/arrival bookkeeping is available via `overlay_mode`/`overlay_current_entry_point`/
+            `overlay_target_entry_point`/`overlay_arrival_time`, and `_is_overlay_agent_done()`/`done`.
         """
-        rail_env_dones = {'__all__': self._rail_env_done}
-        if not self._rail_env_done:
-            actions = self.policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()))
-            self._rail_env_obs, _, rail_env_dones, self.rail_env_info = self.rail_env.step(actions)
-            self._rail_env_done = rail_env_dones['__all__']
-            self._update_overlay_agents()
+        if self._rail_env_done:
+            dones = {handle: True for handle in self.rail_env.get_agent_handles()}
+            dones['__all__'] = True
+            return self._rail_env_obs, {}, dones, self.rail_env_info
 
-        overlay_dones = {handle: self._is_overlay_agent_done(handle) for handle in self.overlay_stops}
-        overlay_dones['__all__'] = all(overlay_dones.values())
-        return rail_env_dones, overlay_dones
+        self._rail_env_obs, rewards, dones, self.rail_env_info = self.rail_env.step(action_dict)
+        self._rail_env_done = dones['__all__']
+        self._update_overlay_agents()
+        return self._rail_env_obs, rewards, dones, self.rail_env_info
 
     def _is_overlay_agent_done(self, handle: int) -> bool:
         """ Reached its last stop and isn't (or never was) mid-ride away from it. """
