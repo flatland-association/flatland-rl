@@ -235,7 +235,7 @@ def _sanitize_entry_point(entry_point):
         direction = int(direction)
     return (position, direction)
 
-
+# TODO https://github.com/flatland-association/flatland-rl/issues/527 make fully generic, Cython-aware
 @attrs
 class EnvAgent(Generic[EntryPointT]):
     # INIT FROM HERE IN _from_line()

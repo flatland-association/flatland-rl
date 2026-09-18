@@ -18,15 +18,13 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     This wrapper exists only for a caller that needs `agent.state`/`agent.state_machine` themselves -
     real `TrainStateMachine` transition/signal internals, not just a `TrainState` value - such as a
     test asserting on state-machine behavior directly, or the `Replay`/`run_replay_config` test
-    framework. `_StateMachineUpdateMixin.step()` below achieves this without `AbstractRailEnv` needing
-    any dedicated extension point: it temporarily replaces the instance's own `_get_observations` with
-    a one-shot wrapper before delegating to `super().step()` - the one-shot wrapper restores the
-    original `_get_observations`, runs the state machine update, then calls the (now restored) real
-    `_get_observations()` - so by the time `AbstractRailEnv.step()`'s own return statement evaluates
-    `self._get_observations()` (left of `self.get_info_dict()` in that same tuple expression, hence
-    evaluated first), `agent.state` is already up to date for both. Without wrapping, `agent.state`/
-    `agent.state_machine` are never touched at all - permanently frozen at their `__init__` default
-    (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
+    framework. `_StateMachineUpdateMixin.step()` below achieves this by delegating to `super().step()`
+    and running the state machine update on the way out, after the real step has fully completed -
+    since nothing in the `(obs, rewards, dones, info)` tuple `step()` returns depends on `agent.state`/
+    `agent.state_machine` (both derived exclusively via `derived_state()`, per above), it doesn't matter
+    whether the update runs before or after that tuple is built, only that it runs once per step. Without
+    wrapping, `agent.state`/`agent.state_machine` are never touched at all - permanently frozen at their
+    `__init__` default (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
 
     Idempotent: wrapping an already-wrapped env just updates `skip_state_machine_update` in place
     rather than double-wrapping. Returns the same instance (not a copy), for chaining convenience.
@@ -51,26 +49,19 @@ class _StateMachineUpdateMixin:
     """ Only ever applied to an instance via `RailEnvStateMachineWrapper` - never instantiated/subclassed directly. """
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
+        # Same override-and-delegate shape as RailEnv.step() itself (calls super().step(), does one more
+        # side-effecting call, returns the same tuple unchanged) - safe here because nothing in that
+        # tuple depends on agent.state/agent.state_machine (see RailEnvStateMachineWrapper's docstring).
+        result = super().step(action_dict)
         if not self.skip_state_machine_update:
-            # One-shot: AbstractRailEnv.step() calls self._get_observations() exactly once, in its own
-            # final `return self._get_observations(), ..., self.get_info_dict()` - evaluated left to
-            # right, so before self.get_info_dict(). Restoring the real _get_observations before running
-            # the update (rather than after) means _update_state_machine_after_step() itself is free to
-            # call self._get_observations() without recursing into this wrapper.
-            def _get_observations_after_state_machine_update():
-                del self._get_observations
-                self._update_state_machine_after_step()
-                return self._get_observations()
-
-            self._get_observations = _get_observations_after_state_machine_update
-        return super().step(action_dict)
+            self._update_state_machine_after_step()
+        return result
 
     def _update_state_machine_after_step(self):
         """
         All `agent.state`/`agent.state_machine` bookkeeping for the step that just ran, in one pass -
-        called from within `AbstractRailEnv.step()` itself (via the one-shot `_get_observations` swap in
-        `step()` above) once this step's position/speed/reward/done are finalized but before
-        observations/info are built - see `TrainStateMachine`
+        called from `step()` above right after `super().step()` returns, once this step's position/
+        speed/reward/done are finalized - see `TrainStateMachine`
         (`flatland/envs/step_utils/state_machine.py`): every transition method,
         `update_if_reached()`, and `state_position_sync_check()` read only their explicit arguments/
         `self.st_signals`, never another agent nor anything `step()` mutates later - so running all

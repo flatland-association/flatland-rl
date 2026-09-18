@@ -61,16 +61,19 @@ def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
 
 
 @lru_cache()
-def _cached_cell_exit(_distance, speed: Fraction) -> bool:
+def cached_cell_exit(max_speed: Fraction, speed: Optional[Fraction], distance: Optional[Fraction]) -> bool:
+    """
+    Would this speed/distance cross the segment boundary next step? `distance is None` (off map) is
+    trivially `True` (see `SpeedCounter.set()`) - checked first, before `_cap_speed`, which can't handle
+    `speed=None`. All on-map call sites already only reach this after excluding off_map themselves, so
+    this convention is never actually read bare off map (see design_by_contract.md's `cell_exit` row).
+    """
+    if distance is None:
+        return True
+    speed = _cap_speed(max_speed, speed)
     if speed == 0:
         return False
-    return _distance + speed >= SEGMENT_LENGTH
-
-
-@lru_cache()
-def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
-    speed = _cap_speed(max_speed, speed)
-    return _cached_cell_exit(distance, speed)
+    return distance + speed >= SEGMENT_LENGTH
 
 
 class SpeedCounter:
@@ -272,9 +275,6 @@ class SpeedCounter:
         """
         At the current speed, do we exit the cell at the next time step?
         """
-        if self._distance is None:
-            # design: distance is None when off map
-            return True
         return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property

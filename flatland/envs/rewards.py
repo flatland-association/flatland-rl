@@ -82,7 +82,7 @@ class Rewards(Generic[RewardT]):
         """
         return None
 
-    # TODO we should drop these methods once EnvAgent.waypoints is also of EntryPointT instead of Waypoint.
+    # TODO https://github.com/flatland-association/flatland-rl/issues/527 we should drop these methods once EnvAgent.waypoints is also of EntryPointT instead of Waypoint.
     @staticmethod
     def _sanitize_waypoints(agent_waypoints: List[List[Waypoint]]) -> List[List[EntryPointT]]:
         agent_waypoints = [[(Rewards._sanitize_waypoint(wp)) for wp in wps] for wps in agent_waypoints]
