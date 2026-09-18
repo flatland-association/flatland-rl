@@ -6,6 +6,7 @@ from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env_heading_info_wrapper import RailEnvHeadingInfoWrapper
 from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
@@ -34,6 +35,7 @@ LEG_WAYPOINTS: Dict[int, List[List[Waypoint]]] = {
     3: [[Waypoint(STATION_C, Grid4TransitionsEnum.WEST)], [Waypoint(STATION_B, Grid4TransitionsEnum.WEST)]],  # C -> B
 }
 LEG_EARLIEST_DEPARTURE: Dict[int, int] = {handle: (handle + 1) * HEADWAY for handle in LEG_WAYPOINTS}
+LEG_TARGET_WAYPOINT: Dict[int, Waypoint] = {handle: leg[-1][0] for handle, leg in LEG_WAYPOINTS.items()}
 
 
 def _make_three_station_rail() -> RailGridTransitionMap:
@@ -87,16 +89,24 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     - No train, underlying or overlay, is ever stopped: the underlying env's headway leaves enough
       clearance that its four trains never contend for a cell, and the overlay train runs alone on its
       own separate env.
+    - The underlying env is wrapped in `RailEnvHeadingInfoWrapper`, so its info dict's `heading` entry
+      always names the waypoint (position, direction) each of its four trains is heading to - its
+      leg's own target waypoint - throughout the run, regardless of whether that train is currently on
+      or off the track.
     """
     rail = _make_three_station_rail()
-    rail_env = RailEnv(width=N_CELLS, height=1,
-                       rail_generator=rail_from_grid_transition_map(rail),
-                       line_generator=_line_generator,
-                       timetable_generator=_timetable_generator,
-                       number_of_agents=len(LEG_WAYPOINTS),
-                       obs_builder_object=FullEnvObservation())
+    rail_env = RailEnvHeadingInfoWrapper(RailEnv(width=N_CELLS, height=1,
+                                                 rail_generator=rail_from_grid_transition_map(rail),
+                                                 line_generator=_line_generator,
+                                                 timetable_generator=_timetable_generator,
+                                                 number_of_agents=len(LEG_WAYPOINTS),
+                                                 obs_builder_object=FullEnvObservation()))
     overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy())
     overlay.reset()
+
+    # the heading info wrapper's info dict already carries each leg's target waypoint right after
+    # reset(), before any train has moved.
+    assert overlay.rail_env_info['heading'] == LEG_TARGET_WAYPOINT
 
     # verbatim expected timetable for the underlying env: one entry per leg, in handle order 0..3
     # (A->B, B->C, B->A, C->B), departures at HEADWAY=6, 12, 18, 24 and arrivals STATION_DISTANCE=3
@@ -125,6 +135,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     while not overlay.done:
         overlay.step()
         step = overlay.rail_env._elapsed_steps
+        assert overlay.rail_env_info['heading'] == LEG_TARGET_WAYPOINT
         for handle, agent in enumerate(overlay.rail_env.agents):
             rail_env_position_by_step[handle][step] = agent.current_entry_point[0] if agent.current_entry_point is not None else None
             assert agent.state != TrainState.STOPPED
