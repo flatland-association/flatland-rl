@@ -1,4 +1,5 @@
 import math
+from fractions import Fraction
 from typing import Callable, Dict, List, Optional, Set
 
 from flatland.core.entry_point_distance_map import (
@@ -18,9 +19,9 @@ class AgentSourceTargetDistanceMap(
     WaypointT]
 ):
     """
-    Adds agent-handle (target_nr) aware querying on top of `EntryPointDistanceMap`. `get_agent_distance`
+    Adds agent-handle (target_nr) aware querying on top of `EntryPointDistanceMap`. `geometric_distance`
     returns the minimum distance from a source entry point to any of a given agent's target entry points;
-    concrete subclasses provide the underlying per-agent storage via `_set_agent_distance`.
+    concrete subclasses provide the underlying per-agent storage via `_set_geometric_distance`.
     """
 
     def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[EntryPointT], WaypointT]):
@@ -80,7 +81,7 @@ class AgentSourceTargetDistanceMap(
                         (self._get_distance(entry_point, target_entry_point) for target_entry_point in targets),
                         default=math.inf
                     )
-                    self._set_agent_distance(entry_point, i, new_distance)
+                    self._set_geometric_distance(entry_point, i, new_distance)
             else:
                 # just copy the distance map from other agent with same target (performance)
                 self._copy_agent_distance(i, computed_targets.index(targets))
@@ -165,7 +166,7 @@ class AgentSourceTargetDistanceMap(
             next_entry_points = self.rail.get_successor_entry_points(source)
             for next_entry_point in next_entry_points:
 
-                next_action_distance = self.get_agent_distance(next_entry_point, handle)
+                next_action_distance = self.geometric_distance(next_entry_point, handle)
                 if next_action_distance < distance:
                     distance = next_action_distance
                     best_next_entry_point = next_entry_point
@@ -181,12 +182,71 @@ class AgentSourceTargetDistanceMap(
             agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
 
-    def get_agent_distance(self, source_entry_point: EntryPointT, target_nr: int):
+    def geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):
+        """
+        The minimum number of cells to cross from `source_entry_point` to any of `target_nr`'s targets,
+        following the rail - a geometric distance, not a number of steps (see `eta` for that).
+        """
         self.get()
-        return self._get_agent_distance(source_entry_point, target_nr)
+        return self._geometric_distance(source_entry_point, target_nr)
 
-    def _set_agent_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: int):
+    def eta(
+        self,
+        entry_point: EntryPointT,
+        handle: int,
+        elapsed_steps: int,
+        earliest_departure: int,
+        speed: Optional[Fraction],
+        max_speed: Fraction,
+        acceleration_delta: Fraction,
+        distance: Fraction = Fraction(0),
+    ) -> Fraction:
+        """
+        Earliest time of arrival: the `elapsed_steps` value at which `handle` reaches a target, assuming
+        it follows the shortest path from `entry_point` unhindered (no other agent, no switch chosen
+        wrong) with a continuously-supplied moving action from here on.
+
+        `speed` is the agent's current speed - `None` off map (not yet departed), in which case
+        `earliest_departure` decides the departure step (`max(earliest_departure, 1)`, since there is no
+        step 0 to depart in) and the ramp to `max_speed` starts from a standing start; `elapsed_steps` is
+        then unused, since the predicted arrival step doesn't depend on when during the wait it's asked.
+        A concrete `speed` (on map) instead ramps up from wherever it already is, ignoring
+        `earliest_departure` (already irrelevant once departed). `distance` is how far the agent has
+        already progressed into `entry_point`'s own cell (0 off map, the default) - subtracted from
+        `geometric_distance(entry_point, handle)` before converting the remainder to time, since that
+        distance is measured from the cell's entry, not the agent's actual position within it.
+
+        Reaching max_speed from the current speed (or from rest, off map) takes `steps_to_max_speed =
+        ceil((max_speed - speed) / acceleration_delta)` steps, covering `distance_during_acceleration =
+        steps_to_max_speed * speed + acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1)
+        / 2` - less than `steps_to_max_speed * max_speed`, since distance advances by the *pre-step*
+        speed each step (see `SpeedCounter.set()`). The remaining geometric distance, after that ramp, is
+        covered at max_speed.
+
+        `steps_to_max_speed` is always at least 1, even off map: the departure step itself is the first
+        of the ramp (its pre-step speed is 0, so - distance advancing by the pre-step speed - it
+        contributes 0 to `distance_during_acceleration` even though its *post*-step speed already jumps
+        to `min(acceleration_delta, max_speed)`). Since departure lands exactly on `elapsed_steps ==
+        max(earliest_departure, 1)`, treating that value itself as the reference step and then adding
+        `steps_to_max_speed` would double-count this step. `reference_step` is offset by `- 1` to the
+        step *before* departure (speed conceptually still 0, zero ramp steps taken yet) so that adding
+        `steps_to_max_speed` back lands exactly on the departure step, not one past it.
+        """
+        reference_step = elapsed_steps if speed is not None else max(earliest_departure, 1) - 1
+        speed = speed if speed is not None else Fraction(0)
+        steps_to_max_speed = math.ceil((max_speed - speed) / acceleration_delta) if speed < max_speed else 0
+        distance_during_acceleration = (
+            steps_to_max_speed * speed + acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
+        )
+        # geometric_distance() returns a numpy float (always a whole cell count for a reachable entry
+        # point, which this method assumes) - cast to an exact Fraction so it composes with
+        # distance/speed/max_speed (also Fractions) without silent float rounding (1/3 isn't exactly
+        # representable in float, and that error compounds across the arithmetic below).
+        remaining_distance = Fraction(int(self.geometric_distance(entry_point, handle))) - distance - distance_during_acceleration
+        return reference_step + steps_to_max_speed + remaining_distance / max_speed
+
+    def _set_geometric_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: int):
         raise NotImplementedError()
 
-    def _get_agent_distance(self, source_entry_point: EntryPointT, target_nr: int):
+    def _geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):
         raise NotImplementedError()

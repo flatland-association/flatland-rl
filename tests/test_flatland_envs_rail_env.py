@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import math
 import os
 import tempfile
 import time
@@ -1433,16 +1432,6 @@ def _make_single_track_corridor(n_cells: int):
 @pytest.mark.parametrize("wrapped", [True, False])
 def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> None:
     """
-    Design: the distance map gives the *geometric* distance from a position to the target - a number of
-    cells to cross, not a number of steps. For an on-map position this directly gives the remaining travel
-    time in steps at max_speed (`distance / max_speed`), since an on-map agent has already settled into
-    motion. For an off-map position (the distance map's own entry for an agent's initial entry point,
-    before departure), that geometric distance alone underestimates the number of steps to reach the
-    target by exactly one: the step the agent departs (off map to its initial on-map position) settles its
-    speed from a standing start without yet advancing its distance along the path. An earliest-arrival
-    estimate computed from an off-map distance therefore needs an explicit `+ 1` that the same estimate
-    computed from an on-map position doesn't.
-
     A single agent on a switch-free corridor, given MOVE_FORWARD every step from the start - the only
     route to its target, so this is exactly "follow the shortest path unhindered" (no other agent, no
     switch to choose wrong).
@@ -1450,28 +1439,21 @@ def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> Non
     The agent settles into motion (departs, `current_entry_point` becomes its initial entry point) at
     the step whose count equals `max(earliest_departure, 1)` - `earliest_departure` itself for any value
     of 1 or more, or the first step for `earliest_departure == 0` (there is no step 0 to depart in, so
-    0 and 1 both mean "depart at the first opportunity").
-
-    `distance / max_speed` alone only gives the remaining travel time once already cruising at
-    max_speed - it assumes max_speed from the very first moving step, which only holds when
-    `acceleration_delta >= max_speed` (departing directly at max_speed, one step to reach it - the case
-    exercised here, since every parametrization below uses the env's default `acceleration_delta ==
-    Fraction(1) >= max_speed`). In general, reaching max_speed from rest takes
-    `steps_to_max_speed = ceil(max_speed / acceleration_delta)` steps, during which the agent covers
-    `distance_during_acceleration = acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2`
-    - strictly less than `steps_to_max_speed * max_speed`, since every step but the last of the ramp runs
-    below max_speed (distance advances by the *pre-step* speed each step - see `SpeedCounter.set()`).
-    The naive `distance / max_speed` estimate doesn't know about this slower ramp, so it needs an
-    `acceleration_delay = (steps_to_max_speed - 1) - distance_during_acceleration / max_speed` correction
-    added on top - the extra time the ramp-up costs beyond cruising at max_speed the whole way. This is
-    `0` exactly when `acceleration_delta >= max_speed` (`steps_to_max_speed == 1`,
-    `distance_during_acceleration == 0`), reducing to the simple case above. The target is then reached
-    at exactly `max(earliest_departure, 1) + distance / max_speed + acceleration_delay`.
+    0 and 1 both mean "depart at the first opportunity"). `distance_map.eta()` (see its own docstring for
+    the derivation, including the acceleration-ramp correction) predicts the arrival step from this
+    off-map position exactly once, up front; re-evaluating it on-map, from the agent's current position/
+    speed/within-cell distance every step thereafter, must keep agreeing with that same original
+    prediction throughout the journey.
     """
     rail, optionals = _make_single_track_corridor(n_cells)
     env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map={max_speed: 1.0}), number_of_agents=1,
                   obs_builder_object=DummyObservationBuilder(), remove_agents_at_target=True)
+    # RailEnv.__init__'s own acceleration_delta default (1.0) is a plain float, unlike
+    # AbstractRailEnv's (Fraction(1)) - force it back to a Fraction so eta()'s arithmetic below stays
+    # exact (a float operand anywhere in a Fraction expression converts the whole result to a lossy
+    # float - see CLAUDE.md's "Speed/distance are Fractions" note).
+    env.acceleration_delta = Fraction(1)
     if wrapped:
         env = RailEnvStateMachineWrapper(env)
     env.reset(random_seed=1)
@@ -1479,25 +1461,12 @@ def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> Non
     agent = env.agents[0]
     agent.earliest_departure = earliest_departure
 
-    def _distance(entry_point, handle) -> Fraction:
-        # distance_map.get() returns a numpy float (always a whole cell count for a reachable entry
-        # point) - cast to an exact Fraction so it composes with speed_counter.distance/max_speed
-        # (also Fractions) without silent float rounding (1/3 isn't exactly representable in float,
-        # and that error compounds across repeated arithmetic below).
-        distance = env.distance_map.get()[
-            handle, entry_point[0][0], entry_point[0][1], entry_point[1]
-        ]
-        return Fraction(int(distance))
-
-    # See the docstring above for the derivation - 0 whenever acceleration_delta >= max_speed (every
-    # parametrization here), since steps_to_max_speed == 1 and distance_during_acceleration == 0 then.
-    acceleration_delta = env.acceleration_delta
-    steps_to_max_speed = math.ceil(max_speed / acceleration_delta)
-    distance_during_acceleration = acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
-    acceleration_delay = (steps_to_max_speed - 1) - distance_during_acceleration / max_speed
-
     departure_step = max(earliest_departure, 1)
-    eta = departure_step + _distance(agent.initial_entry_point, agent.handle) / max_speed + acceleration_delay
+    eta = env.distance_map.eta(
+        entry_point=agent.initial_entry_point, handle=agent.handle, elapsed_steps=env._elapsed_steps,
+        earliest_departure=earliest_departure, speed=None, max_speed=max_speed,
+        acceleration_delta=env.acceleration_delta,
+    )
 
     for _ in range(1000):
         env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -1510,12 +1479,12 @@ def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> Non
             # departure through (but not including) arrival, when current_entry_point goes back to
             # None (remove_agents_at_target=True) before this branch is even reached.
             assert_state(env, agent, wrapped, TrainState.MOVING)
-            # _distance() is the geometric distance from current_entry_point's own cell entry - it
-            # doesn't know how far into that cell the agent has already crept (speed_counter.distance,
-            # fractional whenever max_speed < 1) - subtract that already-covered fraction before
-            # converting the remainder to time.
-            remaining_distance = _distance(agent.current_entry_point, agent.handle) - agent.speed_counter.distance
-            assert env._elapsed_steps + remaining_distance / max_speed == eta
+            on_map_eta = env.distance_map.eta(
+                entry_point=agent.current_entry_point, handle=agent.handle, elapsed_steps=env._elapsed_steps,
+                earliest_departure=earliest_departure, speed=agent.speed_counter.speed, max_speed=max_speed,
+                acceleration_delta=env.acceleration_delta, distance=agent.speed_counter.distance,
+            )
+            assert on_map_eta == eta
 
         if env.dones["__all__"]:
             break
