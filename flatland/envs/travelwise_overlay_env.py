@@ -1,10 +1,8 @@
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.policy import Policy
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.timetable_utils import Line, Timetable
@@ -12,53 +10,35 @@ from flatland.envs.timetable_utils import Line, Timetable
 # `RailEnv`'s off-map departure timing has documented/undocumented edge cases at earliest_departure 0
 # and 1 (e.g. rail_env.py's own "an earliest_departure=0 agent dispatches directly on the very first
 # movement action" comment) where the step an agent actually appears on the map doesn't equal
-# earliest_departure exactly. 2 is the smallest value clear of both, so the overlay agent's departure
+# earliest_departure exactly. 2 is the smallest value clear of both, so every overlay agent's departure
 # step always equals `earliest_departure` and its arrival step always equals `earliest_departure +
 # distance`, exactly - the same clean arithmetic the wrapped env's own legs rely on.
 OVERLAY_EARLIEST_DEPARTURE = 2
 
 
-def _derive_overlay_stops(rail_env: RailEnv) -> List[Tuple[Tuple[int, int], Grid4TransitionsEnum]]:
-    """
-    The overlay agent's route stops at every distinct position used by `rail_env`'s own agents (as a
-    start or a target), ordered west to east - so it passes through every station the underlying env's
-    own legs use, not just the westmost/eastmost extremes, and stops at any of them that lies strictly
-    in between too. Assumes a single-row corridor - every position any agent uses shares the same row.
-    """
-    positions: Set[Tuple[int, int]] = set()
-    for agent in rail_env.agents:
-        positions.add(agent.initial_entry_point[0])
-        for target_position, _ in agent.targets:
-            positions.add(target_position)
-    ordered = sorted(positions, key=lambda position: position[1])
-    direction = Grid4TransitionsEnum.EAST if ordered[-1][1] > ordered[0][1] else Grid4TransitionsEnum.WEST
-    return [(position, direction) for position in ordered]
-
-
 class TravelwiseOverlayEnv:
     """
-    Layers a second, single-agent env over a `RailEnv` ("the underlying env"): the overlay env shares
-    the underlying env's rail topology (transition map), but is otherwise wholly independent of it -
-    separate agent, separate timetable, separate motion checks. The overlay agent shuttles the full
-    span of the underlying env's own route (every distinct station used by its agents, from westmost
-    to eastmost - stopping at any of them in between too) on its own timetable, driven by its own
-    `overlay_policy` (`ShortestPathPolicy` by default) - the `policy` passed in only ever drives the
+    Layers a second env, with its own overlay agents, over a `RailEnv` ("the underlying env"): the
+    overlay env shares the underlying env's rail topology (transition map), but is otherwise wholly
+    independent of it - separate agents, separate timetable, separate motion checks. Each overlay
+    agent (handle `h`) follows its own fixed, ordered list of stops `overlay_stops[h]` - stopping at
+    every one of them, not just the first and last - on its own timetable, driven by `overlay_policy`
+    (a `SetPathPolicy` configured to respect intermediate stops, not `ShortestPathPolicy`, which would
+    path straight from the first stop to the last). The `policy` passed in only ever drives the
     underlying env's own agents.
     """
 
-    def __init__(self, rail_env: RailEnv, policy: Policy, overlay_policy: Optional[Policy] = None):
+    def __init__(self, rail_env: RailEnv, policy: Policy, overlay_policy: Policy, overlay_stops: Dict[int, List[Waypoint]]):
         self.rail_env = rail_env
         self.policy = policy
-        self.overlay_policy = overlay_policy if overlay_policy is not None else ShortestPathPolicy()
+        self.overlay_policy = overlay_policy
+        self.overlay_stops = overlay_stops
 
         self.overlay_env: Optional[RailEnv] = None
-        self.overlay_stops: Optional[List[Tuple[int, int]]] = None
-        self.overlay_start: Optional[Tuple[int, int]] = None
-        self.overlay_target: Optional[Tuple[int, int]] = None
-        self.overlay_earliest_departures: Optional[List[Optional[int]]] = None
-        self.overlay_latest_arrivals: Optional[List[Optional[int]]] = None
-        self.overlay_earliest_departure: Optional[int] = None
-        self.overlay_latest_arrival: Optional[int] = None
+        self.overlay_earliest_departures: Optional[Dict[int, List[Optional[int]]]] = None
+        self.overlay_latest_arrivals: Optional[Dict[int, List[Optional[int]]]] = None
+        self.overlay_earliest_departure: Optional[Dict[int, int]] = None
+        self.overlay_latest_arrival: Optional[Dict[int, int]] = None
 
         self._rail_env_obs = None
         self._overlay_obs = None
@@ -70,36 +50,38 @@ class TravelwiseOverlayEnv:
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
 
-        stops = _derive_overlay_stops(self.rail_env)
-        self.overlay_stops = [position for position, _ in stops]
-        self.overlay_start = stops[0][0]
-        self.overlay_target = stops[-1][0]
-
-        # cumulative distance (cells) from the first stop up to each stop, at speed 1 - no dwell at an
-        # intermediate stop, so its earliest departure and latest arrival are the same step: the step
-        # the train reaches it.
-        cumulative_distances = [0]
-        for (position, _), (next_position, _) in zip(stops, stops[1:]):
-            cumulative_distances.append(cumulative_distances[-1] + abs(next_position[1] - position[1]))
-        arrival_steps = [OVERLAY_EARLIEST_DEPARTURE + distance for distance in cumulative_distances]
-        self.overlay_earliest_departures = arrival_steps[:-1] + [None]
-        self.overlay_latest_arrivals = [None] + arrival_steps[1:]
-        self.overlay_earliest_departure = arrival_steps[0]
-        self.overlay_latest_arrival = arrival_steps[-1]
+        self.overlay_earliest_departures = {}
+        self.overlay_latest_arrivals = {}
+        self.overlay_earliest_departure = {}
+        self.overlay_latest_arrival = {}
+        for handle, stops in self.overlay_stops.items():
+            # cumulative distance (cells) from this agent's first stop up to each of its stops, at
+            # speed 1 - no dwell at an intermediate stop, so its earliest departure and latest arrival
+            # are the same step: the step the train reaches it.
+            cumulative_distances = [0]
+            for stop, next_stop in zip(stops, stops[1:]):
+                cumulative_distances.append(cumulative_distances[-1] + abs(next_stop.position[1] - stop.position[1]))
+            arrival_steps = [OVERLAY_EARLIEST_DEPARTURE + distance for distance in cumulative_distances]
+            self.overlay_earliest_departures[handle] = arrival_steps[:-1] + [None]
+            self.overlay_latest_arrivals[handle] = [None] + arrival_steps[1:]
+            self.overlay_earliest_departure[handle] = arrival_steps[0]
+            self.overlay_latest_arrival[handle] = arrival_steps[-1]
 
         def _line_generator(rail, num_agents, hints, num_resets, np_random) -> Line:
-            return Line(agent_waypoints={0: [[Waypoint(position, direction)] for position, direction in stops]}, agent_speeds=[1.0])
+            return Line(agent_waypoints={handle: [[stop] for stop in stops] for handle, stops in self.overlay_stops.items()},
+                       agent_speeds=[1.0] * len(self.overlay_stops))
 
         def _timetable_generator(agents, distance_map, hints, np_random) -> Timetable:
-            return Timetable(earliest_departures=[self.overlay_earliest_departures],
-                             latest_arrivals=[self.overlay_latest_arrivals],
-                             max_episode_steps=self.overlay_latest_arrival)
+            handles = sorted(self.overlay_stops)
+            return Timetable(earliest_departures=[self.overlay_earliest_departures[handle] for handle in handles],
+                             latest_arrivals=[self.overlay_latest_arrivals[handle] for handle in handles],
+                             max_episode_steps=max(self.overlay_latest_arrival.values()))
 
         self.overlay_env = RailEnv(width=self.rail_env.width, height=self.rail_env.height,
                                    rail_generator=rail_from_grid_transition_map(self.rail_env.rail),
                                    line_generator=_line_generator,
                                    timetable_generator=_timetable_generator,
-                                   number_of_agents=1,
+                                   number_of_agents=len(self.overlay_stops),
                                    obs_builder_object=FullEnvObservation())
         self._overlay_obs, overlay_info = self.overlay_env.reset()
         self._overlay_done = False

@@ -41,6 +41,12 @@ LEG_WAYPOINTS: Dict[int, List[List[Waypoint]]] = {
 LEG_EARLIEST_DEPARTURE: Dict[int, int] = {handle: (handle + 1) * HEADWAY for handle in LEG_WAYPOINTS}
 LEG_TARGET_WAYPOINT: Dict[int, Waypoint] = {handle: leg[-1][0] for handle, leg in LEG_WAYPOINTS.items()}
 
+# The single overlay agent's own route: A->B->C, stopping at B on the way rather than skipping
+# straight to C - one ordered list of stops per overlay agent handle.
+OVERLAY_STOPS: Dict[int, List[Waypoint]] = {
+    0: [Waypoint(STATION_A, Grid4TransitionsEnum.EAST), Waypoint(STATION_B, Grid4TransitionsEnum.EAST), Waypoint(STATION_C, Grid4TransitionsEnum.EAST)],
+}
+
 
 def _make_three_station_rail() -> RailGridTransitionMap:
     transitions = RailEnvTransitions()
@@ -182,10 +188,12 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
 
     A `TravelwiseOverlayEnv` wraps this `RailEnv` (the "underlying env") together with the
     `ShortestPathPolicy` that drives its four legs, and layers on a fifth, wholly independent train:
-    the overlay agent, running A->B->C - stopping at B on the way, not passing it straight through -
-    on its own separate `RailEnv`, driven by `SetPathPolicy` (ported from flatland-baselines) rather
-    than `ShortestPathPolicy`, sharing only the corridor's topology with the underlying env - never its
-    agents, timetable or motion checks.
+    the overlay agent, running `OVERLAY_STOPS[0]` (A->B->C, stopping at B on the way rather than
+    passing it straight through) on its own separate `RailEnv`, driven by `SetPathPolicy` (ported from
+    flatland-baselines) rather than `ShortestPathPolicy`, sharing only the corridor's topology with the
+    underlying env - never its agents, timetable or motion checks. `TravelwiseOverlayEnv` takes both
+    the overlay agents' stops (one ordered list per handle) and the policy that must respect them as
+    required constructor arguments - it has no default route or default policy of its own.
 
     - A `ShortestPathPolicy` drives every one of the underlying env's four trains from its start
       waypoint to its target waypoint, one cell per step (speed 1, no malfunctions, no other traffic
@@ -215,7 +223,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
                                                  timetable_generator=_timetable_generator,
                                                  number_of_agents=len(LEG_WAYPOINTS),
                                                  obs_builder_object=FullEnvObservation()))
-    overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy(), overlay_policy=SetPathPolicy(use_always_first_strategy=1))
+    overlay = TravelwiseOverlayEnv(rail_env, ShortestPathPolicy(),
+                                   overlay_policy=SetPathPolicy(use_always_first_strategy=1),
+                                   overlay_stops=OVERLAY_STOPS)
     overlay.reset()
 
     # the heading info wrapper's info dict already carries each leg's target waypoint right after
@@ -234,17 +244,14 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         assert agent.earliest_departure == LEG_EARLIEST_DEPARTURE[handle]
         assert agent.latest_arrival == LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE
 
-    # the overlay agent's own route/timetable: derived to span the underlying env's full corridor,
-    # stopping at every station it uses (A, B, C - not skipping over intermediate B), on a fixed
-    # earliest departure clear of RailEnv's off-map departure timing edge cases. No dwell at B: its
-    # earliest departure and latest arrival are the same step, the one it reaches B on.
-    assert overlay.overlay_stops == [STATION_A, STATION_B, STATION_C]
-    assert overlay.overlay_start == STATION_A
-    assert overlay.overlay_target == STATION_C
-    assert overlay.overlay_earliest_departures == [2, 2 + STATION_DISTANCE, None]
-    assert overlay.overlay_latest_arrivals == [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]
-    assert overlay.overlay_earliest_departure == 2
-    assert overlay.overlay_latest_arrival == 2 + 2 * STATION_DISTANCE
+    # the overlay agent's own route/timetable, computed from OVERLAY_STOPS[0] (A, B, C - not skipping
+    # over intermediate B), on a fixed earliest departure clear of RailEnv's off-map departure timing
+    # edge cases. No dwell at B: its earliest departure and latest arrival are the same step, the one
+    # it reaches B on.
+    assert overlay.overlay_earliest_departures == {0: [2, 2 + STATION_DISTANCE, None]}
+    assert overlay.overlay_latest_arrivals == {0: [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]}
+    assert overlay.overlay_earliest_departure == {0: 2}
+    assert overlay.overlay_latest_arrival == {0: 2 + 2 * STATION_DISTANCE}
     overlay_agent = overlay.overlay_env.agents[0]
     assert overlay_agent.waypoints == [[Waypoint(STATION_A, Grid4TransitionsEnum.EAST)],
                                        [Waypoint(STATION_B, Grid4TransitionsEnum.EAST)],
@@ -308,8 +315,8 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         assert rail_env_position_by_step[handle][arrival_step] is None, f"leg {handle}: still on track at its latest arrival step {arrival_step}"
 
     # same shape of check for the overlay agent's A->C leg.
-    overlay_departure_step = overlay.overlay_earliest_departure
-    overlay_arrival_step = overlay.overlay_latest_arrival
+    overlay_departure_step = overlay.overlay_earliest_departure[0]
+    overlay_arrival_step = overlay.overlay_latest_arrival[0]
     for step in range(1, overlay_departure_step):
         assert overlay_position_by_step[step] is None, f"overlay: on track before its earliest departure at step {step}"
     for offset in range(2 * STATION_DISTANCE):
