@@ -197,14 +197,14 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
 
     A `TravelwiseOverlayEnv` wraps this `RailEnv` (the "underlying env") together with the
     `ShortestPathPolicy` that drives its four legs, and layers on a fifth agent - the overlay agent, a
-    passenger rather than a train - riding `OVERLAY_STOPS[0]` (A->B->C) on its own separate `RailEnv`,
-    sharing only the corridor's topology with the underlying env - never its agents, timetable or
-    motion checks. The overlay agent never moves under its own action: it either waits at one of its
-    own stops for a train heading to its next stop, or - once one shows up - rides that train's
-    position exactly, one underlying-env agent at a time, boarding and alighting automatically. Its
-    `overlay_policy` (`SetPathPolicy`, ported from flatland-baselines) is still a required constructor
-    argument, but is not currently exercised - `TravelwiseOverlayEnv` ignores overlay agents' own
-    actions entirely while riding mode is in place.
+    passenger rather than a train - riding `OVERLAY_STOPS[0]` (A->B->C), sharing only the corridor's
+    topology with the underlying env - never its agents, timetable or motion checks, and never a real
+    `RailEnv`/`EnvAgent` of its own. The overlay agent never moves under its own action: it either
+    waits at one of its own stops for a train heading to its next stop, or - once one shows up - rides
+    that train's position exactly, one underlying-env agent at a time, boarding and alighting
+    automatically. Its `overlay_policy` (`SetPathPolicy`, ported from flatland-baselines) is still a
+    required constructor argument, but is not currently exercised - `TravelwiseOverlayEnv` ignores
+    overlay agents' own actions entirely while riding mode is in place.
 
     - A `ShortestPathPolicy` drives every one of the underlying env's four trains from its start
       waypoint to its target waypoint, one cell per step (speed 1, no malfunctions, no other traffic
@@ -222,11 +222,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
       since leg 1 (B->C), the only train ever heading to its next stop, C, is the one deliberately
       postponed above: the overlay agent simply keeps waiting until leg 1 actually shows up, boards it
       the instant it does, and alights onto C, its own final target, the step leg 1 arrives there and
-      is removed. Once at C - its own last stop - the overlay agent simply stays there. Since its
-      position is only ever written directly (see `TravelwiseOverlayEnv._sync_overlay_env_agent()`),
-      not reached through the overlay env's own `step()`, that env's `handle_done_state()` only
-      notices the arrival - and sets `overlay_agent.arrival_time`/`target_entry_point` - the *next*
-      time its `step()` runs, one step after the overlay agent's position is actually written as C.
+      is removed. Once at C - its own last stop - the overlay agent simply stays there, with
+      `overlay_arrival_time`/`overlay_target_entry_point` recorded the same step its position is
+      written as C.
     - No train, underlying or overlay, is ever stopped: the underlying env's headway leaves enough
       clearance that its four trains never contend for a cell.
     - The underlying env is wrapped in `RailEnvHeadingInfoWrapper`, so its info dict's `heading` entry
@@ -265,24 +263,13 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         assert agent.latest_arrival == LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE
 
     # the overlay agent's own route/timetable, computed from OVERLAY_STOPS[0] (A, B, C - not skipping
-    # over intermediate B) purely to hand the overlay env's own `RailEnv` a valid `Timetable` (its own
-    # per-step invariant checks are disabled, but `EnvAgent.apply_timetable` itself still asserts a
-    # self-consistent earliest-departure/latest-arrival ordering at construction time) - real arrival
-    # at B/C is no longer on this fixed schedule (see `_update_overlay_agents()`), so only the very
-    # first entry, `overlay_earliest_departure`, is still behaviorally meaningful: it gates the step
-    # the overlay agent shows up waiting at its first stop, A.
+    # over intermediate B) - real arrival at B/C is no longer on this fixed schedule (see
+    # `_update_overlay_agents()`), so only the very first entry, `overlay_earliest_departure`, is still
+    # behaviorally meaningful: it gates the step the overlay agent shows up waiting at its first stop, A.
     assert overlay.overlay_earliest_departures == {0: [2, 2 + STATION_DISTANCE, None]}
     assert overlay.overlay_latest_arrivals == {0: [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]}
     assert overlay.overlay_earliest_departure == {0: 2}
     assert overlay.overlay_latest_arrival == {0: 2 + 2 * STATION_DISTANCE}
-    overlay_agent = overlay.overlay_env.agents[0]
-    assert overlay_agent.waypoints == [[Waypoint(STATION_A, Grid4TransitionsEnum.EAST)],
-                                       [Waypoint(STATION_B, Grid4TransitionsEnum.EAST)],
-                                       [Waypoint(STATION_C, Grid4TransitionsEnum.EAST)]]
-    assert overlay_agent.waypoints_earliest_departure == [2, 2 + STATION_DISTANCE, None]
-    assert overlay_agent.waypoints_latest_arrival == [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]
-    assert overlay_agent.earliest_departure == 2
-    assert overlay_agent.latest_arrival == 2 + 2 * STATION_DISTANCE
 
     rail_env_position_by_step: Dict[int, Dict[int, Tuple[int, int]]] = {handle: {} for handle in LEG_WAYPOINTS}
     overlay_position_by_step: Dict[int, Tuple[int, int]] = {}
@@ -295,9 +282,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
             rail_env_position_by_step[handle][step] = agent.current_entry_point[0] if agent.current_entry_point is not None else None
             assert agent.state != TrainState.STOPPED
         overlay_position, riding_handle = overlay.overlay_mode[0]
-        overlay_position_by_step[step] = overlay_agent.current_entry_point[0] if overlay_agent.current_entry_point is not None else None
+        overlay_current_entry_point = overlay.overlay_current_entry_point[0]
+        overlay_position_by_step[step] = overlay_current_entry_point[0] if overlay_current_entry_point is not None else None
         overlay_mode_by_step[step] = overlay.overlay_mode[0]
-        assert overlay_agent.state != TrainState.STOPPED
         # while riding (mode 3), the ridden underlying agent's own position matches the overlay
         # agent's position exactly, every step - the invariant `overlay_mode[h]`'s riding entry itself
         # is a handle (not a position) relies on.
@@ -355,11 +342,10 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     }
 
     # the overlay agent's own target entry point - C, arriving from the east, as a plain
-    # (position, direction) pair (not a `Waypoint`; `target_entry_point` is an `EntryPointT`) - and the
-    # step `RailEnv` itself records that arrival on (one step after its position is actually written
-    # as C, step 23 - see the docstring above for why).
-    assert overlay_agent.target_entry_point == (STATION_C, Grid4TransitionsEnum.EAST)
-    assert overlay_agent.arrival_time == 24
+    # (position, direction) pair (not a `Waypoint`; `EntryPointT` is generic) - and the step its
+    # arrival is recorded on, the same step its position is actually written as C.
+    assert overlay.overlay_target_entry_point[0] == (STATION_C, Grid4TransitionsEnum.EAST)
+    assert overlay.overlay_arrival_time[0] == 23
 
     for handle, leg in LEG_WAYPOINTS.items():
         start_position = leg[0][0].position
