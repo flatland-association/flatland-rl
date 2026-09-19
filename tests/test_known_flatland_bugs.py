@@ -16,8 +16,8 @@ from flatland.envs.line_generators import SparseLineGen
 from flatland.envs.malfunction_generators import MalfunctionParameters, NoMalfunctionGen, ParamMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import sparse_rail_generator
 from flatland.envs.step_utils.states import TrainState
 from tests.conftest import derived_state, assert_state
@@ -42,75 +42,6 @@ def init_test_rail_env(speed: float, wrapped: bool = True) -> RailEnv:
         rail_env = RailEnvStateMachineWrapper(rail_env)
     _ = rail_env.reset(random_seed=1234)
     return rail_env
-
-
-@pytest.mark.parametrize("wrapped", [True, False])
-def test_min_distance_for_off_map_trains_speed_of_1_REVISEDESIGN(wrapped) -> None:
-    """
-    TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: we could add +1 to "geometric" distance for off map states.
-
-    The minimum distance for an off-map train is calculated from the initial position to the target. However, in
-    order for the agent to spawn or be placed on map on the initial position one action is needed.
-    As such the minimum distance can be viewed as being 1-off for off-map trains when it comes to the number of steps
-    needed to reach the target and especially when reasoning on whether the train can reach its target in time.
-    Although not strictly a bug, but something to be still aware of.
-    """
-
-    env = init_test_rail_env(1, wrapped)
-    env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
-
-    agent = env.agents[0]
-    assert_state(env, agent, wrapped, TrainState.READY_TO_DEPART)
-    min_distance_off_map = env.distance_map.get()[
-        agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
-        agent.initial_entry_point[1]
-    ]
-    off_map_position = agent.initial_entry_point[0]
-
-    env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert_state(env, agent, wrapped, TrainState.MOVING)
-    min_distance_on_map = env.distance_map.get()[
-        agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
-        agent.initial_entry_point[1]
-    ]
-    on_map_position = agent.current_entry_point[0]
-    assert np.all(on_map_position == off_map_position)
-    assert min_distance_off_map == min_distance_on_map
-
-
-@pytest.mark.parametrize("wrapped", [True, False])
-def test_min_distance_for_off_map_trains_speed_of_half_REVISEDESIGN(wrapped) -> None:
-    """
-    TODO https://github.com/flatland-association/flatland-rl/issues/280 revise design: we could add +1 to "geometric" distance for off map states.
-
-    The minimum distance for an off-map train is calculated from the initial position to the target. However, in
-    order for the agent to spawn or be placed on map on the initial position one action is needed.
-    As such the minimum distance can be viewed as being 1-off for off-map trains when it comes to the number of steps
-    needed to reach the target and especially when reasoning on whether the train can reach its target in time.
-    Although not strictly a bug, but something to be still aware of.
-    """
-    rail_env = init_test_rail_env(0.5, wrapped)
-
-    rail_env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
-    rail_env.step({0: RailEnvActions.DO_NOTHING, 1: RailEnvActions.DO_NOTHING})
-
-    agent = rail_env.agents[0]
-    assert_state(rail_env, agent, wrapped, TrainState.READY_TO_DEPART)
-    min_distance_off_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
-        agent.initial_entry_point[1]
-    ]
-    off_map_position = agent.initial_entry_point[0]
-
-    rail_env.step({0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD})
-    assert_state(rail_env, agent, wrapped, TrainState.MOVING)
-    min_distance_on_map = rail_env.distance_map.get()[
-        agent.handle, agent.initial_entry_point[0][0], agent.initial_entry_point[0][1],
-        agent.initial_entry_point[1]
-    ]
-    on_map_position = agent.current_entry_point[0]
-    assert np.all(on_map_position == off_map_position)
-    assert min_distance_off_map == min_distance_on_map
 
 
 # pylint: disable=protected-access

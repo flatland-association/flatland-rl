@@ -1110,11 +1110,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # A DONE agent is never "ready to depart" regardless of earliest_departure timing - not done
         # is included here for semantic correctness, even though every consumer below already applies its
         # own not done guard at the branch, so this doesn't change any branch's outcome.
+        # Uniform for every elapsed_steps, including the very first call (elapsed_steps == 1): an
+        # earliest_departure of 0 or 1 both resolve to "ready at the first opportunity" here, since
+        # there's no step 0 to have made them distinguishable - see
+        # RailEnvStateMachineWrapper._update_state_machine_after_step's own generalized issue #280
+        # bootstrap, which keeps agent.state in sync with this for exactly that pair of values.
         movement_action_given = RailEnvActions.is_moving_action(action)
-        if elapsed_steps == 1:
-            ready_to_depart = not done and (earliest_departure == 0)  # no "step 0" exists, so this is the base case
-        else:
-            ready_to_depart = not done and (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
+        ready_to_depart = not done and (earliest_departure <= elapsed_steps)  # no +1: is it READY_TO_DEPART now
         # required_action_invalid_or_not_required_or_no_movement: why an off-map agent doesn't depart
         # this step - one of three disjoint reasons: not yet ready to depart (action not required
         # yet), ready to depart but no moving action given (action required, but not attempted), or a
