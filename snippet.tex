@@ -1,0 +1,109 @@
+\subsubsection{Notation used below}
+
+The following boolean predicates are computed once per agent per step and reused across all three collect-phase
+candidates below (mirroring \texttt{collect()}'s own hoisting of these as shared parameters to the three
+\texttt{\_candidate\_*} methods - see design\_by\_contract.md's Table 2a/2b and Table 4a):
+
+\begin{align*}
+cellExit_i^t      &:\Leftrightarrow c_i^t \not= \bot \text{ and } s_i^t > 0 \text{ and } d_i^t + s_i^t \geq \lVert c_i^t \rVert \\
+targetReached_i^t &:\Leftrightarrow c_i^t \not= \bot \text{ and } cellExit_i^t \text{ and } \tau(p',\action_i^t) \in targets_i, \text{ for } c_i^t=(p,p') \\
+mapEntry_i^t      &:\Leftrightarrow c_i^t = \bot \text{ and } \action_i^t \in \{\text{L},\text{F},\text{R}\} \text{ and } t+1 \geq e_{i,1,1} \text{ and } \tau(p_{i,1,1},\action_i^t) \not= \bot \\
+stayOffMap_i^t    &:\Leftrightarrow c_i^t = \bot \text{ and not } mapEntry_i^t \\
+invalidAction_i^t &:\Leftrightarrow \tau(p',\action_i^t) = \bot \text{ and } cellExit_i^t, \text{ for } c_i^t=(p,p')
+\end{align*}
+
+Branches below are checked in the same order as their code counterparts (design\_by\_contract.md's own ``Branch
+order'' section) and, in contrast to code, only state what each branch newly requires given that every earlier
+branch in the same \texttt{elif} chain already failed - not the fully self-contained, pairwise-disjoint form the
+code itself uses. All three collect-phase equations assume \texttt{remove\_agents\_at\_target=True} (the code's
+more general form also supports \texttt{False} - out of scope here, see design\_by\_contract.md's Table 4 scope
+note, not an omission to "fix").
+
+\subsubsection{Step Collect Phase}
+
+In the step collect phase, we collect agent state/configuration update candidates unilaterally before the
+simulation checks whether agents can move.
+
+\textbf{Speed update candidates:}
+\begin{equation}
+\tilde{s}_i^{t+1} =
+        \begin{cases}
+            0 & \text{if } i \in dones^t \qquad (\textit{done}) \\
+            0 & \text{elif } stayOffMap_i^t \text{ and } m_i^{t} = \bot \qquad (\textit{stay off map}) \\
+            s_i^t & \text{elif } m_i^{t} = \bot \text{ and } c_i^t \not= \bot \text{ and not } targetReached_i^t \text{ and not } invalidAction_i^t \\
+                  & \quad \text{ and } \big(\action_i^t = \text{DoNothing} \text{ or } (s_i^t \not= 0 \text{ and } \action_i^t \in \{\text{L},\text{R}\})\big) \qquad (\textit{keep moving mid-cell}) \\
+            \min\{s_i^{t}+\Delta{}v_a,v_{\text{max},i}\} & \text{elif } m_i^{t} = \bot \text{ and } c_i^t \not= \bot \text{ and not } targetReached_i^t \text{ and not } invalidAction_i^t \\
+                  & \quad \text{ and } \big(\action_i^t = \text{F} \text{ or } (s_i^t = 0 \text{ and } \action_i^t \in \{\text{L},\text{F},\text{R}\})\big) \qquad (\textit{acceleration or start moving}) \\
+            \max\{s_i^{t}+\Delta{}v_b,0\} & \text{elif } m_i^{t} = \bot \text{ and } c_i^t \not= \bot \text{ and not } targetReached_i^t \text{ and not } invalidAction_i^t \text{ and } \action_i^t = \text{S} \qquad (\textit{braking}) \\
+            0 & \text{elif } m_i^{t} \not= \bot \text{ and not } targetReached_i^t \qquad (\textit{malfunction}) \\
+            \min\{\Delta{}v_a,v_{\text{max},i}\} & \text{elif } c_i^t = \bot \qquad (\textit{map entry}) \\
+            0 & \text{elif } targetReached_i^t \qquad (\textit{target reached}) \\
+            0 & \text{elif } invalidAction_i^t \qquad (\textit{invalid action at cell exit}) \\
+        \end{cases}
+\end{equation}
+
+\textbf{Position update candidates:}
+\begin{equation}
+\tilde{c}_i^{t+1}=
+        \begin{cases}
+            (\bot,\bot) & \text{if } i \in dones^t \qquad (\textit{done}) \\
+            (\bot,\bot) & \text{elif } stayOffMap_i^t \text{ and } m_i^{t} = \bot \qquad (\textit{stay off map}) \\
+            c_i^{t} & \text{elif } c_i^t \not= \bot \text{ and not } cellExit_i^t \qquad (\textit{keep moving mid-cell}) \\
+            (p',\tau(p',\action_i^t)) & \text{elif } m_i^{t} = \bot \text{ and } cellExit_i^t \text{ and not } targetReached_i^t \text{ and } \tau(p',\action_i^t) \not= \bot, \\
+                                      & \quad \text{ for } c_i^t=(p,p') \qquad (\textit{on-map cell transition}) \\
+            c_i^{t} & \text{elif } m_i^{t} \not= \bot \text{ and not } targetReached_i^t \qquad (\textit{malfunction}) \\
+            (p_{i,1,1}, \tau(p_{i,1,1}, \action_i^t)) & \text{elif } c_i^t = \bot \qquad (\textit{map entry}) \\
+            (\bot,\bot) & \text{elif } targetReached_i^t \qquad (\textit{target reached}) \\
+            c_i^{t} & \text{elif } invalidAction_i^t, \text{ for } c_i^t=(p,p') \qquad (\textit{invalid action at cell exit}) \\
+        \end{cases}
+\end{equation}
+
+\textbf{Distance update candidates:}
+\begin{equation}
+\tilde{d}_i^{t+1} =
+        \begin{cases}
+            \min(d_i^{t} + s_i^t, \lVert c_i^t \rVert) & \text{if } i \in dones^t \qquad (\textit{done}) \\
+            \bot & \text{elif } stayOffMap_i^t \text{ and } m_i^{t} = \bot \qquad (\textit{stay off map}) \\
+            d_i^{t} + s_i^t \mod \lVert c_i^t \rVert & \text{elif } s_i^t \not= 0 \text{ and } c_i^t \not= \bot \text{ and } m_i^{t} = \bot \text{ and not } targetReached_i^t \\
+                                                      & \quad \text{ and not } invalidAction_i^t \qquad (\textit{keep moving mid-cell}) \\
+            d_i^{t} & \text{elif } s_i^t = 0 \text{ and } c_i^t \not= \bot \text{ and } m_i^{t} = \bot \text{ and not } targetReached_i^t \\
+                    & \quad \text{ and not } invalidAction_i^t \qquad (\textit{stopped}) \\
+            d_i^{t} & \text{elif } m_i^{t} \not= \bot \text{ and not } targetReached_i^t \qquad (\textit{malfunction}) \\
+            0 & \text{elif } c_i^t = \bot \qquad (\textit{map entry}) \\
+            \bot & \text{elif } targetReached_i^t \qquad (\textit{target reached}) \\
+            \min(d_i^{t} + s_i^t, \lVert c_i^t \rVert) & \text{elif } invalidAction_i^t \qquad (\textit{invalid action at cell exit}) \\
+        \end{cases}
+\end{equation}
+
+\subsubsection{Step Distribute Phase}
+
+In the step distribute phase, we apply the agent state/configuration update candidates for all agents whose
+motion check succeeds ($\mu(\tilde{c}_i^{t+1}, \action_i^t) = \top$), in the same order as \texttt{distribute()}:
+position first, then speed and distance together.
+
+\begin{equation}
+c_i^{t+1} =
+        \begin{cases}
+            \tilde{c}_i^{t+1} & \text{if } \mu(\tilde{c}_i^{t+1}, \action_i^t) = \top \qquad (\textit{accepted}) \\
+            c_i^{t} & \text{else} \qquad (\textit{denied - candidate discarded}) \\
+        \end{cases}
+\end{equation}
+
+\begin{equation}
+s_i^{t+1} =
+        \begin{cases}
+            \bot & \text{if } \mu(\tilde{c}_i^{t+1}, \action_i^t) = \bot \text{ and } c_i^t = \bot \qquad (\textit{denied map entry}) \\
+            0 & \text{elif } \mu(\tilde{c}_i^{t+1}, \action_i^t) = \bot \qquad (\textit{denied on-map crossing}) \\
+            \bot & \text{elif } \tilde{c}_i^{t+1} = \bot \qquad (\textit{accepted, ends up off map}) \\
+            \tilde{s}_i^{t+1} & \text{else} \qquad (\textit{accepted, ends up on map}) \\
+        \end{cases}
+\end{equation}
+
+\begin{equation}
+d_i^{t+1} =
+        \begin{cases}
+            \bot & \text{if } \mu(\tilde{c}_i^{t+1}, \action_i^t) = \bot \text{ and } c_i^t = \bot \qquad (\textit{denied map entry}) \\
+            \min(d_i^{t} + s_i^t, \lVert c_i^t \rVert) & \text{elif } \mu(\tilde{c}_i^{t+1}, \action_i^t) = \bot \qquad (\textit{denied on-map crossing}) \\
+            \tilde{d}_i^{t+1} & \text{else} \qquad (\textit{accepted}) \\
+        \end{cases}
+\end{equation}
