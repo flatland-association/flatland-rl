@@ -677,12 +677,12 @@ def test_symmetric_switch_move_forward_action():
     stop at the cell boundary. A moving-action retry (MOVE_FORWARD, still invalid at this switch)
     is optimistically promoted back to MOVING regardless (SpeedCounter.is_cell_exit() requires
     speed > 0, so a STOPPED/banked agent never blocks its own promotion - see design_by_contract.md),
-    but its  next re-attempt at the boundary is denied and penalized again; a non-moving
+    but its next re-attempt at the boundary is denied and penalized again; a non-moving
     STOP_MOVING retry never promotes at all. Only a valid action (MOVE_LEFT/MOVE_RIGHT)
     lets the agent actually enter the switch. Each MOVING->STOPPED transition that denies a crossing
     draws an INVALID_ACTION penalty (pre-step speed times collision_factor, see
     BaseDefaultRewards.step_reward) - never a COLLISION one, since there is no other agent to
-    conflict with - once per  entering attempt, not once per retry.
+    conflict with - once per entering attempt, not once per retry.
     """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR), skip_state_machine_update=False)
 
