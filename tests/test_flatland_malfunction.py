@@ -534,8 +534,7 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
 
 def test_stop_moving_wraps_overshoot_beyond_boundary():
     """
-    Further consequence of the fix in test_stop_moving_crossing_completion_consistent_with_do_nothing:
-    once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
+    Once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
     boundary is preserved (wrapped via `SpeedCounter.distance_after_crossing`'s `distance % SEGMENT_LENGTH`),
     not discarded - `distance + pre_speed` reaching `3/2` lands the agent `1/2` into the new cell, not
     capped at exactly the boundary.
