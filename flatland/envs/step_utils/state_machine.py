@@ -21,6 +21,11 @@ class TrainStateMachine:
         self.st_signals = StateTransitionSignals()
         self.next_state = None
         self.previous_state = None
+        # Whether set_state() has ever actually driven this state machine (see RailEnvStateMachineWrapper) -
+        # distinguishes "never touched, still sitting at __init__'s default" from "genuinely computed/set to
+        # this exact value", so EnvAgent.state can tell the two apart and fall back to derived_state() for
+        # the former (see agent_utils.py's `state` property).
+        self._is_live = False
 
     def _handle_waiting(self):
         """" Waiting state goes to ready to depart when earliest departure is reached"""
@@ -176,12 +181,14 @@ class TrainStateMachine:
             raise ValueError(f"Cannot set invalid state {state}")
         self.previous_state = self._state
         self._state = state
+        self._is_live = True
 
     def reset(self):
         self._state = self._initial_state
         self.previous_state = None
         self.st_signals = StateTransitionSignals()
         self.clear_next_state()
+        self._is_live = False
 
     def update_if_reached(self, entry_point, targets):
         # Need to do this hacky fix for now, state machine needed speed related states for proper handling
@@ -193,6 +200,11 @@ class TrainStateMachine:
     @property
     def state(self):
         return self._state
+
+    @property
+    def is_live(self):
+        """ Whether set_state() has ever been called on this instance since construction/reset() """
+        return self._is_live
 
     @property
     def state_transition_signals(self):
@@ -243,6 +255,7 @@ class TrainStateMachine:
             "st_signals": self.st_signals,
             "next_state": self.next_state,
             "previous_state": self.previous_state,
+            "_is_live": self._is_live,
         }
 
     def __setstate__(self, state):
@@ -251,3 +264,7 @@ class TrainStateMachine:
         self.st_signals = state["st_signals"]
         self.next_state = state["next_state"]
         self.previous_state = state["previous_state"]
+        # a pickle predating the is_live flag never had it - default to True, since such a pickle's
+        # _state already reflects whatever a real (possibly wrapped) run last set it to, not __init__'s
+        # untouched default.
+        self._is_live = state.get("_is_live", True)

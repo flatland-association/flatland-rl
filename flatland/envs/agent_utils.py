@@ -483,6 +483,18 @@ class EnvAgent(Generic[EntryPointT]):
 
     @property
     def state(self):
+        """
+        The agent's current `TrainState`. Falls back to `derived_state()` (no `elapsed_steps`/
+        `in_malfunction` override - see its own docstring for what that costs: WAITING and
+        READY_TO_DEPART become indistinguishable, both reported as WAITING) whenever
+        `state_machine` has never actually been driven - i.e. on an env never wrapped via
+        `RailEnvStateMachineWrapper`, where `state_machine.state` would otherwise stay frozen at
+        its `__init__` default forever. Once the state machine has been driven at least once
+        (`state_machine.is_live`), this returns its real tracked value directly, identical to
+        before this fallback existed.
+        """
+        if not self.state_machine.is_live:
+            return self.derived_state()
         return self.state_machine.state
 
     @state.setter

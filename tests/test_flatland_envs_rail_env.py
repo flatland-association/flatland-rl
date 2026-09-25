@@ -2663,10 +2663,16 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
     - Every step, all three envs agree exactly on each agent's position (current_entry_point/
       next_entry_point/target_entry_point), arrival_time, speed/distance, malfunction counter,
       rewards and dones: RailEnvStateMachineWrapper never changes step()'s own control flow either way.
-    - agent.state itself stays at its never-touched initial value on both the unwrapped and the
-      skip_state_machine_update=True envs for the whole run, while the default-wrapped env's
-      agents visibly progress through states - showing the wrapper's tracking is real (not a
-      no-op) without it affecting any of the above.
+    - agent.state_machine is never actually driven on the unwrapped and skip_state_machine_update=True
+      envs, so agent.state on those two falls back to agent.derived_state() (see EnvAgent.state's own
+      docstring) - every step, it matches derived_state() exactly, and progresses away from WAITING
+      just like the default-wrapped env's real tracked state does.
+    - The one case agent.state can still diverge between the real-tracked and derived-fallback envs is
+      WAITING vs. READY_TO_DEPART: derived_state() without elapsed_steps can't tell the two apart
+      (always reports WAITING), while the wrapped env's real state machine can. This test tracks
+      whether that divergence occurs at least once, confirming the wrapper's real tracking still adds
+      information beyond the fallback, without it affecting any of the position/reward/done bookkeeping
+      above.
 
     Parametrized over the same seed grid as test_derived_state_matches_state_on_wrapped_env
     (agent_utils.py) - 5x's this test's random-scenario coverage for the price of one more axis.
@@ -2689,8 +2695,7 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
     env_wrapped_skip = RailEnvStateMachineWrapper(make_env(), skip_state_machine_update=True)
     env_wrapped_skip.reset(random_seed=seed)
 
-    initial_states = [agent.state for agent in env.agents]
-    any_state_diverged_on_wrapped_env = False
+    any_real_state_diverged_from_derived_fallback = False
 
     rng = np.random.RandomState(seed)
     for _ in range(80):
@@ -2716,14 +2721,14 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
             assert done_wrapped[a] == done[a]
             assert done_wrapped_skip[a] == done[a]
 
-            assert agent.state == initial_states[a]
-            assert agent_wrapped_skip.state == initial_states[a]
-            if agent_wrapped.state != initial_states[a]:
-                any_state_diverged_on_wrapped_env = True
+            assert agent.state == agent.derived_state()
+            assert agent_wrapped_skip.state == agent_wrapped_skip.derived_state()
+            if agent_wrapped.state != agent.derived_state():
+                any_real_state_diverged_from_derived_fallback = True
 
         assert done_wrapped["__all__"] == done["__all__"]
         assert done_wrapped_skip["__all__"] == done["__all__"]
         if done["__all__"]:
             break
 
-    assert any_state_diverged_on_wrapped_env
+    assert any_real_state_diverged_from_derived_fallback

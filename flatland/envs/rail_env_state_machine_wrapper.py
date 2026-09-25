@@ -23,8 +23,11 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     since nothing in the `(obs, rewards, dones, info)` tuple `step()` returns depends on `agent.state`/
     `agent.state_machine` (both derived exclusively via `derived_state()`, per above), it doesn't matter
     whether the update runs before or after that tuple is built, only that it runs once per step. Without
-    wrapping, `agent.state`/`agent.state_machine` are never touched at all - permanently frozen at their
-    `__init__` default (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
+    wrapping, `agent.state_machine` itself is never touched at all - permanently frozen at its `__init__`
+    default (`TrainState.WAITING`), not `None`/undefined (`state_machine.is_live` is `False` for exactly
+    this reason). `agent.state` (the `EnvAgent` property, not `agent.state_machine.state`) falls back to
+    `derived_state()` in that case instead of surfacing the frozen default directly - see its own
+    docstring.
 
     Idempotent: wrapping an already-wrapped env just updates `skip_state_machine_update` in place
     rather than double-wrapping. Returns the same instance (not a copy), for chaining convenience.
@@ -94,7 +97,7 @@ class _StateMachineUpdateMixin:
             # State-machine-only - map entry itself is derived from earliest_departure/elapsed_steps
             # directly in _candidate_entry_points, never from agent.state.
             if (self._elapsed_steps == 1 and agent.earliest_departure <= 1
-                    and not in_malfunction and agent.state == TrainState.WAITING):
+                    and not in_malfunction and agent.state_machine.state == TrainState.WAITING):
                 agent.state_machine.set_state(TrainState.READY_TO_DEPART)
 
         for agent in self.agents:
@@ -130,7 +133,7 @@ class _StateMachineUpdateMixin:
             if agent_transition_data.resource_check and not agent_transition_data.done:
                 agent.state_machine.update_if_reached(agent_transition_data.candidate_entry_point, agent.targets)
             # Off map or on map state and position should match.
-            if not self._fast_state_position_sync_check(agent.state, agent.current_entry_point, self.remove_agents_at_target):
+            if not self._fast_state_position_sync_check(agent.state_machine.state, agent.current_entry_point, self.remove_agents_at_target):
                 agent.state_machine.state_position_sync_check(agent.current_entry_point, agent.handle, self.remove_agents_at_target)
 
         if self.check_step_pre_post_conditions:
