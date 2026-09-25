@@ -80,7 +80,7 @@ class _StateMachineUpdateMixin:
         the one signal actually snapshotted, alongside `action` itself, in `step()`'s collect phase.
 
         The one exception is the issue #280 WAITING shortcut below, which needs this step's fresh
-        `agent.malfunction_handler.in_malfunction` roll (from `step()`'s own (0a)/(0b), already
+        `agent.malfunction_handler.in_malfunction` roll (from `step()`'s own (1)/(2), already
         applied by the time this hook runs) - so it runs first in this same pass, preserving both its
         own correctness and its original before-the-rest-of-the-state-machine relative order.
         """

@@ -145,9 +145,9 @@ Tables 1, 2a and 2b are the *collect* phase: purely optimistic, pre-step-only de
 any conflict is resolved. `RailEnv.step()`'s distribute phase then resolves conflicts via `MotionCheck`
 (`resource_check = self.resource_check.check_resource(i_agent)`) and, per agent, either commits the already-computed
 `candidate_entry_point`/`candidate_next_entry_point`/`candidate_speed`/`candidate_distance` as-is or falls back to a
-discarded-candidate formula - this is `step()`'s (10a) POSITION UPDATE and (10b) SPEED_COUNTER UPDATE blocks.
-`agent.old_entry_point` is this step's stable pre-step snapshot (captured before (10a) touches anything) of
-`current_entry_point`, i.e. `off_map` (Table 2a) - (10b)'s own discarded-candidate branch reads it to tell
+discarded-candidate formula - this is `step()`'s (12) POSITION UPDATE and (13) SPEED_COUNTER UPDATE blocks.
+`agent.old_entry_point` is this step's stable pre-step snapshot (captured before (12) touches anything) of
+`current_entry_point`, i.e. `off_map` (Table 2a) - (13)'s own discarded-candidate branch reads it to tell
 "was this agent on or off map going into this step" apart: `pass` (a true no-op, not just an unchanged-value
 assignment) is only correct off map because the `speed_counter` invariant already holds `(None, None)` there, with
 nothing to reset.
@@ -161,14 +161,14 @@ nothing to reset.
 
 **Accepted, ends up off map** merges two underlying branches (target reached and removed vs. stayed off map) that
 have distinct conditions but always resolve to the identical `(None, None, (None, None))` triple: `_candidate_speed`
-never returns `None` itself - it returns `0` for both underlying branches (Table 1) - so (10b) forces `None` in
+never returns `None` itself - it returns `0` for both underlying branches (Table 1) - so (13) forces `None` in
 both, overriding the already-computed `agent_transition_data.candidate_speed`, to match the invariant that a
 removed/off-map agent's speed must be `None`. Distance needs no such forcing, since `_candidate_distance` already
 returns `None` for both directly (Table 1).
 
 ### `SpeedCounter.is_cell_entry` — derived after Table 3 resolves speed/distance
 
-`SpeedCounter.set(speed, distance)` (`step_utils/speed_counter.py`) is what (10b) actually calls to commit each
+`SpeedCounter.set(speed, distance)` (`step_utils/speed_counter.py`) is what (13) actually calls to commit each
 row of Table 3 above - it doesn't just store the two values, it also derives `is_cell_entry`, a boolean tracked
 alongside them: `True` exactly when the agent just bootstrapped onto the map (pre-step `distance is None`, new
 `distance is not None`), or the pre-step `distance`/`speed` pair implies a crossing was attempted
@@ -218,7 +218,7 @@ when rewriting the LaTeX, not an error to "fix" by adding a branch), not a code/
 | `agent.malfunction_handler.malfunction_down_counter`                   | `m_i^t` (the counter value itself)       | New term - Table 2a only names the boolean `in_malfunction`, not the underlying counter                          |
 | `off_map` (param); `current_entry_point is None`                       | `c_i^t = \bot`                           | Table 2a, `off_map`                                                                                             |
 | `current_entry_point`, `next_entry_point` (params)                     | `c_i^t = (p, p')`                         | Table 2a, `off_map` definition context; Table 1 header                                                          |
-| `agent.old_entry_point`                                                | (no separate symbol - reads the same `c_i^t = \bot` test as `off_map` above) | Table 3's own prose note; the pre-step snapshot (10b) reads to tell "off map going into this step" apart, distinct from `off_map` only as an implementation detail (captured before (10a) mutates anything), not in meaning |
+| `agent.old_entry_point`                                                | (no separate symbol - reads the same `c_i^t = \bot` test as `off_map` above) | Table 3's own prose note; the pre-step snapshot (13) reads to tell "off map going into this step" apart, distinct from `off_map` only as an implementation detail (captured before (12) mutates anything), not in meaning |
 | `cell_exit` (param of `_candidate_entry_points` only - dead param removed from `_candidate_speed`/`_candidate_distance`); `cached_cell_exit(max_speed, speed, distance)` (`step_utils/speed_counter.py`) | `d_i^{t}+{s_i^{t}} \geq \lVert c_i^t \rVert` (the paper's inline boundary test - the `speed > 0` guard has no separate symbol; already scoped on-map by every consumer below, so unaffected by `cached_cell_exit`'s off-map convention) | Table 2a, `cell_exit` - `cached_cell_exit` returns `True` off map (unlike the paper's on-map-scoped `cellExit_i^t` in snippet.tex), but this is inert: every paper branch reading `cellExit_i^t` already conjoins `c_i^t \not= \bot`, matching Table 2a's own note that `cell_exit`'s off-map value is never read bare |
 | `target_reached` (param of all 3 `_candidate_` methods)                | `\tau(p',\action_i^t) \in targets_i` (combined with `\neg off\_map \wedge cell\_exit` per Table 2b) | Table 2b, `target_reached` - shared, see Table 4c's own Target reached row for `_candidate_entry_points`' richer from-scratch derivation |
 | `transition_invalid` (named local in `collect()`; passed directly only to `_candidate_entry_points` - see Table 4c) | `\tau(p',\action_i^t) = \bot`             | Table 2a, `transition_invalid`                                                                                  |

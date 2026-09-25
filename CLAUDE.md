@@ -199,7 +199,7 @@ on the same agent.
 `speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
 (`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
 `None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.step()` call as
-every other step - `rail_env.py`'s "(10b) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
+every other step - `rail_env.py`'s "(13) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
 from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
 `max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
 (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
@@ -474,7 +474,7 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
   points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,
   avoid: internal numbered step labels from a specific function's control flow (e.g. a docstring citing
-  `rail_env.py`'s own "(3b.5)" or "(10b)" markers by number - fine as an in-file comment right next to the code
+  `rail_env.py`'s own "(3b.5)" or "(13)" markers by number - fine as an in-file comment right next to the code
   it labels, since that neighborhood renumbers together, but a *separate* docstring/doc citing it by number goes
   stale silently the moment that function is refactored and the label moves or disappears); intermediate variable
   names or helper-method names that aren't part of the public contract being documented; and the refactoring/

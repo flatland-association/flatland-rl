@@ -1465,7 +1465,7 @@ def test_platoon_slow_leader_periodic_collision_penalty():
             assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # design (D1): each follower's STOPPED->MOVING promotion now costs it one extra settling step
-    # (see rail_env.py's (3b.5)/(10a)/(10b)) before this fix, that extra one-tick lag happened to
+    # (see rail_env.py's (3b.5)/(12)/(13)) before this fix, that extra one-tick lag happened to
     # land the followers' cadence back in sync with the leader's periodic stall one period later;
     # now it doesn't - no agent is blocked again for the rest of this (short) episode.
     dones = {"__all__": False}

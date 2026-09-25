@@ -265,7 +265,7 @@ def test_reward_function_waiting(rendering=False):
         },
         # design (D1/D2): second agent's STOPPED->MOVING promotion here is one settling step
         # (position unchanged) before it actually leaves (4,6) below - see rail_env.py's
-        # (3b.5)/(10a)/(10b)/movement_allowed design note.
+        # (3b.5)/(12)/(13)/movement_allowed design note.
         3: {
             'positions': {
                 0: (3, 5),

@@ -211,7 +211,7 @@ class SpeedCounter:
         distance into the next cell - the wrap (`% SEGMENT_LENGTH`) is exactly that leftover distance,
         i.e. how far into the new cell the train's momentum actually reaches. This is the only one of
         the four formulas that ever transitions the agent's current_entry_point/next_entry_point into a
-        new cell (see RailEnv.step()'s (10a)/(10b)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
+        new cell (see RailEnv.step()'s (12)/(13)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
         MOVE_RIGHT while MOVING (pre-step speed > 0), or an explicit STOP_MOVING if the
         crossing was already in flight before the brake takes effect (see speed_after_braking above) -
         the action itself never matters once resource_check has granted the crossing.
