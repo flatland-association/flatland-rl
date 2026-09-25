@@ -1091,7 +1091,7 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     # next step, so STOP_MOVING would complete an in-flight crossing out of (3, 5) instead of
     # holding it there (see the STOP_MOVING boundary-crossing fix, issue #178 design D2a). A slower
     # max_speed keeps it mid-cell (is_cell_exit false) when STOP_MOVING brakes it to 0. Only
-    # _max_speed needs overriding here - agent1 hasn't departed yet, so _speed must stay None (off
+    # _max_speed needs overriding here - agent 1 hasn't departed yet, so _speed must stay None (off
     # map); departure (see (3a.3)) computes candidate_speed from acceleration_delta/_max_speed
     # regardless of any pre-existing _speed, so it was never read anyway.
     agent1.speed_counter._max_speed = Fraction(1, 2)
