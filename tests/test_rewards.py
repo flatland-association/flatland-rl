@@ -471,11 +471,8 @@ def test_energy_efficiency_smoothniss_in_morl():
 @pytest.mark.parametrize(
     "rewards,expected_sums",
     [
-        # design: actions applied at cell entry
         (DefaultRewards(), (-1724.0,)),
-        # design: actions applied at cell entry
         (BaseDefaultRewards(), (-1724.0,)),
-        # design: actions applied at cell entry
         (BasicMultiObjectiveRewards(), (-1724.0, -1360.0, -858.1875)),
         # design (D1/D2): STOPPED->MOVING promotion is granted optimistically (see rail_env.py's
         # movement_allowed design note) rather than withheld until the target is free, so a
@@ -483,7 +480,6 @@ def test_energy_efficiency_smoothniss_in_morl():
         # penalty roughly every other step instead of just once - substantially increasing the
         # accumulated per-step penalty total.
         (ECML2026Rewards(), (-119536.5,)),
-        # design: actions applied at cell entry
         (BaseECML2026Rewards(), (-119536.5,)),
     ],
 )
@@ -518,7 +514,6 @@ def test_default_rewards_via_policy_runner():
             data_dir=data_dir / "explicit",
             snapshot_interval=5,
         )
-        # design: actions applied at cell entry
         assert trajectory_implicit.trains_rewards_dones_infos["reward"].sum() == trajectory_explicit.trains_rewards_dones_infos["reward"].sum() == -1724.0
 
 
