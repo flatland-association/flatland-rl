@@ -65,7 +65,6 @@ def test_variablespeed_actions_no_malfunction_no_blocking():
 
                 action=RailEnvActions.MOVE_FORWARD,
             ),
-            # design: actions applied at cell entry
             Replay(  # 4
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,

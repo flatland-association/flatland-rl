@@ -67,6 +67,50 @@ def test_derived_state_matches_state_on_wrapped_env(seed):
         _assert_equivalent()
 
 
+@pytest.mark.parametrize("seed", [1, 42, 99, 123, 2024])
+def test_derived_state_matches_state_on_unwrapped_env(seed):
+    """
+    Same 5-agent, 30x30 sparse map with frequent malfunctions (malfunction_rate=1/15) as
+    test_derived_state_matches_state_on_wrapped_env, but never wrapped via
+    RailEnvStateMachineWrapper - state_machine.is_live stays False for the whole run, so
+    agent.state falls back to agent.derived_state() (no elapsed_steps/in_malfunction override -
+    see EnvAgent.state's own docstring).
+
+    - Right after reset() and after every one of the 100 steps, agent.state exactly equals
+      agent.derived_state() (both calls with no arguments) - the fallback is self-consistent by
+      construction, not just superficially close.
+    - agent.state still agrees with derived_state() on the coarser on-map/off-map/done categories,
+      matching the wrapped-env test's own equivalence checks for those.
+    """
+    n_agents = 5
+    env = RailEnv(
+        width=30, height=30,
+        rail_generator=sparse_rail_generator(max_num_cities=3, seed=seed),
+        line_generator=sparse_line_generator(),
+        number_of_agents=n_agents,
+        malfunction_generator=ParamMalfunctionGen(
+            MalfunctionParameters(min_duration=2, max_duration=4, malfunction_rate=1.0 / 15)),
+    )
+    env.reset(random_seed=seed)
+
+    def _assert_equivalent():
+        for agent in env.agents:
+            assert not agent.state_machine.is_live
+            assert agent.state == agent.derived_state()
+            assert agent.derived_state().is_off_map_state() == agent.state.is_off_map_state()
+            assert agent.derived_state().is_on_map_state() == agent.state.is_on_map_state()
+            assert (agent.derived_state() == TrainState.DONE) == (agent.state == TrainState.DONE)
+
+    _assert_equivalent()
+    rng = np.random.RandomState(seed)
+    for _ in range(100):
+        if env.dones["__all__"]:
+            break
+        action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
+        env.step(action_dict)
+        _assert_equivalent()
+
+
 def test_shortest_paths():
     rail, rail_map, optionals = make_oval_rail()
 

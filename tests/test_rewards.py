@@ -471,11 +471,8 @@ def test_energy_efficiency_smoothniss_in_morl():
 @pytest.mark.parametrize(
     "rewards,expected_sums",
     [
-        # design: actions applied at cell entry
         (DefaultRewards(), (-1724.0,)),
-        # design: actions applied at cell entry
         (BaseDefaultRewards(), (-1724.0,)),
-        # design: actions applied at cell entry
         (BasicMultiObjectiveRewards(), (-1724.0, -1360.0, -858.1875)),
         # design (D1/D2): STOPPED->MOVING promotion is granted optimistically (see rail_env.py's
         # movement_allowed design note) rather than withheld until the target is free, so a
@@ -483,7 +480,6 @@ def test_energy_efficiency_smoothniss_in_morl():
         # penalty roughly every other step instead of just once - substantially increasing the
         # accumulated per-step penalty total.
         (ECML2026Rewards(), (-119536.5,)),
-        # design: actions applied at cell entry
         (BaseECML2026Rewards(), (-119536.5,)),
     ],
 )
@@ -518,7 +514,6 @@ def test_default_rewards_via_policy_runner():
             data_dir=data_dir / "explicit",
             snapshot_interval=5,
         )
-        # design: actions applied at cell entry
         assert trajectory_implicit.trains_rewards_dones_infos["reward"].sum() == trajectory_explicit.trains_rewards_dones_infos["reward"].sum() == -1724.0
 
 
@@ -962,7 +957,7 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
 
 
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    """`state` is STOPPED (a  halt at `waypoint`) or MOVING (rolling through it without stopping) -
+    """`state` is STOPPED (a halt at `waypoint`) or MOVING (rolling through it without stopping) -
     is_stopped_now is derived purely from this step's signals (see BaseDefaultRewards.step_reward), so the
     two need distinct signal combinations rather than sharing one hardcoded set."""
     agent.old_entry_point = (old.position, old.direction)
@@ -1470,7 +1465,7 @@ def test_platoon_slow_leader_periodic_collision_penalty():
             assert rewards[i][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # design (D1): each follower's STOPPED->MOVING promotion now costs it one extra settling step
-    # (see rail_env.py's (3b.5)/(10a)/(10b)) before this fix, that extra one-tick lag happened to
+    # (see rail_env.py's (3b.5)/(12)/(13)) before this fix, that extra one-tick lag happened to
     # land the followers' cadence back in sync with the leader's periodic stall one period later;
     # now it doesn't - no agent is blocked again for the rest of this (short) episode.
     dones = {"__all__": False}

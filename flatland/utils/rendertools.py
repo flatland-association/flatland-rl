@@ -753,7 +753,7 @@ class RenderLocal(RenderBase):
                     if show_inactive_agents:
                         show_this_agent = True
                     else:
-                        show_this_agent = agent.state.is_on_map_state()
+                        show_this_agent = agent.derived_state(env._elapsed_steps).is_on_map_state()
 
                     if show_this_agent:
                         self.gl.set_agent_at(agent_idx, *position, agent.current_entry_point[1], direction,

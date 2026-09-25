@@ -245,17 +245,17 @@ def test_status_done_remove():
 
 def _make_straight_rail(n_cells: int):
     """
-    The smallest possible topology offering a  target cell to cross into: a straight,
+    The smallest possible topology offering a target cell to cross into: a straight,
     switch-free corridor of `n_cells` cells, dead end - straight* - dead end (a plain 2-cell corridor
     for n_cells=2, no straight tiles needed in between at all).
 
     Used by the test_distance_without_crossing_reaches_segment_length_on_target_* tests below, which
     exercise SpeedCounter.distance_without_crossing's "target reached, remove_agents_at_target=False"
     case via an actual RailEnv rather than by calling the formula directly - this matters because the
-    formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (10b) runs,
-    agent.state is already DONE (see (10a)'s update_if_reached(), called before (10b)), so
-    _candidate_distance's own "done" branch is the one that applies (not its ordinary "
-    crossing" branch, which would wrap distance via distance_after_crossing) - it calls
+    formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (13) runs,
+    agent.state is already DONE (see (12)'s update_if_reached(), called before (13)), so
+    _candidate_distance's own "done" branch is the one that applies (not its ordinary 
+    "crossing" branch, which would wrap distance via distance_after_crossing) - it calls
     distance_without_crossing directly.
     """
     transitions = RailEnvTransitions()
@@ -306,7 +306,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     `_make_straight_rail`/`SpeedCounter.distance_without_crossing`'s docstrings for why).
 
     Note `distance == SEGMENT_LENGTH` alone is true of *any* target arrival (exact-fit or excess) and
-    stays true forever afterward (DONE's (10b) fallback keeps re-deriving it from a now-frozen speed=0)
+    stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a now-frozen speed=0)
     - it does not distinguish these cases from each other. What actually varies between them, and is
     what these parametrizations are for, is `expected_excess` - checked below from the last pre-step
     `configurations` entry, i.e. before the cap is applied.
@@ -357,7 +357,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
 
     Why 2 agents: with max_speed=1, banking needs a denied crossing - either an invalid action or a
     resource_check denial. A switch-free corridor has no invalid action to give (a no-choice cell treats
-    every movement action as the same single transition - verified empirically), and a  switch
+    every movement action as the same single transition - verified empirically), and a switch
     would cost more cells than a second agent does. So agent 1 is a stationary blocker sitting exactly
     where agent 0 wants to go, forcing a real resource_check denial instead.
 
@@ -418,7 +418,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
         env.step({0: actions0[step], 1: actions1[step]})
 
     # design: distance == SEGMENT_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
-    # or excess, and stays true forever afterward (DONE's (10b) fallback keeps re-deriving it from a
+    # or excess, and stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a
     # now-frozen speed=0) - it does not by itself distinguish this banked-restart case from an ordinary
     # exact-fit one. What is actually specific to this case is the pre-step sum on the final (granted)
     # crossing attempt: pre_distance(1, banked) + pre_speed(1, ramped) == 2, a full SEGMENT_LENGTH of excess

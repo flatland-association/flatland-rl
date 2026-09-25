@@ -62,16 +62,16 @@ cosmetic (every branch condition is self-contained and pairwise disjoint - see t
 for the exclusion reasoning), not load-bearing.
 
 ```
-_candidate_entry_points          _candidate_speed                 _candidate_distance
-------------------------         ------------------------         ------------------------
+_candidate_entry_points          _candidate_speed                  _candidate_distance
+------------------------         ------------------------          ------------------------
 done                             done                              done
 off_map_no_departure             stay off map                      stay off map
-keep moving mid-cell             keep moving mid-cell              stopped
-on-map cell transition           acceleration or start moving      malfunction
-malfunction                      braking                           map entry
-map entry                        malfunction                       target reached
-target reached                   map entry                         invalid action at cell exit
-invalid action at cell exit      target reached
+keep moving mid-cell             keep moving mid-cell              keep moving mid-cell
+on-map cell transition           acceleration or start moving      stopped
+malfunction                      braking                           malfunction
+map entry                        malfunction                       map entry
+target reached                   map entry                         target reached
+invalid action at cell exit      target reached                    invalid action at cell exit
                                  invalid action at cell exit
 ```
 
@@ -145,9 +145,9 @@ Tables 1, 2a and 2b are the *collect* phase: purely optimistic, pre-step-only de
 any conflict is resolved. `RailEnv.step()`'s distribute phase then resolves conflicts via `MotionCheck`
 (`resource_check = self.resource_check.check_resource(i_agent)`) and, per agent, either commits the already-computed
 `candidate_entry_point`/`candidate_next_entry_point`/`candidate_speed`/`candidate_distance` as-is or falls back to a
-discarded-candidate formula - this is `step()`'s (10a) POSITION UPDATE and (10b) SPEED_COUNTER UPDATE blocks.
-`agent.old_entry_point` is this step's stable pre-step snapshot (captured before (10a) touches anything) of
-`current_entry_point`, i.e. `off_map` (Table 2a) - (10b)'s own discarded-candidate branch reads it to tell
+discarded-candidate formula - this is `step()`'s (12) POSITION UPDATE and (13) SPEED_COUNTER UPDATE blocks.
+`agent.old_entry_point` is this step's stable pre-step snapshot (captured before (12) touches anything) of
+`current_entry_point`, i.e. `off_map` (Table 2a) - (13)'s own discarded-candidate branch reads it to tell
 "was this agent on or off map going into this step" apart: `pass` (a true no-op, not just an unchanged-value
 assignment) is only correct off map because the `speed_counter` invariant already holds `(None, None)` there, with
 nothing to reset.
@@ -161,28 +161,49 @@ nothing to reset.
 
 **Accepted, ends up off map** merges two underlying branches (target reached and removed vs. stayed off map) that
 have distinct conditions but always resolve to the identical `(None, None, (None, None))` triple: `_candidate_speed`
-never returns `None` itself - it returns `0` for both underlying branches (Table 1) - so (10b) forces `None` in
+never returns `None` itself - it returns `0` for both underlying branches (Table 1) - so (13) forces `None` in
 both, overriding the already-computed `agent_transition_data.candidate_speed`, to match the invariant that a
 removed/off-map agent's speed must be `None`. Distance needs no such forcing, since `_candidate_distance` already
 returns `None` for both directly (Table 1).
 
-## Table 4 — code ↔ paper mathematical notation
+### `SpeedCounter.is_cell_entry` — derived after Table 3 resolves speed/distance
 
-A separate write-up formalizes the collect/distribute phases in mathematical notation (superscript `t`/`t+1`
-for pre-/post-step, subscript `i` for agent, `~` for an as-yet-unaccepted candidate). Tables 4a-4e map every
-symbol it uses back to the code identifier (and, where one already exists, the row/term of Tables 1-3 above)
-it denotes - a bridge between the two write-ups, not a replacement for either. "Notes" points back into this
-file where the term is already documented, or says so explicitly when the paper introduces a symbol this file
-doesn't otherwise name.
+`SpeedCounter.set(speed, distance)` (`step_utils/speed_counter.py`) is what (13) actually calls to commit each
+row of Table 3 above - it doesn't just store the two values, it also derives `is_cell_entry`, a boolean tracked
+alongside them: `True` exactly when the agent just bootstrapped onto the map (pre-step `distance is None`, new
+`distance is not None`), or the pre-step `distance`/`speed` pair implies a crossing was attempted
+(`pre_distance + pre_speed >= SEGMENT_LENGTH`) *and* the post-step `distance` lands inside the fresh cell rather
+than banked at the exit (`distance < SEGMENT_LENGTH`). Both conjuncts are needed: at `speed == SEGMENT_LENGTH`
+(e.g. `max_speed=1`), `distance_after_crossing`'s modulo wraps exactly back to the pre-step value (`0 -> 0`), so a
+plain `distance < pre_distance` (or even `<=`) comparison misclassifies it - the latter also misfires on a
+stopped/banked agent whose distance is unchanged for an unrelated reason (denied at the boundary, or genuinely at
+rest).
 
-**Scope of the paper's position/done formulae (relevant to several "Notes" below):** the paper's collect-phase
-position candidate and its `dones`/`\theta` bookkeeping only model `remove_agents_at_target=True` - a DONE
+This is a distinct term from `cell_exit`/`is_cell_exit()` (Table 2a) despite the similar name: `cell_exit` is a
+collect-phase precondition computed from the *pre-step* speed/distance, feeding `_candidate_entry_points`; `is_cell_entry`
+is derived *after* Table 3 has already resolved this step's accepted-or-discarded speed/distance, from both the
+pre- and post-step values together. `action_required` (`rail_env.py`) takes a parameter literally named
+`is_cell_entry` that in fact always receives `is_cell_exit()`'s value, not `SpeedCounter.is_cell_entry` - see its
+own docstring for that pre-existing naming mismatch. `SpeedCounter.is_cell_entry` itself isn't consulted by any
+production control flow at the time of writing - only asserted on directly by `tests/test_speed_counter.py`.
+
+## Table 4 — code ↔ LaTeX mathematical notation
+
+Tables 4a-4e formalize the collect/distribute phases in mathematical notation (superscript `t`/`t+1`
+for pre-/post-step, subscript `i` for agent, `~` for an as-yet-unaccepted candidate), mapping every
+symbol back to the code identifier (and, where one already exists, the row/term of Tables 1-3 above) it
+denotes. "Notes" points back into this file where the term is already documented, or says so explicitly
+when Table 4a-4e's own notation introduces a symbol this file doesn't otherwise name.
+
+**Scope of Table 4c/4a's position/done formulae (relevant to several "Notes" below):** Table 4c's collect-phase
+position candidate and Table 4a's `dones`/`\theta` bookkeeping only model `remove_agents_at_target=True` - a DONE
 agent's position is always given as `(\bot,\bot)`, which only matches code when the agent has actually been
 removed from the map. Under `remove_agents_at_target=False` (parked at target, never removed - Table 1's
 Target reached row, Table 3's Accepted-ends-up-on-map row), a DONE agent's `current_entry_point` stays its
-resolved target entry point, not `None`. The paper doesn't need a second branch for that case - it's simply
-out of scope - so this is a scope note for L3 (keep the single `remove_agents_at_target=True`-shaped branch
-when rewriting the LaTeX, not an error to "fix" by adding a branch), not a code/paper bug.
+resolved target entry point, not `None`. Table 4c's formula doesn't need a second branch for that case - it's
+simply out of scope - so this is a scope note for L3 (keep the single `remove_agents_at_target=True`-shaped
+branch when rewriting the LaTeX, not an error to "fix" by adding a branch), not a mismatch between code and
+Table 4c.
 
 ### Table 4a - base quantities
 
@@ -193,18 +214,18 @@ when rewriting the LaTeX, not an error to "fix" by adding a branch), not a code/
 | `agent_transition_data.done` (equivalently `self.dones[i_agent]` after `handle_done_state()`) | `i \in dones^t`                          | Table 2a, `done`                                                                                                |
 | `self.dones` (dict keyed by agent handle, plus `"__all__"`)            | `dones^t` (the set itself)               | New term - Table 2a/2b's `done` is the per-agent membership test, not the aggregate set                          |
 | `agent.target_entry_point is not None`                                 | `\theta_i^t` (persistent target-reached flag) | New term - code has no separate flag distinct from `done`/`agent.target_entry_point`. Only matches under `remove_agents_at_target=True` (see the scope note above and Table 4e) - out of scope, not a bug, for L3 |
-| `in_malfunction` (param); `agent.malfunction_handler.in_malfunction`   | `m_i^{t} \not= \bot`                     | Table 2a, `in_malfunction`. The original write-up's speed equation used `m_i^{t+1}` here while its position equation used `m_i^t` for this same shared parameter - `m_i^{t+1}` isn't defined until the distribute-phase malfunction-counter equation runs, so `m_i^t` (matching position's original convention) is correct; fixed in snippet.tex (L3) |
+| `in_malfunction` (param); `agent.malfunction_handler.in_malfunction`   | `m_i^{t} \not= \bot`                     | Table 2a, `in_malfunction`. Table 4b's speed equation used `m_i^{t+1}` here while Table 4c's position equation used `m_i^t` for this same shared parameter - `m_i^{t+1}` isn't defined until Table 4e's distribute-phase malfunction-counter equation runs, so `m_i^t` (matching Table 4c's convention) is correct, as already reflected in the row above (L3) |
 | `agent.malfunction_handler.malfunction_down_counter`                   | `m_i^t` (the counter value itself)       | New term - Table 2a only names the boolean `in_malfunction`, not the underlying counter                          |
 | `off_map` (param); `current_entry_point is None`                       | `c_i^t = \bot`                           | Table 2a, `off_map`                                                                                             |
 | `current_entry_point`, `next_entry_point` (params)                     | `c_i^t = (p, p')`                         | Table 2a, `off_map` definition context; Table 1 header                                                          |
-| `agent.old_entry_point`                                                | (no separate symbol - reads the same `c_i^t = \bot` test as `off_map` above) | Table 3's own prose note; the pre-step snapshot (10b) reads to tell "off map going into this step" apart, distinct from `off_map` only as an implementation detail (captured before (10a) mutates anything), not in meaning |
-| `cell_exit` (param of `_candidate_entry_points` only - dead param removed from `_candidate_speed`/`_candidate_distance`); `cached_cell_exit(max_speed, speed, distance)` (`step_utils/speed_counter.py`) | `d_i^{t}+{s_i^{t}} \geq \lVert c_i^t \rVert` (the paper's inline boundary test - the `speed > 0` guard has no separate symbol; already scoped on-map by every consumer below, so unaffected by `cached_cell_exit`'s off-map convention) | Table 2a, `cell_exit` - `cached_cell_exit` returns `True` off map (unlike the paper's on-map-scoped `cellExit_i^t` in snippet.tex), but this is inert: every paper branch reading `cellExit_i^t` already conjoins `c_i^t \not= \bot`, matching Table 2a's own note that `cell_exit`'s off-map value is never read bare |
+| `agent.old_entry_point`                                                | (no separate symbol - reads the same `c_i^t = \bot` test as `off_map` above) | Table 3's own prose note; the pre-step snapshot (13) reads to tell "off map going into this step" apart, distinct from `off_map` only as an implementation detail (captured before (12) mutates anything), not in meaning |
+| `cell_exit` (param of `_candidate_entry_points` only - dead param removed from `_candidate_speed`/`_candidate_distance`); `cached_cell_exit(max_speed, speed, distance)` (`step_utils/speed_counter.py`) | `d_i^{t}+{s_i^{t}} \geq \lVert c_i^t \rVert` (the inline boundary test - the `speed > 0` guard has no separate symbol; already scoped on-map by every consumer below, so unaffected by `cached_cell_exit`'s off-map convention) | Table 2a, `cell_exit` - `cached_cell_exit` returns `True` off map (unlike `cellExit_i^t` above, which is scoped on-map only), but this is inert: every branch reading `cellExit_i^t` already conjoins `c_i^t \not= \bot`, matching Table 2a's own note that `cell_exit`'s off-map value is never read bare |
 | `target_reached` (param of all 3 `_candidate_` methods)                | `\tau(p',\action_i^t) \in targets_i` (combined with `\neg off\_map \wedge cell\_exit` per Table 2b) | Table 2b, `target_reached` - shared, see Table 4c's own Target reached row for `_candidate_entry_points`' richer from-scratch derivation |
 | `transition_invalid` (named local in `collect()`; passed directly only to `_candidate_entry_points` - see Table 4c) | `\tau(p',\action_i^t) = \bot`             | Table 2a, `transition_invalid`                                                                                  |
-| `action_invalid_on_rail` (param of `_candidate_entry_points` only)      | no separate symbol - the paper always uses the raw `\tau(p',\action_i^t)=\bot` test, without an on-map narrowing | Table 2b, `action_invalid_on_rail` - new term relative to the paper                                             |
-| `invalid_action_at_cell_exit` (param of all 3 `_candidate_` methods; `action_invalid_on_rail and cell_exit`) | the paper's "(invalid action)" branch condition, `\tau(p',\action_i^t)=\bot \text{ and } d_i^t+s_i^t\geq\lVert c_i^t\rVert`, repeated inline in the speed/distance equations (see Table 4b/4d) rather than named | Table 2b, `invalid_action_at_cell_exit` - see Table 4c's own note: the paper's *position* equation has no corresponding branch at all (flag for L3) |
-| `stay_off_map` (param of `_candidate_speed`/`_candidate_distance`; `candidate_entry_point is None`) | no separate symbol - the paper's position equation has a "stay off map" value case (`\tilde c_i^{t+1}=(\bot,\bot)`, via its map-entry branch's negation) rather than a named boolean reused by the other two equations | Table 2b, `stay_off_map`                                                                                        |
-| `remove_agents_at_target` (param of `_candidate_distance`; constructor attr)                                    | implicit - see the scope note above; every paper branch that clears position/`\theta` to done assumes this is always `True` | Not in Tables 1-3 by a dedicated row - central to Table 3's two "Accepted" rows and the scope note above         |
+| `action_invalid_on_rail` (param of `_candidate_entry_points` only)      | no separate symbol - Table 4c's formula always uses the raw `\tau(p',\action_i^t)=\bot` test, without an on-map narrowing | Table 2b, `action_invalid_on_rail` - new term relative to Table 4c                                              |
+| `invalid_action_at_cell_exit` (param of all 3 `_candidate_` methods; `action_invalid_on_rail and cell_exit`) | Table 4b/4d's "(invalid action)" branch condition, `\tau(p',\action_i^t)=\bot \text{ and } d_i^t+s_i^t\geq\lVert c_i^t\rVert`, repeated inline in the speed/distance equations rather than named | Table 2b, `invalid_action_at_cell_exit` - see Table 4c's own note: Table 4c's position equation has no corresponding branch at all (flag for L3) |
+| `stay_off_map` (param of `_candidate_speed`/`_candidate_distance`; `candidate_entry_point is None`) | no separate symbol - Table 4c's position equation has a "stay off map" value case (`\tilde c_i^{t+1}=(\bot,\bot)`, via its map-entry branch's negation) rather than a named boolean reused by Table 4b/4d's other two equations | Table 2b, `stay_off_map`                                                                                        |
+| `remove_agents_at_target` (param of `_candidate_distance`; constructor attr)                                    | implicit - see the scope note above; every Table 4a/4c/4e branch that clears position/`\theta` to done assumes this is always `True` | Not in Tables 1-3 by a dedicated row - central to Table 3's two "Accepted" rows and the scope note above         |
 | `speed` (param); `agent.speed_counter.speed`                           | `s_i^t`                                  | Table 2a, `stopped` (`speed == 0`) uses this                                                                    |
 | `distance` (param); `agent.speed_counter.distance`                     | `d_i^t`                                  | Table 2a, `cell_exit` uses this                                                                                 |
 | `SEGMENT_LENGTH` (`flatland.envs.step_utils.speed_counter`)            | `\lVert c_i^t \rVert`                    | Table 2a, `cell_exit` definition                                                                                |
@@ -238,21 +259,21 @@ when rewriting the LaTeX, not an error to "fix" by adding a branch), not a code/
 | Code                                                                 | Math notation                          | Notes                                             |
 |-----------------------------------------------------------------------|------------------------------------------|-----------------------------------------------------|
 | `(candidate_entry_point, candidate_next_entry_point)` (return value)   | `\tilde{c}_i^{t+1}`                       | Table 1, `_candidate_entry_points` column         |
-| `(current_entry_point, next_entry_point)` (unchanged, done branch)     | `(\bot,\bot)` (paper's Done row)          | Scoped to `remove_agents_at_target=True` (see the scope note above) - a DONE agent's `current_entry_point` is already `None` by then (set by `handle_done_state()` the step it first reached DONE), so "unchanged" and `(\bot,\bot)` coincide; out of scope, not a bug, under `remove_agents_at_target=False`. See Table 1's own Done row |
+| `(current_entry_point, next_entry_point)` (unchanged, done branch)     | `(\bot,\bot)`                             | Scoped to `remove_agents_at_target=True` (see the scope note above) - a DONE agent's `current_entry_point` is already `None` by then (set by `handle_done_state()` the step it first reached DONE), so "unchanged" and `(\bot,\bot)` coincide; out of scope, not a bug, under `remove_agents_at_target=False`. See Table 1's own Done row |
 | `(initial_entry_point, candidate_entry_point_independent)`             | `(p_{i,1,1}, \tau(p_{i,1,1}, \action_i^t))` | Table 1, "Map entry" row                        |
-| `(next_entry_point, candidate_entry_point_independent)`, target-reached branch | `(\bot,\bot)` (paper's Target reached row) | Scoped to `remove_agents_at_target=True` (see the scope note above) - `_candidate_entry_points` itself always returns the resolved position here, and the `(None, None)` clearing only happens in the distribute phase (Table 3) when `remove_agents_at_target`; out of scope, not a bug, under `remove_agents_at_target=False`. See Table 1's Target reached row |
+| `(next_entry_point, candidate_entry_point_independent)`, target-reached branch | `(\bot,\bot)`                             | Scoped to `remove_agents_at_target=True` (see the scope note above) - `_candidate_entry_points` itself always returns the resolved position here, and the `(None, None)` clearing only happens in the distribute phase (Table 3) when `remove_agents_at_target`; out of scope, not a bug, under `remove_agents_at_target=False`. See Table 1's Target reached row |
 | `(next_entry_point, candidate_entry_point_independent)`, on-map cell transition branch | `(p',\tau(p',\action_i^t))`      | Table 1, "On-map cell transition" row             |
 | `(current_entry_point, next_entry_point)` (unchanged, invalid action at cell exit branch) | no corresponding branch - see the gap noted below | Table 1, "Invalid action at cell exit" row (`_candidate_entry_points` column); Table 4a's `invalid_action_at_cell_exit`/`transition_invalid` rows |
 | `(current_entry_point, next_entry_point)` (unchanged, default/stay branches) | `c_i^{t}` (else branch)             | Table 1, "Default" row                            |
 
-Gap (for L3, distinct from the `remove_agents_at_target` scope note above): the paper's position equation has no
+Gap (for L3, distinct from the `remove_agents_at_target` scope note above): Table 4c's position equation has no
 "invalid action" branch at all. Its "cell transition" branch (`(p',\tau(p',\action_i^t))` when
 `c_i^t\not=(\bot,\bot)` and `d_i^t+\tilde s_i^{t+1}\geq\lVert c_i^t\rVert`) doesn't exclude
 `\tau(p',\action_i^t)=\bot` the way `on_map_cell_transition`'s own `not action_invalid_on_rail` does in code
 (Table 2b) - so as written, a denied/invalid transition at a cell boundary would fall into "cell transition" and
 set the next entry point to `\bot` instead of being denied and keeping `(current_entry_point, next_entry_point)`
-unchanged, as code's Invalid action at cell exit branch does (Table 1). The speed and distance equations both
-already have their own explicit "(invalid action)" branch (see Table 4a/4b/4d) - only the position equation is
+unchanged, as code's Invalid action at cell exit branch does (Table 1). Table 4b/4d's speed and distance
+equations both already have their own explicit "(invalid action)" branch - only Table 4c's position equation is
 missing one.
 
 ### Table 4d - Step Collect Phase: distance candidate (`_candidate_distance`)
@@ -262,16 +283,16 @@ missing one.
 | `candidate_distance`; `agent_transition_data.candidate_distance`       | `\tilde{d}_i^{t+1}`                       | Table 1, `_candidate_distance` column             |
 | `target_reached`, `stay_off_map` (params)                               | see Table 4a - shared across all 3 `_candidate_` methods, not distance-specific | Table 4a - `cell_exit` itself isn't a parameter here (dead param removed) |
 | `remove_agents_at_target` (param)                                       | implicit - see the scope note above       | Table 4a's `remove_agents_at_target` row; Table 1's Target reached row is the one branch that actually reads it |
-| `SpeedCounter.distance_without_crossing(distance, speed)`, `invalid_action_at_cell_exit` branch | `\min(d_i^{t} + s_i^t, \lVert c_i^t \rVert)` (the paper's "(invalid action)" branch) | referenced in `speed_counter.py`, not this file; Table 1's Done/Invalid-action rows both return this; Table 4a's `invalid_action_at_cell_exit` row |
+| `SpeedCounter.distance_without_crossing(distance, speed)`, `invalid_action_at_cell_exit` branch | `\min(d_i^{t} + s_i^t, \lVert c_i^t \rVert)` (the "(invalid action)" branch) | referenced in `speed_counter.py`, not this file; Table 1's Done/Invalid-action rows both return this; Table 4a's `invalid_action_at_cell_exit` row |
 | `SpeedCounter.distance_after_crossing(distance, speed)`                 | `d_i^{t} + s_i^t \mod \lVert c_i^t \rVert`  | referenced in `speed_counter.py`, not this file; Table 1's Default row                              |
 
-Mismatch (unrelated to the `remove_agents_at_target` scope note above, for L3): the paper's distance formula has
+Mismatch (unrelated to the `remove_agents_at_target` scope note above, for L3): Table 4d's distance formula has
 only two cases - invalid action (`\min(d+s, \lVert c \rVert)`) and "valid action" (`d+s \mod \lVert c \rVert`),
 with a comment claiming the valid-action case "covers malfunction, done, target reached, off map" too. None of
 those four actually reduce to `d+s \mod \lVert c \rVert` in code (Table 1): Done and Invalid action both return
-`distance_without_crossing` (`\min(d+s, \lVert c \rVert)` - the paper's *other* branch, not this one);
+`distance_without_crossing` (`\min(d+s, \lVert c \rVert)` - Table 4d's *other* branch, not this one);
 Malfunction returns `distance` unchanged (no `+s` at all); Map entry returns `0`; Target reached returns either
-`None` (`remove_agents_at_target`) or `distance_without_crossing`. The paper's two-case split doesn't yet cover
+`None` (`remove_agents_at_target`) or `distance_without_crossing`. Table 4d's two-case split doesn't yet cover
 these the way its own comment claims.
 
 ### Table 4e - Step Distribute Phase: accept/reject
@@ -282,9 +303,9 @@ these the way its own comment claims.
 | `agent.speed_counter.speed` (post `.set()`)                             | `s_i^{t+1}`                               | Table 3, `Speed` column                           |
 | `(agent.current_entry_point, agent.next_entry_point)` (post-update)     | `c_i^{t+1}`                               | Table 3, `Entry points` column                    |
 | `agent.speed_counter.distance` (post `.set()`)                          | `d_i^{t+1}`                               | Table 3, `Distance` column                        |
-| — (no code equivalent - see Table 4a's `\theta_i^t` row)                | `\theta_i^{t+1}`                          | Scoped to `remove_agents_at_target=True` (see the scope note above) - the paper derives `dones^{t+1}` from a `\theta` transition; code just re-reads `agent.target_entry_point is not None` directly (Table 2a's `done`), there is no separate persistent flag or transition rule. Out of scope, not a bug, under `remove_agents_at_target=False` |
+| — (no code equivalent - see Table 4a's `\theta_i^t` row)                | `\theta_i^{t+1}`                          | Scoped to `remove_agents_at_target=True` (see the scope note above) - this table derives `dones^{t+1}` from a `\theta` transition; code just re-reads `agent.target_entry_point is not None` directly (Table 2a's `done`), there is no separate persistent flag or transition rule. Out of scope, not a bug, under `remove_agents_at_target=False` |
 | `self.dones[agent.handle] = True` (in `handle_done_state()`)            | `dones^{t+1}`                             | Table 2a, `done` (per-agent); see Table 4a for the aggregate-set caveat |
 | `MalfunctionHandler.update_counter()` (`if counter > 0: counter -= 1`, else stays `0`) | `m_i^{t+1}` (`\bot` if `m_i^t=\bot` or `m_i^t=1` else `m_i^t-1`, treating `\bot` as `0`) | New term - not in Tables 1-3, which only ever read the derived boolean `in_malfunction`, never the raw counter (see Table 4a's `m_i^t` row) |
 | `ZERO_FRACTION` (forced, on-map candidate discarded)                    | `0` (`s_i^{t+1}` else branch)              | Table 3, "Denied on-map crossing" row (`Speed` column)                          |
-| `SpeedCounter.distance_without_crossing(agent_transition_data.distance, agent_transition_data.speed)` (on-map candidate discarded) | `\min(\tilde d_i^{t} + \tilde s_i^t, \lVert c_i^t \rVert)` (`d_i^{t+1}` else branch) | Table 3, "Denied on-map crossing" row (`Distance` column) - N.B. the paper's else branch reads `\tilde d_i^{t}/\tilde s_i^t` (candidates from the *previous* step, no tilde-superscript bump), likely a `t` vs. `t+1` typo relative to the rest of the equation set - flag for L3 |
+| `SpeedCounter.distance_without_crossing(agent_transition_data.distance, agent_transition_data.speed)` (on-map candidate discarded) | `\min(\tilde d_i^{t} + \tilde s_i^t, \lVert c_i^t \rVert)` (`d_i^{t+1}` else branch) | Table 3, "Denied on-map crossing" row (`Distance` column) - N.B. this row's else branch reads `\tilde d_i^{t}/\tilde s_i^t` (candidates from the *previous* step, no tilde-superscript bump), likely a `t` vs. `t+1` typo relative to the rest of the equation set - flag for L3 |
 | `(current_entry_point, next_entry_point)` (unchanged, resource check denied) | `c_i^{t}` (`c_i^{t+1}` else branch)         | Table 3, "Denied on-map crossing"/"Denied map entry" rows (`Entry points` column) |

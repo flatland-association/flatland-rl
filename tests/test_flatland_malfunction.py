@@ -172,7 +172,7 @@ def test_malfunction_process_statistically():
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
             # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
             # shift by 1 while a malfunction is active or just ended (previous entry nonzero); a value that is 0
-            # both here and in the previous entry is a  steady idle step and must stay 0.
+            # both here and in the previous entry is a steady idle step and must stay 0.
             expected = agent_malfunction_list[agent_idx][step]
             prev = agent_malfunction_list[agent_idx][step - 1] if step > 0 else 0
             if expected > 0 or prev > 0:
@@ -534,8 +534,7 @@ def test_stop_moving_crossing_completion_consistent_with_do_nothing():
 
 def test_stop_moving_wraps_overshoot_beyond_boundary():
     """
-    Further consequence of the fix in test_stop_moving_crossing_completion_consistent_with_do_nothing:
-    once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
+    Once STOP_MOVING completes an in-flight crossing like any other action, overshoot past the cell
     boundary is preserved (wrapped via `SpeedCounter.distance_after_crossing`'s `distance % SEGMENT_LENGTH`),
     not discarded - `distance + pre_speed` reaching `3/2` lands the agent `1/2` into the new cell, not
     capped at exactly the boundary.

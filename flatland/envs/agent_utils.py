@@ -49,7 +49,6 @@ class Agent(NamedTuple):
     # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
     target_position: Tuple[int, int] = None
     target_direction: Grid4TransitionsEnum = None
-    # design: actions applied at cell entry.
     next_position: Tuple[int, int] = None
     next_direction: Grid4TransitionsEnum = None
 
@@ -156,7 +155,6 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     next_entry_point = (
         agent_tuple.next_position, agent_tuple.next_direction
     ) if agent_tuple.next_position is not None and agent_tuple.next_direction is not None else None
-    # design: actions applied at cell entry.
     assert (current_entry_point is None and next_entry_point is None) or (
         current_entry_point is not None and next_entry_point is not None and next_entry_point != current_entry_point
     ), (
@@ -169,10 +167,10 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # design: normalize a persisted speed_counter to the current SpeedCounter contract. A pickle predating
     # the "speed/distance are None while off map" design can carry a stale off-map speed pinned at
     # max_speed (with distance 0) instead of None, or a stale nonzero speed while in MALFUNCTION - live
-    # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
+    # code (see rail_env.py's (13) SPEED_COUNTER UPDATE) never produces either combination, so bring an
     # old pickle in line here rather than let a stale value violate _check_speed_distance_speedup_postconditions
     # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
-    #  mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
+    # mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
     # entirely.
     if current_entry_point is None:
         agent_tuple.speed_counter.reset()
@@ -286,7 +284,6 @@ class EnvAgent(Generic[EntryPointT]):
     old_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
-    # design: actions applied at cell entry.
     next_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                               converter=_sanitize_entry_point)
 
@@ -486,6 +483,18 @@ class EnvAgent(Generic[EntryPointT]):
 
     @property
     def state(self):
+        """
+        The agent's current `TrainState`. Falls back to `derived_state()` (no `elapsed_steps`/
+        `in_malfunction` override - see its own docstring for what that costs: WAITING and
+        READY_TO_DEPART become indistinguishable, both reported as WAITING) whenever
+        `state_machine` has never actually been driven - i.e. on an env never wrapped via
+        `RailEnvStateMachineWrapper`, where `state_machine.state` would otherwise stay frozen at
+        its `__init__` default forever. Once the state machine has been driven at least once
+        (`state_machine.is_live`), this returns its real tracked value directly, identical to
+        before this fallback existed.
+        """
+        if not self.state_machine.is_live:
+            return self.derived_state()
         return self.state_machine.state
 
     @state.setter
@@ -513,7 +522,7 @@ class EnvAgent(Generic[EntryPointT]):
         this method is called - something no purely attribute-based method can know on its own:
 
         - Safe (matches the real, settled state exactly, wrapped or not): any call site *after* `step()`'s
-          own position/speed commit - i.e. after its distribute loop ((10a)/(10b) in `rail_env.py`) has run
+          own position/speed commit - i.e. after its distribute loop ((12)/(13) in `rail_env.py`) has run
           for this step. This covers observations/predictors/distance-map queries (built at the very end of
           `step()`, after `RailEnvStateMachineWrapper`'s one-shot `_get_observations` swap has already run
           the real transition when wrapped), `get_info_dict()` (same reasoning - `step()`'s own `return`
@@ -522,8 +531,8 @@ class EnvAgent(Generic[EntryPointT]):
           before that swap - `malfunction_handler.in_malfunction` hasn't changed since collect, so it's
           consistent with the now-committed position/speed), and any read between calls to `step()`
           (including right after `reset()`, where every attribute is simply at its fresh/initial value).
-        - Unsafe: an `EffectsGenerator.on_episode_step_start` hook. `rail_env.py`'s `step()` runs (0a)
-          `agent.malfunction_handler.update_counter()` for every agent *before* (0b)
+        - Unsafe: an `EffectsGenerator.on_episode_step_start` hook. `rail_env.py`'s `step()` runs (1)
+          `agent.malfunction_handler.update_counter()` for every agent *before* (2)
           `effects_generator.on_episode_step_start(self)` - so by the time a condition function reads
           `malfunction_handler.in_malfunction` here, it already reflects *this* step's decremented
           down-counter, while `current_entry_point`/`speed_counter.speed` still hold the *previous* step's

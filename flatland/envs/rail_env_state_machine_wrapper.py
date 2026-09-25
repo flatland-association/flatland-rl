@@ -2,6 +2,7 @@ from typing import Dict
 
 from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.speed_counter import ZERO_FRACTION
 from flatland.envs.step_utils.states import StateTransitionSignals, TrainState
 
 
@@ -23,8 +24,11 @@ def RailEnvStateMachineWrapper(env: AbstractRailEnv, skip_state_machine_update: 
     since nothing in the `(obs, rewards, dones, info)` tuple `step()` returns depends on `agent.state`/
     `agent.state_machine` (both derived exclusively via `derived_state()`, per above), it doesn't matter
     whether the update runs before or after that tuple is built, only that it runs once per step. Without
-    wrapping, `agent.state`/`agent.state_machine` are never touched at all - permanently frozen at their
-    `__init__` default (`TrainState.WAITING`), a valid-looking but stale value, not `None`/undefined.
+    wrapping, `agent.state_machine` itself is never touched at all - permanently frozen at its `__init__`
+    default (`TrainState.WAITING`), not `None`/undefined (`state_machine.is_live` is `False` for exactly
+    this reason). `agent.state` (the `EnvAgent` property, not `agent.state_machine.state`) falls back to
+    `derived_state()` in that case instead of surfacing the frozen default directly - see its own
+    docstring.
 
     Idempotent: wrapping an already-wrapped env just updates `skip_state_machine_update` in place
     rather than double-wrapping. Returns the same instance (not a copy), for chaining convenience.
@@ -77,7 +81,7 @@ class _StateMachineUpdateMixin:
         the one signal actually snapshotted, alongside `action` itself, in `step()`'s collect phase.
 
         The one exception is the issue #280 WAITING shortcut below, which needs this step's fresh
-        `agent.malfunction_handler.in_malfunction` roll (from `step()`'s own (0a)/(0b), already
+        `agent.malfunction_handler.in_malfunction` roll (from `step()`'s own (1)/(2), already
         applied by the time this hook runs) - so it runs first in this same pass, preserving both its
         own correctness and its original before-the-rest-of-the-state-machine relative order.
         """
@@ -94,7 +98,7 @@ class _StateMachineUpdateMixin:
             # State-machine-only - map entry itself is derived from earliest_departure/elapsed_steps
             # directly in _candidate_entry_points, never from agent.state.
             if (self._elapsed_steps == 1 and agent.earliest_departure <= 1
-                    and not in_malfunction and agent.state == TrainState.WAITING):
+                    and not in_malfunction and agent.state_machine.state == TrainState.WAITING):
                 agent.state_machine.set_state(TrainState.READY_TO_DEPART)
 
         for agent in self.agents:
@@ -119,7 +123,7 @@ class _StateMachineUpdateMixin:
                 stop_action_given=agent_transition_data.action == RailEnvActions.STOP_MOVING,
                 movement_action_given=RailEnvActions.is_moving_action(agent_transition_data.action),
                 movement_allowed=agent_transition_data.action_valid and agent_transition_data.resource_check,
-                new_speed_zero=agent_transition_data.candidate_speed == 0.0,
+                new_speed_zero=agent_transition_data.candidate_speed == ZERO_FRACTION,
                 action_valid=agent_transition_data.action_valid,
                 ready_to_depart=ready_to_depart,
             ))
@@ -130,7 +134,7 @@ class _StateMachineUpdateMixin:
             if agent_transition_data.resource_check and not agent_transition_data.done:
                 agent.state_machine.update_if_reached(agent_transition_data.candidate_entry_point, agent.targets)
             # Off map or on map state and position should match.
-            if not self._fast_state_position_sync_check(agent.state, agent.current_entry_point, self.remove_agents_at_target):
+            if not self._fast_state_position_sync_check(agent.state_machine.state, agent.current_entry_point, self.remove_agents_at_target):
                 agent.state_machine.state_position_sync_check(agent.current_entry_point, agent.handle, self.remove_agents_at_target)
 
         if self.check_step_pre_post_conditions:

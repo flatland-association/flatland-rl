@@ -167,7 +167,7 @@ def test_malfunction_off_map_not_on_map_with_stop_action_after_malfunction(wrapp
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # design (issue #280): earliest_departure=2 - an earliest_departure of 0 or 1 both dispatch
     # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
     # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
     # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this
@@ -611,7 +611,7 @@ def test_malfunction_to_moving_instead_of_stopped(wrapped):
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # design (issue #280): earliest_departure=2 - an earliest_departure of 0 or 1 both dispatch
     # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
     # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
     # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this
@@ -684,7 +684,7 @@ def test_stop_and_go(wrapped):
 
     env.agents[0].initial_entry_point = ((6, 6), Grid4TransitionsEnum.SOUTH)
     env.agents[0].targets = {((0, 3), d) for d in Grid4TransitionsEnum}
-    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # design (issue #280): earliest_departure=2 - an earliest_departure of 0 or 1 both dispatch
     # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
     # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
     # which isn't the point of this test; =2 keeps the original two-real-steps-to-depart timing this

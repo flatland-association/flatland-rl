@@ -29,6 +29,7 @@ cdef class TrainStateMachine:
     cdef public object next_state
     cdef public object previous_state
     cdef public StateTransitionSignals st_signals
+    cdef public bint _is_live
 
     # internal dispatch helpers: cdef (not cpdef) since they're only ever called from
     # calculate_next_state within this module, never from outside Python code.

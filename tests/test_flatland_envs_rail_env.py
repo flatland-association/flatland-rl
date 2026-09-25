@@ -677,12 +677,12 @@ def test_symmetric_switch_move_forward_action():
     stop at the cell boundary. A moving-action retry (MOVE_FORWARD, still invalid at this switch)
     is optimistically promoted back to MOVING regardless (SpeedCounter.is_cell_exit() requires
     speed > 0, so a STOPPED/banked agent never blocks its own promotion - see design_by_contract.md),
-    but its  next re-attempt at the boundary is denied and penalized again; a non-moving
+    but its next re-attempt at the boundary is denied and penalized again; a non-moving
     STOP_MOVING retry never promotes at all. Only a valid action (MOVE_LEFT/MOVE_RIGHT)
     lets the agent actually enter the switch. Each MOVING->STOPPED transition that denies a crossing
     draws an INVALID_ACTION penalty (pre-step speed times collision_factor, see
     BaseDefaultRewards.step_reward) - never a COLLISION one, since there is no other agent to
-    conflict with - once per  entering attempt, not once per retry.
+    conflict with - once per entering attempt, not once per retry.
     """
     env, _, _ = env_generator_legacy(seed=43, n_agents=1, rewards=BaseDefaultRewards(collision_factor=COLLISION_FACTOR), skip_state_machine_update=False)
 
@@ -904,7 +904,7 @@ def test_candidate_speed_and_distance_match_crossing():
 
     resource_check, rewards = _assert_speed_distance_match_candidates(env, agent, {0: RailEnvActions.MOVE_FORWARD})
     assert resource_check
-    assert agent.current_entry_point != L  # the crossing completed
+    assert agent.current_entry_point != L  # crossing completed
     # a granted crossing is not a forced stop - no collision/invalid-action penalty
     assert rewards[DefaultPenalties.COLLISION.value] == 0
     assert rewards[DefaultPenalties.INVALID_ACTION.value] == 0
@@ -1091,7 +1091,7 @@ def test_blocked_agent_cannot_redirect_via_later_action():
     # next step, so STOP_MOVING would complete an in-flight crossing out of (3, 5) instead of
     # holding it there (see the STOP_MOVING boundary-crossing fix, issue #178 design D2a). A slower
     # max_speed keeps it mid-cell (is_cell_exit false) when STOP_MOVING brakes it to 0. Only
-    # _max_speed needs overriding here - agent1 hasn't departed yet, so _speed must stay None (off
+    # _max_speed needs overriding here - agent 1 hasn't departed yet, so _speed must stay None (off
     # map); departure (see (3a.3)) computes candidate_speed from acceleration_delta/_max_speed
     # regardless of any pre-existing _speed, so it was never read anyway.
     agent1.speed_counter._max_speed = Fraction(1, 2)
@@ -1251,7 +1251,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # elapsed_steps itself reaches earliest_departure,
     # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
     # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
-    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
+    assert env._elapsed_steps == 2  # (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -1260,7 +1260,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step. Full
     # acceleration delta reaches max speed immediately (acceleration_delta equals max_speed here).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3  # _elapsed_steps +1
+    assert env._elapsed_steps == 3
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1275,21 +1275,21 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # distance resetting to 0 cleanly (unlike a fractional acceleration delta, see
     # test_earliest_departure_state_transitions_initial_speed_zero's 1/2 cruise distance).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 4
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 5
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 6
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1516,7 +1516,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # elapsed_steps itself reaches earliest_departure,
     # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
     # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
-    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
+    assert env._elapsed_steps == 2  # (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -1525,7 +1525,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step, distance
     # resets to 0 and speed reaches the acceleration delta immediately.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3  # _elapsed_steps +1
+    assert env._elapsed_steps == 3
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(3, 10)
@@ -1539,14 +1539,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # design: distance update with pre-step speed. Ramping 0.3 -> 0.6 -> 0.9, distance
     # accumulating the pre-step speed each time, staying in the initial entry point throughout.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 4
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(6, 10)
     assert agent.speed_counter.distance == Fraction(3, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 5
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(9, 10)
@@ -1555,7 +1555,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # distance(0.9) + speed(0.9) = 1.8 >= 1: crosses into the second entry point, wraps to 0.8, and
     # speed finally saturates at max speed (0.9 + 0.3 capped at 1).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 6
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1564,14 +1564,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # At max speed, the agent advances exactly one entry point per step from here on, cruising at
     # a steady 0.8 distance (0.8 + 1 = 1.8, wraps to 0.8 again).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 7  # _elapsed_steps +1
+    assert env._elapsed_steps == 7
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(8, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 8  # _elapsed_steps +1
+    assert env._elapsed_steps == 8
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1765,7 +1765,7 @@ def test_action_required_at_full_segment_length(with_malfunction):
       what lets this promotion happen even though MOVE_FORWARD is still structurally invalid at this
       switch (see test_symmetric_switch_move_forward_action). Both variants end up MOVING here, speed
       > 0 again, distance still pinned at the boundary (the promotion itself travels no distance), so
-      is_cell_exit and action_required both read True again - a further  re-attempt on the next
+      is_cell_exit and action_required both read True again - a further re-attempt on the next
       step would be denied and force-stopped once more.
     """
     transitions = RailEnvTransitions()
@@ -2115,7 +2115,7 @@ def test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_ne
     R = ((3, 7), Grid4TransitionsEnum.WEST)
     agent_a.initial_entry_point = L
     agent_b.initial_entry_point = R
-    # design (issue #280): earliest_departure=2, not 0 - an earliest_departure of 0 or 1 both dispatch
+    # design (issue #280): earliest_departure=2 - an earliest_departure of 0 or 1 both dispatch
     # directly on the very first movement action (see rail_env.py's _candidate_entry_points'
     # ready_to_depart - there's no step 0, so 0 and 1 alias to "ready at the first opportunity"),
     # which would make the "two steps of MOVE_FORWARD to get onto the map" below only one; =2 keeps
@@ -2261,7 +2261,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # two more retries at the boundary: optimistic MOVING resumption (no penalty, nothing re-contested
-    # yet) alternating with a  re-attempt, denied again at the same speed - position and distance
+    # yet) alternating with a re-attempt, denied again at the same speed - position and distance
     # never move from where they were pinned.
     for expected_state, expected_collision in [
         (TrainState.MOVING, 0),
@@ -2491,7 +2491,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
     # place all four directly nose-to-tail on the first four cells, already MOVING at the shared max
     # speed with distance 0 (freshly cruising) - see
     # test_platoon_of_four_agents_starts_and_advances_together_without_force_stops for how a platoon
-    # reaches this state from a  standstill.
+    # reaches this state from a standstill.
     for agent, cell in zip(env.agents, cells[:4]):
         agent.current_entry_point = cell
         agent._set_state(TrainState.MOVING)
@@ -2663,10 +2663,16 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
     - Every step, all three envs agree exactly on each agent's position (current_entry_point/
       next_entry_point/target_entry_point), arrival_time, speed/distance, malfunction counter,
       rewards and dones: RailEnvStateMachineWrapper never changes step()'s own control flow either way.
-    - agent.state itself stays at its never-touched initial value on both the unwrapped and the
-      skip_state_machine_update=True envs for the whole run, while the default-wrapped env's
-      agents visibly progress through states - showing the wrapper's tracking is real (not a
-      no-op) without it affecting any of the above.
+    - agent.state_machine is never actually driven on the unwrapped and skip_state_machine_update=True
+      envs, so agent.state on those two falls back to agent.derived_state() (see EnvAgent.state's own
+      docstring) - every step, it matches derived_state() exactly, and progresses away from WAITING
+      just like the default-wrapped env's real tracked state does.
+    - The one case agent.state can still diverge between the real-tracked and derived-fallback envs is
+      WAITING vs. READY_TO_DEPART: derived_state() without elapsed_steps can't tell the two apart
+      (always reports WAITING), while the wrapped env's real state machine can. This test tracks
+      whether that divergence occurs at least once, confirming the wrapper's real tracking still adds
+      information beyond the fallback, without it affecting any of the position/reward/done bookkeeping
+      above.
 
     Parametrized over the same seed grid as test_derived_state_matches_state_on_wrapped_env
     (agent_utils.py) - 5x's this test's random-scenario coverage for the price of one more axis.
@@ -2689,8 +2695,7 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
     env_wrapped_skip = RailEnvStateMachineWrapper(make_env(), skip_state_machine_update=True)
     env_wrapped_skip.reset(random_seed=seed)
 
-    initial_states = [agent.state for agent in env.agents]
-    any_state_diverged_on_wrapped_env = False
+    any_real_state_diverged_from_derived_fallback = False
 
     rng = np.random.RandomState(seed)
     for _ in range(80):
@@ -2716,14 +2721,14 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
             assert done_wrapped[a] == done[a]
             assert done_wrapped_skip[a] == done[a]
 
-            assert agent.state == initial_states[a]
-            assert agent_wrapped_skip.state == initial_states[a]
-            if agent_wrapped.state != initial_states[a]:
-                any_state_diverged_on_wrapped_env = True
+            assert agent.state == agent.derived_state()
+            assert agent_wrapped_skip.state == agent_wrapped_skip.derived_state()
+            if agent_wrapped.state != agent.derived_state():
+                any_real_state_diverged_from_derived_fallback = True
 
         assert done_wrapped["__all__"] == done["__all__"]
         assert done_wrapped_skip["__all__"] == done["__all__"]
         if done["__all__"]:
             break
 
-    assert any_state_diverged_on_wrapped_env
+    assert any_real_state_diverged_from_derived_fallback

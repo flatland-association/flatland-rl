@@ -406,6 +406,15 @@ class PolicyRunner:
               type=int,
               help="Initiate random seed after the env is generated, goes into second `reset` with `regenerate_rail=False, regenerate_schedule=False`.",
               required=False, default=None)
+@click.option('--skip-state-machine-update',
+              type=bool,
+              default=True,
+              help="Whether the generated env skips agent.state/agent.state_machine bookkeeping (the default, "
+                   "matching env_generator()'s own default). Pass False if --policy reads agent.state directly "
+                   "(e.g. this repo's own bundled ShortestPathPolicy) - an arbitrary caller-supplied policy can't "
+                   "be assumed to use derived_state() the way this repo's own internals do.",
+              required=False
+              )
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy: str = None,
@@ -445,6 +454,7 @@ def generate_trajectory_from_policy(
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
     post_seed: int = None,
+    skip_state_machine_update: bool = True,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -523,6 +533,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=skip_state_machine_update,
         )
     else:
         env, _, _ = env_generator(
@@ -542,6 +553,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=skip_state_machine_update,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:
