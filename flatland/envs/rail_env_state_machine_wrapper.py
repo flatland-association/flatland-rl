@@ -2,6 +2,7 @@ from typing import Dict
 
 from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.speed_counter import ZERO_FRACTION
 from flatland.envs.step_utils.states import StateTransitionSignals, TrainState
 
 
@@ -122,7 +123,7 @@ class _StateMachineUpdateMixin:
                 stop_action_given=agent_transition_data.action == RailEnvActions.STOP_MOVING,
                 movement_action_given=RailEnvActions.is_moving_action(agent_transition_data.action),
                 movement_allowed=agent_transition_data.action_valid and agent_transition_data.resource_check,
-                new_speed_zero=agent_transition_data.candidate_speed == 0.0,
+                new_speed_zero=agent_transition_data.candidate_speed == ZERO_FRACTION,
                 action_valid=agent_transition_data.action_valid,
                 ready_to_depart=ready_to_depart,
             ))
