@@ -62,16 +62,16 @@ cosmetic (every branch condition is self-contained and pairwise disjoint - see t
 for the exclusion reasoning), not load-bearing.
 
 ```
-_candidate_entry_points          _candidate_speed                 _candidate_distance
-------------------------         ------------------------         ------------------------
+_candidate_entry_points          _candidate_speed                  _candidate_distance
+------------------------         ------------------------          ------------------------
 done                             done                              done
 off_map_no_departure             stay off map                      stay off map
-keep moving mid-cell             keep moving mid-cell              stopped
-on-map cell transition           acceleration or start moving      malfunction
-malfunction                      braking                           map entry
-map entry                        malfunction                       target reached
-target reached                   map entry                         invalid action at cell exit
-invalid action at cell exit      target reached
+keep moving mid-cell             keep moving mid-cell              keep moving mid-cell
+on-map cell transition           acceleration or start moving      stopped
+malfunction                      braking                           malfunction
+map entry                        malfunction                       map entry
+target reached                   map entry                         target reached
+invalid action at cell exit      target reached                    invalid action at cell exit
                                  invalid action at cell exit
 ```
 
