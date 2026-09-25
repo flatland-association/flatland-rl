@@ -523,6 +523,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=False,
         )
     else:
         env, _, _ = env_generator(
@@ -542,6 +543,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=False,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:
