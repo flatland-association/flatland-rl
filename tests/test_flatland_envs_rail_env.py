@@ -1765,7 +1765,7 @@ def test_action_required_at_full_segment_length(with_malfunction):
       what lets this promotion happen even though MOVE_FORWARD is still structurally invalid at this
       switch (see test_symmetric_switch_move_forward_action). Both variants end up MOVING here, speed
       > 0 again, distance still pinned at the boundary (the promotion itself travels no distance), so
-      is_cell_exit and action_required both read True again - a further  re-attempt on the next
+      is_cell_exit and action_required both read True again - a further re-attempt on the next
       step would be denied and force-stopped once more.
     """
     transitions = RailEnvTransitions()
@@ -2261,7 +2261,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     assert rewards[0][DefaultPenalties.INVALID_ACTION.value] == 0
 
     # two more retries at the boundary: optimistic MOVING resumption (no penalty, nothing re-contested
-    # yet) alternating with a  re-attempt, denied again at the same speed - position and distance
+    # yet) alternating with a re-attempt, denied again at the same speed - position and distance
     # never move from where they were pinned.
     for expected_state, expected_collision in [
         (TrainState.MOVING, 0),
@@ -2491,7 +2491,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
     # place all four directly nose-to-tail on the first four cells, already MOVING at the shared max
     # speed with distance 0 (freshly cruising) - see
     # test_platoon_of_four_agents_starts_and_advances_together_without_force_stops for how a platoon
-    # reaches this state from a  standstill.
+    # reaches this state from a standstill.
     for agent, cell in zip(env.agents, cells[:4]):
         agent.current_entry_point = cell
         agent._set_state(TrainState.MOVING)

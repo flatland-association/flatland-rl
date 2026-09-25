@@ -170,7 +170,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     # code (see rail_env.py's (10b) SPEED_COUNTER UPDATE) never produces either combination, so bring an
     # old pickle in line here rather than let a stale value violate _check_speed_distance_speedup_postconditions
     # on the very first live step after loading. distance is left untouched for MALFUNCTION (on map, so a
-    #  mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
+    # mid-cell position, not a legacy artifact); MOVING/STOPPED/DONE agents are left untouched
     # entirely.
     if current_entry_point is None:
         agent_tuple.speed_counter.reset()

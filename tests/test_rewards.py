@@ -957,7 +957,7 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
 
 
 def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    """`state` is STOPPED (a  halt at `waypoint`) or MOVING (rolling through it without stopping) -
+    """`state` is STOPPED (a halt at `waypoint`) or MOVING (rolling through it without stopping) -
     is_stopped_now is derived purely from this step's signals (see BaseDefaultRewards.step_reward), so the
     two need distinct signal combinations rather than sharing one hardcoded set."""
     agent.old_entry_point = (old.position, old.direction)

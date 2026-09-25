@@ -172,7 +172,7 @@ def test_malfunction_process_statistically():
             # env.agents[agent_idx].malfunction_handler.malfunction_down_counter)
             # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
             # shift by 1 while a malfunction is active or just ended (previous entry nonzero); a value that is 0
-            # both here and in the previous entry is a  steady idle step and must stay 0.
+            # both here and in the previous entry is a steady idle step and must stay 0.
             expected = agent_malfunction_list[agent_idx][step]
             prev = agent_malfunction_list[agent_idx][step - 1] if step > 0 else 0
             if expected > 0 or prev > 0:

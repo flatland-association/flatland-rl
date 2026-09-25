@@ -1261,7 +1261,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         #   `no_earlier_case_applies`'s own `not invalid_action_at_cell_exit`. cell_exit requires
         #   speed > 0, so this branch can never be true while stopped - a STOPPED agent given a
         #   moving action always falls through to acceleration below instead, regardless of whether
-        #   that action is itself structurally valid; a fresh,  re-attempt at the boundary
+        #   that action is itself structurally valid; a fresh, re-attempt at the boundary
         #   (this time with speed > 0) is what gets denied here, not the promotion step itself.
         # - acceleration or start moving: excludes done/target reached/malfunction/off_map/invalid
         #   action at cell exit via `no_earlier_case_applies`; disjoint from braking since STOP_MOVING
@@ -1370,7 +1370,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # - invalid action at cell exit: excludes done/target reached/malfunction/off_map via its
         #   own explicit terms; structurally exclusive with stopped/default via their own
         #   `not invalid_action_at_cell_exit`. cell_exit requires speed > 0, so this branch can
-        #   never be true while stopped - a fresh,  re-attempt at the boundary (speed > 0)
+        #   never be true while stopped - a fresh, re-attempt at the boundary (speed > 0)
         #   is what gets denied here, not a STOPPED agent's mere promotion/resumption (handled by the
         #   stopped branch instead).
         # - stopped: excludes done/target reached/malfunction/off_map/invalid action at cell exit
