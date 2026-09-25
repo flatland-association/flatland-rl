@@ -107,3 +107,15 @@ d_i^{t+1} =
             \tilde{d}_i^{t+1} & \text{else} \qquad (\textit{accepted}) \\
         \end{cases}
 \end{equation}
+
+\texttt{SpeedCounter} additionally tracks, as a side effect of committing $s_i^{t+1}$/$d_i^{t+1}$ above, whether the
+agent just entered a fresh cell this step - distinct from $cellExit_i^t$, which is a collect-phase precondition on
+the \emph{pre}-step $s_i^t$/$d_i^t$ (see design\_by\_contract.md's Table 2a):
+
+\begin{equation}
+cellEntry_i^{t+1} :\Leftrightarrow (d_i^t = \bot \text{ and } d_i^{t+1} \not= \bot) \text{ or } \big(d_i^t \not= \bot \text{ and } d_i^{t+1} \not= \bot \text{ and } s_i^t \not= \bot \text{ and } d_i^t + s_i^t \geq \lVert c_i^t \rVert \text{ and } d_i^{t+1} < \lVert c_i^t \rVert\big)
+\end{equation}
+
+The second disjunct's two conjuncts are both required: at $s_i^t = \lVert c_i^t \rVert$ (e.g. $v_{\text{max},i}=1$),
+the modulo in $\tilde{d}_i^{t+1}$'s \textit{keep moving mid-cell} formula wraps exactly back to the pre-step value
+($0 \to 0$), so $d_i^{t+1} \not= d_i^t$ alone (or even $d_i^{t+1} \leq d_i^t$) would misclassify it.

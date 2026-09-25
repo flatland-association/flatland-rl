@@ -125,17 +125,23 @@ class SpeedCounter:
             The new within-cell distance, or None while off map. Both speed and distance are None
             together, or both concrete Fractions together - never mixed (see the class docstring).
         """
-        # design: is_cell_entry is "just entered a new cell" - true exactly when distance dropped
-        # relative to its previous value (a wrap into a new cell), or the agent just bootstrapped onto
-        # the map (previous distance None, new distance concrete). distance never decreases within the
-        # same cell (both distance_after_crossing's modulo and distance_without_crossing's cap only ever
-        # hold or grow it), so "new < old" is unambiguously a crossing, not mid-cell noise. Unlike the
-        # old step()'s new_distance < speed (which reduces to old_distance < SEGMENT_LENGTH under
-        # crossing_completed, wrongly False for an agent banked exactly at the boundary that resumes and
-        # crosses), this needs no separate crossing_completed flag at all.
+        # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
+        # bootstrapped onto the map (previous distance None, new distance concrete), or the pre-step
+        # distance/speed pair implies a crossing was attempted (old_distance + old_speed reaches or
+        # exceeds SEGMENT_LENGTH) *and* the new distance shows it landed inside the fresh cell rather
+        # than banked at the exit (new_distance < SEGMENT_LENGTH). A plain "new < old" comparison isn't
+        # enough on its own: at speed == SEGMENT_LENGTH (e.g. max_speed=1), distance_after_crossing's
+        # modulo wraps exactly back to the pre-step value (0 -> 0), so "new < old" and even "new <= old"
+        # both misclassify it - the latter also misfires on a stopped/banked agent whose distance is
+        # unchanged for an unrelated reason (denied at the boundary, or genuinely at rest). Old_speed
+        # here is this call's *pre*-step self._speed - it isn't overwritten until after this block.
         self._is_cell_entry = (
             (self._distance is None and distance is not None)
-            or (self._distance is not None and distance is not None and distance < self._distance)
+            or (
+                self._distance is not None and distance is not None and self._speed is not None
+                and self._distance + self._speed >= SEGMENT_LENGTH
+                and distance < SEGMENT_LENGTH
+            )
         )
         self._distance = distance
         # design: speed and distance are None together while off map - force speed None whenever

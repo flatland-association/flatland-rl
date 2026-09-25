@@ -160,6 +160,27 @@ def test_step_counter_speed025_03():
     assert np.isclose(float(sc.speed), 0.0)
 
 
+def test_step_counter_speed1_every_step_is_a_cell_entry():
+    """At speed 1 (max_speed=1), every step crosses a full cell in one go, so is_cell_entry must be
+    True on every single step, not just the first (https://github.com/flatland-association/flatland-rl/pull/517/changes#r4104433181).
+    A plain "new distance < old distance" comparison misclassifies this: distance_after_crossing's
+    modulo wraps 0 -> 0 at speed == SEGMENT_LENGTH, so "new < old" (0 < 0) is False."""
+    sc = SpeedCounter(max_speed=1.0, speed=1.0)
+    assert sc.is_cell_entry == False  # off map: no cell entered (yet) at all
+
+    sc.set(sc.speed, Fraction(0))
+    assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
+    assert sc.distance == 0
+
+    sc.set(sc.speed, Fraction(0))
+    assert sc.is_cell_entry == True  # wraps into the next cell (0 -> 0): crossing, not a stall
+    assert sc.distance == 0
+
+    sc.set(sc.speed, Fraction(0))
+    assert sc.is_cell_entry == True  # wraps into the next cell again (0 -> 0): still a crossing
+    assert sc.distance == 0
+
+
 def test_clone_speed_counter_speed1():
     """Test that a SpeedCounter stays consistent when restored from a pickled state."""
     sc = SpeedCounter(speed=1, max_speed=1)

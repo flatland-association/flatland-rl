@@ -166,6 +166,27 @@ both, overriding the already-computed `agent_transition_data.candidate_speed`, t
 removed/off-map agent's speed must be `None`. Distance needs no such forcing, since `_candidate_distance` already
 returns `None` for both directly (Table 1).
 
+### `SpeedCounter.is_cell_entry` — derived after Table 3 resolves speed/distance
+
+`SpeedCounter.set(speed, distance)` (`step_utils/speed_counter.py`) is what (10b) actually calls to commit each
+row of Table 3 above - it doesn't just store the two values, it also derives `is_cell_entry`, a boolean tracked
+alongside them: `True` exactly when the agent just bootstrapped onto the map (pre-step `distance is None`, new
+`distance is not None`), or the pre-step `distance`/`speed` pair implies a crossing was attempted
+(`pre_distance + pre_speed >= SEGMENT_LENGTH`) *and* the post-step `distance` lands inside the fresh cell rather
+than banked at the exit (`distance < SEGMENT_LENGTH`). Both conjuncts are needed: at `speed == SEGMENT_LENGTH`
+(e.g. `max_speed=1`), `distance_after_crossing`'s modulo wraps exactly back to the pre-step value (`0 -> 0`), so a
+plain `distance < pre_distance` (or even `<=`) comparison misclassifies it - the latter also misfires on a
+stopped/banked agent whose distance is unchanged for an unrelated reason (denied at the boundary, or genuinely at
+rest).
+
+This is a distinct term from `cell_exit`/`is_cell_exit()` (Table 2a) despite the similar name: `cell_exit` is a
+collect-phase precondition computed from the *pre-step* speed/distance, feeding `_candidate_entry_points`; `is_cell_entry`
+is derived *after* Table 3 has already resolved this step's accepted-or-discarded speed/distance, from both the
+pre- and post-step values together. `action_required` (`rail_env.py`) takes a parameter literally named
+`is_cell_entry` that in fact always receives `is_cell_exit()`'s value, not `SpeedCounter.is_cell_entry` - see its
+own docstring for that pre-existing naming mismatch. `SpeedCounter.is_cell_entry` itself isn't consulted by any
+production control flow at the time of writing - only asserted on directly by `tests/test_speed_counter.py`.
+
 ## Table 4 — code ↔ paper mathematical notation
 
 A separate write-up formalizes the collect/distribute phases in mathematical notation (superscript `t`/`t+1`
