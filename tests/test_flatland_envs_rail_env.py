@@ -904,7 +904,7 @@ def test_candidate_speed_and_distance_match_crossing():
 
     resource_check, rewards = _assert_speed_distance_match_candidates(env, agent, {0: RailEnvActions.MOVE_FORWARD})
     assert resource_check
-    assert agent.current_entry_point != L  # the crossing completed
+    assert agent.current_entry_point != L  # crossing completed
     # a granted crossing is not a forced stop - no collision/invalid-action penalty
     assert rewards[DefaultPenalties.COLLISION.value] == 0
     assert rewards[DefaultPenalties.INVALID_ACTION.value] == 0
