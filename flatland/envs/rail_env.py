@@ -756,7 +756,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         candidate_entry_point = agent_transition_data.candidate_entry_point
         candidate_next_entry_point = agent_transition_data.candidate_next_entry_point
 
-        # (8) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
+        # (7) FETCH CONFLICT RESOLUTION FOR AGENT AND FINALIZE STATE TRANSITION SIGNALS FROM MOTION_CHECK
         resource_check = self.resource_check.check_resource(i_agent)
 
         if not agent_transition_data.is_cell_exit and agent.current_entry_point is not None:
