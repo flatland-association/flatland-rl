@@ -27,7 +27,7 @@ OverlayMode = Tuple[Optional[Tuple[int, int]], Optional[int]]
 class TravelwiseOverlayEnv(Environment):
     """
     Layers a set of overlay agents over a `RailEnv` ("the underlying env"): the overlay agents share
-    the underlying env's rail topology, but are otherwise wholly independent of it - separate agents,
+    the underlying env's rail topology, but are otherwise independent of it - separate agents,
     separate timetable, separate motion checks. Each overlay agent (handle `h`) follows its own fixed,
     ordered list of stops `overlay_stops[h]`.
 
