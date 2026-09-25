@@ -1251,7 +1251,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # elapsed_steps itself reaches earliest_departure,
     # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
     # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
-    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
+    assert env._elapsed_steps == 2  # (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -1260,7 +1260,7 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step. Full
     # acceleration delta reaches max speed immediately (acceleration_delta equals max_speed here).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3  # _elapsed_steps +1
+    assert env._elapsed_steps == 3
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1275,21 +1275,21 @@ def test_earliest_departure_state_transitions_full_acceleration():
     # distance resetting to 0 cleanly (unlike a fractional acceleration delta, see
     # test_earliest_departure_state_transitions_initial_speed_zero's 1/2 cruise distance).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 4
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 5
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(0)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 6
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1516,7 +1516,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # elapsed_steps itself reaches earliest_departure,
     # agent goes to READY_TO_DEPART at the end of the step it reaches earliest_departure
     # (e.g. when earliest_departure==0, agent is READY_TO_DEPART before the first step (where _elapsed_steps 0->1)
-    assert env._elapsed_steps == 2  # _elapsed_steps +2 (2 WAITING steps)
+    assert env._elapsed_steps == 2  # (2 WAITING steps)
 
     # READY_TO_DEPART: still off map, waiting for a valid MOVE_FORWARD to actually depart.
     assert agent.state == TrainState.READY_TO_DEPART
@@ -1525,7 +1525,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # READY_TO_DEPART -> MOVING: agent appears at its initial entry point this very step, distance
     # resets to 0 and speed reaches the acceleration delta immediately.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 3  # _elapsed_steps +1
+    assert env._elapsed_steps == 3
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == agent.initial_entry_point
     assert agent.speed_counter.speed == Fraction(3, 10)
@@ -1539,14 +1539,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # design: distance update with pre-step speed. Ramping 0.3 -> 0.6 -> 0.9, distance
     # accumulating the pre-step speed each time, staying in the initial entry point throughout.
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 4  # _elapsed_steps +1
+    assert env._elapsed_steps == 4
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(6, 10)
     assert agent.speed_counter.distance == Fraction(3, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 5  # _elapsed_steps +1
+    assert env._elapsed_steps == 5
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == first_entry_point
     assert agent.speed_counter.speed == Fraction(9, 10)
@@ -1555,7 +1555,7 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # distance(0.9) + speed(0.9) = 1.8 >= 1: crosses into the second entry point, wraps to 0.8, and
     # speed finally saturates at max speed (0.9 + 0.3 capped at 1).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 6  # _elapsed_steps +1
+    assert env._elapsed_steps == 6
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == second_entry_point
     assert agent.speed_counter.speed == Fraction(1)
@@ -1564,14 +1564,14 @@ def test_earliest_departure_state_transitions_partial_acceleration():
     # At max speed, the agent advances exactly one entry point per step from here on, cruising at
     # a steady 0.8 distance (0.8 + 1 = 1.8, wraps to 0.8 again).
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 7  # _elapsed_steps +1
+    assert env._elapsed_steps == 7
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == third_entry_point
     assert agent.speed_counter.speed == Fraction(1)
     assert agent.speed_counter.distance == Fraction(8, 10)
 
     env.step({agent.handle: RailEnvActions.MOVE_FORWARD})
-    assert env._elapsed_steps == 8  # _elapsed_steps +1
+    assert env._elapsed_steps == 8
     assert agent.state == TrainState.MOVING
     assert agent.current_entry_point == fourth_entry_point
     assert agent.speed_counter.speed == Fraction(1)

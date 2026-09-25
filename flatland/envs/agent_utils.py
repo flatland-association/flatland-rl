@@ -49,7 +49,6 @@ class Agent(NamedTuple):
     # envs persisted before this field existed, or for an agent that hasn't reached DONE yet.
     target_position: Tuple[int, int] = None
     target_direction: Grid4TransitionsEnum = None
-    # design: actions applied at cell entry.
     next_position: Tuple[int, int] = None
     next_direction: Grid4TransitionsEnum = None
 
@@ -156,7 +155,6 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
     next_entry_point = (
         agent_tuple.next_position, agent_tuple.next_direction
     ) if agent_tuple.next_position is not None and agent_tuple.next_direction is not None else None
-    # design: actions applied at cell entry.
     assert (current_entry_point is None and next_entry_point is None) or (
         current_entry_point is not None and next_entry_point is not None and next_entry_point != current_entry_point
     ), (
@@ -286,7 +284,6 @@ class EnvAgent(Generic[EntryPointT]):
     old_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                              converter=_sanitize_entry_point)
 
-    # design: actions applied at cell entry.
     next_entry_point = attrib(type=Optional[EntryPointT], default=Factory(lambda: None),
                               converter=_sanitize_entry_point)
 
