@@ -27,7 +27,6 @@ from versions import parse_version, parse_version_set
 
 import flatland
 from flatland.envs.persistence import RailEnvPersister
-from flatland.envs.step_utils.states import TrainState
 from flatland.evaluators import aicrowd_helpers
 from flatland.evaluators import messages
 from flatland.utils.rendertools import RenderTool
@@ -963,7 +962,7 @@ class FlatlandRemoteEvaluationService:
             complete = 0
             for i_agent in range(self.env.get_num_agents()):
                 agent = self.env.agents[i_agent]
-                if agent.state == TrainState.DONE:
+                if agent.target_entry_point is not None:
                     complete += 1
             percentage_complete = complete * 1.0 / self.env.get_num_agents()
             self.simulation_percentage_complete[-1] = percentage_complete
@@ -1076,12 +1075,12 @@ class FlatlandRemoteEvaluationService:
             agent = self.env.agents[i_agent]
 
             agent_speeds.append(agent.speed_counter.speed)
-            agent_states.append(agent.state)
+            agent_states.append(agent.derived_state(self.env._elapsed_steps))
             agent_earliest_departures.append(agent.earliest_departure)
             agent_latest_arrivals.append(agent.latest_arrival)
             agent_arrival_times.append(agent.arrival_time)
 
-            if (agent.state != TrainState.DONE):
+            if agent.target_entry_point is None:
                 sp = agent.get_shortest_path(self.env.distance_map)
                 len_sp = len(sp) if sp is not None else -1
                 agent_shortest_paths.append(len_sp)

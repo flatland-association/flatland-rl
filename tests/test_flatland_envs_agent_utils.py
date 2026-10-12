@@ -1,18 +1,114 @@
+from fractions import Fraction
+
+import numpy as np
+import pytest
+
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_configurations,
-                                       load_env_agent, virtual_configuration, with_direction)
+from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_entry_points,
+                                       _sanitize_entry_point, load_env_agent, virtual_entry_point, with_direction)
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_generators import rail_from_grid_transition_map
+from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
+from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
+from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
-from flatland.envs.step_utils.action_saver import ActionSaver
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line
 from flatland.utils.simple_rail import make_oval_rail
+
+
+@pytest.mark.parametrize("seed", [1, 42, 99, 123, 2024])
+def test_derived_state_matches_state_on_wrapped_env(seed):
+    """
+    5 agents on a 30x30 sparse map with frequent malfunctions (malfunction_rate=1/15), wrapped via
+    RailEnvStateMachineWrapper so agent.state is live - stepped with 100 random actions per
+    agent.
+
+    - Right after reset() and after every one of the 100 steps, every agent's
+      agent.derived_state(elapsed_steps=env._elapsed_steps) exactly matches the real (live) agent.state -
+      including MALFUNCTION/MALFUNCTION_OFF_MAP (from malfunction_handler.in_malfunction),
+      MOVING/STOPPED (from speed_counter.speed), and WAITING/READY_TO_DEPART (from earliest_departure
+      vs. elapsed_steps), not just the coarser on-map/off-map/done categories other callers need.
+    - derived_state() called with no elapsed_steps still matches on-map/malfunction states exactly, and
+      still agrees with state.is_off_map_state() while off-map (it just can't tell WAITING from
+      READY_TO_DEPART without elapsed_steps, so it always reports WAITING for that pair).
+    """
+    n_agents = 5
+    env = RailEnv(
+        width=30, height=30,
+        rail_generator=sparse_rail_generator(max_num_cities=3, seed=seed),
+        line_generator=sparse_line_generator(),
+        number_of_agents=n_agents,
+        malfunction_generator=ParamMalfunctionGen(
+            MalfunctionParameters(min_duration=2, max_duration=4, malfunction_rate=1.0 / 15)),
+    )
+    env = RailEnvStateMachineWrapper(env)
+    env.reset(random_seed=seed)
+
+    def _assert_equivalent():
+        for agent in env.agents:
+            assert agent.derived_state(elapsed_steps=env._elapsed_steps) == agent.state, \
+                (agent.handle, agent.derived_state(elapsed_steps=env._elapsed_steps), agent.state)
+            assert agent.derived_state().is_off_map_state() == agent.state.is_off_map_state()
+            assert agent.derived_state().is_on_map_state() == agent.state.is_on_map_state()
+            assert (agent.derived_state() == TrainState.DONE) == (agent.state == TrainState.DONE)
+
+    _assert_equivalent()
+    rng = np.random.RandomState(seed)
+    for _ in range(100):
+        if env.dones["__all__"]:
+            break
+        action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
+        env.step(action_dict)
+        _assert_equivalent()
+
+
+@pytest.mark.parametrize("seed", [1, 42, 99, 123, 2024])
+def test_derived_state_matches_state_on_unwrapped_env(seed):
+    """
+    Same 5-agent, 30x30 sparse map with frequent malfunctions (malfunction_rate=1/15) as
+    test_derived_state_matches_state_on_wrapped_env, but never wrapped via
+    RailEnvStateMachineWrapper - state_machine.is_live stays False for the whole run, so
+    agent.state falls back to agent.derived_state() (no elapsed_steps/in_malfunction override -
+    see EnvAgent.state's own docstring).
+
+    - Right after reset() and after every one of the 100 steps, agent.state exactly equals
+      agent.derived_state() (both calls with no arguments) - the fallback is self-consistent by
+      construction, not just superficially close.
+    - agent.state still agrees with derived_state() on the coarser on-map/off-map/done categories,
+      matching the wrapped-env test's own equivalence checks for those.
+    """
+    n_agents = 5
+    env = RailEnv(
+        width=30, height=30,
+        rail_generator=sparse_rail_generator(max_num_cities=3, seed=seed),
+        line_generator=sparse_line_generator(),
+        number_of_agents=n_agents,
+        malfunction_generator=ParamMalfunctionGen(
+            MalfunctionParameters(min_duration=2, max_duration=4, malfunction_rate=1.0 / 15)),
+    )
+    env.reset(random_seed=seed)
+
+    def _assert_equivalent():
+        for agent in env.agents:
+            assert not agent.state_machine.is_live
+            assert agent.state == agent.derived_state()
+            assert agent.derived_state().is_off_map_state() == agent.state.is_off_map_state()
+            assert agent.derived_state().is_on_map_state() == agent.state.is_on_map_state()
+            assert (agent.derived_state() == TrainState.DONE) == (agent.state == TrainState.DONE)
+
+    _assert_equivalent()
+    rng = np.random.RandomState(seed)
+    for _ in range(100):
+        if env.dones["__all__"]:
+            break
+        action_dict = {a: RailEnvActions(rng.randint(0, 5)) for a in range(n_agents)}
+        env.step(action_dict)
+        _assert_equivalent()
 
 
 def test_shortest_paths():
@@ -105,35 +201,35 @@ def test_from_line():
     line = Line(agent_waypoints=agent_waypoints, agent_speeds=[1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
 
     env_agents = EnvAgent.from_line(line)
-    assert env_agents[0].initial_configuration[0] == (11, 40)
-    assert env_agents[0].initial_configuration[1] == 3
+    assert env_agents[0].initial_entry_point[0] == (11, 40)
+    assert env_agents[0].initial_entry_point[1] == 3
     assert next(iter(env_agents[0].targets))[0] == (39, 8)
-    assert env_agents[1].initial_configuration[0] == (38, 8)
-    assert env_agents[1].initial_configuration[1] == 1
+    assert env_agents[1].initial_entry_point[0] == (38, 8)
+    assert env_agents[1].initial_entry_point[1] == 1
     assert next(iter(env_agents[1].targets))[0] == (10, 40)
-    assert env_agents[2].initial_configuration[0] == (17, 5)
-    assert env_agents[2].initial_configuration[1] == 3
+    assert env_agents[2].initial_entry_point[0] == (17, 5)
+    assert env_agents[2].initial_entry_point[1] == 3
     assert next(iter(env_agents[2].targets))[0] == (42, 22)
-    assert env_agents[3].initial_configuration[0] == (41, 22)
-    assert env_agents[3].initial_configuration[1] == 3
+    assert env_agents[3].initial_entry_point[0] == (41, 22)
+    assert env_agents[3].initial_entry_point[1] == 3
     assert next(iter(env_agents[3].targets))[0] == (18, 5)
-    assert env_agents[4].initial_configuration[0] == (11, 40)
-    assert env_agents[4].initial_configuration[1] == 1
+    assert env_agents[4].initial_entry_point[0] == (11, 40)
+    assert env_agents[4].initial_entry_point[1] == 1
     assert next(iter(env_agents[4].targets))[0] == (39, 8)
-    assert env_agents[5].initial_configuration[0] == (38, 8)
-    assert env_agents[5].initial_configuration[1] == 3
+    assert env_agents[5].initial_entry_point[0] == (38, 8)
+    assert env_agents[5].initial_entry_point[1] == 3
     assert next(iter(env_agents[5].targets))[0] == (12, 40)
-    assert env_agents[6].initial_configuration[0] == (38, 8)
-    assert env_agents[6].initial_configuration[1] == 1
+    assert env_agents[6].initial_entry_point[0] == (38, 8)
+    assert env_agents[6].initial_entry_point[1] == 1
     assert next(iter(env_agents[6].targets))[0] == (31, 27)
-    assert env_agents[7].initial_configuration[0] == (31, 26)
-    assert env_agents[7].initial_configuration[1] == 0
+    assert env_agents[7].initial_entry_point[0] == (31, 26)
+    assert env_agents[7].initial_entry_point[1] == 0
     assert next(iter(env_agents[7].targets))[0] == (39, 8)
-    assert env_agents[8].initial_configuration[0] == (41, 22)
-    assert env_agents[8].initial_configuration[1] == 1
+    assert env_agents[8].initial_entry_point[0] == (41, 22)
+    assert env_agents[8].initial_entry_point[1] == 1
     assert next(iter(env_agents[8].targets))[0] == (8, 27)
-    assert env_agents[9].initial_configuration[0] == (9, 27)
-    assert env_agents[9].initial_configuration[1] == 3
+    assert env_agents[9].initial_entry_point[0] == (9, 27)
+    assert env_agents[9].initial_entry_point[1] == 3
     assert next(iter(env_agents[9].targets))[0] == (44, 22)
 
 
@@ -143,7 +239,7 @@ def test_load_env_agent_fallback_waypoints():
     including the initial stop - must itself be a list, not a bare `Waypoint`; and the target group must be
     filtered to the arrival directions valid on `rail`."""
     rail, _, _ = make_oval_rail()
-    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid entry points here
     agent_tuple = Agent(
         initial_position=(0, 0),
         initial_direction=Grid4TransitionsEnum(0),
@@ -157,8 +253,8 @@ def test_load_env_agent_fallback_waypoints():
         arrival_time=None,
         old_direction=None,
         old_position=None,
-        speed_counter=SpeedCounter(1.0),
-        action_saver=ActionSaver(),
+        speed_counter=SpeedCounter(max_speed=1.0),
+        action_saver=None,
         state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
         malfunction_handler=MalfunctionHandler(),
     )
@@ -174,31 +270,31 @@ def test_load_env_agent_fallback_waypoints():
     Rewards._sanitize_waypoints(env_agent.waypoints)
 
 
-def test_filter_valid_target_configurations():
-    """`_filter_valid_target_configurations` must keep only rail-valid directions at a group's position, and
+def test_filter_valid_target_entry_points():
+    """`_filter_valid_target_entry_points` must keep only rail-valid directions at a group's position, and
     must explode a legacy `None`-direction placeholder into concrete valid directions instead of dropping it."""
     rail, _, _ = make_oval_rail()
-    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid configurations here
+    position = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid entry points here
 
-    assert _filter_valid_target_configurations(rail, [
+    assert _filter_valid_target_entry_points(rail, [
         Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3)), Waypoint(position, Grid4TransitionsEnum(2))
     ]) == [Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
 
-    assert _filter_valid_target_configurations(rail, [Waypoint(position, None)]) == [
+    assert _filter_valid_target_entry_points(rail, [Waypoint(position, None)]) == [
         Waypoint(position, Grid4TransitionsEnum(1)), Waypoint(position, Grid4TransitionsEnum(3))]
 
 
 def test_agent_tuple_targets():
     """`_agent_tuple_targets` must pass a concrete `(position, direction)` set through unchanged, and must
     explode a legacy bare `(row, col)` position (from an env pickled before `Agent.target` became
-    `Agent.targets`) into one configuration per direction."""
+    `Agent.targets`) into one entry point per direction."""
 
     def _agent(targets):
         return Agent(
             initial_position=(0, 0), initial_direction=Grid4TransitionsEnum(0), direction=Grid4TransitionsEnum(0),
             targets=targets, moving=False, earliest_departure=0, latest_arrival=100, handle=0, position=None,
-            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(1.0),
-            action_saver=ActionSaver(), state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+            arrival_time=None, old_direction=None, old_position=None, speed_counter=SpeedCounter(max_speed=1.0),
+            action_saver=None, state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
             malfunction_handler=MalfunctionHandler(),
         )
 
@@ -214,40 +310,95 @@ def test_with_direction():
     assert with_direction(None, 2) == (None, 2)
 
 
-def test_virtual_configuration():
+def test_virtual_entry_point():
     """
-    `virtual_configuration` must return a real, rail-valid configuration for a `TrainState.DONE` agent
-    even after it has been removed from the map (`current_configuration` is `None`) - unlike
-    `current_configuration` itself, which observations/predictions cannot compute anything useful from
+    `virtual_entry_point` must return a real, rail-valid entry point for a `TrainState.DONE` agent
+    even after it has been removed from the map (`current_entry_point` is `None`) - unlike
+    `current_entry_point` itself, which observations/predictions cannot compute anything useful from
     once the agent is gone.
     """
     rail, rail_map, optionals = make_oval_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0],
                   rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1)
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     agent = env.agents[0]
 
-    # off map: initial_configuration
-    assert virtual_configuration(agent) == agent.initial_configuration
+    # off map: initial_entry_point
+    assert virtual_entry_point(agent) == agent.initial_entry_point
 
-    # on map: current_configuration
-    agent.current_configuration = agent.initial_configuration
+    # on map: current_entry_point
+    agent.current_entry_point = agent.initial_entry_point
     agent._set_state(TrainState.MOVING)
-    assert virtual_configuration(agent) == agent.current_configuration
+    # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+    # invariant (both set and different while on-map) even for this direct test-harness assignment.
+    transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+    assert transition is not None
+    agent.next_entry_point = _sanitize_entry_point(transition)
+    assert virtual_entry_point(agent) == agent.current_entry_point
 
-    # done, agent still has a (now stale) current_configuration - which must actually be one of the
+    # done, agent still has a (now stale) current_entry_point - which must actually be one of the
     # target alternatives, since DONE is only reachable by having arrived at one
-    agent.current_configuration = next(iter(agent.targets))
+    agent.current_entry_point = next(iter(agent.targets))
     agent._set_state(TrainState.DONE)
-    # mirrors what AbstractRailEnv.handle_done_state() does before current_configuration is cleared
-    agent.target_configuration = agent.current_configuration
-    assert virtual_configuration(agent) in agent.targets
-    assert virtual_configuration(agent) == agent.target_configuration
+    # mirrors what AbstractRailEnv.handle_done_state() does before current_entry_point is cleared
+    agent.target_entry_point = agent.current_entry_point
+    assert virtual_entry_point(agent) in agent.targets
+    assert virtual_entry_point(agent) == agent.target_entry_point
 
-    # done and removed from the map (`current_configuration` is None): still a real configuration
-    agent.current_configuration = None
-    configuration = virtual_configuration(agent)
-    assert configuration is not None
-    assert configuration in agent.targets
-    assert configuration == agent.target_configuration
+    # done and removed from the map (`current_entry_point` is None): still a real entry point
+    agent.current_entry_point = None
+    entry_point = virtual_entry_point(agent)
+    assert entry_point is not None
+    assert entry_point in agent.targets
+    assert entry_point == agent.target_entry_point
+
+
+def test_load_legacy_static_agent():
+    """
+    `EnvAgent.load_legacy_static_agent` reconstructs agents from the oldest, pre-EnvAgent pickle format
+    (a plain tuple per agent: position, direction, target, moving, and - only for the newer of the two
+    legacy shapes - a dict with the agent's speed) - it places every agent on the map immediately (this
+    format has no off-map/departure phase), so current_entry_point is set unconditionally.
+
+    - When a rail is given: next_entry_point is backfilled to a real, rail-valid successor of
+      current_entry_point (not left at EnvAgent's off-map default of None) - satisfying the
+      current_entry_point/next_entry_point invariant load_env_agent enforces on every other loader.
+      speed_counter.speed/distance are concrete Fractions (0 if not moving, the agent's speed if
+      moving), not SpeedCounter's own off-map default of None/None.
+    - Without a rail (the legacy msgpack loaders that defer rail-dependent fixups to a later step, same
+      as target filtering): next_entry_point stays None, deferred rather than guessed at.
+    """
+    rail, rail_map, optionals = make_oval_rail()
+    position, direction = (1, 4), 1
+    successors = rail.get_successor_entry_points((position, direction))
+    assert len(successors) > 0
+    target = (4, 4)
+
+    for moving in (True, False):
+        # newer legacy shape: (position, direction, target, moving, {"speed": ...}, <padding to len>=6>)
+        static_agents_data = [(position, direction, target, moving, {"speed": 0.5}, None)]
+        [agent] = EnvAgent.load_legacy_static_agent(static_agents_data, rail)
+        assert agent.current_entry_point == (position, direction)
+        assert agent.next_entry_point is not None
+        assert agent.next_entry_point != agent.current_entry_point
+        assert rail.is_successor(agent.current_entry_point, agent.next_entry_point)
+        assert agent.speed_counter.speed == (Fraction(1, 2) if moving else Fraction(0))
+        assert agent.speed_counter.distance == Fraction(0)
+
+        # older legacy shape: (position, direction, target, moving) - always reconstructed as stopped
+        static_agents_data = [(position, direction, target, moving)]
+        [agent] = EnvAgent.load_legacy_static_agent(static_agents_data, rail)
+        assert agent.current_entry_point == (position, direction)
+        assert agent.next_entry_point is not None
+        assert agent.next_entry_point != agent.current_entry_point
+        assert rail.is_successor(agent.current_entry_point, agent.next_entry_point)
+        assert agent.speed_counter.speed == Fraction(0)
+        assert agent.speed_counter.distance == Fraction(0)
+
+    # without a rail: next_entry_point deferred (left None), same as target filtering
+    static_agents_data = [(position, direction, target, True, {"speed": 0.5}, None)]
+    [agent] = EnvAgent.load_legacy_static_agent(static_agents_data)
+    assert agent.current_entry_point == (position, direction)
+    assert agent.next_entry_point is None

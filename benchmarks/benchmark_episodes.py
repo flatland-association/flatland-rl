@@ -5,8 +5,8 @@ import pytest
 
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
 
-DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/main/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
-# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v4.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
+DOWNLOAD_INSTRUCTIONS = "Download from https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-9/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip and set BENCHMARK_EPISODES_FOLDER env var to extracted folder."
+# zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip 30x30\ map -x "*.DS_Store"; zip -r FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip malfunction_deadlock_avoidance_heuristics -x "*.DS_Store"
 from flatland.trajectories.trajectories import Trajectory
 
 
@@ -150,7 +150,7 @@ def test_episode(data_sub_dir: str, ep_id: str, skip_rewards_dones_infos: bool, 
 
 
 def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards_dones_infos: bool = False,
-                skip_rewards: bool = False):
+                skip_rewards: bool = False, shifted_malfunction: bool = False, shifted_off_map_speed: bool = False):
     """
     The data is structured as follows:
         -30x30 map
@@ -181,10 +181,21 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
             skip verification of rewards/dones/infos
     skip_rewards : bool
             skip verification of rewards
+    shifted_malfunction : bool
+            recorded episodes predate decrementing the malfunction counter at the start of step() - while an
+            actual malfunction is active, expect the recorded info's `malfunction` one lower than freshly computed.
+            # TODO remove this option once the malfunction episodes are regenerated
+    shifted_off_map_speed : bool
+            recorded episodes predate `SpeedCounter` speed being None while off map - while an agent is off
+            map (freshly computed info's `speed` is None), ignore the recorded info's `speed` (pinned at the
+            agent's max_speed under the old convention).
+            # TODO remove this option once the malfunction episodes are regenerated
     """
     TrajectoryEvaluator(Trajectory.load_existing(data_dir=data_dir, ep_id=ep_id)).evaluate(
         start_step=start_step,
         snapshot_interval=snapshot_interval,
         skip_rewards_dones_infos=skip_rewards_dones_infos,
         skip_rewards=skip_rewards,
+        shifted_malfunction=shifted_malfunction,
+        shifted_off_map_speed=shifted_off_map_speed,
     )

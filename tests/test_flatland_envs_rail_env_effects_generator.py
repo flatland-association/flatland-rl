@@ -26,7 +26,9 @@ def test_rail_env_effects_generator_on_episode_step_start():
     env, _, _ = env_generator(seed=42, effects_generator=TestMalfunctionEffectsGenerator())
     assert env.agents[0].malfunction_handler.malfunction_down_counter == 0
     env.step({i: RailEnvActions.MOVE_FORWARD for i in env.get_agent_handles()})
-    assert env.agents[0].malfunction_handler.malfunction_down_counter == 999998
+    # design: malfunction counter decremented at start of step(), before new malfunctions are generated,
+    # so a malfunction set by on_episode_step_start() this same step is not yet decremented
+    assert env.agents[0].malfunction_handler.malfunction_down_counter == 999999
 
 
 def test_rail_env_effects_generator_on_episode_step_end():

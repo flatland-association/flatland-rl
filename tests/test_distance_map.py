@@ -59,7 +59,7 @@ def test_walker():
     env.reset()
 
     # set initial position and direction for testing...
-    env.agents[0].current_configuration = ((0, 1), 1)
+    env.agents[0].current_entry_point = ((0, 1), 1)
     env.agents[0].targets = {((0, 0), d) for d in Grid4TransitionsEnum}
     # reset to set agents from agents_static
     # env.reset(False, False)
@@ -73,7 +73,7 @@ def test_walker():
 
 def test_distances_cache_cleared_on_reset():
     """
-    Regression test: `ConfigurationDistanceMap.reset()` must clear `self.distances` (the internal
+    Regression test: `EntryPointDistanceMap.reset()` must clear `self.distances` (the internal
     source->target BFS scratch cache). Without this, a stale distance value left over from a previous
     episode survives into the next episode's BFS and can get picked up by the `min()` comparison in
     `DistanceMapWalker._get_and_update_neighbors`, silently corrupting the newly computed distance for
@@ -101,7 +101,7 @@ def test_loaded_distance_map_is_used_for_shortest_paths():
     """
     Regression test: a distance map populated via `.set(...)` (as `RailEnv`/`RailEnvPersister` do when
     loading a precomputed distance map from a saved rail/env file, bypassing `_compute()`/the BFS walk)
-    must still be usable by `get_shortest_paths()`/`get_agent_distance()`. Reading only the internal BFS
+    must still be usable by `get_shortest_paths()`/`geometric_distance()`. Reading only the internal BFS
     scratch cache (which stays empty in this scenario) instead of the actual populated per-agent storage
     silently produced `None` paths for every agent despite a perfectly valid loaded distance map.
     """
@@ -123,9 +123,9 @@ def test_loaded_distance_map_is_used_for_shortest_paths():
 
 def test_agent_with_no_valid_targets_does_not_crash():
     """
-    Regression test: `get_agent_distance()`'s minimum over an agent's target configurations must not
+    Regression test: `geometric_distance()`'s minimum over an agent's target entry points must not
     raise `ValueError: min() arg is an empty sequence` for an agent whose `targets` set has become empty
-    (e.g. via `RailEnvPersister.set_full_state`'s post-load filtering to only rail-valid configurations,
+    (e.g. via `RailEnvPersister.set_full_state`'s post-load filtering to only rail-valid entry points,
     which can filter out every target). The old pre-refactor code had no such min() and never crashed
     on this; `get_shortest_paths()` should keep returning `None` (no path found) for that agent instead.
     """

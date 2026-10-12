@@ -23,17 +23,25 @@ extra env vars must start its `set_env` with `{[testenv]set_env}` or it silently
 `tox-current-env`) must be added to the `verify-requirements` testenv's `DEV_MODULES` list or `deptry` (`DEP002`)
 flags it as unused.
 
-- **Run the core test suite** (matches CI's `test` job): needs `tests/regression/test_episodes_deadlock_avoidance.py`'s
-  and `benchmarks/benchmark_episodes.py`'s fixtures — a `flatland-baselines` checkout on `PYTHONPATH` and a
-  `BENCHMARK_EPISODES_FOLDER` populated from the `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see
-  `flatland-benchmarks-episodes-url` in `checks.yml`):
-  ```
+- **Run the core test suite** (matches CI's `test` job): needs `tests/test_flatland_regression_episodes.py`'s and
+  `tests/test_flatland_evaluators_trajectory_analysis.py`'s fixture — a `flatland-baselines` checkout on
+  `PYTHONPATH` and a `BENCHMARK_EPISODES_FOLDER` populated from the
+  `FLATLAND_BENCHMARK_EPISODES_FOLDER` archive (see `flatland-benchmarks-episodes-url` in `checks.yml`, also
+  duplicated in `benchmarks/benchmark_episodes.py`'s `DOWNLOAD_INSTRUCTIONS` — keep both in sync if the URL ever
+  bumps to a new version). Download and point the env var at the extracted folder (any location works, it's
+  read purely via `BENCHMARK_EPISODES_FOLDER`, nothing hardcodes a path):
+  ```bash
+  curl -sSL -o FLATLAND_BENCHMARK_EPISODES_FOLDER.zip "https://github.com/flatland-association/flatland-scenarios/raw/refs/heads/178-agents-living-on-the-edge-9/trajectories/FLATLAND_BENCHMARK_EPISODES_FOLDER_v7.zip"
+  unzip -o -q FLATLAND_BENCHMARK_EPISODES_FOLDER.zip -d /path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
+  export BENCHMARK_EPISODES_FOLDER=/path/to/FLATLAND_BENCHMARK_EPISODES_FOLDER
   python -m pytest --ignore=tests/ml -m "not slow"
   ```
-  Without that fixture set up, drop the benchmark-episode tests or just run a narrower path, e.g.
-  `python -m pytest tests/envs/test_foo.py`. If the `flatland-baselines` checkout lives inside this repo's own
-  tree (as CI's `test` job does it, and as needed to put it on `PYTHONPATH` without an absolute path), add
-  `--ignore=flatland-baselines` — otherwise pytest's default recursive collection picks up its test suite too.
+  Without that fixture set up, the affected tests fail outright with an `AssertionError` naming
+  `DOWNLOAD_INSTRUCTIONS` (not a skip) — so a run without it set looks like real regressions. Either set up the
+  fixture, or drop the affected tests / run a narrower path, e.g. `python -m pytest tests/envs/test_foo.py`. If
+  the `flatland-baselines` checkout lives inside this repo's own tree (as CI's `test` job does it, and as needed
+  to put it on `PYTHONPATH` without an absolute path), add `--ignore=flatland-baselines` — otherwise pytest's
+  default recursive collection picks up its test suite too.
 - **Run a single test**: `python -m pytest tests/path/to/test_file.py::test_name`.
 - **Run the ML test suite** (`flatland/ml`, RL training — flaky, matches CI's `testml` job): needs `--retries`
   since training runs are inherently non-deterministic:
@@ -41,7 +49,7 @@ flags it as unused.
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
 - **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  120, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
+  160, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
   `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
   'true' }}`) — unset means disabled — but the config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
@@ -61,10 +69,38 @@ flags it as unused.
   plain-Python fallback instead (e.g. to reproduce
   `verify-build-no-gcc`'s behavior), fake a missing compiler: `CC=/nonexistent-cc CXX=/nonexistent-cxx python -c
   "from setuptools import setup; setup()" build_ext --inplace`.
+- **Run tests against the compiled Cython build** (catches a `.pxd`/`.py` mismatch that compiles cleanly but
+  breaks at runtime, e.g. a `cdef class` field only ever assigned in the `.py` source): build in place per
+  above, then `python -m pytest --ignore=tests/ml -m cython_ext` - a fast, targeted subset (not the full suite)
+  of tests marked `pytest.mark.cython_ext` for exercising `state_machine.py`/`states.py`/
+  `rail_env_shortest_paths.py`. Wired into `tox -e py3.13-verify-cython-build-no-isolation`. Mark any new test
+  that exercises these modules the same way - see `CONTRIBUTING.md`'s Cython section.
 - **Profiling notebooks** (`benchmarks/flatland_performance_profiling.ipynb`,
   `benchmarks/benchmark_k_shortest_paths_profiling.ipynb`): `tox -e py3.13-profiling` /
   `tox -e py3.13-profiling-get-k-shortest-paths` — use Python 3.13, not 3.12 (see the Cython section below for
   why the LOCAL_Cython results are otherwise silently missing from the generated plots).
+- **Line-by-line profiling** (ad hoc, not wired into tox/the notebooks above — a manual `line_profiler`
+  workflow for drilling into a specific hot function found via the cumulative-time profiling above): add a
+  `@profile` decorator (`from line_profiler import profile`) to the function(s) to inspect, then run the
+  target script under `kernprof` instead of `python` directly - e.g. for
+  `examples/flatland_performance_profiling.py`:
+  ```
+  kernprof -l examples/flatland_performance_profiling.py
+  ```
+  This produces a `<script>.lprof` file next to the script (here,
+  `examples/flatland_performance_profiling.py.lprof`) - view it with:
+  ```
+  python -m line_profiler -rm examples/flatland_performance_profiling.py.lprof
+  ```
+  (`-r` rich/aligned formatting, `-m` a trailing per-function summary). Per-line `% Time` is only meaningful
+  relative to *that function's own* total - a function called only once or twice (e.g. at episode start) can
+  show a misleadingly huge share of a single-step profiling run; prefer running enough steps that per-line
+  hit counts reflect steady-state repetition, not one-time setup cost, before trusting a percentage. `pip
+  install line_profiler` if the environment doesn't have it - it is **not** currently a `requirements-dev.txt`
+  dependency, so `@profile`/`from line_profiler import profile` left in committed code breaks every import of
+  that module wherever `line_profiler` isn't installed (it has no builtin no-op fallback unless run under
+  `kernprof`, which injects `profile` itself); treat both the import and the decorator as temporary
+  instrumentation to remove again before committing, not a permanent addition.
 
 ## Architecture
 
@@ -73,43 +109,68 @@ flags it as unused.
 `flatland/core/` defines the rail network purely in terms of generic abstractions, each with two independent
 concrete implementations — grid-based (`flatland/envs/grid/`) and graph-based (`flatland/envs/graph/`). Neither
 is a layer on top of the other; they're alternative representations selected at env-construction time. A
-**configuration** is each representation's network-position primitive: `((row, col), direction)` for grid,
+**entry point** is each representation's network-position primitive: `((row, col), direction)` for grid,
 a node-id string for graph.
 
 - **`TransitionMap`** (`core/transition_map.py`) — the rail topology: `get_transitions`/`set_transitions`,
-  `get_successor_configurations`/`get_predecessor_configurations`/`is_valid_configuration`. Grid impl:
+  `get_successor_entry_points`/`get_predecessor_entry_points`/`is_valid_entry_point`. Grid impl:
   `GridTransitionMap` → `RailGridTransitionMap`. Graph impl: `GraphTransitionMap`.
-- **`ResourceMap`** (`core/resource_map.py`) — maps a configuration to the "resource" (occupancy unit) used for
+- **`ResourceMap`** (`core/resource_map.py`) — maps an entry point to the "resource" (occupancy unit) used for
   conflict detection. Grid's `GridResourceMap` normally resolves to `(row, col)`, but for level-free crossings
   returns `(position, direction % 2)` so the two crossing axes count as distinct resources. Graph's
   `GraphResourceMap` is identity on the node id.
-- **Distance-map subsystem** (`core/configuration_distance_map.py`, `core/distance_map.py`,
-  `core/distance_map_walker.py`) — `ConfigurationDistanceMap` (agent-agnostic, keyed by
+- **Distance-map subsystem** (`core/entry_point_distance_map.py`, `core/distance_map.py`,
+  `core/distance_map_walker.py`) — `EntryPointDistanceMap` (agent-agnostic, keyed by
   `(source_config, target_config)`) → `AgentSourceTargetDistanceMap` (agent-handle-aware, shared template-method
   `_compute()`) → concrete `DistanceMap` (grid, numpy array) / `GraphDistanceMap` (graph, nested dict).
-  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target configuration
+  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target entry point
   (a shared visited set across targets silently breaks on cyclic/looped layouts). `RailEnv` keeps one
   `distance_map` instance alive across `reset()` calls rather than reconstructing it per episode.
 
 ### `flatland/envs/` — env control flow
 
 `RailEnv`/`AbstractRailEnv` (`rail_env.py`) is the env facade, generic over `(TransitionMap, ResourceMap,
-ConfigurationType)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
-assignment), `timetable_generators.py` (departure/arrival windows). Per `step()`, for each agent: derive the
-desired next configuration from the action via the `step_utils` state machine (`TrainState`/
-`TrainStateMachine`); look up both agents' current/next *resources* via `resource_map.get_resource(...)`; feed
-`(current_resource, new_resource)` pairs into `agent_chains.py`'s `MotionCheck`, which resolves cross-agent
-conflicts (head-on swaps, same-target collisions) once all agents for the step are registered; then finalize
-state/position, then `handle_done_state()`, then rewards, per agent, in that order. `EnvAgent` (`agent_utils.py`)
-holds per-agent state; `observations.py`/`predictions.py` build the observation returned to policies, typically
-via the distance map's shortest paths.
+EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.py` (agent start/target
+assignment), `timetable_generators.py` (departure/arrival windows). `step()` runs two per-agent phases,
+both state-machine-independent - `collect()` derives each agent's candidate next entry point/speed/distance
+purely from its pre-step position/speed and the given action (`_candidate_entry_points`/`_candidate_speed`/
+`_candidate_distance` - see `design_by_contract.md`), never from `agent.state`, and registers the
+`(current_resource, new_resource)` pair (via `resource_map.get_resource(...)`) with `agent_chains.py`'s
+`MotionCheck`; once every agent's pair is registered, `MotionCheck.find_conflicts()` resolves cross-agent
+conflicts (head-on swaps, same-target collisions) for the whole step at once. `distribute()` then, per agent,
+resolves its candidate against that conflict resolution, commits position/speed/distance, calls
+`handle_done_state()`, and computes the reward. `EnvAgent` (`agent_utils.py`) holds per-agent state;
+`observations.py`/`predictions.py` build the observation returned to policies, typically via the distance
+map's shortest paths.
 
-`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_configuration`
-and, if `remove_agents_at_target` (the default), clears `agent.current_configuration` to `None` — so on the
+`agent.state`/`agent.state_machine` (`TrainState`/`TrainStateMachine`, `step_utils/state_machine.py`) are not
+touched by `AbstractRailEnv.step()` itself at all - they're opt-in, layered on afterward by
+`RailEnvStateMachineWrapper` (`rail_env_state_machine_wrapper.py`), which patches an env instance so its
+`step()` also runs the state machine's bookkeeping (reconstructing `StateTransitionSignals` from the
+`AgentTransitionData` `collect()`/`distribute()` already produced) before observations are built. Nothing in
+production code needs this wrapper any more: `EnvAgent.derived_state(elapsed_steps=None, in_malfunction=None)`
+(`agent_utils.py`) reconstructs the equivalent `TrainState` purely from `current_entry_point`/
+`target_entry_point`/`malfunction_handler.in_malfunction`/`speed_counter.speed`/`earliest_departure` - no
+wrapping required - and is what `get_info_dict()`'s `state`/`action_required` fields,
+`RecordStepsEffectsGenerator`, and every built-in obs builder/predictor use. `derived_state()`'s own docstring
+spells out the one timing subtlety this has: it's only safe to call from a point in `step()` *after* the
+distribute loop has committed this step's position/speed (e.g. `on_episode_step_end`, `get_info_dict()`, any
+read between `step()` calls) - not from `on_episode_step_start`, where `malfunction_handler.in_malfunction`
+has already advanced for the current step while `current_entry_point`/`speed_counter.speed` still reflect the
+previous one; a caller needing to read state from that unsafe point (e.g.
+`ConditionalMalfunctionEffectsGenerator`'s STOPPED-gated conditions) must track its own
+"as of the end of the previous step" snapshot instead, and pass it via `derived_state()`'s `in_malfunction`
+override. `RailEnvStateMachineWrapper` itself is now reserved for code that genuinely needs
+`agent.state`/`agent.state_machine` themselves (real `TrainStateMachine` transition/signal internals) - the
+dedicated wrapper unit test and the `Replay`/`run_replay_config` test framework (`tests/test_utils.py`) and
+tests built on it, plus `tests/test_known_flatland_bugs.py`'s direct state-machine regression tests.
+
+`handle_done_state()` running *before* `rewards.step_reward()` matters: it sets `agent.target_entry_point`
+and, if `remove_agents_at_target` (the default), clears `agent.current_entry_point` to `None` — so on the
 exact step an agent reaches `TrainState.DONE`, a `Rewards.step_reward()` implementation already sees
-`current_configuration is None`. A reward implementation that needs "where is this agent right now" must key
-off `target_configuration` (or `agent_utils.virtual_configuration()`) for a `DONE` agent, not
-`current_configuration` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
+`current_entry_point is None`. A reward implementation that needs "where is this agent right now" must key
+off `target_entry_point` (or `agent_utils.virtual_entry_point()`) for a `DONE` agent, not
+`current_entry_point` — `rewards.py`'s `PunctualityRewards` missed this once and silently dropped a
 departure booking as a result.
 
 `flatland/envs/graph_rail_env.py`'s `GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str])`
@@ -118,43 +179,76 @@ is a full graph-native sibling to `RailEnv`, not just an implementation detail o
 `GraphTransitionMap.grid_to_digraph`), while `GraphRailEnv.from_graph()` builds one directly from an
 `nx.DiGraph` plus string-node-id `agent_waypoints` — no grid tuples or `Waypoint` objects involved at all. Both
 envs share `AbstractRailEnv.step()`/`handle_done_state()` verbatim (a single shared definition), so behavior
-differences between the two are almost entirely about topology/configuration representation, not control flow.
+differences between the two are almost entirely about topology/entry-point representation, not control flow.
 
-### Configuration values are sanitized against numpy-dtype taint
+### Entry point values are sanitized against numpy-dtype taint
 
-`agent_utils.py`'s `_sanitize_configuration()` coerces a grid `(position, direction)` configuration's numpy
+`agent_utils.py`'s `_sanitize_entry_point()` coerces a grid `(position, direction)` entry point's numpy
 scalar elements (e.g. `np.int64` from rail/line generation) to plain `int` — left untouched, this numpy-ness
 can later break tuple equality (e.g. `agent_chains.py`'s level-free-crossing resource comparisons raising "the
 truth value of an array with more than one element is ambiguous"). It's wired in as an attrs `converter=` on
-`EnvAgent`'s four configuration attribs (`initial_configuration`/`current_configuration`/`old_configuration`/
-`target_configuration`), but attrs converters only run in `__init__` — any direct assignment after construction
-(e.g. `agent.current_configuration = ...` in `rail_env.py`'s `step()`) must call `_sanitize_configuration()`
-explicitly itself, unless the assigned value is already a known-sanitized configuration copied from elsewhere
+`EnvAgent`'s four entry-point attribs (`initial_entry_point`/`current_entry_point`/`old_entry_point`/
+`target_entry_point`), but attrs converters only run in `__init__` — any direct assignment after construction
+(e.g. `agent.current_entry_point = ...` in `rail_env.py`'s `step()`) must call `_sanitize_entry_point()`
+explicitly itself, unless the assigned value is already a known-sanitized entry point copied from elsewhere
 on the same agent.
 
-### Speed is always a `Fraction` internally
+### Speed/distance are `Fraction`s, and `None` while off map
 
-`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `speed`/`max_speed`/`distance` as `Fraction`
-unconditionally, regardless of what type callers pass in: `_pseudo_fractional()` snaps any `int`/`float`/`Decimal`
-input to a `Fraction` on the way in (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within
-tolerance). `RailEnv.__init__`'s `acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to
-match. Passing a plain `float` for either instead (as opposed to a `Fraction`) can silently reintroduce floats
-into `new_speed` mid-`step()`, since `Fraction + float` coerces to `float` in Python — this can violate the
-`Fraction`-only invariant assumed by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that
-doesn't saturate to a speed boundary (0 or `max_speed`) in one step.
+`SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `max_speed` as a `Fraction` unconditionally, but
+`speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
+(`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
+`None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.step()` call as
+every other step - `rail_env.py`'s "(13) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
+from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
+`max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
+(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
+`acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to match. Passing a plain `float`
+for either instead (as opposed to a `Fraction`) can silently reintroduce floats into `new_speed` mid-`step()`,
+since `Fraction + float` coerces to `float` in Python — this can violate the `Fraction`-only invariant assumed
+by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that doesn't saturate to a speed boundary (0
+or `max_speed`) in one step.
+
+A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -
+`agent_utils.py`'s `load_env_agent()` normalizes a loaded agent's `speed_counter` against its `TrainState` on
+load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance left untouched) to guard against this.
+
+`SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
+`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
+truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
+itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondition checks to verify the actual
+post-step value against the same formula. Change the math in one place, not independently in `step()` and in
+the postcondition check that verifies it.
+
+`design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
+`AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect
+phase - the per-agent, per-step derivation of the optimistic candidate entry point/speed/distance that the
+distribute phase's resource check then accepts or discards): a table of every case (done/target reached/
+malfunction/map entry/off-map-no-departure/on-map cell transition/invalid action at cell exit/keep-moving) against
+each method's own formula and returned value, plus the shared preconditions/postconditions each branch's
+condition is built from. The methods' own docstrings/comments point back into it (e.g. "See design_by_contract.md's
+Table 2") rather than re-deriving the same branch-exclusion reasoning inline - read it before changing any of the
+three methods' branch conditions, not just the code.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
-`AbstractRailEnv._capture_speed_invariant_pre_step_snapshot()`/`_assert_speed_invariants()` (`rail_env.py`)
-implement a per-agent runtime check that each `step()` call updates `SpeedCounter.speed` to exactly the value
-the action/state-machine/motion-check outcome implies (acceleration/braking/malfunction/off-map/done, each with
-its own expected-speed branch) - a correctness net for the speed-update logic, not part of normal control flow.
-`RailEnv.step()`'s override calls the snapshot method before `super().step()` and the assertion method after;
-`GraphRailEnv` doesn't call either, since it doesn't override `step()`. Both are gated behind the
-`check_step_pre_post_conditions` constructor flag (default `True`) so the extra per-step overhead can be
-disabled where it matters - `examples/flatland_performance_profiling.py`'s `get_rail_env()` defaults it to
-`False`, since that script exists specifically to profile `step()`'s own cumulative time and the assertions
-would otherwise inflate every measurement.
+`AbstractRailEnv.step()` itself calls `_check_pre_post_invariants()` and `_capture_pre_step_snapshot()` up front, and
+`_check_malfunction_state_postcondition()` / `_verify_mutually_exclusive_resource_allocation()` /
+`_check_speed_distance_speedup_postconditions()` / `_check_position_update_postconditions()` (`rail_env.py`) at the end - a
+correctness net verifying every per-agent speed/distance/position update and resource allocation this step
+matches exactly what the action/state-machine/motion-check outcome implies, not part of normal control flow.
+Since these live in `AbstractRailEnv` itself (not a subclass override), `RailEnv` and `GraphRailEnv` both run
+them identically - `RailEnv.step()`'s own override only adds `_update_agent_positions_map()` after calling
+`super().step()`. All are gated behind the `check_step_pre_post_conditions` constructor flag (default `True`)
+so the extra per-step overhead can be disabled where it matters - `examples/flatland_performance_profiling.py`'s
+`get_rail_env()` defaults it to `False`, since that script exists specifically to profile `step()`'s own
+cumulative time and the assertions would otherwise inflate every measurement.
+
+`_check_position_update_postconditions`/`_check_speed_distance_speedup_postconditions` branch purely on position
+(`current_entry_point is None`) and resource/malfunction/action outcomes, never on `agent.state` - the
+off/on-map position signal is the invariant these checks themselves help enforce, so re-deriving branches from
+`agent.state` there would be redundant with (and could drift from) position. `_check_malfunction_state_postcondition`
+is the one exception, since it specifically checks state/malfunction-counter consistency.
 
 ### Cython-accelerated hot paths (`ext-modules`)
 
@@ -204,6 +298,15 @@ sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's 
 compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
 by construction, but guards against e.g. stray `.c`/`.so` files accidentally being packaged).
 
+**None of the above actually execute the compiled code** - they only check that a `.so`/`.pyd` artifact exists
+(or doesn't). A `.pxd`/`.py` mismatch that compiles cleanly but breaks at runtime (e.g. a `cdef class` field
+assigned in the `.py` source but never declared in the `.pxd` - Cython's `cdef class` has no `__dict__`
+fallback for undeclared attributes, unlike a plain Python object) previously only surfaced via the profiling
+notebook's `LOCAL_Cython` step, since that's the only path that both compiles in-place and actually runs
+`env.step()` against the result. `py{...}-verify-cython-build-no-isolation` now also builds in-place and runs
+the tests marked `pytest.mark.cython_ext` against it for exactly this reason - see the `Commands` section above
+and `CONTRIBUTING.md`'s Cython section.
+
 **Known gap: `cProfile` can't see calls into compiled Cython functions on Python 3.12.** Python 3.12's `cProfile`
 registers itself via PEP 669's `sys.monitoring` instead of the legacy `PyEval_SetProfile` hook, and Cython's own
 `sys.monitoring` bridge (`CYTHON_USE_SYS_MONITORING`) is gated to Python ≥3.13 — confirmed independent of the
@@ -242,6 +345,40 @@ multi-agent malfunction/deadlock scenario), prefer capturing a one-off snapshot 
 and loading it in the test via `RailEnvPersister.load_new()`, rather than replaying a long action script - the
 latter is brittle against unrelated timing changes elsewhere in the env (see `tests/test_known_flatland_bugs.py`'s
 `test_two_trains_on_same_cell_bug_FIXED` and its committed `*_snapshot.pkl` fixture for the pattern).
+
+#### Docstrings for tests that step `RailEnv` and assert on agent state
+
+A test that drives a `RailEnv` through `step()` and asserts on `agent.state`/`agent.speed_counter`/
+`agent.current_entry_point` should have a docstring that describes the scenario purely in the domain vocabulary
+a *user* of `RailEnv` would use - agent speeds, distances, positions/cells, and states/actions - not in terms of
+how `step()`, `TrainStateMachine`, or `MotionCheck` internally arrive at that outcome. Concretely:
+
+- Open with a one- or two-sentence scenario line naming the agents, the concrete cells/positions involved (e.g.
+  "L=(3,8) and R=(3,7)"), and any shared parameter (max speed, a parametrize dimension) - not an abstract
+  description.
+- Follow with a flat bullet list, one bullet per phase of the scenario in the order it happens (a `- Setup:` bullet
+  is almost always first). State speed/distance/state values as the reader would observe them via
+  `agent.speed_counter.speed`/`.distance`/`agent.state`/`agent.current_entry_point`, not via the internal signals
+  that produce them (`candidate_speed`, `resource_check`, `movement_allowed`, `crossing_completed`, etc.) - those
+  belong in an inline comment next to the specific assertion they explain, not the docstring.
+- Each bullet states what happens and what the test expects/observes at that phase, so the docstring alone tells
+  you what the test verifies without reading the body - e.g. "A tries to cross into R - denied: position stays on
+  L, speed drops back to 0", not "we then check that A's position doesn't change".
+- Never narrate the act of writing or discovering the test itself - no "confirmed", "verified", "also caught and
+  documented", "discovered by running it", or similar. State the behavior as fact; if a value was surprising or
+  needed to be checked against a real run rather than derived by hand, that belongs in conversation with whoever
+  asked for the test, not in the docstring.
+- Avoid ornate intensifier words (`genuinely`, `genuine`, `truly`, `actually`) and internal-implementation
+  cross-references (a specific `rail_env.py` step label like "(3b.5)", an intermediate helper's name) - see the
+  repo-wide docstring/comment/markdown-doc conventions in "Conventions" below, which this test-docstring guidance
+  is a specific case of.
+- A non-obvious setup trick (e.g. why a blocking agent needs a reduced max speed to avoid completing an in-flight
+  crossing before it can be braked) gets its own bullet or an inline comment at the point it matters, phrased as
+  the fact itself ("the leader is exactly at its own boundary ... so that crossing is already in flight and still
+  completes"), not as a note about the test author's process.
+- See `test_platoon_all_stop_together_once_leader_stops_and_stays_stopped` and
+  `test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor` in
+  `tests/test_flatland_envs_rail_env.py` for the target shape.
 
 ### Other top-level dirs
 
@@ -285,6 +422,14 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
+- Commit messages always follow [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/)
+  (`type(scope): summary`, e.g. `fix(envs): ...`, `docs: ...`, `refactor(rail_env): ...`) - not just PR titles
+  (see "Releases and versioning" above for why PR titles specifically matter to `release-please`); every commit
+  on the branch should follow the same convention.
+- Call a method/function with more than a couple of parameters using keyword arguments at the call site
+  (`self._foo(action=action, state=state, ...)`), not positional - positional args for a long signature are
+  easy to silently mis-order (especially several same-typed/`Optional` params in a row) and a keyword mismatch
+  fails loudly instead.
 - Prefer `NamedTuple` over a plain unnamed `Tuple` or `Dict` for structured data that doesn't need methods.
 - Use `attrs` (`@attrs`/`attrib`) for classes that must keep multiple members in sync as an invariant.
 - Use `abc.ABCMeta`/`abc.abstractmethod` for extension-point base classes.
@@ -294,3 +439,45 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   hot paths" above.
 - Read packaged resource files (e.g. rail data shipped inside a subpackage) via `importlib_resources`
   (`path`/`read_binary`), not a raw path relative to the module.
+- `TypeVar` names are always `T`-suffixed (`EntryPointT = TypeVar('EntryPointT')`, `DistanceMapT =
+  TypeVar('DistanceMapT')`, etc., down to `ObsT`/`ActT`) - matches pylint's default `typevar-rgx`, which rejects
+  a bare `T`/`T1`. The string passed to `TypeVar()` must match the variable name exactly. This also sidesteps a
+  real footgun: several of these names (`TransitionMapT`, `ResourceMapT`, `TransitionsT`) would otherwise
+  collide with an imported class of the same bare name used elsewhere in that same file (e.g. `rail_env.py`
+  imports both `TransitionMap` and `ResourceMap` as classes) - a bare-named TypeVar declaration there would
+  silently shadow the import for every reference below it in the file.
+- When a `TypeVar` has a `bound=`, its name must be exactly `<BoundClassName>T` (e.g. `policy.py`'s
+  `EnvironmentT = TypeVar('EnvironmentT', bound=Environment)`, `rail_env_policy.py`'s `RailEnvT`/
+  `RailEnvActionsT` bound to `RailEnv`/`RailEnvActions`, `distance_map_walker.py`'s `EntryPointDistanceMapT`
+  bound to `EntryPointDistanceMap`) - an abbreviated or generic name (e.g. a bare `EnvT` bound to `Environment`)
+  is disallowed even though it's still `T`-suffixed, since the point is that the name alone should tell you the
+  bound without checking the declaration. An *unbound* `TypeVar` has no such constraint and can stay generic
+  (e.g. `env_observation_builder.py`'s unbound `EnvT`, `entry_point_distance_map.py`'s unbound `DistanceMapT`) -
+  don't confuse the two: the same base name can be legitimately unbound-and-generic in one file and
+  bound-and-specific in another.
+- In comments/docstrings, always be precise about which *switch type* is meant - symmetric vs. single
+  (`RailEnvTransitionsEnum.symmetric_switch_from_*` vs. the single/ordinary switch transitions) - since the two
+  differ in which actions are valid at them and this distinction matters in most cases (e.g. a symmetric switch
+  makes `MOVE_FORWARD` invalid straight through, where a single switch would accept it). If "switch" is used
+  unqualified to mean any type, say so explicitly, e.g. "switch (of any type)".
+- Never rewrite or override wording the user has personally edited in a file without asking first - not even
+  to fix a real inaccuracy spotted in it. Flag the concern and ask; do not silently correct it inline (and
+  never fold such a correction into the same commit as an unrelated requested change, as if it were
+  uncontroversial). The user's own edits to their own file take precedence over an unrequested improvement.
+- Avoid ornate intensifier words in docstrings, comments, and markdown docs - `genuinely`, `genuine`, `truly`,
+  `actually`, `really`, `completely`/`completely free`, and similar filler that doesn't add information over the
+  plain statement. Say what happens directly ("reaches speed 1", "B is free", "the crossing completed"), not
+  "genuinely reaches speed 1"/"B is genuinely free"/"the crossing genuinely completed". If a value or transition
+  is surprising enough to need emphasis, say the concrete fact that makes it surprising (a number, a state name,
+  a contrast with the reader's likely assumption) instead of reaching for an adverb.
+- Docstrings/comments/markdown docs that describe *behavior* (a test's scenario, a design note, a review-findings
+  or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
+  points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,
+  avoid: internal numbered step labels from a specific function's control flow (e.g. a docstring citing
+  `rail_env.py`'s own "(3b.5)" or "(13)" markers by number - fine as an in-file comment right next to the code
+  it labels, since that neighborhood renumbers together, but a *separate* docstring/doc citing it by number goes
+  stale silently the moment that function is refactored and the label moves or disappears); intermediate variable
+  names or helper-method names that aren't part of the public contract being documented; and the refactoring/
+  commit history behind the current code ("added by commit X", "this used to be Y before the Z refactor", "fixed
+  in PR #NNN") - that belongs in the commit message and PR description, not in code comments/docstrings/design
+  docs, which should describe the current behavior as fact, not its provenance.

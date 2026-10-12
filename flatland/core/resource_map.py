@@ -1,14 +1,18 @@
 from typing import Generic, TypeVar, Optional
 
-ConfigurationType = TypeVar('ConfigurationType')
-ResourceType = TypeVar('ResourceType')
+EntryPointT = TypeVar('EntryPointT')
+ResourceT = TypeVar('ResourceT')
 
 
-class ResourceMap(Generic[ConfigurationType, ResourceType]):
+class ResourceMap(Generic[EntryPointT, ResourceT]):
     """
-    Resource Map stores the single resource required to be in the configuration
-    (i.e. to be in the cell or level-free crossing cell in grid world, resp. on the edge in graph world).
+    Resource Map stores the single resource occupied while traversing the edge from `from_entry_point` to
+    `to_entry_point` - the resource held is always the one at `from_entry_point` (the cell/node entered;
+    `to_entry_point` is the neighbor entered once the edge is left, see `GraphTransitionMap`'s docstring
+    for the `[u,v)` framing this mirrors), i.e. to be in the cell or level-free crossing cell in grid
+    world, resp. at the node in graph world. Keyed by the edge rather than a bare entry point, so a
+    resource can in principle depend on the whole transition, not just where it starts.
     """
 
-    def get_resource(self, configuration: Optional[ConfigurationType]) -> Optional[ResourceType]:
+    def get_resource(self, from_entry_point: Optional[EntryPointT], to_entry_point: Optional[EntryPointT]) -> Optional[ResourceT]:
         raise NotImplementedError()

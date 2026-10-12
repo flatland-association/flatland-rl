@@ -32,3 +32,5 @@ cdef class StateTransitionSignals:
     cdef public object target_reached
     cdef public bint movement_allowed
     cdef public bint new_speed_zero
+    cdef public bint action_valid
+    cdef public bint ready_to_depart

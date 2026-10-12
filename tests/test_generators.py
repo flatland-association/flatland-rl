@@ -3,11 +3,12 @@
 
 import numpy as np
 
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator, line_from_file
 from flatland.envs.observations import TreeObsForRailEnv, GlobalObsForRailEnv
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
-from flatland.envs.rail_env import RailEnv
+from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map, rail_from_file, empty_rail_generator
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
@@ -32,13 +33,17 @@ def test_rail_from_grid_transition_map():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=n_agents)
     env.reset(False, False)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == n_agents
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == n_agents
 
     for a_idx in range(len(env.agents)):
         agent = env.agents[a_idx]
-        direction = agent.current_configuration[1] if agent.current_configuration is not None else None
-        agent.current_configuration = (agent.initial_configuration[0], direction)
+        agent.current_entry_point = agent.initial_entry_point
         agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness assignment.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point)
+        assert transition is not None
+        agent.next_entry_point = _sanitize_entry_point(transition)
 
     nr_rail_elements = np.count_nonzero(env.rail.grid)
 
@@ -47,7 +52,7 @@ def test_rail_from_grid_transition_map():
 
     # Check that agents are placed on a rail
     for a in env.agents:
-        assert env.rail.grid[a.current_configuration[0]] != 0
+        assert env.rail.grid[a.current_entry_point[0]] != 0
 
     assert env.get_num_agents() == n_agents
 

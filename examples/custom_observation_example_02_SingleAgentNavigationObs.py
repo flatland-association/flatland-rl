@@ -29,10 +29,10 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        if agent.current_configuration is not None:
-            possible_transitions = self.env.rail.get_transitions(agent.current_configuration)
+        if agent.current_entry_point is not None:
+            possible_transitions = self.env.rail.get_transitions(agent.current_entry_point)
         else:
-            possible_transitions = self.env.rail.get_transitions(agent.initial_configuration)
+            possible_transitions = self.env.rail.get_transitions(agent.initial_entry_point)
 
         num_transitions = np.count_nonzero(possible_transitions)
 
@@ -42,12 +42,12 @@ class SingleAgentNavigationObs(ObservationBuilder):
         if num_transitions == 1:
             observation = [0, 1, 0]
         else:
-            agent_direction = agent.current_configuration[1] if agent.current_configuration is not None \
-                else agent.initial_configuration[1]
+            agent_direction = agent.current_entry_point[1] if agent.current_entry_point is not None \
+                else agent.initial_entry_point[1]
             min_distances = []
             for direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
                 if possible_transitions[direction]:
-                    new_position = get_new_position(agent.current_configuration[0], direction)
+                    new_position = get_new_position(agent.current_entry_point[0], direction)
                     min_distances.append(
                         self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
                 else:

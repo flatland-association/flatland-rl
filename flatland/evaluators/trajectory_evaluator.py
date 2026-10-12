@@ -33,6 +33,8 @@ class TrajectoryEvaluator:
         rewards: Rewards = None,
         obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+        shifted_malfunction: bool = False,
+        shifted_off_map_speed: bool = False,
     ) -> RailEnv:
         """
          Parameters
@@ -53,6 +55,16 @@ class TrajectoryEvaluator:
             obs builder for the restored env, forwarded to `Trajectory.load_env`. If not provided, defaults to `DummyObservationBuilder`.
         effects_generator : EffectsGenerator
             if given, forwarded to `Trajectory.load_env` and replaces the restored env's persisted effects generator instead of being discarded.
+        shifted_malfunction : bool
+            # TODO remove this option once the malfunction episodes are regenerated
+            recorded episodes predate decrementing the malfunction counter at the start of step() -
+            while an actual malfunction is active, expect the recorded info's `malfunction` one lower
+            than freshly computed.
+        shifted_off_map_speed : bool
+            # TODO remove this option once the malfunction episodes are regenerated
+            recorded episodes predate `SpeedCounter` speed being None while off map - while an agent is
+            off map (freshly computed info's `speed` is None), ignore the recorded info's `speed`
+            (pinned at the agent's max_speed under the old convention).
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
@@ -94,7 +106,7 @@ class TrajectoryEvaluator:
             for agent_id in range(n_agents):
                 agent = env.agents[agent_id]
                 expected_position = position_cache[elapsed_after_step][agent_id]
-                actual_position = agent.current_configuration
+                actual_position = agent.current_entry_point
                 assert actual_position == expected_position, f"\n====================================================\n\n\n\n\n" \
                                                              f"- actual_position:\t{actual_position}\n" \
                                                              f"- expected_position:\t{expected_position}\n" \
@@ -102,13 +114,19 @@ class TrajectoryEvaluator:
                                                              f"- agent:\t{agent} \n- state_machine:\t{agent.state_machine}\n" \
                                                              f"- speed_counter:\t{agent.speed_counter}\n" \
                                                              f"- breakpoint:\tself._elapsed_steps == {elapsed_after_step} and agent.handle == {agent.handle}\n" \
-                                                             f"- motion check:\t{list(env.motion_check.stopped)}\n\n\n" \
+                                                             f"- motion check:\t{list(env.resource_check.stopped)}\n\n\n" \
                                                              f"- agents:\t{env.agents}"
                 if not skip_rewards_dones_infos:
                     actual_reward = rewards[agent_id]
                     actual_done = dones[agent_id]
                     actual_info = {k: v[agent_id] for k, v in infos.items()}
                     expected_reward, expected_done, expected_info = trains_rewards_dones_infos_cache[elapsed_after_step][agent_id]
+                    if shifted_malfunction and actual_info.get("malfunction", 0) > 0:
+                        # TODO remove this option once the malfunction episodes are regenerated
+                        expected_info = {**expected_info, "malfunction": expected_info["malfunction"] + 1}
+                    if shifted_off_map_speed and actual_info.get("speed") is None:
+                        # TODO remove this option once the malfunction episodes are regenerated
+                        expected_info = {**expected_info, "speed": None}
                     if not skip_rewards:
                         assert np.allclose(actual_reward, expected_reward), (elapsed_after_step, agent_id, actual_reward, expected_reward)
                     assert actual_done == expected_done, (elapsed_after_step, agent_id, actual_done, expected_done)
@@ -130,7 +148,7 @@ class TrajectoryEvaluator:
         if start_step == 0 and done:
             trains_arrived_episode = self.trajectory.trains_arrived_lookup()
             expected_success_rate = trains_arrived_episode['success_rate']
-            actual_success_rate = sum([agent.state == 6 for agent in env.agents]) / n_agents
+            actual_success_rate = sum([agent.target_entry_point is not None for agent in env.agents]) / n_agents
             print(f"{actual_success_rate * 100}% trains arrived. Expected {expected_success_rate * 100}%. {env._elapsed_steps - 1} elapsed steps.")
 
             assert np.isclose(expected_success_rate, actual_success_rate)

@@ -9,7 +9,7 @@ def test_render_env_one_step_behind_after_agent_done():
     """
     Coverage test: no test previously exercised `RenderTool.render_env()`'s `ONE_STEP_BEHIND`
     variant (the default `agent_render_variant`), including the just-departed-agent transition
-    where `current_configuration` becomes `None` while `old_configuration` still holds the last
+    where `current_entry_point` becomes `None` while `old_entry_point` still holds the last
     on-map position - see `flatland/utils/rendertools.py`.
     """
     rail, rail_map, optionals = make_simple_rail()
@@ -18,18 +18,18 @@ def test_render_env_one_step_behind_after_agent_done():
                   line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset(False, False)
 
-    # place the agent on the map so `current_configuration` becomes a real (position, direction) tuple
+    # place the agent on the map so `current_entry_point` becomes a real (position, direction) tuple
     agent = env.agents[0]
     for _ in range(5):
         env.step({0: RailEnvActions.MOVE_FORWARD})
-        if agent.current_configuration is not None:
+        if agent.current_entry_point is not None:
             break
-    assert agent.current_configuration is not None
+    assert agent.current_entry_point is not None
 
     # simulate the agent having just reached DONE and been removed from the map this step, as
-    # `RailEnv.handle_done_state()` does: `old_configuration` still holds the last on-map position.
-    agent.old_configuration = agent.current_configuration
-    agent.current_configuration = None
+    # `RailEnv.handle_done_state()` does: `old_entry_point` still holds the last on-map position.
+    agent.old_entry_point = agent.current_entry_point
+    agent.current_entry_point = None
 
     renderer = RenderTool(env, gl="PILSVG")
     renderer.render_env(show=False, show_observations=False)

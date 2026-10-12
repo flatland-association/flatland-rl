@@ -1,4 +1,5 @@
 """Test Utils."""
+from fractions import Fraction
 from typing import List, Tuple, Optional
 
 import numpy as np
@@ -6,7 +7,7 @@ from attr import attrs, attrib
 
 from flatland.core.effects_generator import find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, _sanitize_entry_point
 from flatland.envs.line_generators import LineGenerator
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
 from flatland.envs.persistence import RailEnvPersister
@@ -16,6 +17,10 @@ from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGener
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.rendertools import RenderTool
+
+
+# design: distance is None when off map - distinct sentinel so distance=None can be asserted explicitly
+_UNSET = object()
 
 
 @attrs
@@ -28,7 +33,7 @@ class Replay(object):
     reward = attrib(default=None, type=Optional[float])
     state = attrib(default=None, type=Optional[TrainState])
     speed = attrib(default=None, type=Optional[float])
-    distance = attrib(default=None, type=Optional[float])
+    distance = attrib(default=_UNSET, type=Optional[float])
 
 
 @attrs
@@ -97,11 +102,18 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
             for a, test_config in enumerate(test_configs):
                 agent: EnvAgent = env.agents[a]
                 # set the initial position
-                agent.initial_configuration = (test_config.initial_position, test_config.initial_direction)
+                agent.initial_entry_point = (test_config.initial_position, test_config.initial_direction)
                 agent.targets = {(test_config.target, d) for d in Grid4TransitionsEnum}
-                agent.speed_counter = SpeedCounter(speed=test_config.speed,
-                                                   max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed)
             env.reset(False, False)
+            for a, test_config in enumerate(test_configs):
+                agent: EnvAgent = env.agents[a]
+                # N.B. must be set after reset() - reset() puts every agent's speed_counter back off
+                # map (speed/distance None), which would otherwise immediately wipe this out. Keep it
+                # off map (speed=None) when set_ready_to_depart will force the state back to
+                # READY_TO_DEPART below - that call doesn't touch speed_counter, so a real speed here
+                # would otherwise leave it inconsistent with the (still None) position.
+                agent.speed_counter = SpeedCounter(max_speed=test_config.max_speed if test_config.max_speed is not None else test_config.speed,
+                                                   speed=None if set_ready_to_depart else test_config.speed)
 
             if set_ready_to_depart:
                 # Set all agents to ready to depart
@@ -110,25 +122,49 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                     env.agents[i_agent]._set_state(TrainState.READY_TO_DEPART)
 
             elif activate_agents:
-                assert len(set([a.initial_configuration[0] for a in env.agents])) == len(env.agents)
-                for a_idx in range(len(env.agents)):
-                    env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
-                    env.agents[a_idx]._set_state(TrainState.MOVING)
+                assert len(set([a.initial_entry_point[0] for a in env.agents])) == len(env.agents)
+                for a_idx, test_config in enumerate(test_configs):
+                    agent: EnvAgent = env.agents[a_idx]
+                    agent.current_entry_point = agent.initial_entry_point
+                    agent._set_state(TrainState.MOVING)
+                    # design: distance is None when off map -- this test-harness shortcut places
+                    # the agent directly onto the map, bypassing the state machine's own departure
+                    # step (which would otherwise call speed_counter.set() with a non-None speed);
+                    # do it explicitly here so distance starts at 0 (on-map) instead of None.
+                    agent.speed_counter.set(speed=agent.speed_counter.speed, distance=Fraction(0))
+                    # design: actions applied at cell entry -- keep the current_entry_point/
+                    # next_entry_point invariant (both set and different while on-map, see the
+                    # invariant documented in RailEnv.step()) even for this test-harness shortcut:
+                    # derive next_entry_point from the replay's first action, exactly as a real
+                    # departure through step() would (see the READY_TO_DEPART branch in
+                    # RailEnv.step()).
+                    first_action = test_config.replay[0].action
+                    if first_action is None:
+                        first_action = RailEnvActions.DO_NOTHING
+                    transition = env.rail.apply_action_independent(first_action, agent.current_entry_point)
+                    assert transition is not None, (
+                        f"agent {a_idx}: replay[0].action={first_action} has no valid transition "
+                        f"from {agent.current_entry_point} - run_replay_config(activate_agents=True) "
+                        f"needs a first action that is actually valid from the initial position to "
+                        f"derive next_entry_point."
+                    )
+                    next_entry_point = transition
+                    agent.next_entry_point = _sanitize_entry_point(next_entry_point)
 
         def _assert(a, actual, expected, msg, close: bool = True):
             print("[{}] verifying {} on agent {}: actual={}, expected={}".format(step, msg, a, actual, expected))
             _msg = "[{}] agent {}:  actual={}, expected={}".format(step, a, msg, actual, expected)
-            assert (actual == expected) or (close and np.allclose(actual, expected)), _msg
+            assert (actual == expected) or (close and actual is not None and expected is not None and np.allclose(actual, expected)), _msg
 
         action_dict = {}
         print(f"[{step}] BEFORE stepping: verify position/direction/state/malfunction")
         for a, test_config in enumerate(test_configs):
             agent: EnvAgent = env.agents[a]
             replay = test_config.replay[step]
-            # if not agent.current_configuration[0] == replay.position:
+            # if not agent.current_entry_point[0] == replay.position:
             # import pdb; pdb.set_trace()
-            position = agent.current_configuration[0] if agent.current_configuration is not None else None
-            direction = agent.current_configuration[1] if agent.current_configuration is not None else None
+            position = agent.current_entry_point[0] if agent.current_entry_point is not None else None
+            direction = agent.current_entry_point[1] if agent.current_entry_point is not None else None
             _assert(a, position, replay.position, 'position')
             _assert(a, direction, replay.direction, 'direction')
             if replay.state is not None:
@@ -136,7 +172,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
 
             if replay.speed is not None:
                 _assert(a, agent.speed_counter.speed, replay.speed, "speed")
-            if replay.distance is not None:
+            if replay.distance is not _UNSET:
                 _assert(a, agent.speed_counter.distance, replay.distance, "distance")
 
             if replay.action is not None:

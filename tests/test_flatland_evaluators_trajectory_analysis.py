@@ -15,4 +15,4 @@ def test_data_frame_for_trajectories():
     _, _, all_trains_arrived, _, _, _ = data_frame_for_trajectories(data_dir)
     assert len(all_trains_arrived) == 5 * 10  # 5 Tests (Test_00, ..., Test_04) x 10 scenarios.
     mean_success_rate_ = all_trains_arrived["success_rate"].mean()
-    assert np.isclose(mean_success_rate_, 0.6635285714285714)
+    assert np.isclose(mean_success_rate_, 0.6585857142857142)

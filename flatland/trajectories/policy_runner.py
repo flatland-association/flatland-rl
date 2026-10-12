@@ -77,7 +77,7 @@ class PolicyRunner:
 
         for agent_id in range(self.n_agents):
             agent = self.env.agents[agent_id]
-            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_configuration)
+            self.trajectory.position_collect(env_time=env_time + 1, agent_id=agent_id, position=agent.current_entry_point)
             self.trajectory.rewards_dones_infos_collect(env_time=env_time + 1, agent_id=agent_id, reward=rewards.get(agent_id, 0.0),
                                                         info={k: v[agent_id] for k, v in infos.items()},
                                                         done=dones[agent_id])
@@ -90,7 +90,7 @@ class PolicyRunner:
         if self.done:
             if self.callbacks is not None:
                 self.callbacks.on_episode_end(env=self.env, data_dir=self.trajectory.outputs_dir)
-            actual_success_rate = sum([agent.state == 6 for agent in self.env.agents]) / self.n_agents
+            actual_success_rate = sum([agent.target_entry_point is not None for agent in self.env.agents]) / self.n_agents
             # not persisted yet, need to get df from collected buffer
             collected_rewards = self.trajectory._collected_trains_rewards_dones_infos_to_df()["reward"]
             normalized_reward = self.env.rewards.normalize(*collected_rewards, max_episode_steps=self.env._max_episode_steps,
@@ -406,6 +406,15 @@ class PolicyRunner:
               type=int,
               help="Initiate random seed after the env is generated, goes into second `reset` with `regenerate_rail=False, regenerate_schedule=False`.",
               required=False, default=None)
+@click.option('--skip-state-machine-update',
+              type=bool,
+              default=True,
+              help="Whether the generated env skips agent.state/agent.state_machine bookkeeping (the default, "
+                   "matching env_generator()'s own default). Pass False if --policy reads agent.state directly "
+                   "(e.g. this repo's own bundled ShortestPathPolicy) - an arbitrary caller-supplied policy can't "
+                   "be assumed to use derived_state() the way this repo's own internals do.",
+              required=False
+              )
 def generate_trajectory_from_policy(
     data_dir: Path,
     policy: str = None,
@@ -445,6 +454,7 @@ def generate_trajectory_from_policy(
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
     post_seed: int = None,
+    skip_state_machine_update: bool = True,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -523,6 +533,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=skip_state_machine_update,
         )
     else:
         env, _, _ = env_generator(
@@ -542,6 +553,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
+            skip_state_machine_update=skip_state_machine_update,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:

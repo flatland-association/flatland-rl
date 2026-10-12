@@ -132,4 +132,5 @@ find = { }
 [tool.pytest.ini_options]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "cython_ext: exercises flatland/envs/step_utils/state_machine.py, states.py, or rail_env_shortest_paths.py deeply enough to catch a divergence between the plain-Python source and its compiled Cython extension (e.g. a cdef class field only declared in the .py file, not the .pxd) - select with '-m cython_ext' to run this subset against a build with the ext-modules compiled in-place",
 ]

@@ -284,6 +284,11 @@ class MotionCheck(object):
 
         self.stopped: Set[AgentHandle] = set()
         self.deadlocked: Set[AgentHandle] = set()
+        # agents not actually attempting to acquire a different resource this round (r1 == r2,
+        # e.g. mid-cell or voluntarily not moving) - inspectable independent of check_resource/stopped.
+        self.hold_resource: Set[AgentHandle] = set()
+        # agents with no resource to acquire at all (r2 is None, e.g. off-map and not departing)
+        self.no_resource: Set[AgentHandle] = set()
 
     def add_agent(self, i: int, r1: Optional[Resource], r2: Optional[Resource]):
         """
@@ -292,7 +297,10 @@ class MotionCheck(object):
         if r1 is None:
             r1 = (None, i)
         if r2 is None:
+            self.no_resource.add(i)
             r2 = (None, i)
+        if r1 == r2:
+            self.hold_resource.add(i)
         self.agents[i] = (r1, r2)
         if r2 not in self.reverse_target:
             self.reverse_target[r2] = [i]
@@ -371,9 +379,18 @@ class MotionCheck(object):
         self.reverse_target[v_target].remove(v)
         return target_conflicts
 
-    def check_motion(self, i: int, r: Resource) -> bool:
+    def check_resource(self, i: int) -> bool:
         """
+        Whether agent `i` is allowed to move this step - true if any of:
+            - it isn't actually attempting to acquire anything new (`i in self.hold_resource`, e.g.
+              mid-cell or voluntarily not moving) - conflict resolution never needs to weigh in since
+              nothing is being contested;
+            - it has no resource to acquire at all (`i in self.no_resource`, e.g. off-map and not
+              departing this step);
+            - otherwise, whether conflict resolution (`find_conflicts()`) left it out of `self.stopped`.
+
         Returns
-            Will the agent move (either because it does not want to move or because it is stopped by conflict resolution)?
+            Whether agent `i` is allowed to move given its held/desired resources (as recorded by
+            `add_agent()`) and the outcome of conflict resolution.
         """
-        return i not in self.stopped
+        return i in self.hold_resource or i in self.no_resource or i not in self.stopped

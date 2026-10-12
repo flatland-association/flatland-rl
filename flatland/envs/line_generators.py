@@ -171,7 +171,7 @@ class SparseLineGen(BaseLineGen):
 
         agent_waypoints = {i: [[Waypoint(fpa, fda) for fpa, fda in zip(pa, da)] for pa, da in zip(pas, das)] +
                               [[Waypoint(target, d) for d in Grid4TransitionsEnum
-                                if rail.is_valid_configuration((target, d))]] for
+                                if rail.is_valid_entry_point((target, d))]] for
                            i, (pas, das, target)
                            in enumerate(zip(agent_positions, agent_directions, agent_targets))}
 
@@ -188,7 +188,7 @@ class SparseLineGen(BaseLineGen):
                 # not just the single direction originally guessed for an intermediate stop, or the one used
                 # to look up the station - since neither guess necessarily corresponds to a real path.
                 stop_position = wpp2[0].position
-                candidates = [Waypoint(stop_position, d) for d in Grid4TransitionsEnum if rail.is_valid_configuration((stop_position, d))]
+                candidates = [Waypoint(stop_position, d) for d in Grid4TransitionsEnum if rail.is_valid_entry_point((stop_position, d))]
                 # Keep only the candidate directions reachable from any of this leg's source alternatives -
                 # looping over all (source, candidate) combinations rather than assuming a single
                 # representative pair on either side.
@@ -238,7 +238,7 @@ def line_from_file(filename: Union[str, Path] = None, load_from_package=None, en
         # setup with loaded data
         # N.B. Line generator currently has no routing flexibility!
         agent_waypoints = {i: a.waypoints for i, a in enumerate(agents)}
-        agents_speed = [a.speed_counter.speed for a in agents]
+        agents_speed = [a.speed_counter.max_speed for a in agents]
 
         return Line(agent_waypoints=agent_waypoints, agent_speeds=agents_speed)
 

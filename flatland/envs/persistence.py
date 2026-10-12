@@ -1,3 +1,4 @@
+import io
 import pickle
 from pathlib import Path
 from typing import Tuple, Dict, Optional, Union, Any
@@ -12,7 +13,6 @@ from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 
 msgpack_numpy.patch()
-from flatland.envs.step_utils.states import StateTransitionSignals
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs import rail_env
 from flatland.envs.step_utils import env_utils
@@ -26,6 +26,28 @@ from flatland.envs import rail_generators as rail_gen
 from flatland.envs import line_generators as line_gen
 from flatland.envs import timetable_generators as tt_gen
 from flatland.envs import malfunction_effects_generators as mal_eff_gen
+
+
+class _LegacyActionSaver:
+    """
+    Stand-in for `flatland.envs.step_utils.action_saver.ActionSaver`, removed from the live codebase.
+    Every persisted `Agent.action_saver` slot up to that point pickled a real `ActionSaver` instance by
+    class reference - without this stand-in, `_LegacyCompatUnpickler` would still resolve, but a plain
+    `pickle.load`/`pickle.loads` on such a file fails outright with `ModuleNotFoundError` before
+    `load_env_agent` ever gets a chance to discard the (already-unused) value.
+    """
+
+
+class _LegacyCompatUnpickler(pickle.Unpickler):
+    _LEGACY_STUBS = {
+        ("flatland.envs.step_utils.action_saver", "ActionSaver"): _LegacyActionSaver,
+    }
+
+    def find_class(self, module, name):
+        stub = self._LEGACY_STUBS.get((module, name))
+        if stub is not None:
+            return stub
+        return super().find_class(module, name)
 
 
 def _serialize_agent(agent: EnvAgent) -> Agent:
@@ -42,7 +64,7 @@ def _serialize_agent(agent: EnvAgent) -> Agent:
 def _deserialize_agent_tuple(agent_tuple: Agent) -> Agent:
     """
     Undo `_serialize_agent`'s tuple encoding before handing off to `load_env_agent`, which otherwise only
-    recognizes a `set`/`frozenset` of configurations (or, for legacy pre-`targets` pickles, a bare
+    recognizes a `set`/`frozenset` of entry points (or, for legacy pre-`targets` pickles, a bare
     `(row, col)` position - left untouched here). Discriminate structurally rather than by scalar type, since
     legacy pickles hold `numpy.int32` row/col values, not plain `int`s: a bare position's first element is a
     scalar, whereas a tuple of `(position, direction)` pairs has a `tuple` as its first element.
@@ -145,12 +167,13 @@ class RailEnvPersister(object):
                  obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator["RailEnv"]] = None,
+                 skip_state_machine_update: bool = True,
                  ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.
 
         `obs_builder`, `rewards` and `effects_generator` are never part of the persisted state as such (only
-        `effects_generator` has a genuine persisted counterpart, restored from `env_dict`); if given, each of
+        `effects_generator` has a persisted counterpart, restored from `env_dict`); if given, each of
         the three always takes effect for the restored env, replacing rather than merging with any restored
         or default counterpart.
 
@@ -165,6 +188,12 @@ class RailEnvPersister(object):
             rewards for the restored env. Defaults to the env's own default rewards if not given.
         effects_generator : EffectsGenerator
             if given, replaces the effects generator restored from `env_dict` instead of being discarded.
+        skip_state_machine_update : bool
+            Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+            `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+            flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+            derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+            `agent.state_machine` themselves (real state-machine semantics).
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
@@ -172,6 +201,11 @@ class RailEnvPersister(object):
         llGrid = env_dict["grid"]
         height = len(llGrid)
         width = len(llGrid[0])
+
+        # local import: avoids a circular import (persistence <- timetable_generators <- rail_env, all
+        # loaded as a side effect of rail_env.py's own top-level `import timetable_generators`, before
+        # AbstractRailEnv is defined in this same rail_env module).
+        from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 
         if obs_builder is None:
             obs_builder = DummyObservationBuilder()
@@ -185,6 +219,8 @@ class RailEnvPersister(object):
             record_steps=True,
             rewards=rewards,
         )
+        if not skip_state_machine_update:
+            env = RailEnvStateMachineWrapper(env)
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
 
         env.obs_builder.reset(env)
@@ -206,7 +242,7 @@ class RailEnvPersister(object):
             env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)
         elif filename.endswith("pkl"):
             try:
-                env_dict = pickle.loads(load_data)
+                env_dict = _LegacyCompatUnpickler(io.BytesIO(load_data)).load()
             except ValueError:
                 print("pickle failed to load file:", filename, " trying msgpack (deprecated)...")
                 env_dict = msgpack.unpackb(load_data, use_list=False, raw=False)
@@ -248,7 +284,7 @@ class RailEnvPersister(object):
         env.rail = RailGridTransitionMap(height=env.height, width=env.width)
         env.rail.grid = grid
 
-        # Replace the agents tuple with EnvAgent objects. Target configurations are not serialised with rail
+        # Replace the agents tuple with EnvAgent objects. Target entry points are not serialised with rail
         # validity, so `load_env_agent`/`load_legacy_static_agent` filter them against the (now available) rail
         # grid at load time. Otherwise, done in env._agents_from_line() during reset().
         if "agents_static" in env_dict:
@@ -298,9 +334,7 @@ class RailEnvPersister(object):
         if dev_obs_dict_ is not None:
             env.dev_obs_dict = dev_obs_dict_
 
-        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None, None, None, None) for i in range(env.get_num_agents())}
-        for i_agent in range(env.get_num_agents()):
-            env.temp_transition_data[i_agent].state_transition_signal = StateTransitionSignals()
+        env.temp_transition_data = {i: env_utils.AgentTransitionData(None, None) for i in range(env.get_num_agents())}
 
         dones = env_dict.get("dones", None)
         if dones is not None:

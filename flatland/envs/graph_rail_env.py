@@ -13,6 +13,7 @@ from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.timetable_utils import Line, TimetableUtils
@@ -83,7 +84,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
         """Converts `rail_env`'s agents' grid `Waypoint`-based waypoints/speeds into the plain
         string-keyed shape `from_graph` expects."""
-        gctgc = GraphTransitionMap.grid_configuration_to_graph_configuration
+        gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
         agent_waypoints = {
             agent.handle: [[gctgc(*wp.position, wp.direction) for wp in group] for group in agent.waypoints]
             for agent in rail_env.agents
@@ -111,11 +112,12 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         timetable_generator: Optional[TimetableGenerator] = None,
         seed: Optional[int] = None,
         rewards: Rewards = None,
+        skip_state_machine_update: bool = True,
     ) -> "GraphRailEnv":
         """
         Factory method to create a `GraphRailEnv` directly from a string-node graph and string-based
         agent waypoints - counterpart to `from_rail_env`, but graph-native from the start: `g`'s nodes
-        and `agent_waypoints`' leaves are plain configuration strings, never `((row, col), direction)`
+        and `agent_waypoints`' leaves are plain entry point strings, never `((row, col), direction)`
         grid tuples or `Waypoint` objects.
 
         Parameters
@@ -137,6 +139,12 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `ttg.ttgen_flatland2` (`earliest_departure=0`/`latest_arrival=1000` for every agent). Pass
             e.g. `lambda *a, **k: TimetableUtils.from_agents(source_agents, max_episode_steps)` to
             reuse an existing timetable instead (mirrors how `from_rail_env` reuses its source env's).
+        skip_state_machine_update : bool
+            Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+            `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
+            flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
+            derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
+            `agent.state_machine` themselves (real state-machine semantics).
         """
         timetable_generator, agent_speeds = GraphRailEnv._resolve_from_graph_defaults(
             timetable_generator, agent_speeds, agent_waypoints)
@@ -152,6 +160,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             malfunction_generator=malfunction_generator,
             rewards=rewards,
         )
+        if not skip_state_machine_update:
+            graph_env = RailEnvStateMachineWrapper(graph_env)
         graph_env.reset(random_seed=seed)
         return graph_env
 
@@ -217,8 +227,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         else:
             return GraphResourceMap({})
 
-    def _infrastructure_representation(self, configuration: str) -> str:
-        return configuration
+    def _infrastructure_representation(self, entry_point: str) -> str:
+        return entry_point
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         """
@@ -231,17 +241,17 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             speed = line.agent_speeds[handle] if line.agent_speeds is not None else 1.0
             waypoints = list(waypoints)
             # N.B. only the target's alternatives (last waypoint group) can be invalid - the caller's
-            # own routing already guarantees valid configurations everywhere else.
-            waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_configuration(t)]
+            # own routing already guarantees valid entry points everywhere else.
+            waypoints[-1] = [t for t in waypoints[-1] if rail.is_valid_entry_point(t)]
             assert len(waypoints[-1]) > 0, (
                 f"agent {handle}: none of the target alternatives {list(line.agent_waypoints[handle][-1])} "
-                f"are valid configurations in the graph - the agent would end up with an empty `targets`."
+                f"are valid entry points in the graph - the agent would end up with an empty `targets`."
             )
-            initial_configuration = waypoints[0][0]
+            initial_entry_point = waypoints[0][0]
             agents.append(EnvAgent(
-                initial_configuration=initial_configuration,
-                current_configuration=initial_configuration,
-                old_configuration=None,
+                initial_entry_point=initial_entry_point,
+                current_entry_point=initial_entry_point,
+                old_entry_point=None,
                 targets=set(waypoints[-1]),
                 waypoints=waypoints,
                 moving=False,
@@ -250,5 +260,5 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
                 waypoints_earliest_departure=None,
                 waypoints_latest_arrival=None,
                 handle=handle,
-                speed_counter=SpeedCounter(speed=speed)))
+                speed_counter=SpeedCounter(max_speed=speed)))
         return agents

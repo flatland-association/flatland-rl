@@ -1,11 +1,15 @@
+from fractions import Fraction
+
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
+from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.observations import TreeObsForRailEnv
 from flatland.envs.predictions import ShortestPathPredictorForRailEnv
 from flatland.envs.rail_env import RailEnv, RailEnvActions
+from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rewards import DefaultRewards
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
@@ -57,6 +61,7 @@ def test_multi_speed_init():
                   # fix random_seed where all agents have different initial_position
                   random_seed=4,
                   number_of_agents=3)
+    env = RailEnvStateMachineWrapper(env)
 
     # Initialize the agent with the parameters corresponding to the environment and observation_builder
     agent = RandomAgent(218, 4)
@@ -67,21 +72,32 @@ def test_multi_speed_init():
     # Set all the different speeds
     # Reset environment and get initial observations for all agents
     env.reset(False, False)
-    assert len(set([a.initial_configuration[0] for a in env.agents])) == 3
+    assert len(set([a.initial_entry_point[0] for a in env.agents])) == 3
     env._max_episode_steps = 1000
 
     for a_idx in range(len(env.agents)):
-        env.agents[a_idx].current_configuration = env.agents[a_idx].initial_configuration
-        env.agents[a_idx]._set_state(TrainState.MOVING)
+        env_agent = env.agents[a_idx]
+        env_agent.current_entry_point = env_agent.initial_entry_point
+        env_agent._set_state(TrainState.MOVING)
+        # design: actions applied at cell entry -- keep the current_entry_point/next_entry_point
+        # invariant (both set and different while on-map) even for this direct test-harness setup.
+        transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, env_agent.current_entry_point)
+        assert transition is not None
+        env_agent.next_entry_point = _sanitize_entry_point(transition)
 
     def _position(agent):
-        return agent.current_configuration[0] if agent.current_configuration is not None else None
+        return agent.current_entry_point[0] if agent.current_entry_point is not None else None
 
     # Here you can also further enhance the provided observation by means of normalization
     # See training navigation example in the baseline repository
     old_pos = []
     for i_agent in range(env.get_num_agents()):
-        env.agents[i_agent].speed_counter = SpeedCounter(speed=_pseudo_fractional(1.) / (i_agent + 1))
+        speed = _pseudo_fractional(1.) / (i_agent + 1)
+        env.agents[i_agent].speed_counter = SpeedCounter(max_speed=speed, speed=speed)
+        # design: distance is None when off map -- the agent is already on the map here, so mark
+        # the fresh speed_counter as having just entered (distance 0), not off-map (None).
+        sc = env.agents[i_agent].speed_counter
+        sc.set(speed=sc.speed, distance=Fraction(0))
         old_pos.append(_position(env.agents[i_agent]))
         print(_position(env.agents[i_agent]))
     # Run episode
@@ -107,11 +123,12 @@ def test_multi_speed_init():
 
 
 def test_multispeed_actions_no_malfunction_no_blocking():
-    """Test that actions are correctly performed on cell exit for a single agent."""
+    """Test that actions are correctly performed on cell entry for a single agent."""
     rail, rail_map, optionals = make_simple_rail()
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     env._max_episode_steps = 1000
@@ -152,7 +169,8 @@ def test_multispeed_actions_no_malfunction_no_blocking():
             Replay(
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
-                action=None,
+                # design: actions applied at cell entry
+                action=RailEnvActions.MOVE_LEFT,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             Replay(
@@ -227,6 +245,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                   random_seed=1,
                   rewards=DefaultRewards()
                   )
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
     CRASH_PENALTY = 5
     env.rewards.crash_penalty_factor = CRASH_PENALTY
@@ -304,7 +323,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 5),
                     direction=Grid4TransitionsEnum.WEST,
 
-                    action=RailEnvActions.MOVE_FORWARD,
+                    action=None,
                 ),
                 Replay(
                     position=(3, 5),
@@ -326,6 +345,12 @@ def test_multispeed_actions_no_malfunction_blocking():
             initial_position=(3, 8),
             initial_direction=Grid4TransitionsEnum.WEST,
         ),
+        # design (D1/D2): agent 1 (speed 0.5) is repeatedly blocked by agent 0 (speed 1/3) ahead of it -
+        # each block follows the same 3-step pattern: (a) real crossing attempt denied (agent 0 still
+        # occupies the target) -> forced STOPPED, distance banks to the boundary; (b) given a movement
+        # action again, optimistically promoted back to MOVING (self-loop, distance unchanged - see
+        # rail_env.py's movement_allowed design note); (c) now pre-speed > 0, the crossing is
+        # attempted for real again and this time succeeds (agent 0 has since vacated the target).
         ReplayConfig(
             replay=[
                 Replay(  # 0
@@ -342,7 +367,7 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=None,
                 ),
-                # blocked although fraction >= 1.0
+                # blocked although fraction >= 1.0 - agent 0 still occupies (3,8)
                 Replay(  # 2
                     position=(3, 9),
                     direction=Grid4TransitionsEnum.EAST,
@@ -350,13 +375,15 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
+                # design: stopped->moving with pre-speed 0, travelling no distance.
                 Replay(  # 3
-                    position=(3, 8),
-                    direction=Grid4TransitionsEnum.WEST,
+                    position=(3, 9),
+                    direction=Grid4TransitionsEnum.EAST,
                     state=TrainState.MOVING,
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
+                # now pre-speed > 0 - agent 0 has since vacated (3,8), crossing succeeds.
                 Replay(  # 4
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
@@ -364,7 +391,8 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # blocked although fraction >= 1.0
+                # blocked again immediately - is_cell_exit is already true this same step (banked
+                # momentum from the crossing just completed), and agent 0 still occupies (3,7).
                 Replay(  # 5
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
@@ -372,9 +400,8 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
-
                 Replay(  # 6
-                    position=(3, 7),
+                    position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
@@ -385,9 +412,8 @@ def test_multispeed_actions_no_malfunction_blocking():
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
-                    action=RailEnvActions.STOP_MOVING,
+                    action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # blocked although fraction >= 1.0
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
@@ -395,28 +421,27 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
-
                 Replay(  # 9
+                    position=(3, 7),
+                    direction=Grid4TransitionsEnum.WEST,
+                    state=TrainState.MOVING,
+
+                    action=RailEnvActions.MOVE_FORWARD,
+                ),
+                Replay(  # 10
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
                     action=None,
                 ),
-                Replay(  # 10
+                # blocked a third time - agent 0 still occupies (3,5).
+                Replay(  # 11
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.MOVING,
-                    distance=0.5,
-                    speed=_pseudo_fractional(0.5),
+                    state=TrainState.STOPPED,
 
-                    action=RailEnvActions.MOVE_LEFT,
-                ),
-                Replay(  # 11
-                    position=(4, 6),
-                    direction=Grid4TransitionsEnum.SOUTH,
-
-                    action=RailEnvActions.MOVE_FORWARD,
+                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
                 ),
             ],
             target=(3, 0),  # west dead-end
@@ -435,6 +460,7 @@ def test_multispeed_actions_malfunction_no_blocking():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART
@@ -468,13 +494,16 @@ def test_multispeed_actions_malfunction_no_blocking():
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
             # add additional step in the cell
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+            # values shift by 1 while the malfunction is active)
             Replay(  # 3
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=None,
-                set_malfunction=2,  # recovers in two steps from now!,
-                malfunction=2,
+                set_malfunction=3,  # recovers in two steps from now! (duration bumped +1 from 2; observed recovery timing unchanged)
+                malfunction=3,
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
 
@@ -482,7 +511,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=1,
+                malfunction=2,
 
                 action=None,
 
@@ -493,7 +522,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 position=(3, 8),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=0,
+                malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,  # SM: MALFUNCTION -> MOVING needs move action
 
@@ -509,20 +538,23 @@ def test_multispeed_actions_malfunction_no_blocking():
 
                 reward=env.step_penalty * 0.5  # running at speed 0.5
             ),
+            # design: malfunction counter decremented at start of step(), before new malfunctions are generated -
+            # injected duration bumped by 1 so the state sequence below is unaffected (only the malfunction countdown
+            # values shift by 1 while the malfunction is active)
             Replay(  # 7
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MOVING,
                 action=None,
-                set_malfunction=2,  # recovers in two steps from now!
-                malfunction=2,
+                set_malfunction=3,  # recovers in two steps from now! (duration bumped +1 from 2; observed recovery timing unchanged)
+                malfunction=3,
                 reward=env.step_penalty * 0.5  # step penalty for speed 0.5 when malfunctioning
             ),
             Replay(  # 8
                 position=(3, 7),
                 direction=Grid4TransitionsEnum.WEST,
                 state=TrainState.MALFUNCTION,
-                malfunction=1,
+                malfunction=2,
 
                 action=None,
                 reward=env.step_penalty * 0.5  # running at speed 0.5
@@ -532,7 +564,7 @@ def test_multispeed_actions_malfunction_no_blocking():
                 direction=Grid4TransitionsEnum.WEST,
                 # end of malfunction
                 state=TrainState.MALFUNCTION,
-                malfunction=0,
+                malfunction=1,
 
                 action=RailEnvActions.MOVE_FORWARD,  # need move action after malfunction according to SM
 
@@ -622,6 +654,7 @@ def test_multispeed_actions_no_malfunction_invalid_actions():
     env = RailEnv(width=rail_map.shape[1], height=rail_map.shape[0], rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    env = RailEnvStateMachineWrapper(env)
     env.reset()
 
     # Perform DO_NOTHING actions until all trains get to READY_TO_DEPART

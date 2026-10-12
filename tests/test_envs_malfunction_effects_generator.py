@@ -25,17 +25,20 @@ def test_conditional_stopped_cells_and_range_malfunction_effects_generator():
     env.reset()
 
     for _ in range(150):
-        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
+        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.derived_state(env._elapsed_steps) == TrainState.MOVING else RailEnvActions.MOVE_FORWARD
+                  for agent in env.agents})
 
-    initial_positions = {agent.initial_configuration[0] for agent in env.agents}
-    in_malfunction = dict()
-    for agent in env.agents:
-        if agent.malfunction_handler.in_malfunction:
-            in_malfunction[agent.current_configuration[0]] = agent
+    initial_positions = {agent.initial_entry_point[0] for agent in env.agents}
+    in_malfunction = [agent for agent in env.agents if agent.malfunction_handler.in_malfunction]
 
     # there is an agent stopped by the conditional malfunction generator at each initial position
-    assert len(in_malfunction) == len(initial_positions)
-    for _, agents in in_malfunction.items():
+    assert {agent.initial_entry_point[0] for agent in in_malfunction} == initial_positions
+    for agent in in_malfunction:
+        # a STOP_MOVING may complete an in-flight crossing before halting (pre-step momentum already
+        # past the cell boundary), so the agent may be stopped one cell into the successor entry point
+        # reached by that crossing rather than exactly at its initial entry point
+        assert agent.current_entry_point == agent.initial_entry_point or agent.current_entry_point in env.rail.get_successor_entry_points(
+            agent.initial_entry_point)
         assert agent.malfunction_handler.malfunction_down_counter > 700
 
 
@@ -53,7 +56,8 @@ def test_no_effect_conditional_stopped_cells_and_range_malfunction_effects_gener
     env.reset()
 
     for _ in range(150):
-        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.state == TrainState.MOVING else RailEnvActions.MOVE_FORWARD for agent in env.agents})
+        env.step({agent.handle: RailEnvActions.STOP_MOVING if agent.derived_state(env._elapsed_steps) == TrainState.MOVING else RailEnvActions.MOVE_FORWARD
+                  for agent in env.agents})
 
     # no malfunction generated although condition applies as above
     for agent in env.agents:
@@ -81,7 +85,7 @@ def test_conditional_stopped_intermediate_and_range_malfunction_effects_generato
     in_malfunction = dict()
     for agent in env.agents:
         if agent.malfunction_handler.in_malfunction:
-            in_malfunction[agent.current_configuration[0]] = agent
+            in_malfunction[agent.current_entry_point[0]] = agent
 
     # there is an agent stopped by the conditional malfunction generator at each waypoint
     assert len(intermediate_waypoints) == 3
@@ -105,21 +109,22 @@ def test_make_multi_malfunction_condition():
 
     cond = make_multi_malfunction_condition(
         [condition_stopped_intermediate_and_range(44, 99),
-         condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_configuration[0]])])
+         condition_stopped_cells_and_range(44, 99, [env.agents[0].initial_entry_point[0]])])
 
-    env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].initial_configuration[0], direction)
-    assert cond(env.agents[0], 55)
-    assert not cond(env.agents[0], 33)
-    assert not cond(env.agents[0], 100)
+    # derived_state() reports STOPPED for an on-map (current_entry_point is not None), non-malfunctioning
+    # (previous_in_malfunction=False) agent with no positive speed - matches a freshly-departed agent's
+    # speed_counter (None) here, no need to also force the real state machine into STOPPED.
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    env.agents[0].current_entry_point = (env.agents[0].initial_entry_point[0], direction)
+    assert cond(env.agents[0], 55, False)
+    assert not cond(env.agents[0], 33, False)
+    assert not cond(env.agents[0], 100, False)
 
-    env.agents[0].state_machine.set_state(TrainState.STOPPED)
-    direction = env.agents[0].current_configuration[1] if env.agents[0].current_configuration is not None else None
-    env.agents[0].current_configuration = (env.agents[0].waypoints[1][0].position, direction)
-    assert cond(env.agents[0], 55)
-    assert not cond(env.agents[0], 33)
-    assert not cond(env.agents[0], 100)
+    direction = env.agents[0].current_entry_point[1] if env.agents[0].current_entry_point is not None else None
+    env.agents[0].current_entry_point = (env.agents[0].waypoints[1][0].position, direction)
+    assert cond(env.agents[0], 55, False)
+    assert not cond(env.agents[0], 33, False)
+    assert not cond(env.agents[0], 100, False)
 
 
 def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
@@ -149,7 +154,8 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
     assert conditional_malfunction_effects_generator._num_malfunctions == 2
     assert len(in_malfunction) == 2
     for agent in in_malfunction:
-        assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest)
+        # design: malfunction counter decremented at start of step(), before new malfunctions are generated
+        assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest) + 1
 
 
 # TODO https://github.com/flatland-association/flatland-rl/issues/386 use ShortestPathPolicy instead
@@ -164,14 +170,14 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
             break
         actions = dict()
         for agent in env.agents:
-            if agent.current_configuration is None:
+            if agent.current_entry_point is None:
                 actions[agent.handle] = RailEnvActions.MOVE_FORWARD
-            elif agent.state == TrainState.DONE:
+            elif agent.target_entry_point is not None:
                 continue
             else:
 
                 next_waypoint_position = agent.waypoints[agents_at[agent.handle] + 1][0].position
-                if agent.current_configuration[0] == next_waypoint_position:
+                if agent.current_entry_point[0] == next_waypoint_position:
                     if stop_at_first_intermediate:
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
@@ -179,12 +185,34 @@ def _run_with_sthortest_path(env, rendering, num_steps=400, stop_at_first_interm
                         agents_at[agent.handle] += 1
                         actions[agent.handle] = RailEnvActions.STOP_MOVING
                         continue
-                p = get_k_shortest_paths(env, agent.current_configuration[0], agent.current_configuration[1],
+                # design: actions applied at cell entry -- once the agent's pre-step momentum is
+                # about to carry it across the cell boundary into next_entry_point this step
+                # (is_cell_exit), that crossing happens regardless of the action given, so if the
+                # already-locked-in target is next_waypoint_position, STOP_MOVING must be given NOW,
+                # one step before arrival is observable via current_entry_point - otherwise the
+                # agent's pre-step momentum carries it one cell past the waypoint before halting.
+                target_locked_in = agent.next_entry_point is not None \
+                    and agent.next_entry_point[0] == next_waypoint_position
+                if target_locked_in and agent.speed_counter.is_cell_exit():
+                    actions[agent.handle] = RailEnvActions.STOP_MOVING
+                    continue
+                # design: actions applied at cell entry -- once next_entry_point is already
+                # pending, this step's action decides the look-ahead beyond it, not the arrival
+                # at next_waypoint_position itself, so compute it from next_entry_point instead of
+                # current_entry_point. The path below is queried fresh starting at lookahead_from
+                # itself, so its index 1 (one hop beyond the query's own start) is always the
+                # right look-ahead target, whether lookahead_from is current or next_entry_point.
+                has_pending_target = agent.next_entry_point is not None and agent.next_entry_point != agent.current_entry_point
+                lookahead_from = agent.next_entry_point if has_pending_target else agent.current_entry_point
+
+                p = get_k_shortest_paths(env, lookahead_from[0], lookahead_from[1],
                                          next_waypoint_position)
                 shortest_path = p[0]
+                if 1 >= len(shortest_path):
+                    continue
                 for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
                     new_cell_valid, (new_position, new_direction), transition_valid, preprocessed_action, _ = env.rail._check_action_on_agent(
-                        RailEnvActions.from_value(a), agent.current_configuration)
+                        RailEnvActions.from_value(a), lookahead_from)
                     next_wp = shortest_path[1]
                     if (new_cell_valid and transition_valid
                         and new_position == next_wp.position and new_direction == next_wp.direction):
@@ -242,4 +270,4 @@ def test_intermediate_stop_malfunction_effects_generator(rendering: bool = False
 
     assert conditional_malfunction_effects_generator._num_malfunctions == 3
     for agent in env.agents:
-        assert agent.state == TrainState.DONE
+        assert agent.target_entry_point is not None

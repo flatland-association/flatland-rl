@@ -490,7 +490,8 @@ def test_rail_env_malfunction_speed_info():
         assert 'malfunction' in info
         for a in range(env.get_num_agents()):
             assert info['malfunction'][a] >= 0
-            assert info['speed'][a] >= 0 and info['speed'][a] <= 1
+            # design: speed is None while off map
+            assert info['speed'][a] is None or (info['speed'][a] >= 0 and info['speed'][a] <= 1)
             assert info['speed'][a] == env.agents[a].speed_counter.speed
 
         env_renderer.render_env(show=True, show_observations=False, show_predictions=False)

@@ -1,11 +1,15 @@
 from decimal import Decimal
 from fractions import Fraction
 from functools import lru_cache
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
 SEGMENT_LENGTH: Fraction = Fraction(1)
+# shared zero-Fraction constant - Fraction is immutable, so every "return/set to zero speed" call site
+# can safely reuse the same instance instead of constructing a fresh Fraction(0) - profiled at ~12x the
+# cost of referencing an already-built constant.
+ZERO_FRACTION: Fraction = Fraction(0)
 
 
 @lru_cache()
@@ -49,7 +53,7 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
 
 @lru_cache()
 def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
-    v = max(Fraction(0), min(agent_max_speed, new_speed))
+    v = max(ZERO_FRACTION, min(agent_max_speed, new_speed))
     assert isinstance(v, Fraction)
     assert v >= 0.0
     assert v <= 1.0
@@ -57,62 +61,98 @@ def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
 
 
 @lru_cache()
-def _cached_cell_exit(_distance, speed: Fraction) -> bool:
-    return _distance + speed >= SEGMENT_LENGTH
-
-
-@lru_cache()
-def cached_cell_exit(max_speed: Fraction, speed: Fraction, distance: Fraction) -> bool:
+def cached_cell_exit(max_speed: Fraction, speed: Optional[Fraction], distance: Optional[Fraction]) -> bool:
+    """
+    Would this speed/distance cross the segment boundary next step? `distance is None` (off map) is
+    trivially `True` (see `SpeedCounter.set()`) - checked first, before `_cap_speed`, which can't handle
+    `speed=None`. All on-map call sites already only reach this after excluding off_map themselves, so
+    this convention is never actually read bare off map (see design_by_contract.md's `cell_exit` row).
+    """
+    if distance is None:
+        return True
     speed = _cap_speed(max_speed, speed)
-    return _cached_cell_exit(distance, speed)
-
-
-@lru_cache()
-def _distance_update(distance: Fraction, speed: Fraction,
-                     crossing_completed: bool = True) -> Tuple[Fraction, bool]:
-    distance += speed
-
-    if crossing_completed:
-        # check assumption
-        assert distance >= SEGMENT_LENGTH
-        distance = distance % SEGMENT_LENGTH
-        return distance, distance < speed
-
-    # move at most segment end
-    return min(distance, SEGMENT_LENGTH), False
+    if speed == 0:
+        return False
+    return distance + speed >= SEGMENT_LENGTH
 
 
 class SpeedCounter:
-    def __init__(self, speed: float, max_speed: float = None):
-        self._speed: Fraction = _pseudo_fractional(speed)
-        self._distance: Fraction = Fraction(0)
-        self._is_cell_entry = True
-        self._max_speed: Fraction
-        if max_speed is not None:
-            self._max_speed = _pseudo_fractional(max_speed)
-        else:
-            # old constant speed behaviour
-            self._max_speed = self._speed
-        assert self._max_speed <= 1.0
-        assert self._speed <= self._max_speed
-        assert self._speed >= 0.0
-        self.reset()
+    """
+    Tracks an agent's speed and within-cell distance as Fractions of SEGMENT_LENGTH. speed/distance are
+    None while off map (see set()) and become concrete Fractions once the agent enters the map.
 
-    def step(self, speed: Fraction, crossing_completed: bool) -> None:
+    Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
+    pre-step inputs - used by RailEnv.step() to compute candidate speed/distance (which set() is then
+    called with directly), and again by its post-step invariant checks
+    (_check_speed_distance_speedup_postconditions) to verify the actual post-step values match. They are static
+    rather than instance methods since they compute a *candidate* value from explicit pre-step inputs,
+    not the counter's own (post-step) state; acceleration_delta/braking_delta are env-level parameters,
+    not SpeedCounter state, so are passed in explicitly rather than read off self. All four are None
+    (off map) in, None out.
+
+    | Method | Formula | Situation |
+    |---|---|---|
+    | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
+    | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
+    | `distance_after_crossing` | `(distance + pre_speed) % SEGMENT_LENGTH` | cell boundary crossed |
+    | `distance_without_crossing` | `min(distance + pre_speed, SEGMENT_LENGTH)` | cell boundary not crossed |
+    """
+
+    def __init__(self, max_speed: float, speed: Optional[float] = None):
+        self._max_speed: Fraction = _pseudo_fractional(max_speed)
+        assert self._max_speed <= 1.0
+        # design: speed is None until the agent enters the map (see step())
+        self._speed: Optional[Fraction] = _pseudo_fractional(speed) if speed is not None else None
+        if self._speed is not None:
+            assert self._speed <= self._max_speed
+            assert self._speed >= 0.0
+        self._distance: Optional[Fraction] = None
+        self._is_cell_entry = False
+
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction]) -> None:
         """
-        Step the speed counter:
-        - the distance traveled this step is computed from the pre-step speed.
-        - the speed is updated to the new speed (modulo capping by max speed).
+        Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
+        candidate_speed/candidate_distance (accepted), or the discarded-candidate formulas
+        (distance_without_crossing/Fraction(0)) when the candidate was rejected. Unlike the old step(),
+        this does not itself derive distance from a crossing decision - the caller has already made
+        that decision; set() only tracks the resulting state and derives is_cell_entry from it.
 
         Parameters
         ----------
-        speed : Fraction
-            The new speed, effective from the next step.
-        crossing_completed : bool
-            Whether the transition into the next cell actually completed.
+        speed : Optional[Fraction]
+            The new speed, or None while off map (leaving the map, or staying off map).
+        distance : Optional[Fraction]
+            The new within-cell distance, or None while off map. Both speed and distance are None
+            together, or both concrete Fractions together - never mixed (see the class docstring).
         """
-        self._distance, self._is_cell_entry = _distance_update(self._distance, self._speed, crossing_completed)
-        self._speed = _cap_speed(self._max_speed, _pseudo_fractional(speed))
+        # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
+        # bootstrapped onto the map (previous distance None, new distance concrete), or the pre-step
+        # distance/speed pair implies a crossing was attempted (old_distance + old_speed reaches or
+        # exceeds SEGMENT_LENGTH) *and* the new distance shows it landed inside the fresh cell rather
+        # than banked at the exit (new_distance < SEGMENT_LENGTH). A plain "new < old" comparison isn't
+        # enough on its own: at speed == SEGMENT_LENGTH (e.g. max_speed=1), distance_after_crossing's
+        # modulo wraps exactly back to the pre-step value (0 -> 0), so "new < old" and even "new <= old"
+        # both misclassify it - the latter also misfires on a stopped/banked agent whose distance is
+        # unchanged for an unrelated reason (denied at the boundary, or genuinely at rest). Old_speed
+        # here is this call's *pre*-step self._speed - it isn't overwritten until after this block.
+        self._is_cell_entry = (
+            (self._distance is None and distance is not None)
+            or (
+                self._distance is not None and distance is not None and self._speed is not None
+                and self._distance + self._speed >= SEGMENT_LENGTH
+                and distance < SEGMENT_LENGTH
+            )
+        )
+        self._distance = distance
+        # design: speed and distance are None together while off map - force speed None whenever
+        # distance is None, regardless of what was passed, so a caller's off-map placeholder speed
+        # (e.g. _candidate_speed's own "stay off map" branch, which always returns Fraction(0) rather
+        # than None - see its docstring) can never leave the two inconsistent.
+        # speed is always already a Fraction at every real call site (candidate_speed, Fraction(0)) -
+        # _pseudo_fractional's float-tolerance conversion never actually fires here, but its lru_cache
+        # wrapper still costs ~6x a plain isinstance check for a no-op cache hit (profiled) - skip it.
+        self._speed = (_cap_speed(self._max_speed, speed if isinstance(speed, Fraction) else _pseudo_fractional(speed))
+                       if (speed is not None and distance is not None) else None)
 
     def stop(self) -> None:
         """
@@ -120,8 +160,106 @@ class SpeedCounter:
 
         Use this instead of step() whenever the agent's on-map is malfunction or force stop.
         """
-        self._speed = Fraction(0)
+        self._speed = ZERO_FRACTION
         self._is_cell_entry = False
+
+    @staticmethod
+    @lru_cache()
+    def speed_after_acceleration(pre_speed: Optional[Fraction], max_speed: Fraction,
+                                 acceleration_delta: Fraction) -> Optional[Fraction]:
+        """
+        Expected speed after a MOVE_FORWARD action, or a movement action starting an agent moving from
+        rest: pre-step speed plus acceleration_delta, capped at max_speed. None (off map) in, None out.
+
+        Physical motivation: a real train's engine has a limited power/torque budget, so it cannot jump
+        straight to its running speed - it accelerates gradually, gaining at most acceleration_delta of
+        speed per step, whether it is starting from a standstill (STOPPED/READY_TO_DEPART -
+        MOVING, or a just-recovered MALFUNCTION) or already rolling and simply told to keep going faster
+        (MOVE_FORWARD while MOVING). max_speed models the train's own top speed (or a speed restriction
+        on this track section) that acceleration can never exceed.
+        """
+        if pre_speed is None:
+            return None
+        return min(pre_speed + acceleration_delta, max_speed)
+
+    @staticmethod
+    @lru_cache()
+    def speed_after_braking(pre_speed: Optional[Fraction], braking_delta: Fraction) -> Optional[Fraction]:
+        """
+        Expected speed after a STOP_MOVING action: pre-step speed plus (negative) braking_delta,
+        floored at 0. None (off map) in, None out.
+
+        Physical motivation: braking is the operator's own controlled deceleration, not an instant
+        halt - braking_delta models the brake's fixed deceleration rate per step, the mirror image of
+        acceleration_delta. This is the operator's deliberate choice (distinct from being force-stopped
+        by an invalid action or a resource_check denial, see distance_without_crossing below) - a train
+        already at or very near the cell boundary when STOP_MOVING is given can still complete an
+        already-in-flight crossing on the very step it comes to a stop (see distance_after_crossing).
+        """
+        if pre_speed is None:
+            return None
+        return max(pre_speed + braking_delta, 0)
+
+    @staticmethod
+    @lru_cache()
+    def distance_after_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+        """
+        Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
+        pre-step speed, wrapped into the newly-entered cell. None (off map) in, None out.
+
+        Physical motivation: the train's momentum this step carries it across the boundary and some
+        distance into the next cell - the wrap (`% SEGMENT_LENGTH`) is exactly that leftover distance,
+        i.e. how far into the new cell the train's momentum actually reaches. This is the only one of
+        the four formulas that ever transitions the agent's current_entry_point/next_entry_point into a
+        new cell (see RailEnv.step()'s (12)/(13)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
+        MOVE_RIGHT while MOVING (pre-step speed > 0), or an explicit STOP_MOVING if the
+        crossing was already in flight before the brake takes effect (see speed_after_braking above) -
+        the action itself never matters once resource_check has granted the crossing.
+
+        Never returns exactly SEGMENT_LENGTH: a modulo result is always in [0, SEGMENT_LENGTH) by
+        construction - physically, having actually crossed into the new cell, the train is now somewhere
+        inside it, never still sitting exactly on the boundary it just crossed (that "sitting on the
+        boundary" case is distance_without_crossing below, where the crossing does *not* happen).
+        """
+        if distance is None:
+            return None
+        return (distance + pre_speed) % SEGMENT_LENGTH
+
+    @staticmethod
+    @lru_cache()
+    def distance_without_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
+        """
+        Expected distance when this step's cell-boundary crossing did not complete (denied by an
+        invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
+        plus pre-step speed, capped at the cell boundary rather than wrapping into a new cell. None (off
+        map) in, None out.
+
+        Physical motivation: the train's momentum this step still carries it right up to the cell
+        boundary - it just isn't credited with crossing it, so it's parked exactly there instead of
+        past it. This is real physical distance actually covered this step (pre_speed is always > 0 in
+        every case below - a MOVING agent's pre-step speed can never be 0).
+        This formula is deliberately the *same* for an invalid action and a resource_check denial - both
+        are the environment overriding the operator's request against its will, physically identical
+        (a real, momentum-carrying train braked to a stop right at the boundary), so both get the same
+        consequence. A granted STOP_MOVING never lands here on its own: if resource_check grants a
+        in-flight crossing (is_cell_exit() already true pre-step), the crossing completes via
+        distance_after_crossing above regardless of the action - STOP_MOVING cannot itself hold a
+        crossing back once resource_check has approved it.
+
+        The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
+        all three only ever apply once `is_cell_exit()` was already true pre-step (i.e. distance at SEGMENT_LENGTH):
+        - an invalid action denies the crossing attempt at the cell boundary (e.g. going straight
+          through a symmetric switch, which only allows turning) - the operator's own mistaken
+          instruction, physically a real train braking hard right at the switch rather than derailing;
+        - resource_check denies the crossing to another agent (a real motion conflict - the track ahead
+          is physically occupied, so the train brakes to a stop just short of it, same as an emergency
+          stop signal);
+        - the agent reaches its target this step (remove_agents_at_target=False) - parked at the target,
+          capped since there is no further cell to wrap into.
+        """
+        if distance is None:
+            return None
+        return min(distance + pre_speed, SEGMENT_LENGTH)
 
     def __repr__(self):
         return f"speed: {self.speed} \
@@ -130,8 +268,7 @@ class SpeedCounter:
                  is_cell_entry: {self.is_cell_entry}"
 
     def reset(self):
-        self._distance = 0
-        self._is_cell_entry = True
+        self.set(None, None)
 
     @property
     def is_cell_entry(self):
@@ -147,7 +284,10 @@ class SpeedCounter:
         return cached_cell_exit(self._max_speed, self._speed, self._distance)
 
     @property
-    def speed(self) -> Fraction:
+    def speed(self) -> Optional[Fraction]:
+        """
+        Current speed. None while off map (until step() is called with a non-None speed).
+        """
         return self._speed
 
     @property
@@ -155,9 +295,10 @@ class SpeedCounter:
         return self._max_speed
 
     @property
-    def distance(self) -> Fraction:
+    def distance(self) -> Optional[Fraction]:
         """
-        Distance travelled in current cell.
+        Distance traveled in current cell. None while off map (until step() is called with a
+        non-None speed).
         """
         return self._distance
 
