@@ -192,7 +192,7 @@ and a C compiler are available - which is automatic for any build from source, s
   built here (Cython being unconditionally available now) would end up platform-tagged rather than universal -
   publishing that would mean other Python versions/OSes get no matching wheel at all. `tox.ini`'s
   `[testenv:build]` (used for the real PyPI publish and by `checks.yml`'s own `build` check) builds `--sdist`
-  only for exactly this reason - see `CLAUDE.md`'s "Cython-accelerated hot paths" section for the full story.
+  only for exactly this reason - see `AGENTS.md`'s "Cython-accelerated hot paths" section for the full story.
 - The accelerated modules stay plain, fully-interpretable `.py` files - Cython's
   [pure Python mode](https://cython.readthedocs.io/en/latest/src/tutorial/pure.html#augmenting-pxd) - so if you
   need to add type declarations for further speed-ups, do so via a companion `.pxd` file rather than converting
