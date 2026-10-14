@@ -1222,7 +1222,7 @@ def test_earliest_departure_state_transitions_initial_speed_zero():
 # with beforehand. Design D3 (branch 178-agents-living-on-the-edge-11) made that comparison impossible
 # to even construct: a SpeedCounter with a non-None speed for an off-map agent (current_entry_point is
 # None) now violates the off/on-map invariant (see "Speed/distance are Fractions, and None while off map"
-# in CLAUDE.md) and is rejected by _check_off_on_map_invariant on the very next step(), rather than being
+# in AGENTS.md) and is rejected by _check_off_on_map_invariant on the very next step(), rather than being
 # silently discarded on departure. The analogous on-map scenario (agent constructed directly on the map
 # with speed == max_speed, then stepped) is already covered by test_multi_speed.py's
 # test_multi_speed_init and test_multispeed_actions_no_malfunction_no_blocking, so this test was
@@ -1452,7 +1452,7 @@ def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> Non
     # RailEnv.__init__'s own acceleration_delta default (1.0) is a plain float, unlike
     # AbstractRailEnv's (Fraction(1)) - force it back to a Fraction so eta()'s arithmetic below stays
     # exact (a float operand anywhere in a Fraction expression converts the whole result to a lossy
-    # float - see CLAUDE.md's "Speed/distance are Fractions" note).
+    # float - see AGENTS.md's "Speed/distance are Fractions" note).
     env.acceleration_delta = Fraction(1)
     if wrapped:
         env = RailEnvStateMachineWrapper(env)

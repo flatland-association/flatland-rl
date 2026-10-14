@@ -931,7 +931,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             next_entry_point = agent.next_entry_point
             self._check_off_on_map_invariant(current_entry_point, next_entry_point)
             # SpeedCounter contract - see "Speed/distance are Fractions, and None while off map" in
-            # CLAUDE.md - position-derived, not state-machine-derived.
+            # AGENTS.md - position-derived, not state-machine-derived.
             assert (current_entry_point is None) == (agent.speed_counter.speed is None) == (agent.speed_counter.distance is None)
 
         self._verify_mutually_exclusive_resource_allocation()

@@ -400,7 +400,7 @@ class EnvAgent(Generic[EntryPointT]):
             # next_entry_point/speed_counter must be on-map-consistent too (see the
             # current_entry_point/next_entry_point invariant asserted in load_env_agent, and the
             # speed_counter contract in "Speed/distance are Fractions, and None while off map" in
-            # CLAUDE.md), rather than left at their off-map EnvAgent defaults (None/None). Only
+            # AGENTS.md), rather than left at their off-map EnvAgent defaults (None/None). Only
             # possible when a rail is given - callers without one (deprecated msgpack loaders) leave
             # this to a later step, same as target filtering below.
             next_entry_point = _first_successor_entry_point(rail, initial_entry_point) if rail is not None else None

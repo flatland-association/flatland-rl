@@ -66,6 +66,7 @@ runs:
                 # `gh gist create` rejects binary files outright, and the gists API's `content` field is
                 # text-only - so we go through git directly (a gist is just a git repo under the hood, which
                 # accepts binary content fine).
+                rm -rf gist_dir
                 git clone "https://gist.github.com/$GIST_ID.git" gist_dir
                 # Auth via a header (not a token embedded in the remote URL): gist.github.com redirects the
                 # clone/push URL (e.g. to add a trailing slash), and git drops URL-embedded credentials when
