@@ -68,7 +68,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         uses: ./.github/workflows/build-ci-env.yml
         with:
             python-version: ${{ matrix.python-version }}
@@ -80,7 +80,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         uses: ./.github/workflows/build-ci-env.yml
         with:
             python-version: ${{ matrix.python-version }}
@@ -95,7 +95,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
         # are baked into this image by build-ci-env-ml above - nothing left to install here.
         container:
@@ -126,7 +126,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         # All requirements-dev.txt/requirements-ml.txt deps (incl. scipy/dm-tree, already built from source)
         # are baked into this image by build-ci-env-ml above - nothing left to install here.
         container:
@@ -176,7 +176,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         uses: ./.github/workflows/run-ci-env-test.yml
         with:
             python-version: ${{ matrix.python-version }}
@@ -214,16 +214,12 @@ jobs:
     #   localhost/127.0.0.1 to satisfy the containerized-job networking model would be a behavior change for
     #   that interactive use too, not a CI-only config tweak, which is out of scope for a CI-time-reduction
     #   effort.
-    # - This job already carves out python-version 3.10 as "failing too often" (see the matrix below) - it's
-    #   an already-accepted soft spot in this workflow, not the main bottleneck this effort was aimed at.
     notebooks:
         runs-on: ubuntu-24.04
         strategy:
             fail-fast: false
             matrix:
-                python-version: [
-                  # "3.10", # commented out as failing too often
-                    "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Install ffmpeg
@@ -274,7 +270,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         # requirements-dev.txt (incl. scipy, already built from source) is baked into this image by
         # build-ci-env-default above - nothing left to install here. Same image as test (no Redis/other
         # service dependency here, so no networking wrinkle - see notebooks, which does have one and isn't
@@ -304,7 +300,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -360,7 +356,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -426,7 +422,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
@@ -486,7 +482,7 @@ jobs:
         strategy:
             fail-fast: false
             matrix:
-                python-version: [ "3.10", "3.11", "3.12", "3.13", "3.14" ]
+                python-version: [ "3.11", "3.12", "3.13", "3.14" ]
         steps:
             -   uses: actions/checkout@v6
             -   name: Set up Python ${{ matrix.python-version }}
