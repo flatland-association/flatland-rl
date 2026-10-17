@@ -36,7 +36,7 @@ dependencies = [
     "msgpack",
     "networkx<3.7", # pin as long as we support python 3.11 - 3.7 requires python>=3.12 https://pypi.org/project/networkx/3.7/
     "numpy<2.5", # pin as long as we support python 3.11 - 2.5 requires python>=3.12 https://pypi.org/project/numpy/2.5.0/
-    "pandas",
+    "pandas<3", # pin - pandas 3.0's new default string dtype passes NaN as a float (not the string "nan") through GraphTransitionMap.graph_entry_point_to_grid_entry_point's ast.literal_eval, breaking notebooks/graph_demo.ipynb; see https://github.com/flatland-association/flatland-rl/issues/487
     "Pillow",
     "pyglet",
     "pydantic",

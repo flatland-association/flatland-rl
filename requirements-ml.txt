@@ -311,7 +311,7 @@ packaging==26.3
     #   tensorboardx
     #   virtualenv
     #   wandb
-pandas==3.0.6
+pandas==2.3.3
     # via
     #   flatland-rl (pyproject.toml)
     #   ray
@@ -393,6 +393,8 @@ python-discovery==1.6.3
     # via virtualenv
 python-gitlab==8.6.0
     # via crowdai-api
+pytz==2026.5
+    # via pandas
 pyyaml==6.0.3
     # via
     #   flatland-rl (pyproject.toml)
@@ -504,6 +506,8 @@ typing-extensions==4.16.0
     #   wandb
 typing-inspection==0.4.4
     # via pydantic
+tzdata==2026.5
+    # via pandas
 urllib3==2.8.0
     # via
     #   botocore
