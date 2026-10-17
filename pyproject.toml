@@ -53,7 +53,6 @@ dependencies = [
     "timeout_decorator",
     "versions==1.6.1", # pin because of https://github.com/nekitdev/versions/issues/95
     "contourpy<1.4", # pin as long as we support python 3.11 - 1.4 requires python>=3.12 https://pypi.org/project/contourpy/1.4.0/
-    "rpds-py",
 ]
 dynamic = ["version"]
 

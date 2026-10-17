@@ -474,7 +474,6 @@ rfc3987-syntax==1.1.0
     # via jsonschema
 rpds-py==2026.9.1
     # via
-    #   flatland-rl (pyproject.toml)
     #   jsonschema
     #   referencing
 s3transfer==0.19.2
