@@ -35,7 +35,7 @@ dependencies = [
     "msgpack_numpy",
     "msgpack",
     "networkx<3.7", # pin as long as we support python 3.11 - 3.7 requires python>=3.12 https://pypi.org/project/networkx/3.7/
-    "numpy<2",
+    "numpy<2.5", # pin as long as we support python 3.11 - 2.5 requires python>=3.12 https://pypi.org/project/numpy/2.5.0/
     "pandas<3", # pin for now (peristence changed in v3).
     "Pillow",
     "pyglet",
@@ -52,7 +52,7 @@ dependencies = [
     "svgutils",
     "timeout_decorator",
     "versions==1.6.1", # pin because of https://github.com/nekitdev/versions/issues/95
-    "contourpy",
+    "contourpy<1.4", # pin as long as we support python 3.11 - 1.4 requires python>=3.12 https://pypi.org/project/contourpy/1.4.0/
     "rpds-py",
 ]
 dynamic = ["version"]
@@ -86,7 +86,7 @@ ml = [
     "ray[default,rllib]",
     "stable_baselines3",
     "supersuit<3.10.0", # pin because of bug: https://github.com/Farama-Foundation/SuperSuit/pull/258
-    "scipy",
+    "scipy<1.18", # pin as long as we support python 3.11 - 1.18 requires python>=3.12 https://pypi.org/project/scipy/1.18.0/
     "torch",
     "wandb",
 ]

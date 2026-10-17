@@ -206,7 +206,7 @@ networkx==3.6.1
     # via
     #   flatland-rl (pyproject.toml)
     #   torch
-numpy==1.26.4
+numpy==2.4.6
     # via
     #   contourpy
     #   dm-tree

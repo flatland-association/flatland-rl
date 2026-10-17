@@ -296,7 +296,7 @@ notebook-shim==0.2.4
     # via
     #   jupyterlab
     #   notebook
-numpy==1.26.4
+numpy==2.4.6
     # via
     #   contourpy
     #   flatland-rl (pyproject.toml)
@@ -308,7 +308,7 @@ numpy==1.26.4
     #   opencv-python
     #   pandas
     #   seaborn
-opencv-python==4.11.0.86
+opencv-python==5.0.0.93
     # via flatland-rl (pyproject.toml)
 orderings==1.6.0
     # via versions

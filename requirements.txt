@@ -94,7 +94,7 @@ named==1.4.2
     #   solus
 networkx==3.6.1
     # via flatland-rl (pyproject.toml)
-numpy==1.26.4
+numpy==2.4.6
     # via
     #   contourpy
     #   flatland-rl (pyproject.toml)
