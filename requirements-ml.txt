@@ -448,7 +448,7 @@ stable-baselines3==2.9.0
     # via flatland-rl (pyproject.toml)
 stack-data==0.6.3
     # via ipython
-supersuit==3.9.3
+supersuit==3.11.0
     # via flatland-rl (pyproject.toml)
 svgutils==0.3.4
     # via flatland-rl (pyproject.toml)

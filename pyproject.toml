@@ -84,7 +84,7 @@ ml = [
     "pettingzoo",
     "ray[default,rllib]",
     "stable_baselines3",
-    "supersuit<3.10.0", # pin because of bug: https://github.com/Farama-Foundation/SuperSuit/pull/258
+    "supersuit!=3.10.0", # 3.10.0 broke concat_vec_envs_v1, fixed in 3.11.0: https://github.com/Farama-Foundation/SuperSuit/pull/258
     "scipy<1.18", # pin as long as we support python 3.11 - 1.18 requires python>=3.12 https://pypi.org/project/scipy/1.18.0/
     "torch",
     "wandb",
