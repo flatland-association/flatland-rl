@@ -42,7 +42,7 @@ dependencies = [
     "pydantic",
     "python-dateutil",
     "PyYAML",
-    "redis<8", # pin as redis-py 8.0 defaults socket_timeout/socket_connect_timeout to 5s (was unbounded), breaking the indefinite blpop/brpop waits in evaluators/client.py and service.py with TimeoutError - see https://github.com/redis/redis-py/releases/tag/v8.0.0
+    "redis<8", # pin due to timeout errors (https://github.com/flatland-association/flatland-baselines/pull/62) - root cause: redis-py 8.0 defaults socket_timeout/socket_connect_timeout to 5s (was unbounded), breaking the indefinite blpop/brpop waits in evaluators/client.py and service.py with TimeoutError - see https://github.com/redis/redis-py/releases/tag/v8.0.0
     "requests",
     "recordtype",
     "redis",
