@@ -34,7 +34,7 @@ dependencies = [
     "matplotlib",
     "msgpack_numpy",
     "msgpack",
-    "networkx",
+    "networkx<3.7", # pin as long as we support python 3.11 - 3.7 requires python>=3.12 https://pypi.org/project/networkx/3.7/
     "numpy<2",
     "pandas<3", # pin for now (peristence changed in v3).
     "Pillow",

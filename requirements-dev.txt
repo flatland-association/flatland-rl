@@ -288,7 +288,7 @@ nbmake==1.5.5
     # via flatland-rl (pyproject.toml)
 nest-asyncio2==1.7.4
     # via ipykernel
-networkx==3.7
+networkx==3.6.1
     # via flatland-rl (pyproject.toml)
 notebook==7.6.3
     # via jupyter
@@ -339,7 +339,7 @@ parso==0.8.7
     # via jedi
 pexpect==4.9.0
     # via ipython
-pillow==12.3.0
+pillow==13.0.0
     # via
     #   flatland-rl (pyproject.toml)
     #   ipycanvas
