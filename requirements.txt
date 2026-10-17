@@ -106,7 +106,7 @@ orderings==1.6.0
     # via versions
 packaging==26.3
     # via matplotlib
-pandas==2.3.3
+pandas==3.0.6
     # via flatland-rl (pyproject.toml)
 parso==0.8.7
     # via jedi
@@ -145,8 +145,6 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-gitlab==8.6.0
     # via crowdai-api
-pytz==2026.5
-    # via pandas
 pyyaml==6.0.3
     # via flatland-rl (pyproject.toml)
 recordtype==1.4
@@ -201,8 +199,6 @@ typing-extensions==4.16.0
     #   versions
 typing-inspection==0.4.4
     # via pydantic
-tzdata==2026.5
-    # via pandas
 urllib3==2.8.0
     # via
     #   botocore
