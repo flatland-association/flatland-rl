@@ -19,6 +19,7 @@ References:
 - Nygren, E., Eichenberger, Ch., Frejinger, E. Scope Restriction for Scalable Real-Time Railway Rescheduling: An Exploratory Study. https://arxiv.org/abs/2305.03574
 """
 import ast
+import math
 from collections import defaultdict
 from functools import lru_cache
 from typing import Tuple, Optional, Set
@@ -160,7 +161,10 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
     @staticmethod
     @lru_cache
     def graph_entry_point_to_grid_entry_point(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
-        if s is None:
+        # pandas 3's default string dtype surfaces a missing entry to Series.map() as a raw float NaN
+        # (not None, which object-dtype columns passed) - see trajectories.py's normalize_position_read
+        # for the same guard against the same pandas behavior.
+        if s is None or (isinstance(s, float) and math.isnan(s)):
             return None
         r, c, d = ast.literal_eval(s)
         return ((r, c), d)
