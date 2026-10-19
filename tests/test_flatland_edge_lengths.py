@@ -422,3 +422,59 @@ def test_weighted_distance_map_recompute():
     grid_env.distance_map._compute(grid_env.agents, grid_env.rail)
     assert np.array_equal(grid_env.distance_map.get(), expected)
     assert np.isfinite(expected).any()
+
+
+def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=None, n_cells=5):
+    """ Single agent on map at the start of dead-end cell (0, 0), leaving east, target (0, n_cells - 1). """
+    from flatland.core.env_observation_builder import DummyObservationBuilder as _Dummy
+    rail, optionals = _straight_rail(n_cells)
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths=edge_lengths,
+                  obs_builder_object=obs_builder if obs_builder is not None else _Dummy())
+    env.reset()
+    agent = env.agents[0]
+    agent.initial_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
+    agent.current_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
+    agent.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point))
+    agent.targets = {((0, n_cells - 1), EAST)}
+    agent._set_state(TrainState.MOVING)
+    agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
+    agent.speed_counter.set(max_speed, Fraction(0), env.edge_length(agent.current_entry_point, agent.next_entry_point))
+    env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
+    env.obs_builder.reset(env)
+    return env
+
+
+@pytest.mark.parametrize("edge_lengths,expected_dist", [
+    (None, 4),
+    ({_edge(1): Fraction(3), _edge(2): Fraction(5, 2)}, 1 + 3 + Fraction(5, 2) + 1),
+])
+def test_tree_obs_distances_sum_edge_lengths(edge_lengths, expected_dist):
+    from flatland.envs.observations import TreeObsForRailEnv
+    from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+
+    env = _straight_env_with_agent(edge_lengths, obs_builder=TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv()))
+    obs = env.obs_builder.get_many([0])[0]
+    forward = obs.childs["F"]
+    assert forward.dist_own_target_encountered == expected_dist
+    assert forward.dist_to_next_branch == expected_dist
+    assert obs.dist_min_to_target == expected_dist
+    if edge_lengths is None:
+        assert isinstance(forward.dist_own_target_encountered, int)
+
+
+@pytest.mark.parametrize("max_speed,edge_lengths,expected_cols", [
+    (Fraction(1), None, [0, 1, 2, 3, 4, 4, 4, 4]),
+    (Fraction(1), {_edge(1): Fraction(3)}, [0, 1, 1, 1, 2, 3, 4, 4]),
+    (Fraction(1, 2), {_edge(1): Fraction(2)}, [0, 0, 1, 1, 1, 1, 2, 2]),
+    # overshoot carried over: 3/2 + 3/2 = 3 steps on the two long edges
+    (Fraction(1), {_edge(1): Fraction(3, 2), _edge(2): Fraction(3, 2)}, [0, 1, 1, 2, 3, 4, 4, 4]),
+])
+def test_shortest_path_predictor_with_edge_lengths(max_speed, edge_lengths, expected_cols):
+    from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+
+    env = _straight_env_with_agent(edge_lengths, max_speed=max_speed)
+    predictor = ShortestPathPredictorForRailEnv(max_depth=len(expected_cols) - 1)
+    predictor.reset(env)
+    prediction = predictor.get()[0]
+    assert [int(p[2]) for p in prediction] == expected_cols

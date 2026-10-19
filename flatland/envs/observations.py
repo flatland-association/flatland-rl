@@ -136,6 +136,9 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             [... from 'right] +
             [... from 'back']
 
+        Distances are sums of the lengths of the edges traversed (see `RailEnv.edge_lengths`), i.e. numbers of cells
+        if all edges have the default length 1.
+
         Each node information is composed of 9 features:
 
         #1:
@@ -240,7 +243,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 new_cell = get_new_position(agent_virtual_position, branch_direction)
 
                 branch_observation, branch_visited = \
-                    self._explore_branch(handle, new_cell, branch_direction, 1, 1)
+                    self._explore_branch(handle, new_cell, branch_direction,
+                                         self._edge_length((agent_virtual_position, agent_virtual_direction), (new_cell, branch_direction)), 1)
                 root_node_observation.childs[self.tree_explored_actions_char[i]] = branch_observation
 
                 visited |= branch_visited
@@ -250,6 +254,14 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         self.env.dev_obs_dict[handle] = visited
 
         return root_node_observation
+
+    def _edge_length(self, u, v):
+        """
+        Length of the edge `(u, v)` as float - plain int 1 if the env has no edge lengths (all edges of length 1).
+        """
+        if self.env.edge_lengths is None:
+            return 1
+        return float(self.env.edge_length(u, v))
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
@@ -277,8 +289,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         agent_target = next(iter(agent.targets))[0]
         distance_map_handle = self.env.distance_map.get()[handle]
 
-        # assume constant max_speed
-        time_per_cell = 1.0 / agent.speed_counter.max_speed
+        # assume constant max_speed - time to travel a unit of distance (a cell if all edges have length 1)
+        time_per_unit_distance = 1.0 / agent.speed_counter.max_speed
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
@@ -328,7 +340,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 crossing_found = True
 
             # Register possible future conflict
-            predicted_time = int(tot_dist * time_per_cell)
+            predicted_time = int(tot_dist * time_per_unit_distance)
             if self.predictor and predicted_time < self.max_prediction_depth:
                 int_position = coordinate_to_position(self.env.width, [position])
                 if tot_dist < self.max_prediction_depth:
@@ -409,10 +421,11 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                     # Keep walking through the tree along `direction`
                     exploring = True
                     # convert one-hot encoding to 0,1,2,3
+                    previous_entry_point = (position, direction)
                     direction = fast_argmax(cell_transitions)
                     position = get_new_position(position, direction)
                     num_steps += 1
-                    tot_dist += 1
+                    tot_dist += self._edge_length(previous_entry_point, (position, direction))
             elif num_transitions > 0:
                 # Switch detected
                 last_is_switch = True
@@ -470,7 +483,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 branch_observation, branch_visited = self._explore_branch(handle,
                                                                           new_cell,
                                                                           (branch_direction + 2) % 4,
-                                                                          tot_dist + 1,
+                                                                          tot_dist + self._edge_length(
+                                                                              (position, direction), (new_cell, (branch_direction + 2) % 4)),
                                                                           depth + 1)
                 node.childs[self.tree_explored_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:
@@ -480,7 +494,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 branch_observation, branch_visited = self._explore_branch(handle,
                                                                           new_cell,
                                                                           branch_direction,
-                                                                          tot_dist + 1,
+                                                                          tot_dist + self._edge_length((position, direction), (new_cell, branch_direction)),
                                                                           depth + 1)
                 node.childs[self.tree_explored_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:
