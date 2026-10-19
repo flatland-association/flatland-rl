@@ -13,7 +13,7 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.step_utils.speed_counter import SpeedCounter, SEGMENT_LENGTH
+from flatland.envs.step_utils.speed_counter import SpeedCounter, DEFAULT_EDGE_LENGTH
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
@@ -302,10 +302,10 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     """
     A single agent on the smallest possible corridor (2 cells: start, and target immediately next to
     it) reaching its target with `remove_agents_at_target=False` - `distance` always ends up at exactly
-    `SEGMENT_LENGTH`, discarding `expected_excess` momentum in the process (see
+    `DEFAULT_EDGE_LENGTH`, discarding `expected_excess` momentum in the process (see
     `_make_straight_rail`/`SpeedCounter.distance_without_crossing`'s docstrings for why).
 
-    Note `distance == SEGMENT_LENGTH` alone is true of *any* target arrival (exact-fit or excess) and
+    Note `distance == DEFAULT_EDGE_LENGTH` alone is true of *any* target arrival (exact-fit or excess) and
     stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a now-frozen speed=0)
     - it does not distinguish these cases from each other. What actually varies between them, and is
     what these parametrizations are for, is `expected_excess` - checked below from the last pre-step
@@ -313,13 +313,13 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
 
     - exact_fit-default_speed: max_speed=1 (the common default). Step 0 is the agent's own departure
       settling step (distance deferred at 0, speed ramps 0 -> 1); step 1 already has pre_distance=0,
-      pre_speed=1, so it crosses directly into the target with zero excess (sum == SEGMENT_LENGTH
+      pre_speed=1, so it crosses directly into the target with zero excess (sum == DEFAULT_EDGE_LENGTH
       exactly).
-    - exact_fit-fractional_speed: max_speed=1/2 evenly divides SEGMENT_LENGTH. Step 0 settles (distance
+    - exact_fit-fractional_speed: max_speed=1/2 evenly divides DEFAULT_EDGE_LENGTH. Step 0 settles (distance
       0, speed ramps to 1/2); step 1 advances mid-cell to distance=1/2 (pre_distance=0, pre_speed=1/2,
       sum=1/2, no crossing yet); step 2 crosses into the target with pre_distance=1/2, pre_speed=1/2,
       sum=1 exactly - zero excess again, purely because 1/2 divides 1.
-    - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide SEGMENT_LENGTH. Step 0
+    - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide DEFAULT_EDGE_LENGTH. Step 0
       settles (speed ramps to 3/4); step 1 advances to distance=3/4 (sum=3/4, no crossing yet); step 2
       crosses into the target with pre_distance=3/4, pre_speed=3/4, sum=3/2 - an excess of 1/2 gets
       silently discarded by the cap, with no prior blocking/banking involved at all.
@@ -343,16 +343,16 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
 
     _, final_pre_distance, final_pre_speed = configurations[-1]
     assert agent.current_entry_point in agent.targets
-    assert agent.speed_counter.distance == SEGMENT_LENGTH
-    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(final_pre_distance, final_pre_speed)
-    assert (final_pre_distance + final_pre_speed) == (SEGMENT_LENGTH + expected_excess)
+    assert agent.speed_counter.distance == DEFAULT_EDGE_LENGTH
+    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(final_pre_distance, final_pre_speed, DEFAULT_EDGE_LENGTH)
+    assert (final_pre_distance + final_pre_speed) == (DEFAULT_EDGE_LENGTH + expected_excess)
 
 
 def test_distance_without_crossing_reaches_segment_length_on_target_banked_restart():
     """
     The one case that *does* need prior blocking: max_speed=1 would otherwise never produce excess (see
     exact_fit-default_speed above) - what makes this different is that the agent's distance is already
-    banked at SEGMENT_LENGTH (from an earlier, real resource_check denial) by the time it makes its
+    banked at DEFAULT_EDGE_LENGTH (from an earlier, real resource_check denial) by the time it makes its
     successful attempt, rather than arriving mid-cell.
 
     Why 2 agents: with max_speed=1, banking needs a denied crossing - either an invalid action or a
@@ -379,7 +379,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
       stays at its banked value of 1, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
     - step 4: agent 0's pre_speed is now 1 again, with pre_distance still 1 (banked) - its real
       crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=1,
-      pre_speed=1, sum=2 - a full SEGMENT_LENGTH of momentum discarded by the cap.
+      pre_speed=1, sum=2 - a full DEFAULT_EDGE_LENGTH of momentum discarded by the cap.
     """
     rail, optionals = _make_straight_rail(3)
     env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -417,18 +417,18 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
         pre_step_distance_speed = (agent0.speed_counter.distance, agent0.speed_counter.speed)
         env.step({0: actions0[step], 1: actions1[step]})
 
-    # design: distance == SEGMENT_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
+    # design: distance == DEFAULT_EDGE_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
     # or excess, and stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a
     # now-frozen speed=0) - it does not by itself distinguish this banked-restart case from an ordinary
     # exact-fit one. What is actually specific to this case is the pre-step sum on the final (granted)
-    # crossing attempt: pre_distance(1, banked) + pre_speed(1, ramped) == 2, a full SEGMENT_LENGTH of excess
+    # crossing attempt: pre_distance(1, banked) + pre_speed(1, ramped) == 2, a full DEFAULT_EDGE_LENGTH of excess
     # momentum silently discarded by the cap - captured here from the last iteration's pre-step values.
-    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == SEGMENT_LENGTH + Fraction(1)
+    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == DEFAULT_EDGE_LENGTH + Fraction(1)
 
     assert agent0.current_entry_point in agent0.targets
-    assert agent0.speed_counter.distance == SEGMENT_LENGTH
+    assert agent0.speed_counter.distance == DEFAULT_EDGE_LENGTH
     assert agent0.state == TrainState.DONE
     # agent 1 completed its own (non-excess, exact-fit) crossing along the way
     assert agent1.current_entry_point in agent1.targets
-    assert agent1.speed_counter.distance == SEGMENT_LENGTH
+    assert agent1.speed_counter.distance == DEFAULT_EDGE_LENGTH
     assert agent1.state == TrainState.DONE

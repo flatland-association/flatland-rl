@@ -68,6 +68,8 @@ class AgentSourceTargetDistanceMap(
         Computes the distance maps for each unique target. Thus, if several targets are the same we only
         compute the distance for them once and copy to all agents with the same target.
         """
+        # TODO https://github.com/flatland-association/flatland-rl/issues/526 distances count edges (each of length 1),
+        #  ignoring `AbstractRailEnv.edge_length()` - take edge lengths into account here and in `eta()`.
         self.agents_previous_computation = self.agents
         self.distance_map = self._new_distance_map(len(agents))
         distance_map_walker = DistanceMapWalker(self)

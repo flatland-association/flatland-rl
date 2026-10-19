@@ -27,7 +27,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties
-from flatland.envs.step_utils.speed_counter import SEGMENT_LENGTH, SpeedCounter, _cap_speed
+from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, SpeedCounter, _cap_speed
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool
@@ -744,7 +744,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == -1 * Fraction(1, 2) * COLLISION_FACTOR
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # design: distance is already banked at the boundary (SEGMENT_LENGTH), so is_cell_exit() reads
+    # design: distance is already banked at the boundary (DEFAULT_EDGE_LENGTH), so is_cell_exit() reads
     # False at speed 0 (see design_by_contract.md) - a STOPPED agent given a moving action is always
     # optimistically promoted back to MOVING, regardless of whether that action (MOVE_FORWARD's
     # straight-through look-ahead) is itself structurally valid here. Distance stays banked at the
@@ -819,6 +819,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     # off_map alone (see step()'s own comment) - cell_exit/target_reached/etc. are never needed
     # off-map by any of the 3 candidate_ methods' branch logic.
     off_map = current_entry_point is None
+    edge_length = None if off_map else env.edge_length(current_entry_point, next_entry_point)
     transition_invalid = candidate_entry_point_independent is None
     if off_map:
         cell_exit = False
@@ -826,7 +827,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
         action_invalid_on_rail = False
         invalid_action_at_cell_exit = False
     else:
-        cell_exit = speed is not None and speed > 0 and distance + speed >= SEGMENT_LENGTH
+        cell_exit = speed is not None and speed > 0 and distance + speed >= edge_length
         target_reached = cell_exit and next_entry_point in agent.targets
         action_invalid_on_rail = transition_invalid
         invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -847,7 +848,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     resource_check = env.temp_transition_data[agent.handle].resource_check
     if not resource_check:
         expected_speed = None if current_entry_point is None else Fraction(0)
-        expected_distance = SpeedCounter.distance_without_crossing(distance, speed)
+        expected_distance = SpeedCounter.distance_without_crossing(distance, speed, edge_length)
     else:
         expected_distance = env._candidate_distance(
             speed=speed,
@@ -858,6 +859,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
             off_map=off_map, target_reached=target_reached,
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             stopped=(speed == 0), stay_off_map=stay_off_map,
+            edge_length=edge_length,
         )
         if env.remove_agents_at_target and (done or candidate_entry_point in agent.targets):
             expected_speed = None
@@ -1735,8 +1737,8 @@ def test_action_required_at_full_segment_length(with_malfunction):
     Single agent departs at (2,3) heading WEST towards a symmetric switch at (2,1) whose only valid
     exits are north/south - continuing MOVE_FORWARD (straight through) is invalid there, so the agent
     is force-stopped one cell short, banked exactly at the (2,2) cell boundary: distance ==
-    SEGMENT_LENGTH (1), speed == 0. Design: for an on-map state, info['action_required'] depends purely
-    on SpeedCounter.is_cell_exit() (speed > 0 and distance + speed >= SEGMENT_LENGTH - see
+    DEFAULT_EDGE_LENGTH (1), speed == 0. Design: for an on-map state, info['action_required'] depends purely
+    on SpeedCounter.is_cell_exit() (speed > 0 and distance + speed >= DEFAULT_EDGE_LENGTH - see
     design_by_contract.md), not on which on-map state (MOVING/STOPPED/MALFUNCTION) the agent is
     actually in - is_cell_exit() (and so action_required) reads False for any agent parked at speed 0,
     even one banked exactly at the boundary by distance alone, whether or not it also happens to be

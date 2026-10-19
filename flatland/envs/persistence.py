@@ -50,6 +50,13 @@ class _LegacyCompatUnpickler(pickle.Unpickler):
         return super().find_class(module, name)
 
 
+def _to_tuple(x):
+    """Recursively convert (msgpack-deserialized) lists back to tuples."""
+    if isinstance(x, (list, tuple)):
+        return tuple(_to_tuple(e) for e in x)
+    return x
+
+
 def _serialize_agent(agent: EnvAgent) -> Agent:
     """
     `EnvAgent.to_agent()` puts a raw `set` in `targets`, which is unhashable to any `flatland-rl` older than
@@ -359,6 +366,9 @@ class RailEnvPersister(object):
         if "stations_links" in env_dict:
             env.stations_links = env_dict["stations_links"]
 
+        # msgpack round-trips tuples as lists - restore the ((r, c), d) entry point tuples used as keys
+        env.edge_lengths = {(_to_tuple(u), _to_tuple(v)): length for u, v, length in env_dict.get("edge_lengths", None) or []}
+
     @classmethod
     def _apply_effects_generator(cls, env_dict: dict):
         # new format takes precedence: if the full effects_generator state was saved, that alone is authoritative
@@ -431,6 +441,9 @@ class RailEnvPersister(object):
         }
         if hasattr(env, "stations_links"):
             msg_data_dict["stations_links"] = env.stations_links
+        if getattr(env, "edge_lengths", None):
+            # list of (u, v, length) triples, as msgpack cannot persist tuple keys
+            msg_data_dict["edge_lengths"] = [(u, v, length) for (u, v), length in env.edge_lengths.items()]
         return msg_data_dict
 
     ################################################################################################

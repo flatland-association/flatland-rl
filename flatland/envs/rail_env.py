@@ -31,7 +31,8 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed, cached_cell_exit, SpeedCounter, ZERO_FRACTION
+from flatland.envs.step_utils.speed_counter import _cap_speed, cached_cell_exit, SpeedCounter, ZERO_FRACTION, DEFAULT_EDGE_LENGTH, \
+    validated_edge_length
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils import seeding
 
@@ -312,10 +313,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
           of anything else.
         - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
         - MOVING / STOPPED / MALFUNCTION (on map): collapses to `is_cell_entry` alone (speed > 0 and
-          distance + speed >= SEGMENT_LENGTH - see design_by_contract.md) - identical for all three
+          distance + speed >= edge_length - see design_by_contract.md) - identical for all three
           on-map states, with no special case for MALFUNCTION. Since this requires speed > 0, it reads
           False for any on-map agent parked at speed 0, regardless of distance - including a
-          STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance == SEGMENT_LENGTH, e.g.
+          STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance == edge_length, e.g.
           after a denied crossing). This makes "malfunctioning agents never need an action" a
           state-level guarantee - a malfunctioning agent's speed is always forced to 0, so this branch
           is always False throughout any malfunction, on map or off - see
@@ -614,6 +615,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # (collected_is_cell_exit) - both now go through SpeedCounter.cached_cell_exit(), the single
         # shared implementation, not an independent reimplementation.
         off_map = agent.current_entry_point is None
+        # length of the edge (current_entry_point -> next_entry_point) the agent is on, None off map.
+        edge_length = None if off_map else self.edge_length(agent.current_entry_point, agent.next_entry_point)
         transition_invalid = candidate_entry_point_independent is None
         # The off_map branch below is a fast-path equivalent to cached_cell_exit(agent_max_speed, None,
         # None) (which also returns True off-map) - skipping the call entirely, not diverging from it,
@@ -636,7 +639,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             action_invalid_on_rail = False
             invalid_action_at_cell_exit = False
         else:
-            cell_exit = cached_cell_exit(agent_max_speed, speed, distance)
+            cell_exit = cached_cell_exit(agent_max_speed, speed, distance, edge_length)
             target_reached = cell_exit and agent.next_entry_point in agent_targets
             action_invalid_on_rail = transition_invalid
             invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -691,6 +694,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
             stopped=stopped,
             stay_off_map=stay_off_map,
+            edge_length=edge_length,
         )
 
         if self.check_step_pre_post_conditions:
@@ -724,6 +728,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
 
         agent_transition_data.speed = speed
         agent_transition_data.distance = distance
+        agent_transition_data.edge_length = edge_length
         agent_transition_data.is_cell_exit = collected_is_cell_exit
         # the distribute phase re-reads this same agent.target_entry_point is not None check (before
         # handle_done_state() can change it for this agent) - stored here instead of recomputed there.
@@ -821,8 +826,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # above) - identical to agent_transition_data.distance/.speed, already stored by the
             # collect phase.
             new_distance = SpeedCounter.distance_without_crossing(
-                agent_transition_data.distance, agent_transition_data.speed)
-            agent.speed_counter.set(new_speed, new_distance)
+                agent_transition_data.distance, agent_transition_data.speed, agent_transition_data.edge_length)
+            # candidate discarded -> agent stays on the same edge
+            agent.speed_counter.set(new_speed, new_distance, agent_transition_data.edge_length)
         else:
             # candidates accepted - distance is exactly candidate_distance in every case (already
             # None for "removed at target"/"stayed off map", see _candidate_distance's own
@@ -836,7 +842,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 new_speed = None
             else:
                 new_speed = agent_transition_data.candidate_speed
-            agent.speed_counter.set(new_speed, new_distance)
+            # candidate accepted -> agent is now on edge (candidate_entry_point, candidate_next_entry_point), or off map.
+            new_edge_length = None if new_distance is None else self.edge_length(
+                agent.current_entry_point, agent.next_entry_point)
+            agent.speed_counter.set(new_speed, new_distance, new_edge_length)
 
         # (14) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
         self.handle_done_state(agent)
@@ -933,6 +942,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # SpeedCounter contract - see "Speed/distance are Fractions, and None while off map" in
             # AGENTS.md - position-derived, not state-machine-derived.
             assert (current_entry_point is None) == (agent.speed_counter.speed is None) == (agent.speed_counter.distance is None)
+            # the speed counter tracks the length of the edge the agent is currently on
+            if current_entry_point is not None:
+                assert agent.speed_counter.edge_length == self.edge_length(current_entry_point, next_entry_point), \
+                    (agent.speed_counter.edge_length, self.edge_length(current_entry_point, next_entry_point))
 
         self._verify_mutually_exclusive_resource_allocation()
 
@@ -1007,6 +1020,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             next_entry_point = snap.next_entry_point
             candidate_entry_point_independent = pre_step.candidate_entry_point_independents[h]
             off_map = current_entry_point is None
+            edge_length = None if off_map else self.edge_length(current_entry_point, next_entry_point)
             transition_invalid = candidate_entry_point_independent is None
             # see collect()'s own comment for why this is gated on off_map alone, and for
             # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
@@ -1016,7 +1030,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 action_invalid_on_rail = False
                 invalid_action_at_cell_exit = False
             else:
-                cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
+                cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance, edge_length)
                 target_reached = cell_exit and next_entry_point in agent.targets
                 action_invalid_on_rail = transition_invalid
                 invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1328,10 +1342,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             target_reached: bool,
                             invalid_action_at_cell_exit: bool,
                             stopped: bool,
-                            stay_off_map: bool) -> Optional[Fraction]:
+                            stay_off_map: bool,
+                            edge_length: Optional[Fraction]) -> Optional[Fraction]:
         """
         The (optimistic) candidate distance of collect phase
-        (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by segment length)
+        (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by edge length)
         to be accepted/rejected by resource check in distribute phase.
 
         Each branch's condition below is self-contained: it explicitly excludes every other branch
@@ -1342,7 +1357,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         rail_env.py's collect() for their shared definitions. Unlike _candidate_entry_points, this
         method never reads cell_exit itself (only the already-derived target_reached/
         invalid_action_at_cell_exit that are computed from it) - see design_by_contract.md's
-        cell_exit row. Note this narrows the lru_cache key from the
+        cell_exit row. edge_length is the length of the edge (current entry point -> next entry point)
+        the agent is on pre-step (None off map), passed on to the SpeedCounter distance formulas. Note this narrows the lru_cache key from the
         original (which included current_entry_point/next_entry_point/candidate_entry_point/
         candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
         booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
@@ -1386,14 +1402,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # every condition below is already fully self-contained (see above).
         # done
         if done:
-            return SpeedCounter.distance_without_crossing(distance, speed)
+            return SpeedCounter.distance_without_crossing(distance, speed, edge_length)
         # stay off map
         if off_map and stay_off_map and not done and not target_reached and not in_malfunction:
             return None
         #  keep moving mid-cell
         if (not stopped and not done and not target_reached and not off_map and not in_malfunction
             and not invalid_action_at_cell_exit):
-            return SpeedCounter.distance_after_crossing(distance, speed)
+            return SpeedCounter.distance_after_crossing(distance, speed, edge_length)
         # stopped
         if (stopped and not done and not target_reached and not off_map and not in_malfunction
             and not invalid_action_at_cell_exit):
@@ -1408,7 +1424,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if target_reached and not done:
             if remove_agents_at_target:
                 return None
-            return SpeedCounter.distance_without_crossing(distance, speed)
+            return SpeedCounter.distance_without_crossing(distance, speed, edge_length)
         # invalid action at cell exit
         if (invalid_action_at_cell_exit and not done and not target_reached and not in_malfunction
             and not off_map):
@@ -1416,7 +1432,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
             # branch, and (13)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
             # boundary, it just isn't credited with crossing it.
-            return SpeedCounter.distance_without_crossing(distance, speed)
+            return SpeedCounter.distance_without_crossing(distance, speed, edge_length)
         raise ValueError("no _candidate_distance branch matched - branches are exhaustive by construction")
 
     def _check_speed_distance_speedup_postconditions(self, action_dict: Dict[int, RailEnvActions],
@@ -1436,7 +1452,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # off map pre-step)
             if not self.temp_transition_data[h].resource_check:
                 assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
-                    snap.distance, speed)
+                    snap.distance, speed,
+                    None if snap.current_entry_point is None else self.edge_length(snap.current_entry_point, snap.next_entry_point))
 
             # candidates accepted in distribute phase
             else:
@@ -1450,6 +1467,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 done = snap.done
                 in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
+                edge_length = None if off_map else self.edge_length(current_entry_point, next_entry_point)
                 transition_invalid = candidate_entry_point_independent is None
                 # see collect()'s own comment for why this is gated on off_map alone, and for
                 # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
@@ -1459,7 +1477,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     action_invalid_on_rail = False
                     invalid_action_at_cell_exit = False
                 else:
-                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
+                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance, edge_length)
                     target_reached = cell_exit and next_entry_point in agent.targets
                     action_invalid_on_rail = transition_invalid
                     invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1491,6 +1509,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     invalid_action_at_cell_exit=invalid_action_at_cell_exit,
                     stopped=(speed == 0),
                     stay_off_map=(candidate_entry_point is None),
+                    edge_length=edge_length,
                 )
 
         # speed update postcondition
@@ -1517,6 +1536,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 done = snap.done
                 in_malfunction = snap.in_malfunction
                 off_map = current_entry_point is None
+                edge_length = None if off_map else self.edge_length(current_entry_point, next_entry_point)
                 transition_invalid = candidate_entry_point_independent is None
                 # see collect()'s own comment for why this is gated on off_map alone, and for
                 # cached_cell_exit's shared off-map convention (True, matching is_cell_exit()).
@@ -1526,7 +1546,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                     action_invalid_on_rail = False
                     invalid_action_at_cell_exit = False
                 else:
-                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance)
+                    cell_exit = cached_cell_exit(agent.speed_counter.max_speed, speed, distance, edge_length)
                     target_reached = cell_exit and next_entry_point in agent.targets
                     action_invalid_on_rail = transition_invalid
                     invalid_action_at_cell_exit = action_invalid_on_rail and cell_exit
@@ -1573,6 +1593,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def _infrastructure_representation(self, entry_point: EntryPointT) -> str:
         raise NotImplementedError()
 
+    def edge_length(self, u: EntryPointT, v: EntryPointT) -> Fraction:
+        """
+        Length of the edge from entry point `u` to its successor entry point `v` (at least `MIN_EDGE_LENGTH`).
+        An agent on the map is always on the edge `(current_entry_point, next_entry_point)` and needs to
+        travel this distance before crossing into the next edge.
+        """
+        raise NotImplementedError()
+
     def _get_observations(self):
         """
         Utility which returns the dictionary of observations for an agent with respect to environment
@@ -1611,7 +1639,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                  braking_delta=-1.0,
                  check_step_pre_post_conditions: bool = True,
                  rewards: Rewards = None,
-                 effects_generator: EffectsGenerator["RailEnv"] = None
+                 effects_generator: EffectsGenerator["RailEnv"] = None,
+                 edge_lengths: Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]] = None,
                  ):
         """
         All parameters from parent `AbstractRailEnv`. Classic grid rail env, called rail env tout court for continuity.
@@ -1624,9 +1653,15 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
         height : int
             The height of the rail map. Potentially in the future,
             a range of heights to sample from.
+        edge_lengths : Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]
+            Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
+            `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
+            when leaving it with heading `d2`. Must be at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
+            length `DEFAULT_EDGE_LENGTH` (1).
         """
         self.width = width
         self.height = height
+        self.edge_lengths = edge_lengths
 
         super().__init__(
             rail_generator=rail_generator,
@@ -1709,6 +1744,20 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
 
     def _infrastructure_representation(self, entry_point: Tuple[Tuple[int, int], int]) -> str:
         return RailEnvTransitionsEnum(self.rail.get_full_transitions(*entry_point[0])).name
+
+    @property
+    def edge_lengths(self) -> Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]:
+        return self._edge_lengths
+
+    @edge_lengths.setter
+    def edge_lengths(self, edge_lengths: Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]):
+        # empty map normalized to None for edge_length()'s fast path
+        self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
+
+    def edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Fraction:
+        if self._edge_lengths is None:
+            return DEFAULT_EDGE_LENGTH
+        return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
 
     def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         agents = EnvAgent.from_line(line)

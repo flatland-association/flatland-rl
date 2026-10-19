@@ -19,6 +19,8 @@ class DecisionPointGraphEdgeData:
         The list of collapsed cells, starting on a facing switch (e.g. where a decision has been taken upon entering).
     len: int
         Number of collapsed cells.
+        TODO https://github.com/flatland-association/flatland-rl/issues/526 sum up the collapsed edges' `length`
+         attributes instead (see `GraphRailEnv.edge_length()`).
 
     """
     path = attrib(type=List[GridNode])
