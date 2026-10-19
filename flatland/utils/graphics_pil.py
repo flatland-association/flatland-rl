@@ -674,6 +674,21 @@ class PILSVG(PILGL):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
         self.draw_image_row_col(occupied_im, (row, col), 1)
 
+    def set_agent_progress(self, agent_idx, row, col, progress):
+        """
+        Progress bar along the bottom of cell (row, col): outlined over the full cell width, filled in the agent's
+        color up to `progress` (fraction in [0, 1]) of it.
+        """
+        x0 = col * self.nPixCell + 0.1 * self.nPixCell
+        width = 0.8 * self.nPixCell
+        y0 = row * self.nPixCell + 0.82 * self.nPixCell
+        y1 = row * self.nPixCell + 0.92 * self.nPixCell
+        draw = self.draws[PILGL.AGENT_LAYER]
+        draw.rectangle([(x0, y0), (x0 + width, y1)], fill=(255, 255, 255, 200), outline=(0, 0, 0, 255))
+        if progress > 0:
+            draw.rectangle([(x0, y0), (x0 + progress * width, y1)], fill=self.get_agent_color(agent_idx) + (255,),
+                           outline=(0, 0, 0, 255))
+
     def draw_malfunction(self, agent_idx, rcTopLeft):
         # Roughly an "X" shape to indicate malfunction
         grcOffsets = np.array([[0, 0], [1, 1], [1, 0], [0, 1]])

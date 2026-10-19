@@ -432,6 +432,7 @@ def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=No
                   line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths=edge_lengths,
                   obs_builder_object=obs_builder if obs_builder is not None else _Dummy())
     env.reset()
+    env._max_episode_steps = 1000
     agent = env.agents[0]
     agent.initial_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
     agent.current_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
@@ -478,3 +479,38 @@ def test_shortest_path_predictor_with_edge_lengths(max_speed, edge_lengths, expe
     predictor.reset(env)
     prediction = predictor.get()[0]
     assert [int(p[2]) for p in prediction] == expected_cols
+
+
+def test_render_agent_progress():
+    from flatland.utils.rendertools import RenderTool, RenderLocal
+
+    env = _straight_env_with_agent({_edge(1): Fraction(3)})
+    agent = env.agents[0]
+    env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert agent.current_entry_point == ((0, 1), EAST)
+
+    plain = RenderTool(env, gl="PILSVG")
+    with_progress = RenderTool(env, gl="PILSVG", show_agent_progress=True)
+    gl = with_progress.renderer.gl
+    n_pix = gl.nPixCell
+    color = np.array(gl.get_agent_color(0))
+    bar_row = int(0.87 * n_pix)
+
+    def filled(img, col):
+        row = img[bar_row, col * n_pix:(col + 1) * n_pix, :3]
+        return int(np.all(row == color, axis=1).sum())
+
+    widths = []
+    for expected_distance in [Fraction(0), Fraction(1), Fraction(2)]:
+        assert agent.speed_counter.distance == expected_distance
+        assert RenderLocal._agent_progress(agent) == pytest.approx(float(expected_distance / 3))
+        img_plain = plain.render_env(show=False, show_observations=False, return_image=True)
+        img = with_progress.render_env(show=False, show_observations=False, return_image=True)
+        widths.append(filled(img, 1))
+        # default rendering unaffected: no bar drawn
+        assert filled(img_plain, 1) == 0
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+    assert widths[0] == 0
+    # bar is 0.8 of the cell width: 1/3 resp. 2/3 of it filled (up to pixel rounding and outline)
+    assert widths[1] == pytest.approx(0.8 * n_pix / 3, abs=3)
+    assert widths[2] == pytest.approx(2 * 0.8 * n_pix / 3, abs=3)

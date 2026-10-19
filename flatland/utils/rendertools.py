@@ -32,7 +32,17 @@ class RenderTool(object):
     def __init__(self, env, gl="PGL", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
                  show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
-                 host="localhost", port=None):
+                 host="localhost", port=None, show_agent_progress=False):
+        """
+        Parameters
+        ----------
+        show_agent_progress : bool
+            draw a progress bar at the bottom of each on-map agent's (actual, current) cell - also with the
+            ONE_STEP_BEHIND variants, which draw the agent itself in its previous cell -, showing how far the agent has travelled
+            along its current edge (`speed_counter.distance / speed_counter.edge_length`) - useful for slow agents
+            and long edges (see `RailEnv.edge_lengths`), where an agent stays in the same cell for several steps.
+            Only supported by the "PILSVG"/"PGL" renderers.
+        """
 
         self.env = env
         self.frame_nr = 0
@@ -44,7 +54,8 @@ class RenderTool(object):
         if gl in ["PIL", "PILSVG", "PGL"]:
             self.renderer = RenderLocal(env, gl, jupyter,
                  agent_render_variant,
-                 show_debug, clear_debug_text, screen_width, screen_height)
+                 show_debug, clear_debug_text, screen_width, screen_height,
+                 show_agent_progress=show_agent_progress)
             self.gl = self.renderer.gl
         else:
             print("[", gl, "] not found, switch to PGL")
@@ -144,7 +155,8 @@ class RenderLocal(RenderBase):
 
     def __init__(self, env, gl: GraphicsLayer = "PILSVG", jupyter=False,
                  agent_render_variant=AgentRenderVariant.ONE_STEP_BEHIND,
-                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600):
+                 show_debug=False, clear_debug_text=True, screen_width=800, screen_height=600,
+                 show_agent_progress=False):
 
         self.env = env
         self.frame_nr = 0
@@ -168,6 +180,7 @@ class RenderLocal(RenderBase):
         self.new_rail = True
         self.show_debug = show_debug
         self.clear_debug_text = clear_debug_text
+        self.show_agent_progress = show_agent_progress
         self.update_background()
 
     def reset(self):
@@ -633,6 +646,16 @@ class RenderLocal(RenderBase):
             return self.get_image()
         return
 
+    @staticmethod
+    def _agent_progress(agent) -> float:
+        """
+        Fraction in [0, 1] of the current edge (current entry point -> next entry point) the on-map agent has travelled.
+        """
+        edge_length = agent.speed_counter.edge_length
+        if not edge_length:
+            return 0.0
+        return float(min(max(agent.speed_counter.distance / edge_length, 0), 1))
+
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
         show_agents=True, show_inactive_agents=False, show_rowcols=False, return_image=False
@@ -759,6 +782,9 @@ class RenderLocal(RenderBase):
                         self.gl.set_agent_at(agent_idx, *position, agent.current_entry_point[1], direction,
                                         selected_agent == agent_idx,
                                         rail_grid=env.rail.grid, malfunction=is_malfunction)
+
+                if self.show_agent_progress and agent.speed_counter.distance is not None:
+                    self.gl.set_agent_progress(agent_idx, *agent_position, self._agent_progress(agent))
 
         if show_observations:
             self.render_observation(range(env.get_num_agents()), env.dev_obs_dict)
