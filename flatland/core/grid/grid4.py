@@ -239,6 +239,9 @@ class Grid4Transitions(Transitions[np.uint16, int, bool]):
             `orientation`.
 
         """
+        # cast to plain Python int: numpy>=2 raises OverflowError when AND-ing a numpy-width integer
+        # (e.g. uint16) with the negative Python int that `~(1 << shift)` produces.
+        cell_transition = int(cell_transition)
         if new_transition:
             cell_transition |= (1 << ((4 - 1 - orientation) * 4 + (4 - 1 - direction)))
         else:
