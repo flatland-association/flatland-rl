@@ -35,6 +35,7 @@ class TrajectoryEvaluator:
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
         shifted_malfunction: bool = False,
         shifted_off_map_speed: bool = False,
+        skip_state_machine_update: bool = True,
     ) -> RailEnv:
         """
          Parameters
@@ -65,11 +66,14 @@ class TrajectoryEvaluator:
             recorded episodes predate `SpeedCounter` speed being None while off map - while an agent is
             off map (freshly computed info's `speed` is None), ignore the recorded info's `speed`
             (pinned at the agent's max_speed under the old convention).
+        skip_state_machine_update : bool
+            forwarded to `Trajectory.load_env`. Defaults to `True` (unwrapped, see `RailEnvStateMachineWrapper`).
         """
         if tqdm_kwargs is None:
             tqdm_kwargs = {}
 
-        env = self.trajectory.load_env(start_step=start_step, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+        env = self.trajectory.load_env(start_step=start_step, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                       skip_state_machine_update=skip_state_machine_update)
         if start_step is None:
             start_step = 0
         if end_step is None:

@@ -325,3 +325,80 @@ def test_env_path_and_obs_builder():
         env, _ = RailEnvPersister.load_new(str(data_dir / SERIALISED_STATE_SUBDIR / f"dummy.pkl"))
         actual = random_state_to_hashablestate(env.np_random)
         assert actual == expected
+
+
+class StateMachineRecordingCallbacks(FlatlandCallbacks):
+    """Records whether the env stepped by `PolicyRunner` is wrapped and has its state machine updated."""
+    recorded: List[Dict[str, Any]] = []
+
+    def on_episode_end(self, *, env: Optional[RailEnv] = None, **kwargs) -> None:
+        StateMachineRecordingCallbacks.recorded.append({
+            "skip_state_machine_update": getattr(env, "skip_state_machine_update", True),
+            "state_machine_live": any(agent.state_machine.is_live for agent in env.agents),
+        })
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+@pytest.mark.parametrize("env_source", ["legacy_env_generator", "env_generator", "env_path"])
+def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: bool):
+    # wrapping is not persisted: the env reloaded by PolicyRunner.resume() must still honor the flag
+    StateMachineRecordingCallbacks.recorded = []
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_dir = Path(tmpdirname)
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        args = ["--data-dir", str(data_dir),
+                "--policy-pkg", "tests.trajectories.test_policy_runner",
+                "--policy-cls", "RandomPolicy",
+                "--callbacks-pkg", "tests.trajectories.test_policy_runner",
+                "--callbacks-cls", "StateMachineRecordingCallbacks",
+                "--snapshot-interval", 0,
+                "--skip-state-machine-update", skip_state_machine_update]
+        if env_source == "legacy_env_generator":
+            args += ["--seed", 42, "--legacy-env-generator", "True"]
+        elif env_source == "env_generator":
+            args += ["--seed", 42]
+        else:
+            env_file = str(tmp_dir / "env.pkl")
+            RailEnvPersister.save(env_generator(seed=42)[0], env_file)
+            args += ["--env-path", env_file]
+
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy(args)
+        assert e_info.value.code == 0
+
+    assert StateMachineRecordingCallbacks.recorded == [{
+        "skip_state_machine_update": skip_state_machine_update,
+        "state_machine_live": not skip_state_machine_update,
+    }]
+
+
+def test_create_from_policy_keeps_wrapping():
+    StateMachineRecordingCallbacks.recorded = []
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
+        PolicyRunner.create_from_policy(
+            env=env,
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=0,
+            callbacks=StateMachineRecordingCallbacks(),
+        )
+    assert StateMachineRecordingCallbacks.recorded == [{"skip_state_machine_update": False, "state_machine_live": True}]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+@pytest.mark.parametrize("start_step", [None, 5, 7], ids=["initial", "snapshot", "replay"])
+def test_load_env_skip_state_machine_update(start_step: Optional[int], skip_state_machine_update: bool):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator(seed=42)[0],
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=5,
+            end_step=10,
+        )
+        env = trajectory.load_env(start_step=start_step, skip_state_machine_update=skip_state_machine_update)
+        assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+        if start_step is not None:
+            assert env._elapsed_steps == start_step

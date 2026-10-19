@@ -408,7 +408,8 @@ class Trajectory:
     def load_env(self, start_step: Optional[int] = None,
                  obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
                  rewards: Optional["Rewards"] = None,
-                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None, ) -> Optional[RailEnv]:
+                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                 skip_state_machine_update: bool = True, ) -> Optional[RailEnv]:
         """
         Restore an episode's env.
 
@@ -428,6 +429,9 @@ class Trajectory:
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         effects_generator : EffectsGenerator
             if given, replaces the persisted effects generator instead of being discarded.
+        skip_state_machine_update : bool
+            forwarded to `RailEnvPersister.load_new` (and to the replay, if any). Wrapping is not part of the
+            persisted state, so pass `False` to restore an env that updates `agent.state`/`agent.state_machine`.
         Returns
         -------
         RailEnv
@@ -438,16 +442,19 @@ class Trajectory:
         def inner_load():
             if start_step is None:
                 f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                                  skip_state_machine_update=skip_state_machine_update)
                 return env
             else:
                 closest = self._find_closest_snapshot(start_step)
                 if closest is None:
                     f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                    env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                                      skip_state_machine_update=skip_state_machine_update)
                     return env
                 f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                                  skip_state_machine_update=skip_state_machine_update)
                 return env
 
         env = inner_load()
@@ -457,7 +464,8 @@ class Trajectory:
         if start_step is not None and env._elapsed_steps < start_step:
             from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
             env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step,
-                                                                obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                                                                obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                                                skip_state_machine_update=skip_state_machine_update)
         return env
 
     @staticmethod

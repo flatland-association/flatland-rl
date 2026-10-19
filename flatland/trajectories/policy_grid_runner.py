@@ -100,6 +100,12 @@ from flatland.trajectories.policy_runner import generate_trajectory_from_policy
               type=int,
               help="Initiate random seed after the env is generated, goes into second `reset` with `regenerate_rail=False, regenerate_schedule=False`. Same seed is applied to all loaded envs!",
               required=False, default=None)
+@click.option('--skip-state-machine-update',
+              type=bool,
+              default=True,
+              help="Forwarded to `generate_trajectory_from_policy` for every row. Pass False if --policy reads agent.state directly.",
+              required=False
+              )
 def generate_trajectories_from_metadata(
     metadata_csv: Path,
     data_dir: Path,
@@ -117,6 +123,7 @@ def generate_trajectories_from_metadata(
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
     post_seed: int = None,
+    skip_state_machine_update: bool = True,
 ):
     metadata = pd.read_csv(metadata_csv)
     for k, v in metadata.iterrows():
@@ -173,6 +180,7 @@ def generate_trajectories_from_metadata(
                 args += ["--callbacks-cls", callbacks_cls]
             if post_seed is not None:
                 args += ["--post-seed", post_seed]
+            args += ["--skip-state-machine-update", skip_state_machine_update]
 
             generate_trajectory_from_policy(args)
 
