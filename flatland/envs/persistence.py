@@ -316,8 +316,12 @@ class RailEnvPersister(object):
         if _elapsed_steps is not None:
             env._elapsed_steps = _elapsed_steps
 
+        # msgpack round-trips tuples as lists - restore the ((r, c), d) entry point tuples used as keys;
+        # needed before the distance map is computed below.
+        env.edge_lengths = {(_to_tuple(u), _to_tuple(v)): length for u, v, length in env_dict.get("edge_lengths", None) or []}
+
         env.distance_map.distance_map = env_dict.get('distance_map', None)
-        env.distance_map.reset(env.agents, env.rail)
+        env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
         env.distance_map._compute(env.agents, env.rail)
 
         random_seed = env.random_seed = env_dict.get("random_seed", None)
@@ -365,9 +369,6 @@ class RailEnvPersister(object):
 
         if "stations_links" in env_dict:
             env.stations_links = env_dict["stations_links"]
-
-        # msgpack round-trips tuples as lists - restore the ((r, c), d) entry point tuples used as keys
-        env.edge_lengths = {(_to_tuple(u), _to_tuple(v)): length for u, v, length in env_dict.get("edge_lengths", None) or []}
 
     @classmethod
     def _apply_effects_generator(cls, env_dict: dict):

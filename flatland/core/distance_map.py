@@ -14,6 +14,17 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 
 
+def _exact_fraction(d) -> Fraction:
+    """
+    Exact `Fraction` of a distance: ints/Fractions as is, floats (numpy grid distance map) rounded to the closest
+    fraction with denominator up to 10**6 - exact for sums of edge lengths with small denominators, as the float
+    representation error is orders of magnitude below the gap between any two such fractions.
+    """
+    if isinstance(d, (int, Fraction)):
+        return Fraction(d)
+    return Fraction(float(d)).limit_denominator(10 ** 6)
+
+
 class AgentSourceTargetDistanceMap(
     EntryPointDistanceMap[TransitionMapT, DistanceMapT, EntryPointT,
     WaypointT]
@@ -56,11 +67,12 @@ class AgentSourceTargetDistanceMap(
 
         return self.distance_map
 
-    def reset(self, agents: List[EnvAgent], rail: TransitionMapT):
+    def reset(self, agents: List[EnvAgent], rail: TransitionMapT,
+              edge_length: Optional[Callable[[EntryPointT, EntryPointT], Fraction]] = None):
         """
-        Reset the distance map
+        Reset the distance map - see `EntryPointDistanceMap.reset()`.
         """
-        super().reset(agents=agents, rail=rail)
+        super().reset(agents=agents, rail=rail, edge_length=edge_length)
         self.reset_was_called = True
 
     def _compute(self, agents: List[EnvAgent], rail: TransitionMapT):
@@ -68,8 +80,6 @@ class AgentSourceTargetDistanceMap(
         Computes the distance maps for each unique target. Thus, if several targets are the same we only
         compute the distance for them once and copy to all agents with the same target.
         """
-        # TODO https://github.com/flatland-association/flatland-rl/issues/526 distances count edges (each of length 1),
-        #  ignoring `AbstractRailEnv.edge_length()` - take edge lengths into account here and in `eta()`.
         self.agents_previous_computation = self.agents
         self.distance_map = self._new_distance_map(len(agents))
         distance_map_walker = DistanceMapWalker(self)
@@ -134,19 +144,34 @@ class AgentSourceTargetDistanceMap(
 
         return shortest_paths
 
-    def _shortest_path_for_agent(self, agent: EnvAgent, max_depth: Optional[int] = None):
+    def _shortest_path_source(self, agent: EnvAgent) -> Optional[EntryPointT]:
         if agent.derived_state().is_off_map_state():
-            entry_point = agent.initial_entry_point
+            return agent.initial_entry_point
         elif agent.derived_state().is_on_map_state():
-            entry_point = agent.current_entry_point
-        elif agent.derived_state() == TrainState.DONE:
-            return None
-        else:
+            return agent.current_entry_point
+        return None
+
+    def _shortest_path_for_agent(self, agent: EnvAgent, max_depth: Optional[int] = None):
+        entry_point = self._shortest_path_source(agent)
+        if entry_point is None:
             return None
         handle = agent.handle
         targets = agent.targets
 
         return self._reconstruct_shortest_path(entry_point, handle, max_depth, targets)
+
+    def shortest_path_length(self, agent: EnvAgent) -> Optional[Fraction]:
+        """
+        Length of the agent's shortest path (see `get_shortest_paths`) in cells, including the start cell: its number
+        of waypoints with unit edge lengths, in general the sum of the lengths of its edges plus 1 - independent of
+        which of several equally long shortest paths is taken. None if there is no path.
+        """
+        shortest_path = self._shortest_path_for_agent(agent)
+        if shortest_path is None:
+            return None
+        if self.edge_length is None:
+            return len(shortest_path)
+        return _exact_fraction(self.geometric_distance(self._shortest_path_source(agent), agent.handle)) + 1
 
     def _reconstruct_shortest_path(
         self,
@@ -164,11 +189,17 @@ class AgentSourceTargetDistanceMap(
         depth = 0
 
         while source not in targets and (max_depth is None or depth < max_depth):
+            if self.edge_length is not None:
+                # with edge lengths, compare the total distance via each successor (edge length plus the successor's
+                # distance) - not monotonic across steps like the successor's distance alone with unit edge lengths.
+                distance = math.inf
             best_next_entry_point = None
             next_entry_points = self.rail.get_successor_entry_points(source)
             for next_entry_point in next_entry_points:
 
                 next_action_distance = self.geometric_distance(next_entry_point, handle)
+                if self.edge_length is not None:
+                    next_action_distance = next_action_distance + self.edge_length(source, next_entry_point)
                 if next_action_distance < distance:
                     distance = next_action_distance
                     best_next_entry_point = next_entry_point
@@ -186,8 +217,9 @@ class AgentSourceTargetDistanceMap(
 
     def geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):
         """
-        The minimum number of cells to cross from `source_entry_point` to any of `target_nr`'s targets,
-        following the rail - a geometric distance, not a number of steps (see `eta` for that).
+        The minimum total length of the edges to traverse from `source_entry_point` to any of `target_nr`'s targets,
+        following the rail (the number of cells to cross if all edges have length 1) - a geometric distance, not a
+        number of steps (see `eta` for that).
         """
         self.get()
         return self._geometric_distance(source_entry_point, target_nr)
@@ -240,11 +272,11 @@ class AgentSourceTargetDistanceMap(
         distance_during_acceleration = (
             steps_to_max_speed * speed + acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
         )
-        # geometric_distance() returns a numpy float (always a whole cell count for a reachable entry
-        # point, which this method assumes) - cast to an exact Fraction so it composes with
-        # distance/speed/max_speed (also Fractions) without silent float rounding (1/3 isn't exactly
-        # representable in float, and that error compounds across the arithmetic below).
-        remaining_distance = Fraction(int(self.geometric_distance(entry_point, handle))) - distance - distance_during_acceleration
+        # geometric_distance() returns a numpy float in the grid case (a whole cell count with unit edge lengths, a
+        # sum of edge lengths otherwise; always finite for a reachable entry point, which this method assumes) - cast
+        # to an exact Fraction so it composes with distance/speed/max_speed (also Fractions) without silent float
+        # rounding (1/3 isn't exactly representable in float, and that error compounds across the arithmetic below).
+        remaining_distance = _exact_fraction(self.geometric_distance(entry_point, handle)) - distance - distance_during_acceleration
         return reference_step + steps_to_max_speed + remaining_distance / max_speed
 
     def _set_geometric_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: int):

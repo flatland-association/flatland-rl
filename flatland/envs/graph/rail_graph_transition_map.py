@@ -21,6 +21,7 @@ References:
 import ast
 import math
 from collections import defaultdict
+from fractions import Fraction
 from functools import lru_cache
 from typing import Tuple, Optional, Set
 
@@ -30,6 +31,7 @@ from flatland.core.grid.grid4_utils import get_new_position
 from flatland.core.transition_map import GridTransitionMap, TransitionMap
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, validated_edge_length
 
 GridNode = str
 GridEdge = Tuple[str]
@@ -180,3 +182,13 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
     @lru_cache
     def is_valid_entry_point(self, entry_point: GridNode) -> bool:
         return entry_point in self.g.nodes
+
+    def edge_length(self, u: GridNode, v: GridNode) -> Fraction:
+        """
+        The `length` attribute of the edge `(u, v)`, `DEFAULT_EDGE_LENGTH` if undefined.
+        N.B. not cached, as edge attributes can be changed on `g`.
+        """
+        length = self.g.edges[u, v].get("length")
+        if length is None:
+            return DEFAULT_EDGE_LENGTH
+        return validated_edge_length(length)

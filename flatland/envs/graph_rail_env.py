@@ -16,7 +16,7 @@ from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalf
 from flatland.envs.rail_env import RailEnv, AbstractRailEnv
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rewards import Rewards
-from flatland.envs.step_utils.speed_counter import SpeedCounter, DEFAULT_EDGE_LENGTH, validated_edge_length
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.timetable_utils import Line, TimetableUtils
 from flatland.utils.seeding import random_state_to_hashablestate, random_state_from_hashablestate
 
@@ -250,12 +250,15 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
 
     def edge_length(self, u: str, v: str) -> Fraction:
         """
-        The `length` attribute of the edge `(u, v)` in the graph, `DEFAULT_EDGE_LENGTH` if undefined.
+        The `length` attribute of the edge `(u, v)` in the graph, `DEFAULT_EDGE_LENGTH` if undefined - see
+        `GraphTransitionMap.edge_length()`.
         """
-        length = self.rail.g.edges[u, v].get("length")
-        if length is None:
-            return DEFAULT_EDGE_LENGTH
-        return validated_edge_length(length)
+        return self.rail.edge_length(u, v)
+
+    def _distance_map_edge_length(self) -> Optional[Callable[[str, str], Fraction]]:
+        if any("length" in d for _, _, d in self.rail.g.edges(data=True)):
+            return self.edge_length
+        return None
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         """

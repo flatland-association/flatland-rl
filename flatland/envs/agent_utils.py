@@ -335,10 +335,8 @@ class EnvAgent(Generic[EntryPointT]):
         return distance_map.get_shortest_paths(agent_handle=self.handle)[self.handle]
 
     def get_travel_time_on_shortest_path(self, distance_map) -> int:
-        shortest_path = self.get_shortest_path(distance_map)
-        if shortest_path is not None:
-            distance = len(shortest_path)
-        else:
+        distance = distance_map.shortest_path_length(self)
+        if distance is None:
             distance = 0
         speed = self.speed_counter.max_speed
         return int(np.ceil(distance / speed))

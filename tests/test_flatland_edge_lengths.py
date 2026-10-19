@@ -282,3 +282,143 @@ def test_grid_graph_parity_with_edge_lengths(seed):
             GraphTransitionMap.graph_entry_point_to_grid_entry_point)
         assert len(graph_trajectory.trains_positions["position"].compare(grid_trajectory.trains_positions["position"])) == 0
         assert len(graph_trajectory.compare_rewards_dones_infos(grid_trajectory, ignoring_action_required=False)) == 0
+
+
+def test_weighted_walk_prefers_shorter_length_over_fewer_edges():
+    import networkx as nx
+    from flatland.core.distance_map_walker import DistanceMapWalker
+    from flatland.core.entry_point_distance_map import EntryPointDistanceMap
+
+    g = nx.DiGraph()
+    # a -> b -> d: 2 edges, total length 10; a -> c -> e -> d: 3 edges, total length 3
+    g.add_edge("a", "b", length=5)
+    g.add_edge("b", "d", length=5)
+    g.add_edge("a", "c")
+    g.add_edge("c", "e")
+    g.add_edge("e", "d")
+    gtm = GraphTransitionMap(g)
+
+    unweighted = EntryPointDistanceMap(agents=[], waypoint_init=str)
+    unweighted.reset([], gtm)
+    assert DistanceMapWalker(unweighted)._distance_map_walker(gtm, ["d"]) == {"a", "b", "c", "d", "e"}
+    assert unweighted._get_distance("a", "d") == 2
+    assert unweighted._get_distance("b", "d") == 1
+
+    weighted = EntryPointDistanceMap(agents=[], waypoint_init=str)
+    weighted.reset([], gtm, edge_length=gtm.edge_length)
+    assert DistanceMapWalker(weighted)._distance_map_walker(gtm, ["d"]) == {"a", "b", "c", "d", "e"}
+    assert weighted._get_distance("a", "d") == 3
+    assert weighted._get_distance("b", "d") == 5
+    assert weighted._get_distance("c", "d") == 2
+    assert weighted._get_distance("d", "d") == 0
+
+
+@pytest.mark.parametrize("seed", [42, 43])
+def test_weighted_walk_with_unit_lengths_matches_bfs(seed):
+    grid_env, _, _ = env_generator(seed=seed)
+    bfs = grid_env.distance_map.get()
+    grid_env.distance_map.reset(grid_env.agents, grid_env.rail, edge_length=lambda u, v: DEFAULT_EDGE_LENGTH)
+    dijkstra = grid_env.distance_map.get()
+    assert np.array_equal(bfs, dijkstra)
+
+
+def test_grid_distance_map_sums_edge_lengths():
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3), _edge(2): Fraction(5, 2)})
+    env.reset()
+    agent = env.agents[0]
+    agent.targets = {((0, 4), EAST)}
+    env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
+    assert env.distance_map.geometric_distance(((0, 3), EAST), 0) == 1
+    assert env.distance_map.geometric_distance(((0, 2), EAST), 0) == 1 + Fraction(5, 2)
+    assert env.distance_map.geometric_distance(((0, 1), EAST), 0) == 1 + Fraction(5, 2) + 3
+
+
+@pytest.mark.parametrize("max_speed", [Fraction(1), Fraction(1, 2), Fraction(1, 3)])
+@pytest.mark.parametrize("earliest_departure", [0, 3])
+def test_eta_with_edge_lengths(max_speed, earliest_departure):
+    """
+    Same as test_flatland_envs_rail_env.py's eta consistency tests, on a corridor with non-unit edge lengths:
+    the off-map eta prediction is re-confirmed on map every step and matches the actual arrival.
+    """
+    from tests.test_flatland_envs_rail_env import _make_single_track_corridor
+
+    n_cells = 6
+    rail, optionals = _make_single_track_corridor(n_cells)
+    g = GraphTransitionMap.grid_to_digraph(rail)
+    gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
+    edge_lengths = {}
+    for u, v in g.edges:
+        (r, c), _ = gtgg(u)
+        edge_lengths[(gtgg(u), gtgg(v))] = [Fraction(2), Fraction(3), Fraction(1), Fraction(4)][c % 4]
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(speed_ratio_map={max_speed: 1.0}), number_of_agents=1,
+                  remove_agents_at_target=True, edge_lengths=edge_lengths)
+    env.acceleration_delta = Fraction(1)
+    env.reset(random_seed=1)
+    env._max_episode_steps = 1000
+    agent = env.agents[0]
+    agent.earliest_departure = earliest_departure
+
+    eta = env.distance_map.eta(
+        entry_point=agent.initial_entry_point, handle=agent.handle, elapsed_steps=env._elapsed_steps,
+        earliest_departure=earliest_departure, speed=None, max_speed=max_speed, acceleration_delta=env.acceleration_delta,
+    )
+    # sanity check: longer than with unit edge lengths
+    assert env.distance_map.geometric_distance(agent.initial_entry_point, agent.handle) > n_cells - 1
+
+    for _ in range(1000):
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+        if agent.current_entry_point is not None:
+            on_map_eta = env.distance_map.eta(
+                entry_point=agent.current_entry_point, handle=agent.handle, elapsed_steps=env._elapsed_steps,
+                earliest_departure=earliest_departure, speed=agent.speed_counter.speed, max_speed=max_speed,
+                acceleration_delta=env.acceleration_delta, distance=agent.speed_counter.distance,
+            )
+            assert on_map_eta == eta
+        if env.dones["__all__"]:
+            break
+    assert agent.arrival_time == eta
+
+
+def test_graph_distance_map_uses_length_attribute():
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3)})
+    env.reset()
+    graph_env = GraphRailEnv.from_rail_env(env, DummyObservationBuilder())
+    agent = graph_env.agents[0]
+    gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
+    grid_agent = env.agents[0]
+    for source in [gctgc(0, 1, EAST), gctgc(0, 2, EAST), gctgc(0, 3, EAST)]:
+        assert graph_env.distance_map.geometric_distance(source, agent.handle) == env.distance_map.geometric_distance(
+            GraphTransitionMap.graph_entry_point_to_grid_entry_point(source), grid_agent.handle)
+
+
+def test_decision_point_graph_edge_length():
+    from flatland.envs.graph.graph_simplification import DecisionPointGraph
+    from flatland.utils.simple_rail import make_simple_rail
+
+    rail, _, _ = make_simple_rail()
+    g = GraphTransitionMap.grid_to_digraph(rail)
+    unit_dpg = DecisionPointGraph.fromGraphTransitionMap(GraphTransitionMap(g))
+    for _, _, d in unit_dpg.g.edges(data="d"):
+        assert d.length == d.len - 1
+    for u, v in g.edges:
+        g.edges[u, v]["length"] = Fraction(5, 2)
+    dpg = DecisionPointGraph.fromGraphTransitionMap(GraphTransitionMap(g))
+    for _, _, d in dpg.g.edges(data="d"):
+        assert d.length == Fraction(5, 2) * (d.len - 1)
+
+
+def test_weighted_distance_map_recompute():
+    grid_env, _, _ = env_generator(seed=42)
+    g = GraphTransitionMap.grid_to_digraph(grid_env.rail)
+    gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
+    grid_env.edge_lengths = {(gtgg(u), gtgg(v)): Fraction(2) for u, v in g.edges}
+    expected = np.copy(grid_env.distance_map.get())
+    # re-computing without reset (distances of the previous walk still present) gives the same distances
+    grid_env.distance_map._compute(grid_env.agents, grid_env.rail)
+    assert np.array_equal(grid_env.distance_map.get(), expected)
+    assert np.isfinite(expected).any()

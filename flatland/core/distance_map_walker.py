@@ -1,4 +1,7 @@
+import heapq
+import math
 from collections import deque
+from itertools import count
 from typing import List, Generic, Set, TypeVar
 
 from flatland.core.entry_point_distance_map import EntryPointDistanceMap
@@ -12,8 +15,8 @@ EntryPointT = TypeVar('EntryPointT')
 class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPointT]):
     """
     "All-to-any-one-in-cluster": utility class to compute distance maps from each entry point in the rail network (cell and each possible orientation within it in grid case)
-     to any one in the set of target entry points using backwards BFS. Agnostic of any agent/target_nr - operates
-     purely in terms of entry points.
+     to any one in the set of target entry points using backwards BFS (backwards Dijkstra if the distance map has
+     an `edge_length`). Agnostic of any agent/target_nr - operates purely in terms of entry points.
     """
 
     def __init__(self, distance_map: EntryPointDistanceMap):
@@ -52,8 +55,10 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
                         ) -> Set[EntryPointT]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
-        the minimum distances.
+        the minimum distances - backward Dijkstra instead if the distance map has an `edge_length`.
         """
+        if self.distance_map.edge_length is not None:
+            return self._weighted_walk_to_target(rail, target_entry_point)
         self.distance_map._set_distance(target_entry_point, target_entry_point, 0)
 
         # Fill in the (up to) 4 neighboring nodes
@@ -78,6 +83,36 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
                 for n in valid_neighbors:
                     nodes_queue.append(n)
 
+        return visited
+
+    def _weighted_walk_to_target(self, rail: TransitionMapT, target_entry_point: EntryPointT
+                                 ) -> Set[EntryPointT]:
+        """
+        Backward Dijkstra from a single target entry point to every entry point that can reach it, filling in
+        the minimum sum of edge lengths `edge_length(u, v)` to reach the target.
+        """
+        edge_length = self.distance_map.edge_length
+        # tentative distances of this walk - not the distance map's own, which may still hold a previous walk's
+        # distances (e.g. when re-computed), which would prevent the walk from expanding at all.
+        tentative = {target_entry_point: 0}
+        # tie-breaker so entry points themselves never need to be comparable
+        tie_breaker = count()
+        queue = [(0, next(tie_breaker), target_entry_point)]
+        visited = set()
+        while queue:
+            distance, _, entry_point = heapq.heappop(queue)
+            if entry_point in visited:
+                continue
+            visited.add(entry_point)
+            self.distance_map._set_distance(
+                entry_point, target_entry_point, min(self.distance_map._get_distance(entry_point, target_entry_point), distance))
+            for predecessor_entry_point in rail.get_predecessor_entry_points(entry_point):
+                if predecessor_entry_point in visited:
+                    continue
+                new_distance = distance + edge_length(predecessor_entry_point, entry_point)
+                if new_distance < tentative.get(predecessor_entry_point, math.inf):
+                    tentative[predecessor_entry_point] = new_distance
+                    heapq.heappush(queue, (new_distance, next(tie_breaker), predecessor_entry_point))
         return visited
 
     def _get_and_update_neighbors(self, rail: TransitionMapT, entry_point: EntryPointT,

@@ -6,7 +6,7 @@ import random
 import warnings
 from fractions import Fraction
 from functools import lru_cache
-from typing import List, Optional, Dict, Tuple, Any, Generic, TypeVar, NamedTuple
+from typing import Callable, List, Optional, Dict, Tuple, Any, Generic, TypeVar, NamedTuple
 
 import numpy as np
 
@@ -382,7 +382,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self.agents = self._agents_from_line(line, self.rail)
 
             # Reset distance map - basically initializing
-            self.distance_map.reset(self.agents, self.rail)
+            self.distance_map.reset(self.agents, self.rail, edge_length=self._distance_map_edge_length())
 
             # Timetable Generation
             timetable = self.timetable_generator(self.agents, self.distance_map, agents_hints, self.np_random)
@@ -391,7 +391,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             self.agents = self._apply_timetable_to_agents(self.agents, timetable)
         else:
             self.resource_map = self._extract_resource_map_from_optionals(optionals)
-            self.distance_map.reset(self.agents, self.rail)
+            self.distance_map.reset(self.agents, self.rail, edge_length=self._distance_map_edge_length())
 
         # Reset agents to initial states
         self.reset_agents()
@@ -1601,6 +1601,13 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         """
         raise NotImplementedError()
 
+    def _distance_map_edge_length(self) -> Optional[Callable[[EntryPointT, EntryPointT], Fraction]]:
+        """
+        `edge_length` for the distance map - None if all edges have the default length, so the distance map
+        falls back to its plain (integer) edge count BFS.
+        """
+        raise NotImplementedError()
+
     def _get_observations(self):
         """
         Utility which returns the dictionary of observations for an agent with respect to environment
@@ -1753,11 +1760,17 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
     def edge_lengths(self, edge_lengths: Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]):
         # empty map normalized to None for edge_length()'s fast path
         self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
+        # distance map already computed (set after reset) -> recompute with the new edge lengths
+        if getattr(self, "distance_map", None) is not None and self.rail is not None:
+            self.distance_map.reset(self.agents, self.rail, edge_length=self._distance_map_edge_length())
 
     def edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Fraction:
         if self._edge_lengths is None:
             return DEFAULT_EDGE_LENGTH
         return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
+
+    def _distance_map_edge_length(self) -> Optional[Callable[[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]:
+        return self.edge_length if self._edge_lengths is not None else None
 
     def _agents_from_line(self, line: "Line", rail: GridTransitionMap) -> List[EnvAgent[Tuple[Tuple[int, int], int]]]:
         agents = EnvAgent.from_line(line)

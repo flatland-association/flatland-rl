@@ -14,11 +14,9 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.timetable_utils import Timetable
 
 
-def len_handle_none(v):
-    if v is not None:
-        return len(v)
-    else:
-        return 0
+def _shortest_path_length_or_zero(distance_map, agent):
+    length = distance_map.shortest_path_length(agent)
+    return length if length is not None else 0
 
 
 def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
@@ -74,16 +72,15 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
                     targets={(waypoints[i + 1][0].position, d) for d in Grid4TransitionsEnum},
                 ))
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
-        distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
+        distance_map_with_intermediates.reset(fake_agents, distance_map.rail, edge_length=distance_map.edge_length)
 
-        shortest_paths = distance_map_with_intermediates.get_shortest_paths()
         shortest_path_segment_lengths = [[] for _ in range(num_agents)]
-        for k, v in shortest_paths.items():
-            shortest_path_segment_lengths[k % num_agents].append(len_handle_none(v))
+        for fake_agent in fake_agents:
+            shortest_path_segment_lengths[fake_agent.handle % num_agents].append(
+                _shortest_path_length_or_zero(distance_map_with_intermediates, fake_agent))
         shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
     else:
-        shortest_paths = distance_map.get_shortest_paths()
-        shortest_paths_lengths = [len_handle_none(v) for k, v in shortest_paths.items()]
+        shortest_paths_lengths = [_shortest_path_length_or_zero(distance_map, agent) for agent in distance_map.agents]
         shortest_path_segment_lengths = [[l] for l in shortest_paths_lengths]
 
     # Find mean_shortest_path_time

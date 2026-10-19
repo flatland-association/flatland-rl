@@ -1,3 +1,4 @@
+from fractions import Fraction
 from typing import List, Tuple
 
 import networkx as nx
@@ -19,19 +20,20 @@ class DecisionPointGraphEdgeData:
         The list of collapsed cells, starting on a facing switch (e.g. where a decision has been taken upon entering).
     len: int
         Number of collapsed cells.
-        TODO https://github.com/flatland-association/flatland-rl/issues/526 sum up the collapsed edges' `length`
-         attributes instead (see `GraphRailEnv.edge_length()`).
+    length: Fraction
+        Sum of the lengths of the collapsed edges (see `GraphTransitionMap.edge_length()`).
 
     """
     path = attrib(type=List[GridNode])
     len = attrib(type=int)
+    length = attrib(type=Fraction)
 
 
 class DecisionPointGraph:
     """
     Overlay on top of Flatland 3 grid where consecutive cells where agents cannot choose between alternative paths are collapsed into a single edge.
     A reference to the underlying grid nodes is maintained.
-    The edge length is the number of cells "collapsed" into this edge.
+    The edge's `len` is the number of cells "collapsed" into this edge, its `length` the sum of the collapsed edges' lengths.
     See `DecisionPointGraphEdgeData`.
 
     Attributes
@@ -59,6 +61,11 @@ class DecisionPointGraph:
         return branch
 
     @staticmethod
+    def _edge_data(gtm: GraphTransitionMap, branch: List[GridNode]) -> DecisionPointGraphEdgeData:
+        return DecisionPointGraphEdgeData(path=branch, len=len(branch), length=sum(
+            (gtm.edge_length(u, v) for u, v in zip(branch, branch[1:])), Fraction(0)))
+
+    @staticmethod
     def fromGraphTransitionMap(gtm: GraphTransitionMap) -> "DecisionPointGraph":
         """
         Factory method to derive `DecisionPointGraph` from `GraphTransitionMap`.
@@ -84,7 +91,7 @@ class DecisionPointGraph:
         for dp in decision_nodes:
             for n in micro.successors(dp):
                 branch = DecisionPointGraph._explore_branch(micro, dp, n)
-                g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+                g.add_edge(branch[0], branch[-1], d=DecisionPointGraph._edge_data(gtm, branch))
                 for u, v, in zip(branch, branch[1:]):
                     closed.add((u, v))
 
@@ -93,7 +100,7 @@ class DecisionPointGraph:
         while not len(open) == 0:
             u, v = next(iter(open))
             branch = DecisionPointGraph._explore_branch(micro, u, v)
-            g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+            g.add_edge(branch[0], branch[-1], d=DecisionPointGraph._edge_data(gtm, branch))
             for u_, v_, in zip(branch, branch[1:]):
                 open.discard((u_, v_))
 
