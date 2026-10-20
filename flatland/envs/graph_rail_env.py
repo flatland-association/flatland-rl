@@ -140,7 +140,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         Parameters
         ----------
         g: nx.DiGraph
-            the rail topology, with `actions`/`straight` edge attributes and an optional
+            the rail topology, with `actions` edge attributes and an optional
             `prohibited_actions` node attribute - see `GraphTransitionMap.grid_to_digraph` for the
             shape expected by `RailEnv.step()`. An optional `length` edge attribute gives the edge's length
             (at least `MIN_EDGE_LENGTH`, i.e. 1), defaulting to `DEFAULT_EDGE_LENGTH` (1) - see `edge_length()`.
