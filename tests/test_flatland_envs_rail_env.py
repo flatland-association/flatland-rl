@@ -902,7 +902,7 @@ def test_candidate_speed_and_distance_match_crossing():
     agent._set_state(TrainState.MOVING)
     agent.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(1))
-    agent.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2))
+    agent.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2), edge_length=DEFAULT_EDGE_LENGTH)
 
     resource_check, rewards = _assert_speed_distance_match_candidates(env, agent, {0: RailEnvActions.MOVE_FORWARD})
     assert resource_check
@@ -930,7 +930,7 @@ def test_candidate_speed_and_distance_match_invalid_action_denial_at_cell_exit()
     agent.next_entry_point = _sanitize_entry_point(
         env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point))
     agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(1, 2))
-    agent.speed_counter.set(speed=Fraction(1, 2), distance=Fraction(1))  # banked exactly at the boundary
+    agent.speed_counter.set(speed=Fraction(1, 2), distance=Fraction(1), edge_length=DEFAULT_EDGE_LENGTH)  # banked exactly at the boundary
 
     resource_check, rewards = _assert_speed_distance_match_candidates(
         env, agent, {agent.handle: RailEnvActions.STOP_MOVING})
@@ -968,13 +968,13 @@ def test_candidate_speed_and_distance_match_resource_check_denial():
     agent_a._set_state(TrainState.MOVING)
     agent_a.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
     agent_a.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(1))
-    agent_a.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2))
+    agent_a.speed_counter.set(speed=Fraction(1), distance=Fraction(1, 2), edge_length=DEFAULT_EDGE_LENGTH)
 
     agent_b.current_entry_point = R
     agent_b._set_state(TrainState.STOPPED)
     agent_b.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, R))
     agent_b.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(0))
-    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(1, 2))
+    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(1, 2), edge_length=DEFAULT_EDGE_LENGTH)
 
     resource_check, rewards = _assert_speed_distance_match_candidates(
         env, agent_a, {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.DO_NOTHING})
@@ -2228,7 +2228,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     agent_a._set_state(TrainState.MOVING)
     agent_a.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, L))
     agent_a.speed_counter = SpeedCounter(max_speed=speed, speed=speed)
-    agent_a.speed_counter.set(speed=speed, distance=Fraction(0))  # bootstrap onto the map at distance 0
+    agent_a.speed_counter.set(speed=speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)  # bootstrap onto the map at distance 0
     agent_a.speed_counter._distance = Fraction(1, 2)
 
     # place B directly on R, at rest - a stopped, blocking neighbor.
@@ -2236,7 +2236,7 @@ def test_agent_cruising_at_constant_speed_banks_distance_to_boundary_then_stops(
     agent_b._set_state(TrainState.STOPPED)
     agent_b.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, R))
     agent_b.speed_counter = SpeedCounter(max_speed=Fraction(1), speed=Fraction(0))
-    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
+    agent_b.speed_counter.set(speed=Fraction(0), distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
     agent_b.speed_counter._distance = Fraction(1, 2)
 
     for step in range(1, steps_to_boundary):
@@ -2315,7 +2315,7 @@ def test_platoon_of_four_agents_starts_and_advances_together_without_force_stops
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
-        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
+        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         agent.speed_counter._distance = Fraction(1)
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
@@ -2408,7 +2408,7 @@ def test_platoon_of_four_agents_starting_mid_cell_moves_in_lockstep_without_forc
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=Fraction(1, 2), speed=Fraction(0))
-        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0))
+        agent.speed_counter.set(speed=Fraction(0), distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         agent.speed_counter._distance = distance
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
@@ -2500,7 +2500,7 @@ def test_platoon_all_stop_together_once_leader_stops_and_stays_stopped(
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-        agent.speed_counter.set(speed=max_speed, distance=Fraction(0))  # bootstrap onto the map at distance 0
+        agent.speed_counter.set(speed=max_speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)  # bootstrap onto the map at distance 0
 
     forward = {i: RailEnvActions.MOVE_FORWARD for i in range(4)}
     hold_leader = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD,
@@ -2631,7 +2631,7 @@ def test_two_agents_different_in_cell_distance_converge_to_lockstep(max_speed, s
         next_transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, cell)
         agent.next_entry_point = _sanitize_entry_point(next_transition)
         agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-        agent.speed_counter.set(speed=max_speed, distance=Fraction(0))
+        agent.speed_counter.set(speed=max_speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         agent.speed_counter._distance = distance
 
     forward = {0: RailEnvActions.MOVE_FORWARD, 1: RailEnvActions.MOVE_FORWARD}

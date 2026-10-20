@@ -7,6 +7,7 @@ from attr import attrs, attrib
 
 from flatland.core.effects_generator import find_effects_generator, make_multi_effects_generator
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.envs.agent_utils import EnvAgent, _sanitize_entry_point
 from flatland.envs.line_generators import LineGenerator
 from flatland.envs.malfunction_generators import MalfunctionParameters, malfunction_from_params
@@ -131,7 +132,7 @@ def run_replay_config(env: RailEnv, test_configs: List[ReplayConfig], rendering:
                     # the agent directly onto the map, bypassing the state machine's own departure
                     # step (which would otherwise call speed_counter.set() with a non-None speed);
                     # do it explicitly here so distance starts at 0 (on-map) instead of None.
-                    agent.speed_counter.set(speed=agent.speed_counter.speed, distance=Fraction(0))
+                    agent.speed_counter.set(speed=agent.speed_counter.speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
                     # design: actions applied at cell entry -- keep the current_entry_point/
                     # next_entry_point invariant (both set and different while on-map, see the
                     # invariant documented in RailEnv.step()) even for this test-harness shortcut:

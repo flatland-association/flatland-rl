@@ -288,7 +288,7 @@ def _place_agent_on_map(env, handle, position, direction, target, state, max_spe
     agent.targets = {(target, d) for d in Grid4TransitionsEnum}
     agent._set_state(state)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=speed)
-    agent.speed_counter.set(speed=speed, distance=Fraction(0))  # bootstrap distance to 0 on-map
+    agent.speed_counter.set(speed=speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)  # bootstrap distance to 0 on-map
     next_entry_point = env.rail.apply_action_independent(first_action, agent.current_entry_point)
     assert next_entry_point is not None
     agent.next_entry_point = _sanitize_entry_point(next_entry_point)

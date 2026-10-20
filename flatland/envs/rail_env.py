@@ -487,7 +487,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 # set this step (candidate_speed's own "done or target reached" branch returns
                 # Fraction(0), not None - see its docstring), which is fine since (13) always runs
                 # strictly before this.
-                agent.speed_counter.set(None, None)
+                agent.speed_counter.set(None, None, None)
 
     def step(self, action_dict: Dict[int, RailEnvActions]):
         """

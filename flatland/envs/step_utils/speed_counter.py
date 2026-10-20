@@ -114,8 +114,7 @@ class SpeedCounter:
         self._edge_length: Optional[Fraction] = None
         self._is_cell_entry = False
 
-    def set(self, speed: Optional[Fraction], distance: Optional[Fraction],
-            edge_length: Optional[Fraction] = DEFAULT_EDGE_LENGTH) -> None:
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], edge_length: Optional[Fraction]) -> None:
         """
         Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
         candidate_speed/candidate_distance (accepted), or the discarded-candidate formulas
@@ -131,8 +130,8 @@ class SpeedCounter:
             The new within-cell distance, or None while off map. Both speed and distance are None
             together, or both concrete Fractions together - never mixed (see the class docstring).
         edge_length : Optional[Fraction]
-            The length of the edge the agent is on after this update (ignored while off map, i.e.
-            distance None).
+            The length of the edge the agent is on after this update, i.e.
+            `rail.edge_length(current_entry_point, next_entry_point)` - ignored while off map (distance None).
         """
         # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
         # bootstrapped onto the map (previous distance None, new distance concrete), or the pre-step
@@ -285,7 +284,7 @@ class SpeedCounter:
                  is_cell_entry: {self.is_cell_entry}"
 
     def reset(self):
-        self.set(None, None)
+        self.set(None, None, None)
 
     @property
     def is_cell_entry(self):
