@@ -32,11 +32,11 @@ from flatland.core.transition_map import GridTransitionMap, TransitionMap, DEFAU
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
-GridNode = str
-GridEdge = Tuple[str]
+GraphNode = str
+GraphEdge = Tuple[GraphNode, GraphNode]
 
 
-class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
+class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
@@ -142,7 +142,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, entry_point: GridNode) -> Optional[GridNode]:
+    def apply_action_independent(self, action: RailEnvActions, entry_point: GraphNode) -> Optional[GraphNode]:
         if action in self.g.nodes[entry_point].get("prohibited_actions", set()):
             return None
         succs = list(self.g.successors(entry_point))
@@ -151,7 +151,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             if action in edge_data["actions"]:
                 return v
 
-    def get_transitions(self, entry_point: GridNode) -> Tuple[bool]:
+    def get_transitions(self, entry_point: GraphNode) -> Tuple[bool]:
         return True,
 
     @staticmethod
@@ -171,18 +171,18 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return ((r, c), d)
 
     @lru_cache
-    def get_successor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+    def get_successor_entry_points(self, entry_point: GraphNode) -> Set[GraphNode]:
         return set(self.g.successors(entry_point))
 
     @lru_cache
-    def get_predecessor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+    def get_predecessor_entry_points(self, entry_point: GraphNode) -> Set[GraphNode]:
         return set(self.g.predecessors(entry_point))
 
     @lru_cache
-    def is_valid_entry_point(self, entry_point: GridNode) -> bool:
+    def is_valid_entry_point(self, entry_point: GraphNode) -> bool:
         return entry_point in self.g.nodes
 
-    def edge_length(self, u: GridNode, v: GridNode) -> Fraction:
+    def edge_length(self, u: GraphNode, v: GraphNode) -> Fraction:
         """
         The `length` attribute of the edge `(u, v)`, `DEFAULT_EDGE_LENGTH` if undefined.
         N.B. not cached, as edge attributes can be changed on `g`.

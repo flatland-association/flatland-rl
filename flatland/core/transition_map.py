@@ -25,6 +25,11 @@ TransitionsT = TypeVar('TransitionsT')
 TransitionsValidityT = TypeVar('TransitionsValidityT')
 ActionsT = TypeVar('ActionsT')
 
+# grid entry point `((r, c), d)`: cell `(r, c)` entered with heading `d`
+GridNode = Tuple[Tuple[int, int], int]
+# grid edge `(u, v)` from entry point `u` to its successor entry point `v`
+GridEdge = Tuple[GridNode, GridNode]
+
 # length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
 # see `TransitionMap.edge_length()`.
 DEFAULT_EDGE_LENGTH: Fraction = Fraction(1)
@@ -224,7 +229,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
     Attributes
     ----------
-    edge_lengths : Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]
+    edge_lengths : Optional[Dict[GridEdge, Fraction]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
         when leaving it with heading `d2`. Must be at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
@@ -250,15 +255,15 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         self._reset_cache()
 
     @property
-    def edge_lengths(self) -> Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]:
+    def edge_lengths(self) -> Optional[Dict[GridEdge, Fraction]]:
         return self._edge_lengths
 
     @edge_lengths.setter
-    def edge_lengths(self, edge_lengths: Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]):
+    def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, Fraction]]):
         # empty map normalized to None for edge_length()'s fast path
         self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
 
-    def edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Fraction:
+    def edge_length(self, u: GridNode, v: GridNode) -> Fraction:
         if self._edge_lengths is None:
             return DEFAULT_EDGE_LENGTH
         return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)

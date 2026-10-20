@@ -1,12 +1,10 @@
 from fractions import Fraction
-from typing import List, Tuple
+from typing import List
 
 import networkx as nx
 from attr import attrs, attrib
 
-from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
-
-GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GraphNode
 
 
 @attrs
@@ -16,7 +14,7 @@ class DecisionPointGraphEdgeData:
 
     Attributes
     ----------
-    path: List[GridNode]
+    path: List[GraphNode]
         The list of collapsed cells, starting on a facing switch (e.g. where a decision has been taken upon entering).
     len: int
         Number of collapsed cells.
@@ -24,7 +22,7 @@ class DecisionPointGraphEdgeData:
         Sum of the lengths of the collapsed edges (see `GraphTransitionMap.edge_length()`).
 
     """
-    path = attrib(type=List[GridNode])
+    path = attrib(type=List[GraphNode])
     len = attrib(type=int)
     length = attrib(type=Fraction)
 
@@ -39,14 +37,14 @@ class DecisionPointGraph:
     Attributes
     ----------
     g: nx.MultiDiGraph
-        The decision point graph. Nodes have type `GridNode` and edge data has an attributed `d` of type `DecisionPointGraphEdgeData`.
+        The decision point graph. Nodes have type `GraphNode` and edge data has an attributed `d` of type `DecisionPointGraphEdgeData`.
     """
 
     def __init__(self, g: nx.MultiDiGraph):
         self.g = g
 
     @staticmethod
-    def _explore_branch(g: nx.DiGraph, u: GridNode, v: GridNode) -> List[GridNode]:
+    def _explore_branch(g: nx.DiGraph, u: GraphNode, v: GraphNode) -> List[GraphNode]:
         branch = [u, v]
         successors = list(g.successors(v))
         assert len(successors) > 0
@@ -61,7 +59,7 @@ class DecisionPointGraph:
         return branch
 
     @staticmethod
-    def _edge_data(gtm: GraphTransitionMap, branch: List[GridNode]) -> DecisionPointGraphEdgeData:
+    def _edge_data(gtm: GraphTransitionMap, branch: List[GraphNode]) -> DecisionPointGraphEdgeData:
         return DecisionPointGraphEdgeData(path=branch, len=len(branch), length=sum(
             (gtm.edge_length(u, v) for u, v in zip(branch, branch[1:])), Fraction(0)))
 
