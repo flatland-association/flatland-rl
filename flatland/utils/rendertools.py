@@ -651,10 +651,7 @@ class RenderLocal(RenderBase):
         """
         Fraction in [0, 1] of the current edge (current entry point -> next entry point) the on-map agent has travelled.
         """
-        edge_length = agent.speed_counter.edge_length
-        if not edge_length:
-            return 0.0
-        return float(min(max(agent.speed_counter.distance / edge_length, 0), 1))
+        return float(min(max(agent.speed_counter.distance / agent.speed_counter.edge_length, 0), 1))
 
     def render_env_svg(
         self, show=False, show_observations=True, show_predictions=False, selected_agent=None,
