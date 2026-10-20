@@ -12,7 +12,7 @@ import pytest
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.transition_map import GridTransitionMap
+from flatland.core.transition_map import GridTransitionMap, DEFAULT_EDGE_LENGTH
 from flatland.env_generation.env_generator import env_generator, env_generator_legacy
 from flatland.envs.agent_utils import EnvAgent, with_direction, _sanitize_entry_point
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
@@ -27,7 +27,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_generators import sparse_rail_generator, rail_from_file
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import BaseDefaultRewards, DefaultPenalties
-from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, SpeedCounter, _cap_speed
+from flatland.envs.step_utils.speed_counter import SpeedCounter, _cap_speed
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.rendertools import RenderTool

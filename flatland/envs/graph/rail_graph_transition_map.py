@@ -28,10 +28,9 @@ from typing import Tuple, Optional, Set
 import networkx as nx
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap, TransitionMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap, DEFAULT_EDGE_LENGTH, validated_edge_length
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, validated_edge_length
 
 GridNode = str
 GridEdge = Tuple[str]

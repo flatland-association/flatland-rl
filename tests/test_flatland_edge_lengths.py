@@ -21,7 +21,8 @@ from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrap
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import DefaultRewards
-from flatland.envs.step_utils.speed_counter import SpeedCounter, DEFAULT_EDGE_LENGTH, cached_cell_exit, validated_edge_length
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, validated_edge_length
+from flatland.envs.step_utils.speed_counter import SpeedCounter, cached_cell_exit
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy

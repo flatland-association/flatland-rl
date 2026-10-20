@@ -5,13 +5,8 @@ from typing import Optional
 
 import numpy as np
 
-# length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
-# see `TransitionMap.edge_length()`.
-DEFAULT_EDGE_LENGTH: Fraction = Fraction(1)
-# smallest admissible edge length: speed is capped at 1 (see `_cap_speed`), so with every edge at least this
-# long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
-# fits into the newly entered edge.
-MIN_EDGE_LENGTH: Fraction = Fraction(1)
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
+
 # shared zero-Fraction constant - Fraction is immutable, so every "return/set to zero speed" call site
 # can safely reuse the same instance instead of constructing a fresh Fraction(0) - profiled at ~12x the
 # cost of referencing an already-built constant.
@@ -55,21 +50,6 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
         else:
             return Fraction.from_float(v)
     raise ValueError(f"Cannot convert {v} to Fraction.")
-
-
-def validated_edge_length(length) -> Fraction:
-    """
-    Convert an edge length to `Fraction` (see `_pseudo_fractional`) and check it is at least `MIN_EDGE_LENGTH`.
-
-    Raises
-    ------
-    ValueError
-        if the length is shorter than `MIN_EDGE_LENGTH`.
-    """
-    length = _pseudo_fractional(length)
-    if length is None or length < MIN_EDGE_LENGTH:
-        raise ValueError(f"Edge length must be at least {MIN_EDGE_LENGTH}, found {length}.")
-    return length
 
 
 @lru_cache()

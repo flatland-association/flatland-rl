@@ -18,13 +18,39 @@ from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_count_nonzero
-from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, validated_edge_length
 from flatland.utils.ordered_set import OrderedSet
 
 EntryPointT = TypeVar('EntryPointT')
 TransitionsT = TypeVar('TransitionsT')
 TransitionsValidityT = TypeVar('TransitionsValidityT')
 ActionsT = TypeVar('ActionsT')
+
+# length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
+# see `TransitionMap.edge_length()`.
+DEFAULT_EDGE_LENGTH: Fraction = Fraction(1)
+# smallest admissible edge length: speed is capped at 1 (see `speed_counter._cap_speed`), so with every edge at least this
+# long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
+# fits into the newly entered edge.
+MIN_EDGE_LENGTH: Fraction = Fraction(1)
+
+
+def validated_edge_length(length) -> Fraction:
+    """
+    Convert an edge length to `Fraction` (floats via their shortest decimal representation, e.g. 1.1 -> 11/10)
+    and check it is at least `MIN_EDGE_LENGTH`.
+
+    Raises
+    ------
+    ValueError
+        if the length is not a number or shorter than `MIN_EDGE_LENGTH`.
+    """
+    try:
+        length = Fraction(str(length)) if isinstance(length, float) else Fraction(length)
+    except (TypeError, ValueError):
+        raise ValueError(f"Edge length must be a number, found {length}.")
+    if length < MIN_EDGE_LENGTH:
+        raise ValueError(f"Edge length must be at least {MIN_EDGE_LENGTH}, found {length}.")
+    return length
 
 
 class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, ActionsT]):

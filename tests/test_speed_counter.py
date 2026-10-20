@@ -5,8 +5,9 @@ from fractions import Fraction
 import numpy as np
 import pytest
 
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
-    cached_cell_exit, DEFAULT_EDGE_LENGTH
+    cached_cell_exit
 
 
 # design: distance update with pre-step speed.
