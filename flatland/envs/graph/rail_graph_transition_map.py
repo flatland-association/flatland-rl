@@ -193,6 +193,9 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             return DEFAULT_EDGE_LENGTH
         return validated_edge_length(length)
 
+    def has_edge_lengths(self) -> bool:
+        return any("length" in d for _, _, d in self.g.edges(data=True))
+
     def _assert_actions_partitioned(self):
         """
         For each node, every rail env action is either in the node's `prohibited_actions` or in the `actions` of exactly one

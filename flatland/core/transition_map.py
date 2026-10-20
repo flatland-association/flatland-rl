@@ -4,8 +4,9 @@ TransitionMap and derived classes.
 import traceback
 import uuid
 import warnings
+from fractions import Fraction
 from functools import lru_cache
-from typing import Tuple, Generic, TypeVar, Any, Set, Optional
+from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional
 
 import numpy as np
 from importlib_resources import path
@@ -17,6 +18,7 @@ from flatland.core.grid.grid_utils import IntVector2DArray, IntVector2D
 from flatland.core.grid.grid_utils import Vec2dOperations as Vec2d
 from flatland.core.transitions import Transitions
 from flatland.envs.fast_methods import fast_count_nonzero
+from flatland.envs.step_utils.speed_counter import DEFAULT_EDGE_LENGTH, validated_edge_length
 from flatland.utils.ordered_set import OrderedSet
 
 EntryPointT = TypeVar('EntryPointT')
@@ -164,6 +166,21 @@ class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, Act
         """
         raise NotImplementedError()
 
+    def edge_length(self, u: EntryPointT, v: EntryPointT) -> Fraction:
+        """
+        Length of the edge from entry point `u` to its successor entry point `v` (at least `MIN_EDGE_LENGTH`).
+        An agent on the map is always on the edge `(current_entry_point, next_entry_point)` and needs to
+        travel this distance before crossing into the next edge. `DEFAULT_EDGE_LENGTH` (1) unless overridden.
+        """
+        return DEFAULT_EDGE_LENGTH
+
+    def has_edge_lengths(self) -> bool:
+        """
+        Whether any edge may have a non-default length - if not, consumers like the distance map can use plain
+        integer unit lengths (faster than `Fraction` arithmetic).
+        """
+        return False
+
 
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsT]):
     """
@@ -178,6 +195,14 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     transitions : Transitions
         The Transitions object to use to encode/decode transitions over the
         grid.
+
+    Attributes
+    ----------
+    edge_lengths : Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]
+        Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
+        `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
+        when leaving it with heading `d2`. Must be at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
+        length `DEFAULT_EDGE_LENGTH` (1). Set by `RailEnv` from the rail generator's `optionals["edge_lengths"]`.
     """
 
     def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), grid: np.ndarray = None):
@@ -195,7 +220,25 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             if grid.dtype != self.transitions.get_type():
                 warnings.warn(f"Expected dtype {self.transitions.get_type()}, found {grid.dtype}.")
             self.grid = grid
+        self.edge_lengths = None
         self._reset_cache()
+
+    @property
+    def edge_lengths(self) -> Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]:
+        return self._edge_lengths
+
+    @edge_lengths.setter
+    def edge_lengths(self, edge_lengths: Optional[Dict[Tuple[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]]):
+        # empty map normalized to None for edge_length()'s fast path
+        self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
+
+    def edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Fraction:
+        if self._edge_lengths is None:
+            return DEFAULT_EDGE_LENGTH
+        return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
+
+    def has_edge_lengths(self) -> bool:
+        return self._edge_lengths is not None
 
     def _reset_cache(self):
         # use __eq__ and __hash__ to control cache lifecycle of instance methods, see https://docs.python.org/3/faq/programming.html#how-do-i-cache-method-calls.

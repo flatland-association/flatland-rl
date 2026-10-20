@@ -40,7 +40,7 @@ class RenderTool(object):
             draw a progress bar at the bottom of each on-map agent's (actual, current) cell - also with the
             ONE_STEP_BEHIND variants, which draw the agent itself in its previous cell -, showing how far the agent has travelled
             along its current edge (`speed_counter.distance / speed_counter.edge_length`) - useful for slow agents
-            and long edges (see `RailEnv.edge_lengths`), where an agent stays in the same cell for several steps.
+            and long edges (see `GridTransitionMap.edge_lengths`), where an agent stays in the same cell for several steps.
             Only supported by the "PILSVG"/"PGL" renderers.
         """
 

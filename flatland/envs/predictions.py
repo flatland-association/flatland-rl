@@ -141,8 +141,7 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
             # assume constant max_speed
             agent_speed = agent.speed_counter.max_speed
             times_per_cell = int(np.reciprocal(agent_speed))
-            # steps spent on the current edge so far - the agent moves on after times_per_cell steps per unit of the
-            # edge's length (see RailEnv.edge_lengths)
+            # steps spent on the current edge so far
             steps_on_edge = 0
             prediction = np.zeros(shape=(self.max_depth + 1, 5))
             prediction[0] = [0, *agent_virtual_position, agent_virtual_direction, 0]
@@ -166,8 +165,8 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
 
                 steps_on_edge += 1
                 steps_for_edge = times_per_cell
-                if self.env.edge_lengths is not None:
-                    steps_for_edge = times_per_cell * self.env.edge_length(
+                if self.env.rail.has_edge_lengths():
+                    steps_for_edge = times_per_cell * self.env.rail.edge_length(
                         (new_position, new_direction), (shortest_path[0].position, shortest_path[0].direction))
                 if steps_on_edge >= steps_for_edge:
                     steps_on_edge -= steps_for_edge

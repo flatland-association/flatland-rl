@@ -72,7 +72,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
                     targets={(waypoints[i + 1][0].position, d) for d in Grid4TransitionsEnum},
                 ))
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
-        distance_map_with_intermediates.reset(fake_agents, distance_map.rail, edge_length=distance_map.edge_length)
+        distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
 
         shortest_path_segment_lengths = [[] for _ in range(num_agents)]
         for fake_agent in fake_agents:

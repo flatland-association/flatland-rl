@@ -33,7 +33,7 @@ class DecisionPointGraph:
     """
     Overlay on top of Flatland 3 grid where consecutive cells where agents cannot choose between alternative paths are collapsed into a single edge.
     A reference to the underlying grid nodes is maintained.
-    The edge's `len` is the number of cells "collapsed" into this edge, its `length` the sum of the collapsed edges' lengths.
+    The edge length is the number of cells "collapsed" into this edge.
     See `DecisionPointGraphEdgeData`.
 
     Attributes

@@ -9,7 +9,7 @@ from flatland.core.entry_point_distance_map import (
     TransitionMapT,
     WaypointT,
 )
-from flatland.core.distance_map_walker import DistanceMapWalker
+from flatland.core.distance_map_walker import DistanceMapWalker, _unit_edge_length
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 
@@ -67,12 +67,11 @@ class AgentSourceTargetDistanceMap(
 
         return self.distance_map
 
-    def reset(self, agents: List[EnvAgent], rail: TransitionMapT,
-              edge_length: Optional[Callable[[EntryPointT, EntryPointT], Fraction]] = None):
+    def reset(self, agents: List[EnvAgent], rail: TransitionMapT):
         """
-        Reset the distance map - see `EntryPointDistanceMap.reset()`.
+        Reset the distance map
         """
-        super().reset(agents=agents, rail=rail, edge_length=edge_length)
+        super().reset(agents=agents, rail=rail)
         self.reset_was_called = True
 
     def _compute(self, agents: List[EnvAgent], rail: TransitionMapT):
@@ -188,15 +187,14 @@ class AgentSourceTargetDistanceMap(
 
         distance = math.inf
         depth = 0
+        edge_length = self.rail.edge_length if self.rail.has_edge_lengths() else _unit_edge_length
 
         while source not in targets and (max_depth is None or depth < max_depth):
             best_next_entry_point = None
             next_entry_points = self.rail.get_successor_entry_points(source)
             for next_entry_point in next_entry_points:
 
-                # total distance via next_entry_point - the best one's equals the distance from source, so strictly
-                # decreasing along the path
-                next_action_distance = self.geometric_distance(next_entry_point, handle) + self.edge_length(source, next_entry_point)
+                next_action_distance = self.geometric_distance(next_entry_point, handle) + edge_length(source, next_entry_point)
                 if next_action_distance < distance:
                     distance = next_action_distance
                     best_next_entry_point = next_entry_point
@@ -214,9 +212,8 @@ class AgentSourceTargetDistanceMap(
 
     def geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):
         """
-        The minimum total length of the edges to traverse from `source_entry_point` to any of `target_nr`'s targets,
-        following the rail (the number of cells to cross if all edges have length 1) - a geometric distance, not a
-        number of steps (see `eta` for that).
+        The minimum total edge length to cross from `source_entry_point` to any of `target_nr`'s targets,
+        following the rail - a geometric distance, not a number of steps (see `eta` for that).
         """
         self.get()
         return self._geometric_distance(source_entry_point, target_nr)
@@ -269,10 +266,10 @@ class AgentSourceTargetDistanceMap(
         distance_during_acceleration = (
             steps_to_max_speed * speed + acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
         )
-        # geometric_distance() returns a numpy float in the grid case (a whole cell count with unit edge lengths, a
-        # sum of edge lengths otherwise; always finite for a reachable entry point, which this method assumes) - cast
-        # to an exact Fraction so it composes with distance/speed/max_speed (also Fractions) without silent float
-        # rounding (1/3 isn't exactly representable in float, and that error compounds across the arithmetic below).
+        # geometric_distance() returns a numpy float (always a sum of edge lengths for a reachable entry
+        # point, which this method assumes) - cast to an exact Fraction so it composes with
+        # distance/speed/max_speed (also Fractions) without silent float rounding (1/3 isn't exactly
+        # representable in float, and that error compounds across the arithmetic below).
         remaining_distance = _exact_fraction(self.geometric_distance(entry_point, handle)) - distance - distance_during_acceleration
         return reference_step + steps_to_max_speed + remaining_distance / max_speed
 

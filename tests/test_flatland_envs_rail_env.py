@@ -819,7 +819,7 @@ def _assert_speed_distance_match_candidates(env, agent, action_dict):
     # off_map alone (see step()'s own comment) - cell_exit/target_reached/etc. are never needed
     # off-map by any of the 3 candidate_ methods' branch logic.
     off_map = current_entry_point is None
-    edge_length = None if off_map else env.edge_length(current_entry_point, next_entry_point)
+    edge_length = None if off_map else env.rail.edge_length(current_entry_point, next_entry_point)
     transition_invalid = candidate_entry_point_independent is None
     if off_map:
         cell_exit = False

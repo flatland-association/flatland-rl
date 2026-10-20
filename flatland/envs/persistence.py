@@ -57,6 +57,18 @@ def _to_tuple(x):
     return x
 
 
+def edge_lengths_from_env_dict(env_dict: Dict) -> Optional[Dict]:
+    """
+    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state` - a list of `(u, v, length)` triples, as
+    msgpack cannot persist tuple keys and round-trips tuples as lists - back to a dict keyed by `(u, v)` with the
+    `((r, c), d)` entry point tuples restored. None if not persisted.
+    """
+    triples = env_dict.get("edge_lengths", None)
+    if not triples:
+        return None
+    return {(_to_tuple(u), _to_tuple(v)): length for u, v, length in triples}
+
+
 def _serialize_agent(agent: EnvAgent) -> Agent:
     """
     `EnvAgent.to_agent()` puts a raw `set` in `targets`, which is unhashable to any `flatland-rl` older than
@@ -290,6 +302,7 @@ class RailEnvPersister(object):
         # use new rail object instance for lru cache scoping and garbage collection to work properly
         env.rail = RailGridTransitionMap(height=env.height, width=env.width)
         env.rail.grid = grid
+        env.rail.edge_lengths = edge_lengths_from_env_dict(env_dict)
 
         # Replace the agents tuple with EnvAgent objects. Target entry points are not serialised with rail
         # validity, so `load_env_agent`/`load_legacy_static_agent` filter them against the (now available) rail
@@ -316,12 +329,8 @@ class RailEnvPersister(object):
         if _elapsed_steps is not None:
             env._elapsed_steps = _elapsed_steps
 
-        # msgpack round-trips tuples as lists - restore the ((r, c), d) entry point tuples used as keys;
-        # needed before the distance map is computed below.
-        env.edge_lengths = {(_to_tuple(u), _to_tuple(v)): length for u, v, length in env_dict.get("edge_lengths", None) or []}
-
         env.distance_map.distance_map = env_dict.get('distance_map', None)
-        env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
+        env.distance_map.reset(env.agents, env.rail)
         env.distance_map._compute(env.agents, env.rail)
 
         random_seed = env.random_seed = env_dict.get("random_seed", None)
@@ -442,9 +451,9 @@ class RailEnvPersister(object):
         }
         if hasattr(env, "stations_links"):
             msg_data_dict["stations_links"] = env.stations_links
-        if getattr(env, "edge_lengths", None):
-            # list of (u, v, length) triples, as msgpack cannot persist tuple keys
-            msg_data_dict["edge_lengths"] = [(u, v, length) for (u, v), length in env.edge_lengths.items()]
+        if env.rail.edge_lengths:
+            # list of (u, v, length) triples, as msgpack cannot persist tuple keys - see edge_lengths_from_env_dict()
+            msg_data_dict["edge_lengths"] = [(u, v, length) for (u, v), length in env.rail.edge_lengths.items()]
         return msg_data_dict
 
     ################################################################################################

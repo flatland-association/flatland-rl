@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 # length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
-# see `AbstractRailEnv.edge_length()`.
+# see `TransitionMap.edge_length()`.
 DEFAULT_EDGE_LENGTH: Fraction = Fraction(1)
 # smallest admissible edge length: speed is capped at 1 (see `_cap_speed`), so with every edge at least this
 # long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
@@ -157,9 +157,8 @@ class SpeedCounter:
         # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
         # bootstrapped onto the map (previous distance None, new distance concrete), or the pre-step
         # distance/speed pair implies a crossing was attempted (old_distance + old_speed reaches or
-        # exceeds the old edge's length) *and* the new distance shows it landed inside the fresh cell rather
-        # than banked at the exit (new_distance < new edge's length - if the crossing was denied, old and new
-        # edge are the same). A plain "new < old" comparison isn't
+        # exceeds the old edge_length) *and* the new distance shows it landed inside the fresh cell rather
+        # than banked at the exit (new_distance < new edge_length). A plain "new < old" comparison isn't
         # enough on its own: at speed == 1 (e.g. max_speed=1) on a unit-length edge, distance_after_crossing's
         # modulo wraps exactly back to the pre-step value (0 -> 0), so "new < old" and even "new <= old"
         # both misclassify it - the latter also misfires on a stopped/banked agent whose distance is
@@ -237,26 +236,22 @@ class SpeedCounter:
                                 edge_length: Optional[Fraction]) -> Optional[Fraction]:
         """
         Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
-        pre-step speed, wrapped into the newly-entered cell. Also used mid-edge (no boundary reached,
-        `distance + pre_speed < edge_length`), where it is just `distance + pre_speed`. None (off map) in,
-        None out.
+        pre-step speed, wrapped into the newly-entered cell (just `distance + pre_speed` if it stays below
+        `edge_length`). None (off map) in, None out.
 
-        Physical motivation: the train's momentum this step carries it across the boundary of the current
-        edge (of length `edge_length`) and some distance into the next one - the leftover
-        `distance + pre_speed - edge_length` is exactly how far into the new edge the train's momentum
-        actually reaches. This is the only one of
+        Physical motivation: the train's momentum this step carries it across the boundary and some
+        distance into the next cell - the wrap (`(distance + pre_speed - edge_length) % 1`) is exactly that leftover distance,
+        i.e. how far into the new cell the train's momentum actually reaches. This is the only one of
         the four formulas that ever transitions the agent's current_entry_point/next_entry_point into a
         new cell (see RailEnv.step()'s (12)/(13)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
         MOVE_RIGHT while MOVING (pre-step speed > 0), or an explicit STOP_MOVING if the
         crossing was already in flight before the brake takes effect (see speed_after_braking above) -
         the action itself never matters once resource_check has granted the crossing.
 
-        After a crossing, the result is always in [0, 1) and hence strictly inside the new edge (every edge
-        is at least `MIN_EDGE_LENGTH` = 1 long) - physically, having actually crossed into the new edge, the
-        train is now somewhere inside it, never still sitting exactly on its exit boundary (that "sitting on
-        the boundary" case is distance_without_crossing below, where the crossing does *not* happen). The
-        leftover is at most 1 (distance <= edge_length, pre_speed <= 1); it equals 1 only for an agent banked
-        at the boundary crossing at full speed 1, where the `% 1` wraps it to 0 (as for unit-length edges).
+        Never returns exactly the new edge's length: a modulo result is always in [0, 1) by construction
+        (every edge is at least `MIN_EDGE_LENGTH` = 1 long) - physically, having actually crossed into the new cell, the train is now somewhere
+        inside it, never still sitting exactly on the boundary it just crossed (that "sitting on the
+        boundary" case is distance_without_crossing below, where the crossing does *not* happen).
         """
         if distance is None:
             return None

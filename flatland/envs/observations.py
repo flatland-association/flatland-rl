@@ -136,9 +136,6 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             [... from 'right] +
             [... from 'back']
 
-        Distances are sums of the lengths of the edges traversed (see `RailEnv.edge_lengths`), i.e. numbers of cells
-        if all edges have the default length 1.
-
         Each node information is composed of 9 features:
 
         #1:
@@ -259,9 +256,9 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         """
         Length of the edge `(u, v)` as float - plain int 1 if the env has no edge lengths (all edges of length 1).
         """
-        if self.env.edge_lengths is None:
+        if not self.env.rail.has_edge_lengths():
             return 1
-        return float(self.env.edge_length(u, v))
+        return float(self.env.rail.edge_length(u, v))
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
@@ -289,8 +286,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         agent_target = next(iter(agent.targets))[0]
         distance_map_handle = self.env.distance_map.get()[handle]
 
-        # assume constant max_speed - time to travel a unit of distance (a cell if all edges have length 1)
-        time_per_unit_distance = 1.0 / agent.speed_counter.max_speed
+        # assume constant max_speed
+        time_per_cell = 1.0 / agent.speed_counter.max_speed
         own_target_encountered = np.inf
         other_agent_encountered = np.inf
         other_target_encountered = np.inf
@@ -340,7 +337,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 crossing_found = True
 
             # Register possible future conflict
-            predicted_time = int(tot_dist * time_per_unit_distance)
+            predicted_time = int(tot_dist * time_per_cell)
             if self.predictor and predicted_time < self.max_prediction_depth:
                 int_position = coordinate_to_position(self.env.width, [position])
                 if tot_dist < self.max_prediction_depth:

@@ -1,6 +1,5 @@
 import ast
 import warnings
-from fractions import Fraction
 from typing import Callable, Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -85,17 +84,17 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     @staticmethod
     def _grid_edge_lengths(rail_env: RailEnv, g: nx.DiGraph) -> None:
         """
-        Copies `rail_env.edge_lengths` onto the `length` attribute of the corresponding edges of the
-        grid-derived graph `g` (edges not in `rail_env.edge_lengths` get no `length` attribute, i.e. default length).
+        Copies `rail_env.rail.edge_lengths` onto the `length` attribute of the corresponding edges of the
+        grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length).
         """
-        if not rail_env.edge_lengths:
+        if not rail_env.rail.edge_lengths:
             return
         gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
-        for ((r, c), d), ((r2, c2), d2) in rail_env.edge_lengths.keys():
+        for (((r, c), d), ((r2, c2), d2)), length in rail_env.rail.edge_lengths.items():
             u = gctgc(r, c, d)
             v = gctgc(r2, c2, d2)
             if g.has_edge(u, v):
-                g.edges[u, v]["length"] = rail_env.edge_length(((r, c), d), ((r2, c2), d2))
+                g.edges[u, v]["length"] = length
 
     @staticmethod
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
@@ -143,7 +142,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             the rail topology, with `actions` edge attributes and an optional
             `prohibited_actions` node attribute - see `GraphTransitionMap.grid_to_digraph` for the
             shape expected by `RailEnv.step()`. An optional `length` edge attribute gives the edge's length
-            (at least `MIN_EDGE_LENGTH`, i.e. 1), defaulting to `DEFAULT_EDGE_LENGTH` (1) - see `edge_length()`.
+            (see `GraphTransitionMap.edge_length()`).
         resource_map: Dict[str, str]
             maps each node in `g` to the resource (occupancy unit) used for conflict detection.
         agent_waypoints: Dict[int, List[List[str]]]
@@ -247,18 +246,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
 
     def _infrastructure_representation(self, entry_point: str) -> str:
         return entry_point
-
-    def edge_length(self, u: str, v: str) -> Fraction:
-        """
-        The `length` attribute of the edge `(u, v)` in the graph, `DEFAULT_EDGE_LENGTH` if undefined - see
-        `GraphTransitionMap.edge_length()`.
-        """
-        return self.rail.edge_length(u, v)
-
-    def _distance_map_edge_length(self) -> Optional[Callable[[str, str], Fraction]]:
-        if any("length" in d for _, _, d in self.rail.g.edges(data=True)):
-            return self.edge_length
-        return None
 
     def _agents_from_line(self, line: "Line", rail: GraphTransitionMap) -> List[EnvAgent[str]]:
         """

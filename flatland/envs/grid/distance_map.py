@@ -1,5 +1,4 @@
-from fractions import Fraction
-from typing import Callable, List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 
@@ -21,12 +20,11 @@ class DistanceMap(
         self.env_height = env_height
         self.env_width = env_width
 
-    def reset(self, agents: List[EnvAgent], rail: RailGridTransitionMap,
-              edge_length: Optional[Callable[[Tuple[Tuple[int, int], int], Tuple[Tuple[int, int], int]], Fraction]] = None):
+    def reset(self, agents: List[EnvAgent], rail: RailGridTransitionMap):
         """
-        Reset the distance map - see `EntryPointDistanceMap.reset()`.
+        Reset the distance map
         """
-        super().reset(agents=agents, rail=rail, edge_length=edge_length)
+        super().reset(agents=agents, rail=rail)
         self.env_height = rail.height
         self.env_width = rail.width
 

@@ -10,12 +10,15 @@ TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
 EntryPointT = TypeVar('EntryPointT')
 
 
+def _unit_edge_length(u, v) -> int:
+    return 1
+
+
 class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPointT]):
     """
     "All-to-any-one-in-cluster": utility class to compute distance maps from each entry point in the rail network (cell and each possible orientation within it in grid case)
-     to any one in the set of target entry points using backwards BFS, re-visiting an entry point whenever a shorter
-     distance to it is found (label-correcting, as edges can have different lengths, see `EntryPointDistanceMap.edge_length`).
-     Agnostic of any agent/target_nr - operates purely in terms of entry points.
+     to any one in the set of target entry points using backwards BFS. Agnostic of any agent/target_nr - operates
+     purely in terms of entry points.
     """
 
     def __init__(self, distance_map: EntryPointDistanceMap):
@@ -45,6 +48,8 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
             the set of all entry points backwards-reachable from any of the target entry points (i.e.
             those a distance was filled in for).
         """
+        # plain integer unit lengths if the rail has no edge lengths (faster than Fraction arithmetic)
+        self._edge_length = rail.edge_length if rail.has_edge_lengths() else _unit_edge_length
         reachable_entry_points = set()
         for target_entry_point in target_entry_points:
             reachable_entry_points |= self._walk_to_target(rail, target_entry_point)
@@ -54,8 +59,7 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
                         ) -> Set[EntryPointT]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
-        the minimum distances. An entry point is re-queued whenever a shorter distance to it is found - with unit
-        edge lengths, the first distance found is already the minimum, so this is a plain BFS.
+        the minimum distances.
         """
         self.distance_map._set_distance(target_entry_point, target_entry_point, 0)
 
@@ -87,11 +91,11 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
                                   current_distance: int, target_entry_point: EntryPointT, visited: Dict[EntryPointT, int]):
         """
         Utility function used by _walk_to_target to perform a BFS walk over the rail, filling in the
-        minimum distances to a single target entry point. Returns the predecessors to which a shorter distance was found.
+        minimum distances to a single target entry point.
         """
         neighbors = []
         for predecessor_entry_point in rail.get_predecessor_entry_points(entry_point):
-            new_distance = current_distance + self.distance_map.edge_length(predecessor_entry_point, entry_point)
+            new_distance = current_distance + self._edge_length(predecessor_entry_point, entry_point)
             if new_distance < visited.get(predecessor_entry_point, math.inf):
                 visited[predecessor_entry_point] = new_distance
                 neighbors.append((predecessor_entry_point, new_distance))

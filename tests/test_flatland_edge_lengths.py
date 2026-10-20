@@ -141,6 +141,11 @@ def _edge(c: int):
     return ((0, c), EAST), ((0, c + 1), EAST)
 
 
+def _with_edge_lengths(optionals, edge_lengths):
+    """ Rail generator optionals with `edge_lengths` added (if any). """
+    return {**optionals, "edge_lengths": edge_lengths} if edge_lengths else optionals
+
+
 def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=True):
     """
     Single agent bootstrapped moving at full `max_speed` at the start of dead-end cell (0, 0) (entered heading west,
@@ -149,9 +154,8 @@ def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=Tr
     until the agent is done.
     """
     rail, optionals = _straight_rail(n_cells)
-    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, remove_agents_at_target=remove_agents_at_target,
-                  edge_lengths=edge_lengths)
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
+                  line_generator=sparse_line_generator(), number_of_agents=1, remove_agents_at_target=remove_agents_at_target)
     env = RailEnvStateMachineWrapper(env)
     env.reset()
     env._max_episode_steps = 1000
@@ -162,7 +166,7 @@ def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=Tr
     agent.targets = {((0, n_cells - 1), d) for d in Grid4TransitionsEnum}
     agent._set_state(TrainState.MOVING)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-    agent.speed_counter.set(max_speed, Fraction(0), env.edge_length(agent.current_entry_point, agent.next_entry_point))
+    agent.speed_counter.set(max_speed, Fraction(0), env.rail.edge_length(agent.current_entry_point, agent.next_entry_point))
 
     trajectory = []
     for _ in range(100):
@@ -214,20 +218,37 @@ def test_edge_lengths_default_and_validation():
     rail, optionals = _straight_rail(3)
     env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1)
-    assert env.edge_lengths is None
-    assert env.edge_length(*_edge(0)) == DEFAULT_EDGE_LENGTH
-    env.edge_lengths = {_edge(0): 2.0}
-    assert env.edge_length(*_edge(0)) == Fraction(2)
-    assert env.edge_length(*_edge(1)) == DEFAULT_EDGE_LENGTH
+    env.reset()
+    assert env.rail.edge_lengths is None
+    assert not env.rail.has_edge_lengths()
+    assert env.rail.edge_length(*_edge(0)) == DEFAULT_EDGE_LENGTH
+    env.rail.edge_lengths = {_edge(0): 2.0}
+    assert env.rail.has_edge_lengths()
+    assert env.rail.edge_length(*_edge(0)) == Fraction(2)
+    assert env.rail.edge_length(*_edge(1)) == DEFAULT_EDGE_LENGTH
     with pytest.raises(ValueError):
-        env.edge_lengths = {_edge(0): Fraction(1, 2)}
+        env.rail.edge_lengths = {_edge(0): Fraction(1, 2)}
+
+
+@pytest.mark.parametrize("regenerate_rail", [True, False])
+def test_edge_lengths_from_rail_generator_optionals_survive_reset(regenerate_rail):
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): 3})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset()
+    assert env.rail.edge_lengths == {_edge(1): Fraction(3)}
+    env.reset(regenerate_rail=regenerate_rail, regenerate_schedule=regenerate_rail)
+    assert env.rail.edge_lengths == {_edge(1): Fraction(3)}
+    assert env.distance_map.rail.has_edge_lengths()
 
 
 @pytest.mark.parametrize("suffix", ["pkl", "mpk"])
 def test_edge_lengths_persisted(suffix):
+    from flatland.envs.rail_generators import rail_from_file
+
     rail, optionals = _straight_rail(5)
-    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3)})
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): Fraction(3)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     with tempfile.TemporaryDirectory() as tmpdirname:
         f = Path(tmpdirname) / f"env.{suffix}"
@@ -236,26 +257,29 @@ def test_edge_lengths_persisted(suffix):
         except TypeError:
             pytest.skip("msgpack cannot persist Fractions")
         loaded, _ = RailEnvPersister.load_new(str(f))
-    assert loaded.edge_lengths == {_edge(1): Fraction(3)}
-    assert loaded.edge_length(*_edge(1)) == Fraction(3)
+        # rail generator from file passes the edge lengths on in its optionals
+        _, from_file_optionals = rail_from_file(str(f))(5, 1, 1)
+    assert loaded.rail.edge_lengths == {_edge(1): Fraction(3)}
+    assert loaded.rail.edge_length(*_edge(1)) == Fraction(3)
+    assert from_file_optionals["edge_lengths"] == {_edge(1): Fraction(3)}
 
 
 def test_graph_edge_length_attribute():
     rail, optionals = _straight_rail(5)
-    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3)})
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): Fraction(3)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     graph_env = GraphRailEnv.from_rail_env(env, DummyObservationBuilder())
     gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
     u, v = gctgc(0, 1, EAST), gctgc(0, 2, EAST)
     assert graph_env.rail.g.edges[u, v]["length"] == Fraction(3)
-    assert graph_env.edge_length(u, v) == Fraction(3)
+    assert graph_env.rail.edge_length(u, v) == Fraction(3)
     u2, v2 = gctgc(0, 2, EAST), gctgc(0, 3, EAST)
     assert "length" not in graph_env.rail.g.edges[u2, v2]
-    assert graph_env.edge_length(u2, v2) == DEFAULT_EDGE_LENGTH
+    assert graph_env.rail.edge_length(u2, v2) == DEFAULT_EDGE_LENGTH
     graph_env.rail.g.edges[u2, v2]["length"] = 0.5
     with pytest.raises(ValueError):
-        graph_env.edge_length(u2, v2)
+        graph_env.rail.edge_length(u2, v2)
 
 
 @pytest.mark.parametrize("seed", range(42, 46))
@@ -268,7 +292,8 @@ def test_grid_graph_parity_with_edge_lengths(seed):
     for u, v in g.edges:
         edge_lengths[(GraphTransitionMap.graph_entry_point_to_grid_entry_point(u),
                       GraphTransitionMap.graph_entry_point_to_grid_entry_point(v))] = lengths[np_random.randint(len(lengths))]
-    grid_env.edge_lengths = edge_lengths
+    grid_env.rail.edge_lengths = edge_lengths
+    grid_env.distance_map.reset(grid_env.agents, grid_env.rail)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed, rewards=DefaultRewards())
 
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -297,15 +322,17 @@ def test_weighted_walk_prefers_shorter_length_over_fewer_edges():
     g.add_edge("c", "e")
     g.add_edge("e", "d")
     gtm = GraphTransitionMap(g)
+    unweighted_gtm = GraphTransitionMap(nx.DiGraph(list(g.edges)))
+    assert gtm.has_edge_lengths() and not unweighted_gtm.has_edge_lengths()
 
     unweighted = EntryPointDistanceMap(agents=[], waypoint_init=str)
-    unweighted.reset([], gtm)
-    assert DistanceMapWalker(unweighted)._distance_map_walker(gtm, ["d"]) == {"a", "b", "c", "d", "e"}
+    unweighted.reset([], unweighted_gtm)
+    assert DistanceMapWalker(unweighted)._distance_map_walker(unweighted_gtm, ["d"]) == {"a", "b", "c", "d", "e"}
     assert unweighted._get_distance("a", "d") == 2
     assert unweighted._get_distance("b", "d") == 1
 
     weighted = EntryPointDistanceMap(agents=[], waypoint_init=str)
-    weighted.reset([], gtm, edge_length=gtm.edge_length)
+    weighted.reset([], gtm)
     assert DistanceMapWalker(weighted)._distance_map_walker(gtm, ["d"]) == {"a", "b", "c", "d", "e"}
     assert weighted._get_distance("a", "d") == 3
     assert weighted._get_distance("b", "d") == 5
@@ -316,20 +343,25 @@ def test_weighted_walk_prefers_shorter_length_over_fewer_edges():
 @pytest.mark.parametrize("seed", [42, 43])
 def test_weighted_walk_with_unit_lengths_matches_bfs(seed):
     grid_env, _, _ = env_generator(seed=seed)
-    bfs = grid_env.distance_map.get()
-    grid_env.distance_map.reset(grid_env.agents, grid_env.rail, edge_length=lambda u, v: DEFAULT_EDGE_LENGTH)
-    dijkstra = grid_env.distance_map.get()
-    assert np.array_equal(bfs, dijkstra)
+    bfs = np.copy(grid_env.distance_map.get())
+    # explicit unit edge lengths (Fraction(1)) instead of the default integer unit lengths
+    g = GraphTransitionMap.grid_to_digraph(grid_env.rail)
+    gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
+    grid_env.rail.edge_lengths = {(gtgg(u), gtgg(v)): DEFAULT_EDGE_LENGTH for u, v in g.edges}
+    grid_env.distance_map.reset(grid_env.agents, grid_env.rail)
+    weighted = grid_env.distance_map.get()
+    assert np.array_equal(bfs, weighted)
 
 
 def test_grid_distance_map_sums_edge_lengths():
     rail, optionals = _straight_rail(5)
-    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3), _edge(2): Fraction(5, 2)})
+    env = RailEnv(width=5, height=1,
+                  rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): Fraction(3), _edge(2): Fraction(5, 2)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     agent = env.agents[0]
     agent.targets = {((0, 4), EAST)}
-    env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
+    env.distance_map.reset(env.agents, env.rail)
     assert env.distance_map.geometric_distance(((0, 3), EAST), 0) == 1
     assert env.distance_map.geometric_distance(((0, 2), EAST), 0) == 1 + Fraction(5, 2)
     assert env.distance_map.geometric_distance(((0, 1), EAST), 0) == 1 + Fraction(5, 2) + 3
@@ -352,9 +384,9 @@ def test_eta_with_edge_lengths(max_speed, earliest_departure):
     for u, v in g.edges:
         (r, c), _ = gtgg(u)
         edge_lengths[(gtgg(u), gtgg(v))] = [Fraction(2), Fraction(3), Fraction(1), Fraction(4)][c % 4]
-    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
                   line_generator=sparse_line_generator(speed_ratio_map={max_speed: 1.0}), number_of_agents=1,
-                  remove_agents_at_target=True, edge_lengths=edge_lengths)
+                  remove_agents_at_target=True)
     env.acceleration_delta = Fraction(1)
     env.reset(random_seed=1)
     env._max_episode_steps = 1000
@@ -384,8 +416,8 @@ def test_eta_with_edge_lengths(max_speed, earliest_departure):
 
 def test_graph_distance_map_uses_length_attribute():
     rail, optionals = _straight_rail(5)
-    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths={_edge(1): Fraction(3)})
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): Fraction(3)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     graph_env = GraphRailEnv.from_rail_env(env, DummyObservationBuilder())
     agent = graph_env.agents[0]
@@ -416,7 +448,8 @@ def test_weighted_distance_map_recompute():
     grid_env, _, _ = env_generator(seed=42)
     g = GraphTransitionMap.grid_to_digraph(grid_env.rail)
     gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
-    grid_env.edge_lengths = {(gtgg(u), gtgg(v)): Fraction(2) for u, v in g.edges}
+    grid_env.rail.edge_lengths = {(gtgg(u), gtgg(v)): Fraction(2) for u, v in g.edges}
+    grid_env.distance_map.reset(grid_env.agents, grid_env.rail)
     expected = np.copy(grid_env.distance_map.get())
     # re-computing without reset (distances of the previous walk still present) gives the same distances
     grid_env.distance_map._compute(grid_env.agents, grid_env.rail)
@@ -428,8 +461,8 @@ def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=No
     """ Single agent on map at the start of dead-end cell (0, 0), leaving east, target (0, n_cells - 1). """
     from flatland.core.env_observation_builder import DummyObservationBuilder as _Dummy
     rail, optionals = _straight_rail(n_cells)
-    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
-                  line_generator=sparse_line_generator(), number_of_agents=1, edge_lengths=edge_lengths,
+    env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
+                  line_generator=sparse_line_generator(), number_of_agents=1,
                   obs_builder_object=obs_builder if obs_builder is not None else _Dummy())
     env.reset()
     env._max_episode_steps = 1000
@@ -440,8 +473,8 @@ def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=No
     agent.targets = {((0, n_cells - 1), EAST)}
     agent._set_state(TrainState.MOVING)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
-    agent.speed_counter.set(max_speed, Fraction(0), env.edge_length(agent.current_entry_point, agent.next_entry_point))
-    env.distance_map.reset(env.agents, env.rail, edge_length=env._distance_map_edge_length())
+    agent.speed_counter.set(max_speed, Fraction(0), env.rail.edge_length(agent.current_entry_point, agent.next_entry_point))
+    env.distance_map.reset(env.agents, env.rail)
     env.obs_builder.reset(env)
     return env
 
