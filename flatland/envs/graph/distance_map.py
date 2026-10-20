@@ -1,5 +1,6 @@
 from collections import defaultdict
-from typing import List, Dict, Set
+from fractions import Fraction
+from typing import List, Dict, Set, Union
 
 from flatland.core.entry_point_distance_map import _infinite_distance
 from flatland.core.distance_map import AgentSourceTargetDistanceMap
@@ -24,7 +25,7 @@ class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         self.distance_map[target_nr] = self.distance_map[source_target_nr]
 
-    def _set_geometric_distance(self, source_entry_point: str, target_nr: int, new_distance: int):
+    def _set_geometric_distance(self, source_entry_point: str, target_nr: int, new_distance: Union[int, Fraction]):
         self.distance_map[target_nr][source_entry_point] = new_distance
 
     def _geometric_distance(self, source_entry_point: str, target_nr: int):

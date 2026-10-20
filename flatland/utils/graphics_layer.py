@@ -87,7 +87,7 @@ class GraphicsLayer(object):
     def set_cell_occupied(self, iAgent, row, col):
         pass
 
-    def set_agent_progress(self, iAgent, row, col, progress):
+    def set_agent_progress(self, iAgent: int, row: int, col: int, progress: float) -> None:
         """ Show the agent's progress (fraction in [0, 1]) along its current edge in cell (row, col). """
         pass
 

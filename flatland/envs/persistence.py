@@ -50,7 +50,7 @@ class _LegacyCompatUnpickler(pickle.Unpickler):
         return super().find_class(module, name)
 
 
-def _to_tuple(x):
+def _to_tuple(x: Any) -> Any:
     """Recursively convert (msgpack-deserialized) lists back to tuples."""
     if isinstance(x, (list, tuple)):
         return tuple(_to_tuple(e) for e in x)

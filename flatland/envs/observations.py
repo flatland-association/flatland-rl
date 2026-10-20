@@ -2,7 +2,7 @@
 Collection of environment-specific ObservationBuilder.
 """
 import collections
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 
 import numpy as np
 
@@ -252,7 +252,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
 
         return root_node_observation
 
-    def _edge_length(self, u, v):
+    def _edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Union[int, float]:
         """
         Length of the edge `(u, v)` as float - plain int 1 if the env has no edge lengths (all edges of length 1).
         """

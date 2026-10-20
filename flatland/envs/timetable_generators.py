@@ -2,6 +2,7 @@
 import pickle
 import warnings
 from pathlib import Path
+from fractions import Fraction
 from typing import List, Union
 
 import numpy as np
@@ -14,7 +15,7 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.timetable_utils import Timetable
 
 
-def _shortest_path_length_or_zero(distance_map, agent):
+def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) -> Union[Fraction, int]:
     length = distance_map.shortest_path_length(agent)
     return length if length is not None else 0
 

@@ -674,7 +674,7 @@ class PILSVG(PILGL):
         occupied_im = self.cell_occupied[agent_idx % len(self.cell_occupied)]
         self.draw_image_row_col(occupied_im, (row, col), 1)
 
-    def set_agent_progress(self, agent_idx, row, col, progress):
+    def set_agent_progress(self, agent_idx: int, row: int, col: int, progress: float) -> None:
         """
         Progress bar along the bottom of cell (row, col): outlined over the full cell width, filled in the agent's
         color up to `progress` (fraction in [0, 1]) of it.

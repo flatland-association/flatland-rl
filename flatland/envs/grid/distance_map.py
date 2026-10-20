@@ -1,4 +1,5 @@
-from typing import List, Tuple
+from fractions import Fraction
+from typing import List, Tuple, Union
 
 import numpy as np
 
@@ -38,7 +39,7 @@ class DistanceMap(
         # just copy the distance map from other agent with same target (performance)
         self.distance_map[target_nr, :, :, :] = np.copy(self.distance_map[source_target_nr, :, :, :])
 
-    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: Union[int, Fraction]):
         (r, c), direction = source_entry_point
         self.distance_map[target_nr, r, c, direction] = new_distance
 
