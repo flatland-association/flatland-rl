@@ -8,6 +8,7 @@ import pytest
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.grid.grid4_utils import get_new_position
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
@@ -28,6 +29,7 @@ from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy
 
 EAST = Grid4TransitionsEnum.EAST
+NORTH = Grid4TransitionsEnum.NORTH
 
 
 @pytest.mark.parametrize("edge_length", [Fraction(1), Fraction(2), Fraction(5, 2)])
@@ -216,19 +218,47 @@ def test_long_target_edge_parks_at_edge_length():
 
 
 def test_edge_lengths_default_and_validation():
-    rail, optionals = _straight_rail(3)
-    env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+    rail, optionals = _straight_rail(4)
+    env = RailEnv(width=4, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     assert env.rail.edge_lengths is None
     assert not env.rail.has_edge_lengths()
-    assert env.rail.edge_length(*_edge(0)) == DEFAULT_EDGE_LENGTH
-    env.rail.edge_lengths = {_edge(0): 2.0}
-    assert env.rail.has_edge_lengths()
-    assert env.rail.edge_length(*_edge(0)) == Fraction(2)
     assert env.rail.edge_length(*_edge(1)) == DEFAULT_EDGE_LENGTH
+    env.rail.edge_lengths = {_edge(1): 2.0}
+    assert env.rail.has_edge_lengths()
+    assert env.rail.edge_length(*_edge(1)) == Fraction(2)
+    assert env.rail.edge_length(*_edge(2)) == DEFAULT_EDGE_LENGTH
     with pytest.raises(ValueError):
-        env.rail.edge_lengths = {_edge(0): Fraction(1, 2)}
+        env.rail.edge_lengths = {_edge(1): Fraction(1, 2)}
+
+
+@pytest.mark.parametrize("non_edge", [
+    _edge(0),  # dead end (0, 0) is entered heading west only
+    (((0, 1), EAST), ((0, 3), EAST)),  # skips a cell
+    (((0, 1), EAST), ((0, 1), NORTH)),  # no transition towards north
+    (((0, 3), EAST), ((0, 4), EAST)),  # leaves the grid
+])
+def test_edge_lengths_reject_non_edges(non_edge):
+    rail, optionals = _straight_rail(4)
+    with pytest.raises(ValueError):
+        rail.edge_lengths = {non_edge: Fraction(2)}
+    env = RailEnv(width=4, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {non_edge: Fraction(2)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    with pytest.raises(ValueError):
+        env.reset()
+
+
+@pytest.mark.parametrize("seed", [42, 43])
+def test_grid_has_edge_matches_graph_edges(seed):
+    env, _, _ = env_generator(seed=seed)
+    g = GraphTransitionMap.grid_to_digraph(env.rail)
+    for r in range(env.height):
+        for c in range(env.width):
+            for d in range(4):
+                for d2 in range(4):
+                    (r2, c2) = get_new_position((r, c), d2)
+                    assert env.rail.has_edge(((r, c), d), ((r2, c2), d2)) == g.has_edge(f"{r, c, d}", f"{r2, c2, d2}")
 
 
 @pytest.mark.parametrize("regenerate_rail", [True, False])

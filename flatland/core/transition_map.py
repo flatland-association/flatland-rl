@@ -232,7 +232,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     edge_lengths : Optional[Dict[GridEdge, Fraction]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
-        when leaving it with heading `d2`. Must be at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
+        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
         length `DEFAULT_EDGE_LENGTH` (1). Set by `RailEnv` from the rail generator's `optionals["edge_lengths"]`.
     """
 
@@ -260,8 +260,21 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
     @edge_lengths.setter
     def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, Fraction]]):
+        for u, v in (edge_lengths or {}):
+            if not self.has_edge(u, v):
+                raise ValueError(f"Edge length given for ({u}, {v}), which is not an edge of the grid.")
         # empty map normalized to None for edge_length()'s fast path
         self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
+
+    def has_edge(self, u: GridNode, v: GridNode) -> bool:
+        """
+        Whether there is a transition from entry point `u = ((r, c), d)` to `v = ((r2, c2), d2)`, i.e. leaving cell
+        `(r, c)` (entered with heading `d`) with heading `d2` leads into cell `(r2, c2)` - the edges of
+        `GraphTransitionMap.grid_to_digraph`.
+        """
+        (position, _), (next_position, next_direction) = u, v
+        return (self.check_bounds(position) and tuple(get_new_position(position, next_direction)) == tuple(next_position)
+                and bool(self.get_transition(u, next_direction)))
 
     def edge_length(self, u: GridNode, v: GridNode) -> Fraction:
         if self._edge_lengths is None:

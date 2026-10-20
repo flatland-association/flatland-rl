@@ -86,6 +86,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         """
         Copies `rail_env.rail.edge_lengths` onto the `length` attribute of the corresponding edges of the
         grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length).
+        Every key is an edge of `g`, as `GridTransitionMap.edge_lengths` only accepts edges of the grid.
         """
         if not rail_env.rail.edge_lengths:
             return
@@ -93,8 +94,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         for (((r, c), d), ((r2, c2), d2)), length in rail_env.rail.edge_lengths.items():
             u = gctgc(r, c, d)
             v = gctgc(r2, c2, d2)
-            if g.has_edge(u, v):
-                g.edges[u, v]["length"] = length
+            assert g.has_edge(u, v), (u, v)
+            g.edges[u, v]["length"] = length
 
     @staticmethod
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
