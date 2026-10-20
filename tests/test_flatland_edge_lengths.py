@@ -1,3 +1,4 @@
+import math
 import pickle
 import tempfile
 from fractions import Fraction
@@ -582,3 +583,60 @@ def test_render_agent_progress():
     # bar is 0.8 of the cell width: 1/3 resp. 2/3 of it filled (up to pixel rounding and outline)
     assert widths[1] == pytest.approx(0.8 * n_pix / 3, abs=3)
     assert widths[2] == pytest.approx(2 * 0.8 * n_pix / 3, abs=3)
+
+
+@pytest.mark.parametrize("max_speed", [Fraction(1), Fraction(1, 2)])
+@pytest.mark.parametrize("edge_lengths,expected_length", [
+    (None, 5),
+    ({_edge(1): Fraction(3), _edge(2): Fraction(5, 2)}, 1 + 3 + Fraction(5, 2) + 1 + 1),
+])
+def test_travel_time_on_shortest_path_with_edge_lengths(max_speed, edge_lengths, expected_length):
+    env = _straight_env_with_agent(edge_lengths, max_speed=max_speed)
+    agent = env.agents[0]
+    # sum of the edge lengths from (0, 0) to (0, 4) plus the start cell
+    assert env.distance_map.shortest_path_length(agent) == expected_length
+    assert agent.get_travel_time_on_shortest_path(env.distance_map) == math.ceil(expected_length / max_speed)
+
+
+def _with_all_edge_lengths(rail_generator, length):
+    """ Wraps `rail_generator` to return `length` for every edge of the generated rail in `optionals["edge_lengths"]`. """
+
+    def generator(*args, **kwargs):
+        rail, optionals = rail_generator(*args, **kwargs)
+        gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
+        edge_lengths = {(gtgg(u), gtgg(v)): length for u, v in GraphTransitionMap.grid_to_digraph(rail).edges}
+        return rail, {**(optionals or {}), "edge_lengths": edge_lengths}
+
+    return generator
+
+
+def _env_with_intermediate_waypoints(length=None):
+    env, _, _ = env_generator(seed=42, line_length=3, n_cities=5, x_dim=40, y_dim=40)
+    if length is not None:
+        env.rail_generator = _with_all_edge_lengths(env.rail_generator, length)
+    env.reset(random_seed=42)
+    assert all(len(a.waypoints) == 3 for a in env.agents)
+    return env
+
+
+def test_timetable_segments_scale_with_edge_lengths():
+    unit_env = _env_with_intermediate_waypoints()
+    env = _env_with_intermediate_waypoints(Fraction(2))
+    assert env.rail.has_edge_lengths()
+    for unit_agent, agent in zip(unit_env.agents, env.agents):
+        # segment lengths count cells including the start cell: n unit edges -> n + 1, n edges of length 2 -> 2n + 1
+        unit_first = unit_agent.waypoints_earliest_departure[1] - unit_agent.waypoints_earliest_departure[0]
+        first = agent.waypoints_earliest_departure[1] - agent.waypoints_earliest_departure[0]
+        assert first == 2 * unit_first - 1
+        unit_last = unit_agent.waypoints_latest_arrival[2] - unit_agent.waypoints_latest_arrival[1]
+        last = agent.waypoints_latest_arrival[2] - agent.waypoints_latest_arrival[1]
+        assert last == 2 * unit_last - 1
+
+
+@pytest.mark.xfail(strict=True, reason="intermediate timetable entries are Fractions from shortest_path_length() - not yet whole steps")
+@pytest.mark.parametrize("length", [None, Fraction(3, 2)])
+def test_timetable_with_intermediate_waypoints_is_whole_steps(length):
+    env = _env_with_intermediate_waypoints(length)
+    for agent in env.agents:
+        times = [t for t in agent.waypoints_earliest_departure + agent.waypoints_latest_arrival if t is not None]
+        assert all(type(t) is int for t in times), times
