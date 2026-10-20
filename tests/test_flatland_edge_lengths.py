@@ -308,9 +308,13 @@ def test_graph_edge_length_attribute():
     u2, v2 = gctgc(0, 2, EAST), gctgc(0, 3, EAST)
     assert "length" not in graph_env.rail.g.edges[u2, v2]
     assert graph_env.rail.edge_length(u2, v2) == DEFAULT_EDGE_LENGTH
+    # read when constructed: later changes on g are not picked up
+    graph_env.rail.g.edges[u2, v2]["length"] = Fraction(2)
+    assert graph_env.rail.edge_length(u2, v2) == DEFAULT_EDGE_LENGTH
+    # validated when constructed
     graph_env.rail.g.edges[u2, v2]["length"] = 0.5
     with pytest.raises(ValueError):
-        graph_env.rail.edge_length(u2, v2)
+        GraphTransitionMap(graph_env.rail.g)
 
 
 @pytest.mark.parametrize("seed", range(42, 46))

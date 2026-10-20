@@ -23,7 +23,7 @@ import math
 from collections import defaultdict
 from fractions import Fraction
 from functools import lru_cache
-from typing import Tuple, Optional, Set
+from typing import Dict, Tuple, Optional, Set
 
 import networkx as nx
 
@@ -69,11 +69,17 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
     Attributes
     ----------
     g: nx.DiGraph
+        The optional `length` edge attributes are read when constructed (see `edge_length()`) - like the
+        lru_cache'd topology methods, they must not change on `g` afterwards (see `GridTransitionMap.edge_lengths`
+        for the intended workflow).
     """
 
     def __init__(self, g: nx.DiGraph):
         self.g = g
         self.cell_in_pins = defaultdict(lambda: set())
+        # validated once, not per edge_length() call (called several times per agent and step)
+        self._edge_lengths: Dict[GraphEdge, Fraction] = {
+            (u, v): validated_edge_length(d["length"]) for u, v, d in g.edges(data=True) if "length" in d}
 
     @staticmethod
     def grid_to_digraph(transition_map: GridTransitionMap) -> nx.DiGraph:
@@ -184,16 +190,12 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
 
     def edge_length(self, u: GraphNode, v: GraphNode) -> Fraction:
         """
-        The `length` attribute of the edge `(u, v)`, `DEFAULT_EDGE_LENGTH` if undefined.
-        N.B. not cached, as edge attributes can be changed on `g`.
+        The `length` attribute of the edge `(u, v)` (read when constructed), `DEFAULT_EDGE_LENGTH` if undefined.
         """
-        length = self.g.edges[u, v].get("length")
-        if length is None:
-            return DEFAULT_EDGE_LENGTH
-        return validated_edge_length(length)
+        return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
 
     def has_edge_lengths(self) -> bool:
-        return any("length" in d for _, _, d in self.g.edges(data=True))
+        return bool(self._edge_lengths)
 
     def _assert_actions_partitioned(self):
         """
