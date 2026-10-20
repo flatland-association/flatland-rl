@@ -169,8 +169,9 @@ class AgentSourceTargetDistanceMap(
         shortest_path = self._shortest_path_for_agent(agent)
         if shortest_path is None:
             return None
-        if self.edge_length is None:
-            return len(shortest_path)
+        if len(shortest_path) == 1:
+            # already at a target - no distance map lookup needed (none may be computable, e.g. without predecessors)
+            return 1
         return _exact_fraction(self.geometric_distance(self._shortest_path_source(agent), agent.handle)) + 1
 
     def _reconstruct_shortest_path(
@@ -189,17 +190,13 @@ class AgentSourceTargetDistanceMap(
         depth = 0
 
         while source not in targets and (max_depth is None or depth < max_depth):
-            if self.edge_length is not None:
-                # with edge lengths, compare the total distance via each successor (edge length plus the successor's
-                # distance) - not monotonic across steps like the successor's distance alone with unit edge lengths.
-                distance = math.inf
             best_next_entry_point = None
             next_entry_points = self.rail.get_successor_entry_points(source)
             for next_entry_point in next_entry_points:
 
-                next_action_distance = self.geometric_distance(next_entry_point, handle)
-                if self.edge_length is not None:
-                    next_action_distance = next_action_distance + self.edge_length(source, next_entry_point)
+                # total distance via next_entry_point - the best one's equals the distance from source, so strictly
+                # decreasing along the path
+                next_action_distance = self.geometric_distance(next_entry_point, handle) + self.edge_length(source, next_entry_point)
                 if next_action_distance < distance:
                     distance = next_action_distance
                     best_next_entry_point = next_entry_point

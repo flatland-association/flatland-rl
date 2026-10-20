@@ -1604,7 +1604,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
     def _distance_map_edge_length(self) -> Optional[Callable[[EntryPointT, EntryPointT], Fraction]]:
         """
         `edge_length` for the distance map - None if all edges have the default length, so the distance map
-        falls back to its plain (integer) edge count BFS.
+        uses plain integer unit lengths (faster than `Fraction` arithmetic).
         """
         raise NotImplementedError()
 

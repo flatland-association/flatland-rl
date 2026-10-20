@@ -17,6 +17,10 @@ def _infinite_distance():
     return math.inf
 
 
+def _unit_edge_length(u, v) -> int:
+    return 1
+
+
 class EntryPointDistanceMap(Generic[TransitionMapT, DistanceMapT, EntryPointT, WaypointT]):
     """
     Base distance map collecting the distance from every entry point visited during the walk to the
@@ -24,14 +28,14 @@ class EntryPointDistanceMap(Generic[TransitionMapT, DistanceMapT, EntryPointT, W
     of any numeric target_nr (agent handle), which `DistanceMapWalker` has no notion of.
 
     The distance is the sum of the lengths of the edges `(u, v)` traversed, given by `edge_length(u, v)`
-    (see `AbstractRailEnv.edge_length()`) - or simply the number of edges traversed if `edge_length` is None.
+    (see `AbstractRailEnv.edge_length()`) - the number of edges traversed with the default unit edge lengths.
     """
 
     def __init__(self, agents: List[EnvAgent], waypoint_init: Callable[[EntryPointT], WaypointT]):
         self.agents: List[EnvAgent] = agents
         self.rail: Optional[RailGridTransitionMap] = None
         self.waypoint_init = waypoint_init
-        self.edge_length: Optional[Callable[[EntryPointT, EntryPointT], Fraction]] = None
+        self.edge_length: Callable[[EntryPointT, EntryPointT], Fraction] = _unit_edge_length
         self.distances: Dict[
             Tuple[EntryPointT, EntryPointT], int
         ] = defaultdict(_infinite_distance)
@@ -50,7 +54,7 @@ class EntryPointDistanceMap(Generic[TransitionMapT, DistanceMapT, EntryPointT, W
         """
         self.agents: List[EnvAgent] = agents
         self.rail = rail
-        self.edge_length = edge_length
+        self.edge_length = edge_length if edge_length is not None else _unit_edge_length
         self.distances: Dict[
             Tuple[EntryPointT, EntryPointT], int
         ] = defaultdict(_infinite_distance)
