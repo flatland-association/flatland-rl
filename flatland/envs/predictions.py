@@ -169,6 +169,10 @@ class ShortestPathPredictorForRailEnv(PredictionBuilder[RailEnv, Dict[int, np.nd
                     steps_for_edge = times_per_cell * self.env.rail.edge_length(
                         (new_position, new_direction), (shortest_path[0].position, shortest_path[0].direction))
                 if steps_on_edge >= steps_for_edge:
+                    # start counting for the next edge: subtract rather than reset to 0, to carry the part of this step already
+                    # spent on the next edge (as the env carries the leftover distance) - 0 whenever steps_for_edge is a whole
+                    # number. steps_on_edge stays in [0, steps_for_edge); after a crossing it is the remainder in [0, 1) - at
+                    # most one crossing per step, as steps_for_edge >= 1.
                     steps_on_edge -= steps_for_edge
                     new_position = shortest_path[0].position
                     new_direction = shortest_path[0].direction

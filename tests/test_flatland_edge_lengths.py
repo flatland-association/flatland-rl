@@ -566,6 +566,31 @@ def test_shortest_path_predictor_with_edge_lengths(max_speed, edge_lengths, expe
     assert [int(p[2]) for p in prediction] == expected_cols
 
 
+@pytest.mark.parametrize("max_speed,edge_lengths", [
+    (Fraction(1), None),
+    (Fraction(1), {_edge(1): Fraction(3)}),
+    (Fraction(1, 2), {_edge(1): Fraction(2)}),
+    (Fraction(1), {_edge(1): Fraction(3, 2), _edge(2): Fraction(3, 2)}),
+    # 5/2 and 7/2 steps at speed 1/2: the remainder is carried over
+    (Fraction(1, 2), {_edge(1): Fraction(5, 4), _edge(2): Fraction(7, 4)}),
+])
+def test_shortest_path_predictor_matches_env_with_edge_lengths(max_speed, edge_lengths):
+    """ The predicted column at each step is the column the agent is in after stepping with MOVE_FORWARD. """
+    from flatland.envs.predictions import ShortestPathPredictorForRailEnv
+
+    env = _straight_env_with_agent(edge_lengths, max_speed=max_speed)
+    predictor = ShortestPathPredictorForRailEnv(max_depth=20)
+    predictor.reset(env)
+    predicted_cols = [int(p[2]) for p in predictor.get()[0]]
+    agent = env.agents[0]
+    actual_cols = [agent.current_entry_point[0][1]]
+    while agent.current_entry_point is not None and len(actual_cols) <= 20:
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+        # removed at the target: still predicted at the target
+        actual_cols.append(agent.current_entry_point[0][1] if agent.current_entry_point is not None else 4)
+    assert predicted_cols[:len(actual_cols)] == actual_cols
+
+
 def test_render_agent_progress():
     from flatland.utils.rendertools import RenderTool, RenderLocal
 
