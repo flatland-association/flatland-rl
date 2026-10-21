@@ -53,14 +53,14 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
         self._edge_length = rail.edge_length if rail.has_edge_lengths() else _unit_edge_length
         reachable_entry_points = set()
         for target_entry_point in target_entry_points:
-            reachable_entry_points |= self._walk_to_target(rail, target_entry_point)
+            reachable_entry_points.update(self._walk_to_target(rail, target_entry_point))
         return reachable_entry_points
 
     def _walk_to_target(self, rail: TransitionMapT, target_entry_point: EntryPointT
-                        ) -> Set[EntryPointT]:
+                        ) -> Dict[EntryPointT, Union[int, Fraction]]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
-        the minimum distances.
+        the minimum distances. Returns the reached entry points with their distance to the target entry point.
         """
         self.distance_map._set_distance(target_entry_point, target_entry_point, 0)
 
@@ -89,7 +89,7 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
                 for n in valid_neighbors:
                     nodes_queue.append(n)
 
-        return set(visited)
+        return visited
 
     def _get_and_update_neighbors(self, rail: TransitionMapT, entry_point: EntryPointT,
                                   current_distance: Union[int, Fraction], target_entry_point: EntryPointT,
