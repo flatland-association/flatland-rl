@@ -34,6 +34,14 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         np_random - RNG state for seeding
     returns:
         Timetable with the latest_arrivals, earliest_departures and max_episdode_steps
+
+    N.B. travel times are a heuristic: each segment (between consecutive waypoints) counts the sum of its edge
+    lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`). The total, divided by the
+    agent's max speed, determines max_episode_steps, the departure window and latest arrival; intermediate waypoint
+    times add the segment lengths without dividing by the speed. Hence the step onto the map is counted per segment
+    and scaled by the speed, giving slow agents and agents with intermediate waypoints some extra slack in total,
+    whereas slow agents' intermediate waypoint times are relatively tight. See
+    `EnvAgent.get_travel_time_on_shortest_path()` for the travel time used for rewards.
     """
     # max_episode_steps calculation
     if agents_hints:
