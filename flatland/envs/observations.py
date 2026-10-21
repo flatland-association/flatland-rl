@@ -216,7 +216,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                      dist_other_agent_encountered=0, dist_potential_conflict=0,
                                      dist_unusable_switch=0, dist_to_next_branch=0,
-                                     dist_min_to_target=distance_map[(handle, *agent_virtual_position, agent_virtual_direction)],
+                                     dist_min_to_target=float(distance_map[(handle, *agent_virtual_position, agent_virtual_direction)]),
                                      num_agents_same_direction=0, num_agents_opposite_direction=0,
                                      num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
                                      speed_min_fractional=speed_min_fractional,
@@ -446,10 +446,10 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             dist_min_to_target = 0
         elif last_is_terminal:
             dist_to_next_branch = np.inf
-            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
+            dist_min_to_target = float(distance_map_handle[position[0], position[1], direction])
         else:
             dist_to_next_branch = tot_dist
-            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
+            dist_min_to_target = float(distance_map_handle[position[0], position[1], direction])
 
         node = Node(dist_own_target_encountered=own_target_encountered,
                     dist_other_target_encountered=other_target_encountered,

@@ -15,17 +15,6 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 
 
-def _exact_fraction(d) -> Fraction:
-    """
-    Exact `Fraction` of a distance: ints/Fractions as is, floats (numpy grid distance map) rounded to the closest
-    fraction with denominator up to 10**6 - exact for sums of edge lengths with small denominators, as the float
-    representation error is orders of magnitude below the gap between any two such fractions.
-    """
-    if isinstance(d, (int, Fraction)):
-        return Fraction(d)
-    return Fraction(float(d)).limit_denominator(10 ** 6)
-
-
 class AgentSourceTargetDistanceMap(
     EntryPointDistanceMap[TransitionMapT, DistanceMapT, EntryPointT,
     WaypointT]
@@ -173,7 +162,7 @@ class AgentSourceTargetDistanceMap(
         if len(shortest_path) == 1:
             # already at a target - no distance map lookup needed (none may be computable, e.g. without predecessors)
             return 1
-        return _exact_fraction(self.geometric_distance(self._shortest_path_source(agent), agent.handle)) + 1
+        return self.geometric_distance(self._shortest_path_source(agent), agent.handle) + 1
 
     def _reconstruct_shortest_path(
         self,
@@ -212,7 +201,7 @@ class AgentSourceTargetDistanceMap(
             agent_shortest_path.append(self.waypoint_init(source))
         return agent_shortest_path
 
-    def geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):
+    def geometric_distance(self, source_entry_point: EntryPointT, target_nr: int) -> Distance:
         """
         The minimum total edge length to cross from `source_entry_point` to any of `target_nr`'s targets,
         following the rail - a geometric distance, not a number of steps (see `eta` for that).
@@ -268,11 +257,8 @@ class AgentSourceTargetDistanceMap(
         distance_during_acceleration = (
             steps_to_max_speed * speed + acceleration_delta * steps_to_max_speed * (steps_to_max_speed - 1) / 2
         )
-        # geometric_distance() returns a numpy float (always a sum of edge lengths for a reachable entry
-        # point, which this method assumes) - cast to an exact Fraction so it composes with
-        # distance/speed/max_speed (also Fractions) without silent float rounding (1/3 isn't exactly
-        # representable in float, and that error compounds across the arithmetic below).
-        remaining_distance = _exact_fraction(self.geometric_distance(entry_point, handle)) - distance - distance_during_acceleration
+        # geometric_distance() is exact (int or Fraction) for a reachable entry point, which this method assumes
+        remaining_distance = self.geometric_distance(entry_point, handle) - distance - distance_during_acceleration
         return reference_step + steps_to_max_speed + remaining_distance / max_speed
 
     def _set_geometric_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: Distance):

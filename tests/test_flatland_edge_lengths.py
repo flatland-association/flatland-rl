@@ -502,7 +502,8 @@ def test_weighted_distance_map_recompute():
     # re-computing without reset (distances of the previous walk still present) gives the same distances
     grid_env.distance_map._compute(grid_env.agents, grid_env.rail)
     assert np.array_equal(grid_env.distance_map.get(), expected)
-    assert np.isfinite(expected).any()
+    # with edge lengths, the grid distance map is an object array of exact distances
+    assert np.isfinite(expected.astype(float)).any()
 
 
 def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=None, n_cells=5):
@@ -601,12 +602,16 @@ def test_render_agent_progress():
 @pytest.mark.parametrize("edge_lengths,expected_length", [
     (None, 5),
     ({_edge(1): Fraction(3), _edge(2): Fraction(5, 2)}, 1 + 3 + Fraction(5, 2) + 1 + 1),
+    # exact: in float, 1.1 + 1.1 + 1.1 == 3.3000000000000003
+    ({_edge(1): Fraction(11, 10), _edge(2): Fraction(11, 10), _edge(3): Fraction(11, 10)}, 1 + 3 * Fraction(11, 10) + 1),
 ])
 def test_travel_time_on_shortest_path_with_edge_lengths(max_speed, edge_lengths, expected_length):
     env = _straight_env_with_agent(edge_lengths, max_speed=max_speed)
     agent = env.agents[0]
     # sum of the edge lengths from (0, 0) to (0, 4), plus 1 as len(shortest_path) counts waypoints, not edges
     assert env.distance_map.shortest_path_length(agent) == expected_length
+    # int without edge lengths, Fraction with
+    assert type(env.distance_map.shortest_path_length(agent)) is type(expected_length)
     assert agent.get_travel_time_on_shortest_path(env.distance_map) == math.ceil(expected_length / max_speed)
 
 
