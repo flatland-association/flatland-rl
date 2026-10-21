@@ -85,7 +85,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
     def _grid_edge_lengths(rail_env: RailEnv, g: nx.DiGraph) -> None:
         """
         Copies `rail_env.rail.edge_lengths` onto the `length` attribute of the corresponding edges of the
-        grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length).
+        grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length,
+        by design - see `GraphTransitionMap.grid_to_digraph`).
         Every key is an edge of `g`, as `GridTransitionMap.edge_lengths` only accepts edges of the grid.
         """
         if not rail_env.rail.edge_lengths:

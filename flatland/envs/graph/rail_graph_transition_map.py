@@ -89,6 +89,12 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
         ---------
         actions : Set[str]
             set of actions to go for this edge
+        length : EdgeLength, optional
+            length of this edge (`int` or `Fraction`, at least `MIN_EDGE_LENGTH`), see `edge_length()`. Design decision:
+            the attribute is not enforced on every edge. An edge without it has `DEFAULT_EDGE_LENGTH` (1), as an edge
+            missing from `GridTransitionMap.edge_lengths`. So graphs without lengths stay valid unchanged, and only edges
+            that differ from the default need the attribute. `grid_to_digraph` itself sets none
+            (see `GraphRailEnv.from_rail_env`).
 
         Node data
         ---------
