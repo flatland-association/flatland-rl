@@ -85,6 +85,10 @@ class SpeedCounter:
     `(current entry point, next entry point)` the agent is currently on. speed/distance/edge_length are
     None while off map (see set()) and become concrete Fractions once the agent enters the map.
 
+    Definition: speed is the distance travelled per step - each step adds the pre-step speed to the distance. Its
+    inverse `1 / speed` is the number of steps it takes to pass through an edge of length 1 (`edge_length / speed`
+    steps for an edge of length `edge_length`).
+
     Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
     pre-step inputs - used by RailEnv.step() to compute candidate speed/distance (which set() is then
     called with directly), and again by its post-step invariant checks

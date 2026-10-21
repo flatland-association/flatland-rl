@@ -200,6 +200,12 @@ on the same agent.
 
 ### Speed/distance are `Fraction`s, and `None` while off map
 
+Definition: speed is the distance travelled per step - each step adds the pre-step speed to the distance. Its
+inverse `1 / speed` is the number of steps it takes to pass through an edge of length 1 (`edge_length / speed` steps
+for an edge of length `edge_length`). Don't confuse the two: for at most one edge boundary per step, the
+shortest edge must be at least `MAX_SPEED` long, not `1 / MAX_SPEED`. Hence `MIN_EDGE_LENGTH = MAX_SPEED` (both 1, in
+`core/transition_map.py`).
+
 `SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `max_speed` as a `Fraction` unconditionally, but
 `speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
 (`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
