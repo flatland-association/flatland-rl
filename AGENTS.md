@@ -124,8 +124,12 @@ a node-id string for graph.
   `core/distance_map_walker.py`) — `EntryPointDistanceMap` (agent-agnostic, keyed by
   `(source_config, target_config)`) → `AgentSourceTargetDistanceMap` (agent-handle-aware, shared template-method
   `_compute()`) → concrete `DistanceMap` (grid, numpy array) / `GraphDistanceMap` (graph, nested dict).
-  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target entry point
-  (a shared visited set across targets silently breaks on cyclic/looped layouts). `RailEnv` keeps one
+  `DistanceMapWalker` does the label-correcting backward BFS that fills it in (an entry point is re-queued
+  whenever a shorter distance over `edge_length(u, v)` is found - a plain BFS with `int` distances when the rail
+  has no edge lengths), one independent walk per target entry point (a shared visited set across targets
+  silently breaks on cyclic/looped layouts). `shortest_path_length()` is the sum of edge lengths along the
+  shortest path plus 1, reproducing `len(shortest_path)` (waypoints, not edges) - existing timetables and
+  rewards depend on that +1. `RailEnv` keeps one
   `distance_map` instance alive across `reset()` calls rather than reconstructing it per episode.
 
 ### `flatland/envs/` — env control flow
@@ -230,6 +234,40 @@ each method's own formula and returned value, plus the shared preconditions/post
 condition is built from. The methods' own docstrings/comments point back into it (e.g. "See design_by_contract.md's
 Table 2") rather than re-deriving the same branch-exclusion reasoning inline - read it before changing any of the
 three methods' branch conditions, not just the code.
+
+### Edge lengths
+
+Every edge `(u, v)` between consecutive entry points has a length (`Fraction`, at least `MIN_EDGE_LENGTH` = 1 so
+an agent crosses at most one edge boundary per step, default `DEFAULT_EDGE_LENGTH` = 1; both and
+`validated_edge_length()` live in `core/transition_map.py`, which converts floats via their decimal representation,
+not `_pseudo_fractional()`). The `SpeedCounter` formulas take the current edge's length as an explicit argument,
+and `SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
+default.
+
+- Grid: the rail generator returns lengths as `optionals["edge_lengths"]` (`{(u, v): length}`, keyed by the
+  `GridNode = ((row, col), direction)` / `GridEdge` aliases), and `RailEnv` sets them on
+  `GridTransitionMap.edge_lengths`, whose setter rejects keys that are not edges (`has_edge(u, v)`, the same edges
+  as `GraphTransitionMap.grid_to_digraph`). There is no `RailEnv` constructor or distance map `reset()` parameter
+  for them. Persisted with the rail as `(u, v, length)` triples; `rail_from_file` returns them as optionals.
+- Graph: the `length` edge attribute, read and validated once in `GraphTransitionMap.__init__` (an invalid
+  length raises `ValueError` on construction). `GraphRailEnv.from_rail_env` copies grid lengths over. The graph
+  model's node/edge aliases are `GraphNode` / `GraphEdge` - don't mix them up with the grid's `GridNode` /
+  `GridEdge`.
+- Consumers (step, distance map, decision point graph, tree observation, shortest path predictor) only go through
+  `TransitionMap.edge_length(u, v)` / `has_edge_lengths()`; rendering's `show_agent_progress` reads
+  `speed_counter.distance / speed_counter.edge_length`. Without edge lengths, everything stays integer arithmetic,
+  identical to unit lengths.
+- Lengths are set once per `reset()` (rail generator → transition map → distance map reset) and must not change
+  afterwards: derived state (distance map, timetable, on-map agents' `speed_counter.edge_length`) is not updated.
+- `timetable_generator`'s travel times are a heuristic (+1 per segment, the total divided by the agent's speed,
+  intermediate waypoint times not), with segment lengths rounded up so timetable entries stay whole steps. This
+  is documented, not to be "fixed": changing it changes every generated timetable.
+  `EnvAgent.get_travel_time_on_shortest_path()` (rewards) has the analogous map-entry-step issue, tracked in
+  [#544](https://github.com/flatland-association/flatland-rl/issues/544) as an opt-in flag with the default unchanged.
+
+When changing anything edge-length related, run the grid ↔ graph parity tests (`tests/test_flatland_edge_lengths.py`,
+`tests/flatland/envs/graph/test_graph_rail_env.py`) and the regression episodes (`BENCHMARK_EPISODES_FOLDER`, see "Commands") - unit
+lengths must reproduce main's behavior exactly.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
@@ -420,6 +458,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   This runs `test` → `publish-test-pypi` → `docker-publish` instead.
 - PRs are squash-merged; adjust the squashed commit's subject/body to accurately describe the change, since that
   message is what `release-please` parses.
+- Don't edit `CHANGELOG.md` by hand (not even for public API changes) - `release-please` generates it from the
+  commit messages.
+- A PR that closes an issue (`Closes #NNN`) leaves no TODO or comment in the code referencing that issue - resolve
+  them in the PR, or move the remaining work to a new issue and reference that one instead.
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
