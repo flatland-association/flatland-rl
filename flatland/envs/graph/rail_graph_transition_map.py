@@ -21,14 +21,13 @@ References:
 import ast
 import math
 from collections import defaultdict
-from fractions import Fraction
 from functools import lru_cache
 from typing import Dict, Tuple, Optional, Set
 
 import networkx as nx
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap, TransitionMap, DEFAULT_EDGE_LENGTH, validated_edge_length
+from flatland.core.transition_map import GridTransitionMap, TransitionMap, DEFAULT_EDGE_LENGTH, EdgeLength, validated_edge_length
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
@@ -78,7 +77,7 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
         self.g = g
         self.cell_in_pins = defaultdict(lambda: set())
         # validated once, not per edge_length() call (called several times per agent and step)
-        self._edge_lengths: Dict[GraphEdge, Fraction] = {
+        self._edge_lengths: Dict[GraphEdge, EdgeLength] = {
             (u, v): validated_edge_length(d["length"]) for u, v, d in g.edges(data=True) if "length" in d}
 
     @staticmethod
@@ -188,7 +187,7 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
     def is_valid_entry_point(self, entry_point: GraphNode) -> bool:
         return entry_point in self.g.nodes
 
-    def edge_length(self, u: GraphNode, v: GraphNode) -> Fraction:
+    def edge_length(self, u: GraphNode, v: GraphNode) -> EdgeLength:
         """
         The `length` attribute of the edge `(u, v)` (read when constructed), `DEFAULT_EDGE_LENGTH` if undefined.
         """

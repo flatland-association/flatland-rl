@@ -1,9 +1,8 @@
 import math
 from collections import defaultdict
-from fractions import Fraction
-from typing import Dict, List, Optional, Generic, TypeVar, Callable, Tuple, Union
+from typing import Dict, List, Optional, Generic, TypeVar, Callable, Tuple
 
-from flatland.core.transition_map import TransitionMap
+from flatland.core.transition_map import Distance, TransitionMap
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 
@@ -29,7 +28,7 @@ class EntryPointDistanceMap(Generic[TransitionMapT, DistanceMapT, EntryPointT, W
         self.rail: Optional[RailGridTransitionMap] = None
         self.waypoint_init = waypoint_init
         self.distances: Dict[
-            Tuple[EntryPointT, EntryPointT], Union[int, Fraction]
+            Tuple[EntryPointT, EntryPointT], Distance
         ] = defaultdict(_infinite_distance)
 
     def reset(self, agents: List[EnvAgent], rail: TransitionMapT):
@@ -39,13 +38,13 @@ class EntryPointDistanceMap(Generic[TransitionMapT, DistanceMapT, EntryPointT, W
         self.agents: List[EnvAgent] = agents
         self.rail = rail
         self.distances: Dict[
-            Tuple[EntryPointT, EntryPointT], Union[int, Fraction]
+            Tuple[EntryPointT, EntryPointT], Distance
         ] = defaultdict(_infinite_distance)
 
     def _set_distance(self, source_entry_point: EntryPointT,
-                      target_entry_point: EntryPointT, new_distance: Union[int, Fraction]):
+                      target_entry_point: EntryPointT, new_distance: Distance):
         self.distances[(source_entry_point, target_entry_point)] = new_distance
 
     def _get_distance(self, source_entry_point: EntryPointT,
-                      target_entry_point: EntryPointT) -> Union[int, Fraction]:
+                      target_entry_point: EntryPointT) -> Distance:
         return self.distances[(source_entry_point, target_entry_point)]

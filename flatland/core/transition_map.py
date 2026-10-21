@@ -6,7 +6,7 @@ import uuid
 import warnings
 from fractions import Fraction
 from functools import lru_cache
-from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional
+from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional, Union
 
 import numpy as np
 from importlib_resources import path
@@ -29,6 +29,11 @@ ActionsT = TypeVar('ActionsT')
 GridNode = Tuple[Tuple[int, int], int]
 # grid edge `(u, v)` from entry point `u` to its successor entry point `v`
 GridEdge = Tuple[GridNode, GridNode]
+
+# length of an edge (grid and graph)
+EdgeLength = Union[int, Fraction]
+# distance between entry points: a sum of edge lengths
+Distance = Union[int, Fraction]
 
 # length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
 # see `TransitionMap.edge_length()`.
@@ -197,7 +202,7 @@ class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, Act
         """
         raise NotImplementedError()
 
-    def edge_length(self, u: EntryPointT, v: EntryPointT) -> Fraction:
+    def edge_length(self, u: EntryPointT, v: EntryPointT) -> EdgeLength:
         """
         Length of the edge from entry point `u` to its successor entry point `v` (at least `MIN_EDGE_LENGTH`).
         An agent on the map is always on the edge `(current_entry_point, next_entry_point)` and needs to
@@ -229,7 +234,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
     Attributes
     ----------
-    edge_lengths : Optional[Dict[GridEdge, Fraction]]
+    edge_lengths : Optional[Dict[GridEdge, EdgeLength]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
         when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
@@ -262,11 +267,11 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         self._reset_cache()
 
     @property
-    def edge_lengths(self) -> Optional[Dict[GridEdge, Fraction]]:
+    def edge_lengths(self) -> Optional[Dict[GridEdge, EdgeLength]]:
         return self._edge_lengths
 
     @edge_lengths.setter
-    def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, Fraction]]):
+    def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, EdgeLength]]):
         for u, v in (edge_lengths or {}):
             if not self.has_edge(u, v):
                 raise ValueError(f"Edge length given for ({u}, {v}), which is not an edge of the grid.")
@@ -283,7 +288,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         return (self.check_bounds(position) and tuple(get_new_position(position, next_direction)) == tuple(next_position)
                 and bool(self.get_transition(u, next_direction)))
 
-    def edge_length(self, u: GridNode, v: GridNode) -> Fraction:
+    def edge_length(self, u: GridNode, v: GridNode) -> EdgeLength:
         if self._edge_lengths is None:
             return DEFAULT_EDGE_LENGTH
         return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)

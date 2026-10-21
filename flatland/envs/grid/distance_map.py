@@ -1,10 +1,10 @@
-from fractions import Fraction
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 import numpy as np
 
 from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.envs.agent_utils import EnvAgent
+from flatland.core.transition_map import Distance
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
@@ -39,7 +39,7 @@ class DistanceMap(
         # just copy the distance map from other agent with same target (performance)
         self.distance_map[target_nr, :, :, :] = np.copy(self.distance_map[source_target_nr, :, :, :])
 
-    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: Union[int, Fraction]):
+    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: Distance):
         (r, c), direction = source_entry_point
         self.distance_map[target_nr, r, c, direction] = new_distance
 

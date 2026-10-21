@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength
 
 # shared zero-Fraction constant - Fraction is immutable, so every "return/set to zero speed" call site
 # can safely reuse the same instance instead of constructing a fresh Fraction(0) - profiled at ~12x the
@@ -63,7 +63,7 @@ def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
 
 @lru_cache()
 def cached_cell_exit(max_speed: Fraction, speed: Optional[Fraction], distance: Optional[Fraction],
-                     edge_length: Optional[Fraction]) -> bool:
+                     edge_length: Optional[EdgeLength]) -> bool:
     """
     Would this speed/distance cross the boundary of the current edge (of length `edge_length`) next step?
     `distance is None` (off map) is
@@ -111,10 +111,10 @@ class SpeedCounter:
             assert self._speed <= self._max_speed
             assert self._speed >= 0.0
         self._distance: Optional[Fraction] = None
-        self._edge_length: Optional[Fraction] = None
+        self._edge_length: Optional[EdgeLength] = None
         self._is_cell_entry = False
 
-    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], edge_length: Optional[Fraction]) -> None:
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], edge_length: Optional[EdgeLength]) -> None:
         """
         Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
         candidate_speed/candidate_distance (accepted), or the discarded-candidate formulas
@@ -129,7 +129,7 @@ class SpeedCounter:
         distance : Optional[Fraction]
             The new within-cell distance, or None while off map. Both speed and distance are None
             together, or both concrete Fractions together - never mixed (see the class docstring).
-        edge_length : Optional[Fraction]
+        edge_length : Optional[EdgeLength]
             The length of the edge the agent is on after this update, i.e.
             `rail.edge_length(current_entry_point, next_entry_point)` - ignored while off map (distance None).
         """
@@ -212,7 +212,7 @@ class SpeedCounter:
     @staticmethod
     @lru_cache()
     def distance_after_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction],
-                                edge_length: Optional[Fraction]) -> Optional[Fraction]:
+                                edge_length: Optional[EdgeLength]) -> Optional[Fraction]:
         """
         Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
         pre-step speed, wrapped into the newly-entered cell (just `distance + pre_speed` if it stays below
@@ -242,7 +242,7 @@ class SpeedCounter:
     @staticmethod
     @lru_cache()
     def distance_without_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction],
-                                  edge_length: Optional[Fraction]) -> Optional[Fraction]:
+                                  edge_length: Optional[EdgeLength]) -> Optional[Fraction]:
         """
         Expected distance when this step's cell-boundary crossing did not complete (denied by an
         invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
@@ -319,7 +319,7 @@ class SpeedCounter:
         return self._distance
 
     @property
-    def edge_length(self) -> Optional[Fraction]:
+    def edge_length(self) -> Optional[EdgeLength]:
         """
         Length of the edge (current entry point -> next entry point) the agent is on. None while off map.
         """

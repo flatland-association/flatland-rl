@@ -17,7 +17,7 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import ObservationBuilder
 from flatland.core.grid.grid_resource_map import GridResourceMap
 from flatland.core.resource_map import ResourceMap
-from flatland.core.transition_map import GridTransitionMap, TransitionMap
+from flatland.core.transition_map import EdgeLength, GridTransitionMap, TransitionMap
 from flatland.envs import agent_chains as ac
 from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_effects_generators as mfg
@@ -1340,7 +1340,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                             invalid_action_at_cell_exit: bool,
                             stopped: bool,
                             stay_off_map: bool,
-                            edge_length: Optional[Fraction]) -> Optional[Fraction]:
+                            edge_length: Optional[EdgeLength]) -> Optional[Fraction]:
         """
         The (optimistic) candidate distance of collect phase
         (actions invalid in the grid if cell transition is imminent lead to pre-step speed added truncated by edge length)

@@ -4,6 +4,7 @@ from typing import List
 import networkx as nx
 from attr import attrs, attrib
 
+from flatland.core.transition_map import EdgeLength
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GraphNode
 
 
@@ -18,13 +19,13 @@ class DecisionPointGraphEdgeData:
         The list of collapsed cells, starting on a facing switch (e.g. where a decision has been taken upon entering).
     len: int
         Number of collapsed cells.
-    length: Fraction
+    length: EdgeLength
         Sum of the lengths of the collapsed edges (see `GraphTransitionMap.edge_length()`).
 
     """
     path = attrib(type=List[GraphNode])
     len = attrib(type=int)
-    length = attrib(type=Fraction)
+    length = attrib(type=EdgeLength)
 
 
 class DecisionPointGraph:

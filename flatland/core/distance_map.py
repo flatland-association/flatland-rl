@@ -1,6 +1,6 @@
 import math
 from fractions import Fraction
-from typing import Callable, Dict, List, Optional, Set, Union
+from typing import Callable, Dict, List, Optional, Set
 
 from flatland.core.entry_point_distance_map import (
     EntryPointDistanceMap,
@@ -10,6 +10,7 @@ from flatland.core.entry_point_distance_map import (
     WaypointT,
 )
 from flatland.core.distance_map_walker import DistanceMapWalker, _unit_edge_length
+from flatland.core.transition_map import Distance
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.step_utils.states import TrainState
 
@@ -274,7 +275,7 @@ class AgentSourceTargetDistanceMap(
         remaining_distance = _exact_fraction(self.geometric_distance(entry_point, handle)) - distance - distance_during_acceleration
         return reference_step + steps_to_max_speed + remaining_distance / max_speed
 
-    def _set_geometric_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: Union[int, Fraction]):
+    def _set_geometric_distance(self, source_entry_point: EntryPointT, target_nr: int, new_distance: Distance):
         raise NotImplementedError()
 
     def _geometric_distance(self, source_entry_point: EntryPointT, target_nr: int):

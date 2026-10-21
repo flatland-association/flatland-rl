@@ -1,10 +1,9 @@
 import math
 from collections import deque
-from fractions import Fraction
-from typing import Dict, List, Generic, Set, TypeVar, Union
+from typing import Dict, List, Generic, Set, TypeVar
 
 from flatland.core.entry_point_distance_map import EntryPointDistanceMap
-from flatland.core.transition_map import TransitionMap
+from flatland.core.transition_map import Distance, TransitionMap
 
 EntryPointDistanceMapT = TypeVar('EntryPointDistanceMapT', bound=EntryPointDistanceMap)
 TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
@@ -57,7 +56,7 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
         return reachable_entry_points
 
     def _walk_to_target(self, rail: TransitionMapT, target_entry_point: EntryPointT
-                        ) -> Dict[EntryPointT, Union[int, Fraction]]:
+                        ) -> Dict[EntryPointT, Distance]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
         the minimum distances. Returns the reached entry points with their distance to the target entry point.
@@ -92,8 +91,8 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
         return visited
 
     def _get_and_update_neighbors(self, rail: TransitionMapT, entry_point: EntryPointT,
-                                  current_distance: Union[int, Fraction], target_entry_point: EntryPointT,
-                                  visited: Dict[EntryPointT, Union[int, Fraction]]):
+                                  current_distance: Distance, target_entry_point: EntryPointT,
+                                  visited: Dict[EntryPointT, Distance]):
         """
         Utility function used by _walk_to_target to perform a BFS walk over the rail, filling in the
         minimum distances to a single target entry point.
