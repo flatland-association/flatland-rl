@@ -64,8 +64,11 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
         """
         self.distance_map._set_distance(target_entry_point, target_entry_point, 0)
 
-        # entry point -> minimum distance found so far by this walk (not the distance map's own distances, which may
-        # still hold a previous walk's, e.g. when re-computed, and would then never be improved upon)
+        # entry point -> minimum distance found so far by this walk. With edge lengths, an entry point may first be
+        # reached on a longer path. It is then queued again with the shorter distance. Without edge lengths, every edge
+        # adds 1 and the queue is processed in order of distance, so the first distance found is the minimum. The distance
+        # map's own distances are not used for this: they may still hold a previous walk's distances, e.g. when
+        # re-computed. These would never be improved upon.
         visited = {target_entry_point: 0}
 
         # Fill in the (up to) 4 neighboring nodes
