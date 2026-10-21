@@ -1,8 +1,8 @@
 """Timetable generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
+import math
 import pickle
 import warnings
 from pathlib import Path
-from fractions import Fraction
 from typing import List, Union
 
 import numpy as np
@@ -15,9 +15,10 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.timetable_utils import Timetable
 
 
-def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) -> Union[Fraction, int]:
+def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) -> int:
     length = distance_map.shortest_path_length(agent)
-    return length if length is not None else 0
+    # whole steps, as timetable entries are steps - rounded up for fractional edge lengths
+    return int(math.ceil(length)) if length is not None else 0
 
 
 def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
@@ -36,11 +37,11 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         Timetable with the latest_arrivals, earliest_departures and max_episdode_steps
 
     N.B. travel times are a heuristic: each segment (between consecutive waypoints) counts the sum of its edge
-    lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`). The total, divided by the
-    agent's max speed, determines max_episode_steps, the departure window and latest arrival; intermediate waypoint
-    times add the segment lengths without dividing by the speed. Hence the step onto the map is counted per segment
-    and scaled by the speed, giving slow agents and agents with intermediate waypoints some extra slack in total,
-    whereas slow agents' intermediate waypoint times are relatively tight. See
+    lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`), rounded up to whole steps. The
+    total, divided by the agent's max speed, determines max_episode_steps, the departure window and latest arrival;
+    intermediate waypoint times add the segment lengths without dividing by the speed. Hence the step onto the map is
+    counted per segment and scaled by the speed, giving slow agents and agents with intermediate waypoints some extra
+    slack in total, whereas slow agents' intermediate waypoint times are relatively tight. See
     `EnvAgent.get_travel_time_on_shortest_path()` for the travel time used for rewards.
     """
     # max_episode_steps calculation

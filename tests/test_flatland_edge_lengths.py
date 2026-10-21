@@ -633,7 +633,6 @@ def test_timetable_segments_scale_with_edge_lengths():
         assert last == 2 * unit_last - 1
 
 
-@pytest.mark.xfail(strict=True, reason="intermediate timetable entries are Fractions from shortest_path_length() - not yet whole steps")
 @pytest.mark.parametrize("length", [None, Fraction(3, 2)])
 def test_timetable_with_intermediate_waypoints_is_whole_steps(length):
     env = _env_with_intermediate_waypoints(length)
