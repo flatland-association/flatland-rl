@@ -513,6 +513,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   "genuinely reaches speed 1"/"B is genuinely free"/"the crossing genuinely completed". If a value or transition
   is surprising enough to need emphasis, say the concrete fact that makes it surprising (a number, a state name,
   a contrast with the reader's likely assumption) instead of reaching for an adverb.
+- Keep the syntax of docstrings, comments, and markdown docs simple: prefer short main clauses side by side
+  (parataxis) over sentences with nested subordinate clauses and parentheticals. Write "X is not used here: it may
+  still hold Y. Y would never be improved upon.", not "(not X, which may still hold Y, e.g. when Z, and would then
+  never be improved upon)".
 - Docstrings/comments/markdown docs that describe *behavior* (a test's scenario, a design note, a review-findings
   or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
   points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,
