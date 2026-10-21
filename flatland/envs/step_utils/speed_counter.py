@@ -95,8 +95,8 @@ class SpeedCounter:
     (_check_speed_distance_speedup_postconditions) to verify the actual post-step values match. They are static
     rather than instance methods since they compute a *candidate* value from explicit pre-step inputs,
     not the counter's own (post-step) state; acceleration_delta/braking_delta are env-level parameters,
-    not SpeedCounter state, so are passed in explicitly rather than read off self. All four are None
-    (off map) in, None out.
+    not SpeedCounter state, so are passed in explicitly rather than read off self. All four return None
+    off map, i.e. when `pre_speed` (speed formulas) or `distance` (distance formulas) is None.
 
     | Method | Formula | Situation |
     |---|---|---|
@@ -182,7 +182,7 @@ class SpeedCounter:
                                  acceleration_delta: Fraction) -> Optional[Fraction]:
         """
         Expected speed after a MOVE_FORWARD action, or a movement action starting an agent moving from
-        rest: pre-step speed plus acceleration_delta, capped at max_speed. None (off map) in, None out.
+        rest: pre-step speed plus acceleration_delta, capped at max_speed. Off map (`pre_speed` is None), returns None.
 
         Physical motivation: a real train's engine has a limited power/torque budget, so it cannot jump
         straight to its running speed - it accelerates gradually, gaining at most acceleration_delta of
@@ -200,7 +200,7 @@ class SpeedCounter:
     def speed_after_braking(pre_speed: Optional[Fraction], braking_delta: Fraction) -> Optional[Fraction]:
         """
         Expected speed after a STOP_MOVING action: pre-step speed plus (negative) braking_delta,
-        floored at 0. None (off map) in, None out.
+        floored at 0. Off map (`pre_speed` is None), returns None.
 
         Physical motivation: braking is the operator's own controlled deceleration, not an instant
         halt - braking_delta models the brake's fixed deceleration rate per step, the mirror image of
@@ -220,7 +220,7 @@ class SpeedCounter:
         """
         Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
         pre-step speed, wrapped into the newly-entered cell (just `distance + pre_speed` if it stays below
-        `edge_length`). None (off map) in, None out.
+        `edge_length`). Off map (`distance` is None, and then so are `pre_speed` and `edge_length`), returns None.
 
         Physical motivation: the train's momentum this step carries it across the boundary and some
         distance into the next cell - the wrap (`(distance + pre_speed - edge_length) % MAX_SPEED`) is exactly that leftover distance,
@@ -256,7 +256,7 @@ class SpeedCounter:
         Expected distance when this step's cell-boundary crossing did not complete (denied by an
         invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
         plus pre-step speed, capped at the current edge's boundary (`edge_length`) rather than wrapping into a
-        new cell. None (off map) in, None out.
+        new cell. Off map (`distance` is None, and then so are `pre_speed` and `edge_length`), returns None.
 
         Physical motivation: the train's momentum this step still carries it right up to the cell
         boundary - it just isn't credited with crossing it, so it's parked exactly there instead of

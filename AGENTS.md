@@ -226,7 +226,7 @@ load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance le
 
 `SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
 `speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
-truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
+truth for the accel/brake/crossing math, all return `None` off map (`pre_speed` resp. `distance` is `None`) - used both by `SpeedCounter`
 itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondition checks to verify the actual
 post-step value against the same formula. Change the math in one place, not independently in `step()` and in
 the postcondition check that verifies it.
