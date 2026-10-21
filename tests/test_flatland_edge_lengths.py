@@ -593,7 +593,7 @@ def test_render_agent_progress():
 def test_travel_time_on_shortest_path_with_edge_lengths(max_speed, edge_lengths, expected_length):
     env = _straight_env_with_agent(edge_lengths, max_speed=max_speed)
     agent = env.agents[0]
-    # sum of the edge lengths from (0, 0) to (0, 4) plus the start cell
+    # sum of the edge lengths from (0, 0) to (0, 4), plus 1 as len(shortest_path) counts waypoints, not edges
     assert env.distance_map.shortest_path_length(agent) == expected_length
     assert agent.get_travel_time_on_shortest_path(env.distance_map) == math.ceil(expected_length / max_speed)
 
@@ -624,7 +624,7 @@ def test_timetable_segments_scale_with_edge_lengths():
     env = _env_with_intermediate_waypoints(Fraction(2))
     assert env.rail.has_edge_lengths()
     for unit_agent, agent in zip(unit_env.agents, env.agents):
-        # segment lengths count cells including the start cell: n unit edges -> n + 1, n edges of length 2 -> 2n + 1
+        # segment lengths are the sum of the edge lengths plus 1: n unit edges -> n + 1, n edges of length 2 -> 2n + 1
         unit_first = unit_agent.waypoints_earliest_departure[1] - unit_agent.waypoints_earliest_departure[0]
         first = agent.waypoints_earliest_departure[1] - agent.waypoints_earliest_departure[0]
         assert first == 2 * unit_first - 1

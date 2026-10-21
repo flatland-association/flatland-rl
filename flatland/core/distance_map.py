@@ -161,9 +161,10 @@ class AgentSourceTargetDistanceMap(
 
     def shortest_path_length(self, agent: EnvAgent) -> Optional[Fraction]:
         """
-        Length of the agent's shortest path (see `get_shortest_paths`) in cells, including the start cell: its number
-        of waypoints with unit edge lengths, in general the sum of the lengths of its edges plus 1 - independent of
-        which of several equally long shortest paths is taken. None if there is no path.
+        Length of the agent's shortest path (see `get_shortest_paths`): the sum of the lengths of its edges plus 1, as
+        `len(shortest_path)` (counting waypoints, not edges) used for travel times and timetables before edge lengths -
+        for an agent off the map, the 1 matches its step onto the map. Independent of which of several equally long
+        shortest paths is taken. None if there is no path.
         """
         shortest_path = self._shortest_path_for_agent(agent)
         if shortest_path is None:
