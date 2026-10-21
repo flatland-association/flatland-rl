@@ -936,9 +936,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             current_entry_point = agent.current_entry_point
             next_entry_point = agent.next_entry_point
             self._check_off_on_map_invariant(current_entry_point, next_entry_point)
-            # SpeedCounter contract - see "Speed/distance are Fractions, and None while off map" in
-            # AGENTS.md - position-derived, not state-machine-derived.
-            assert (current_entry_point is None) == (agent.speed_counter.speed is None) == (agent.speed_counter.distance is None)
+            # SpeedCounter contract "Speed/distance are Fractions, and None while off map" - position-derived, not state-machine-derived.
+            assert ((current_entry_point is None) == (agent.speed_counter.speed is None) == (agent.speed_counter.distance is None)
+                    == (agent.speed_counter.edge_length is None))
             # the speed counter tracks the length of the edge the agent is currently on
             if current_entry_point is not None:
                 assert agent.speed_counter.edge_length == self.rail.edge_length(current_entry_point, next_entry_point), \
