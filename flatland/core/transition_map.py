@@ -39,10 +39,14 @@ Distance = Union[int, Fraction]
 # length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
 # see `TransitionMap.edge_length()`.
 DEFAULT_EDGE_LENGTH: EdgeLength = 1
-# smallest admissible edge length: speed is capped at 1 (see `speed_counter._cap_speed`), so with every edge at least this
+# upper bound of every agent's speed (and max_speed). Speed is the distance travelled per step; its inverse is the
+# number of steps it takes to pass through an edge of length 1. Code elsewhere (e.g. observations,
+# `speed_counter._pseudo_fractional`) assumes speeds of at most 1.
+MAX_SPEED: EdgeLength = 1
+# smallest admissible edge length: speed is capped at `MAX_SPEED`, so with every edge at least this
 # long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
 # fits into the newly entered edge.
-MIN_EDGE_LENGTH: EdgeLength = 1
+MIN_EDGE_LENGTH: EdgeLength = MAX_SPEED
 
 
 def validated_edge_length(length) -> EdgeLength:

@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength, validated_edge_length
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength, MAX_SPEED, validated_edge_length
 
 # shared zero-Fraction constant - Fraction is immutable, so every "return/set to zero speed" call site
 # can safely reuse the same instance instead of constructing a fresh Fraction(0) - profiled at ~12x the
@@ -57,7 +57,7 @@ def _cap_speed(agent_max_speed: Fraction, new_speed: Fraction) -> Fraction:
     v = max(ZERO_FRACTION, min(agent_max_speed, new_speed))
     assert isinstance(v, Fraction)
     assert v >= 0.0
-    assert v <= 1.0
+    assert v <= MAX_SPEED
     return v
 
 
@@ -98,13 +98,13 @@ class SpeedCounter:
     |---|---|---|
     | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
     | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
-    | `distance_after_crossing` | `(distance + pre_speed - edge_length) % 1` if `distance + pre_speed >= edge_length`, else `distance + pre_speed` | cell boundary crossed |
+    | `distance_after_crossing` | `(distance + pre_speed - edge_length) % MAX_SPEED` if `distance + pre_speed >= edge_length`, else `distance + pre_speed` | cell boundary crossed |
     | `distance_without_crossing` | `min(distance + pre_speed, edge_length)` | cell boundary not crossed |
     """
 
     def __init__(self, max_speed: float, speed: Optional[float] = None):
         self._max_speed: Fraction = _pseudo_fractional(max_speed)
-        assert self._max_speed <= 1.0
+        assert self._max_speed <= MAX_SPEED
         # design: speed is None until the agent enters the map (see step())
         self._speed: Optional[Fraction] = _pseudo_fractional(speed) if speed is not None else None
         if self._speed is not None:
@@ -219,7 +219,7 @@ class SpeedCounter:
         `edge_length`). None (off map) in, None out.
 
         Physical motivation: the train's momentum this step carries it across the boundary and some
-        distance into the next cell - the wrap (`(distance + pre_speed - edge_length) % 1`) is exactly that leftover distance,
+        distance into the next cell - the wrap (`(distance + pre_speed - edge_length) % MAX_SPEED`) is exactly that leftover distance,
         i.e. how far into the new cell the train's momentum actually reaches. This is the only one of
         the four formulas that ever transitions the agent's current_entry_point/next_entry_point into a
         new cell (see RailEnv.step()'s (12)/(13)); the granting action can be MOVE_FORWARD/MOVE_LEFT/
@@ -227,8 +227,13 @@ class SpeedCounter:
         crossing was already in flight before the brake takes effect (see speed_after_braking above) -
         the action itself never matters once resource_check has granted the crossing.
 
-        Never returns exactly the new edge's length: a modulo result is always in [0, 1) by construction
-        (every edge is at least `MIN_EDGE_LENGTH` = 1 long) - physically, having actually crossed into the new cell, the train is now somewhere
+        The leftover `distance + pre_speed - edge_length` is in [0, `MAX_SPEED`]: `distance` is at most `edge_length`
+        (see distance_without_crossing below) and `pre_speed` is at most `MAX_SPEED`. So the modulo only changes a
+        leftover of exactly `MAX_SPEED`: a train waiting at the exit of its edge that crosses at full speed enters the
+        new edge at 0.
+
+        Never returns exactly the new edge's length: a modulo result is always in [0, `MAX_SPEED`) by construction
+        (every edge is at least `MIN_EDGE_LENGTH` = `MAX_SPEED` long) - physically, having actually crossed into the new cell, the train is now somewhere
         inside it, never still sitting exactly on the boundary it just crossed (that "sitting on the
         boundary" case is distance_without_crossing below, where the crossing does *not* happen).
         """
@@ -237,7 +242,7 @@ class SpeedCounter:
         leftover = distance + pre_speed - edge_length
         if leftover < 0:
             return distance + pre_speed
-        return leftover % 1
+        return leftover % MAX_SPEED
 
     @staticmethod
     @lru_cache()

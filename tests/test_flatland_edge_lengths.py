@@ -24,7 +24,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rewards import DefaultRewards
 from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, validated_edge_length
-from flatland.envs.step_utils.speed_counter import SpeedCounter, cached_cell_exit
+from flatland.envs.step_utils.speed_counter import MAX_SPEED, SpeedCounter, cached_cell_exit
 from flatland.envs.step_utils.states import TrainState
 from flatland.trajectories.policy_runner import PolicyRunner
 from tests.trajectories.test_policy_runner import RandomPolicy
@@ -41,8 +41,11 @@ def test_distance_after_crossing(edge_length):
     assert SpeedCounter.distance_after_crossing(edge_length - Fraction(1, 2), Fraction(1, 2), edge_length) == 0
     # overshoot carried into the next edge
     assert SpeedCounter.distance_after_crossing(edge_length - Fraction(1, 4), Fraction(3, 4), edge_length) == Fraction(1, 2)
-    # banked at the boundary with full speed: wraps to 0, never lands on the next edge's exit
-    assert SpeedCounter.distance_after_crossing(edge_length, Fraction(1), edge_length) == 0
+    # banked at the boundary with half speed: carried half into the next edge
+    assert SpeedCounter.distance_after_crossing(edge_length, Fraction(1, 2), edge_length) == Fraction(1, 2)
+    # banked at the boundary with full speed: the leftover is MAX_SPEED, the only value % MAX_SPEED changes - enters
+    # the next edge at 0, never on its exit
+    assert SpeedCounter.distance_after_crossing(edge_length, MAX_SPEED, edge_length) == 0
     assert SpeedCounter.distance_after_crossing(None, None, edge_length) is None
 
 
