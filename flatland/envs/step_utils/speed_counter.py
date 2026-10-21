@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength, validated_edge_length
 
 # shared zero-Fraction constant - Fraction is immutable, so every "return/set to zero speed" call site
 # can safely reuse the same instance instead of constructing a fresh Fraction(0) - profiled at ~12x the
@@ -354,7 +354,7 @@ class SpeedCounter:
             # old pickles have constant speed
             self._max_speed = _pseudo_fractional(self._speed)
         if "edge_length" in load_dict:
-            self._edge_length = _pseudo_fractional(load_dict["edge_length"])
+            self._edge_length = validated_edge_length(load_dict["edge_length"]) if load_dict["edge_length"] is not None else None
         else:
             # old pickles have unit-length edges only
             self._edge_length = DEFAULT_EDGE_LENGTH if self._distance is not None else None

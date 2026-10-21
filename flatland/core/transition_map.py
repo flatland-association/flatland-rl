@@ -1,6 +1,7 @@
 """
 TransitionMap and derived classes.
 """
+import numbers
 import traceback
 import uuid
 import warnings
@@ -37,27 +38,27 @@ Distance = Union[int, Fraction]
 
 # length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
 # see `TransitionMap.edge_length()`.
-DEFAULT_EDGE_LENGTH: Fraction = Fraction(1)
+DEFAULT_EDGE_LENGTH: EdgeLength = 1
 # smallest admissible edge length: speed is capped at 1 (see `speed_counter._cap_speed`), so with every edge at least this
 # long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
 # fits into the newly entered edge.
-MIN_EDGE_LENGTH: Fraction = Fraction(1)
+MIN_EDGE_LENGTH: EdgeLength = 1
 
 
-def validated_edge_length(length) -> Fraction:
+def validated_edge_length(length) -> EdgeLength:
     """
-    Convert an edge length to `Fraction` (floats via their shortest decimal representation, e.g. 1.1 -> 11/10)
-    and check it is at least `MIN_EDGE_LENGTH`.
+    Check an edge length is an `int` or a `Fraction` and at least `MIN_EDGE_LENGTH`. Numpy integers are converted to
+    `int`. Floats are rejected: most fractions have no exact float representation. Pass e.g. `Fraction("1.1")` instead.
 
     Raises
     ------
     ValueError
-        if the length is not a number or shorter than `MIN_EDGE_LENGTH`.
+        if the length is not an `int` or a `Fraction`, or shorter than `MIN_EDGE_LENGTH`.
     """
-    try:
-        length = Fraction(str(length)) if isinstance(length, float) else Fraction(length)
-    except (TypeError, ValueError):
-        raise ValueError(f"Edge length must be a number, found {length}.")
+    if isinstance(length, bool) or not isinstance(length, numbers.Rational):
+        raise ValueError(f"Edge length must be an int or a Fraction, found {type(length).__name__} {length}.")
+    if isinstance(length, numbers.Integral):
+        length = int(length)
     if length < MIN_EDGE_LENGTH:
         raise ValueError(f"Edge length must be at least {MIN_EDGE_LENGTH}, found {length}.")
     return length
@@ -237,7 +238,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     edge_lengths : Optional[Dict[GridEdge, EdgeLength]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
-        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
+        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`), an `int` or a `Fraction` (floats are rejected) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
         length `DEFAULT_EDGE_LENGTH` (1).
         Intended workflow: `RailEnv.reset()` calls the rail generator, which builds this transition map and returns
         the edge lengths as `optionals["edge_lengths"]`; `RailEnv` sets them here, then resets its distance map

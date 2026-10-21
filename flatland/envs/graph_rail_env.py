@@ -142,7 +142,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         g: nx.DiGraph
             the rail topology, with `actions` edge attributes and an optional
             `prohibited_actions` node attribute - see `GraphTransitionMap.grid_to_digraph` for the
-            shape expected by `RailEnv.step()`. An optional `length` edge attribute gives the edge's length
+            shape expected by `RailEnv.step()`. An optional `length` edge attribute (`int` or `Fraction`) gives the edge's length
             (see `GraphTransitionMap.edge_length()`), read when the env is constructed - must not change afterwards.
         resource_map: Dict[str, str]
             maps each node in `g` to the resource (occupancy unit) used for conflict detection.

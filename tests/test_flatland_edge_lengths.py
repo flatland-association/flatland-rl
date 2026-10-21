@@ -60,15 +60,22 @@ def test_cached_cell_exit(edge_length):
     assert cached_cell_exit(Fraction(1), None, None, None)
 
 
-@pytest.mark.parametrize("length", [Fraction(1, 2), 0, -1, 0.75])
+@pytest.mark.parametrize("length", [Fraction(1, 2), 0, -1])
 def test_validated_edge_length_rejects_short_edges(length):
     with pytest.raises(ValueError):
         validated_edge_length(length)
 
 
-def test_validated_edge_length_converts():
-    assert validated_edge_length(1.5) == Fraction(3, 2)
-    assert validated_edge_length(3) == Fraction(3)
+@pytest.mark.parametrize("length", [1.5, 2.0, np.float64(2), "2", True, None])
+def test_validated_edge_length_rejects_non_int_or_fraction(length):
+    with pytest.raises(ValueError, match="must be an int or a Fraction"):
+        validated_edge_length(length)
+
+
+def test_validated_edge_length_keeps_type():
+    assert validated_edge_length(3) == 3 and type(validated_edge_length(3)) is int
+    assert type(validated_edge_length(np.int64(3))) is int
+    assert validated_edge_length(Fraction(3, 2)) == Fraction(3, 2) and type(validated_edge_length(Fraction(3, 2))) is Fraction
 
 
 def test_speed_counter_is_cell_exit_uses_edge_length():
@@ -226,12 +233,14 @@ def test_edge_lengths_default_and_validation():
     assert env.rail.edge_lengths is None
     assert not env.rail.has_edge_lengths()
     assert env.rail.edge_length(*_edge(1)) == DEFAULT_EDGE_LENGTH
-    env.rail.edge_lengths = {_edge(1): 2.0}
+    env.rail.edge_lengths = {_edge(1): 2}
     assert env.rail.has_edge_lengths()
     assert env.rail.edge_length(*_edge(1)) == Fraction(2)
     assert env.rail.edge_length(*_edge(2)) == DEFAULT_EDGE_LENGTH
     with pytest.raises(ValueError):
         env.rail.edge_lengths = {_edge(1): Fraction(1, 2)}
+    with pytest.raises(ValueError, match="must be an int or a Fraction"):
+        env.rail.edge_lengths = {_edge(1): 2.0}
 
 
 @pytest.mark.parametrize("non_edge", [
@@ -313,9 +322,12 @@ def test_graph_edge_length_attribute():
     graph_env.rail.g.edges[u2, v2]["length"] = Fraction(2)
     assert graph_env.rail.edge_length(u2, v2) == DEFAULT_EDGE_LENGTH
     # validated when constructed
-    graph_env.rail.g.edges[u2, v2]["length"] = 0.5  # below MIN_EDGE_LENGTH (1)
+    graph_env.rail.g.edges[u2, v2]["length"] = Fraction(1, 2)  # below MIN_EDGE_LENGTH (1)
     with pytest.raises(ValueError):
         GraphTransitionMap(graph_env.rail.g)  # constructor validates every `length` attribute
+    graph_env.rail.g.edges[u2, v2]["length"] = 2.0  # float
+    with pytest.raises(ValueError, match="must be an int or a Fraction"):
+        GraphTransitionMap(graph_env.rail.g)
 
 
 @pytest.mark.parametrize("seed", range(42, 46))

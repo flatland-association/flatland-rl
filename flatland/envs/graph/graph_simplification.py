@@ -1,4 +1,3 @@
-from fractions import Fraction
 from typing import List
 
 import networkx as nx
@@ -62,7 +61,7 @@ class DecisionPointGraph:
     @staticmethod
     def _edge_data(gtm: GraphTransitionMap, branch: List[GraphNode]) -> DecisionPointGraphEdgeData:
         return DecisionPointGraphEdgeData(path=branch, len=len(branch), length=sum(
-            (gtm.edge_length(u, v) for u, v in zip(branch, branch[1:])), Fraction(0)))
+            (gtm.edge_length(u, v) for u, v in zip(branch, branch[1:])), 0))
 
     @staticmethod
     def fromGraphTransitionMap(gtm: GraphTransitionMap) -> "DecisionPointGraph":

@@ -237,10 +237,10 @@ three methods' branch conditions, not just the code.
 
 ### Edge lengths
 
-Every edge `(u, v)` between consecutive entry points has a length (`Fraction`, at least `MIN_EDGE_LENGTH` = 1 so
-an agent crosses at most one edge boundary per step, default `DEFAULT_EDGE_LENGTH` = 1; both and
-`validated_edge_length()` live in `core/transition_map.py`, which converts floats via their decimal representation,
-not `_pseudo_fractional()`). The `SpeedCounter` formulas take the current edge's length as an explicit argument,
+Every edge `(u, v)` between consecutive entry points has a length of type `EdgeLength` (`int` or `Fraction`). It is
+at least `MIN_EDGE_LENGTH` = 1, so an agent crosses at most one edge boundary per step. The default is
+`DEFAULT_EDGE_LENGTH` = 1. `validated_edge_length()` rejects floats, as most fractions have no exact float
+representation. Distances (sums of edge lengths) have type `Distance`. All of these live in `core/transition_map.py`. The `SpeedCounter` formulas take the current edge's length as an explicit argument,
 and `SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
 default.
 

@@ -25,7 +25,7 @@ from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibr
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
     a RailGridTransitionMap followed by an (optional) dict/
-    Optional `edge_lengths` key: `{(u, v): length}` with the length (at least 1) of the edge from entry point
+    Optional `edge_lengths` key: `{(u, v): length}` with the length (`int` or `Fraction`, floats are rejected, at least 1) of the edge from entry point
     `u = ((r, c), d)` to its successor `v` - set on the rail by `RailEnv` (see `GridTransitionMap.edge_lengths`), edges not
     listed have length 1.
 """
