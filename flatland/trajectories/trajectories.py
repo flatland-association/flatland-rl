@@ -154,7 +154,8 @@ class Trajectory:
             # see `_read_actions` for why explicit dtypes (not just `columns=`) matter here.
             return pd.DataFrame({'episode_id': pd.Series(dtype='object'), 'env_time': pd.Series(dtype='int64'),
                                  'agent_id': pd.Series(dtype='int64'), 'position': pd.Series(dtype='object')})
-        df = pd.read_csv(f, sep='\t')
+        # read as text - graph node ids may look numeric (e.g. "1")
+        df = pd.read_csv(f, sep='\t', dtype={"position": str})
         df["position"] = df["position"].map(normalize_position_read)
         if episode_only:
             return df[df['episode_id'] == self.ep_id]
@@ -567,9 +568,12 @@ def normalize_position_read(p):
     - None,None -> None
     - None,d -> None
     - nan -> None (why?)
+    - graph node ids not of tuple form (e.g. "a", "1") -> unchanged
     """
     if pd.isna(p):
         return None
+    if not p.startswith("("):
+        return p
     t = ast.literal_eval(p)
     # (None,None) -> None
     # (None,d) -> None

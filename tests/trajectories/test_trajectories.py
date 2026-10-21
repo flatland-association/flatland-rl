@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Any
 
+import pandas as pd
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
@@ -18,7 +19,7 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rewards import DefaultRewards
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
 from flatland.trajectories.policy_runner import generate_trajectory_from_policy, PolicyRunner
-from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, OUTPUTS_SUBDIR
+from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, OUTPUTS_SUBDIR, Trajectory, normalize_position_read
 from flatland.utils.seeding import np_random
 from flatland.utils.seeding import random_state_to_hashablestate
 
@@ -209,3 +210,28 @@ def test_persistence_reset(seed):
 
     assert np_random_generated != np_random_reset_no_regenerate_no_seed
     assert dict_generated != dict_reset_no_regenerate_no_seed
+
+
+@pytest.mark.parametrize("raw,expected", [
+    ("((1, 2), 3)", ((1, 2), 3)),
+    # files saved before 90fc275f: an off-map agent's position was written as (None, None) (no configuration) ...
+    ("(None, None)", None),
+    # ... or as (None, d) (off-map agent with a direction) - now written as an empty value, read as NaN.
+    ("(None, 3)", None),
+    (float("nan"), None),
+    ("(1, 2, 3)", "(1, 2, 3)"),
+    ("a", "a"),
+    ("1", "1"),
+])
+def test_normalize_position_read(raw, expected):
+    assert normalize_position_read(raw) == expected
+
+
+def test_read_trains_positions_non_tuple_node_ids():
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        trajectory = Trajectory(data_dir=data_dir, ep_id="ep")
+        positions = ["a", "1", "(1, 2, 3)", "((1, 2), 3)", None]
+        trajectory._write_trains_positions(pd.DataFrame({
+            "episode_id": "ep", "env_time": range(len(positions)), "agent_id": 0, "position": positions}))
+        assert list(trajectory._read_trains_positions()["position"]) == ["a", "1", "(1, 2, 3)", ((1, 2), 3), None]
