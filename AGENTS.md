@@ -123,7 +123,8 @@ a node-id string for graph.
 - **Distance-map subsystem** (`core/entry_point_distance_map.py`, `core/distance_map.py`,
   `core/distance_map_walker.py`) — `EntryPointDistanceMap` (agent-agnostic, keyed by
   `(source_config, target_config)`) → `AgentSourceTargetDistanceMap` (agent-handle-aware, shared template-method
-  `_compute()`) → concrete `DistanceMap` (grid, numpy array) / `GraphDistanceMap` (graph, nested dict).
+  `_compute()`) → concrete `DistanceMap` (grid, numpy array - float without edge lengths, object array of exact
+  distances with them) / `GraphDistanceMap` (graph, nested dict).
   `DistanceMapWalker` does the label-correcting backward BFS that fills it in (an entry point is re-queued
   whenever a shorter distance over `edge_length(u, v)` is found - a plain BFS with `int` distances when the rail
   has no edge lengths), one independent walk per target entry point (a shared visited set across targets
