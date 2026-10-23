@@ -1,11 +1,13 @@
 """
 TransitionMap and derived classes.
 """
+import numbers
 import traceback
 import uuid
 import warnings
+from fractions import Fraction
 from functools import lru_cache
-from typing import Tuple, Generic, TypeVar, Any, Set, Optional
+from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional, Union
 
 import numpy as np
 from importlib_resources import path
@@ -23,6 +25,47 @@ EntryPointT = TypeVar('EntryPointT')
 TransitionsT = TypeVar('TransitionsT')
 TransitionsValidityT = TypeVar('TransitionsValidityT')
 ActionsT = TypeVar('ActionsT')
+
+# grid entry point `((r, c), d)`: cell `(r, c)` entered with heading `d`
+GridNode = Tuple[Tuple[int, int], int]
+# grid edge `(u, v)` from entry point `u` to its successor entry point `v`
+GridEdge = Tuple[GridNode, GridNode]
+
+# length of an edge (grid and graph)
+EdgeLength = Union[int, Fraction]
+# distance between entry points: a sum of edge lengths
+Distance = Union[int, Fraction]
+
+# length of an edge `(u, v)` (current entry point -> next entry point) whose length is not explicitly given -
+# see `TransitionMap.edge_length()`.
+DEFAULT_EDGE_LENGTH: EdgeLength = 1
+# upper bound of every agent's speed (and max_speed). Speed is the distance travelled per step; its inverse is the
+# number of steps it takes to pass through an edge of length 1. Code elsewhere (e.g. observations,
+# `speed_counter._pseudo_fractional`) assumes speeds of at most 1.
+MAX_SPEED: EdgeLength = 1
+# smallest admissible edge length: speed is capped at `MAX_SPEED`, so with every edge at least this
+# long an agent crosses at most one edge boundary per step, and the leftover distance after a crossing always
+# fits into the newly entered edge.
+MIN_EDGE_LENGTH: EdgeLength = MAX_SPEED
+
+
+def validated_edge_length(length) -> EdgeLength:
+    """
+    Check an edge length is an `int` or a `Fraction` and at least `MIN_EDGE_LENGTH`. Numpy integers are converted to
+    `int`. Floats are rejected: most fractions have no exact float representation. Pass e.g. `Fraction("1.1")` instead.
+
+    Raises
+    ------
+    ValueError
+        if the length is not an `int` or a `Fraction`, or shorter than `MIN_EDGE_LENGTH`.
+    """
+    if isinstance(length, bool) or not isinstance(length, numbers.Rational):
+        raise ValueError(f"Edge length must be an int or a Fraction, found {type(length).__name__} {length}.")
+    if isinstance(length, numbers.Integral):
+        length = int(length)
+    if length < MIN_EDGE_LENGTH:
+        raise ValueError(f"Edge length must be at least {MIN_EDGE_LENGTH}, found {length}.")
+    return length
 
 
 class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, ActionsT]):
@@ -164,6 +207,21 @@ class TransitionMap(Generic[EntryPointT, TransitionsT, TransitionsValidityT, Act
         """
         raise NotImplementedError()
 
+    def edge_length(self, u: EntryPointT, v: EntryPointT) -> EdgeLength:
+        """
+        Length of the edge from entry point `u` to its successor entry point `v` (at least `MIN_EDGE_LENGTH`).
+        An agent on the map is always on the edge `(current_entry_point, next_entry_point)` and needs to
+        travel this distance before crossing into the next edge. `DEFAULT_EDGE_LENGTH` (1) unless overridden.
+        """
+        return DEFAULT_EDGE_LENGTH
+
+    def has_edge_lengths(self) -> bool:
+        """
+        Whether any edge may have a non-default length - if not, consumers like the distance map can use plain
+        integer unit lengths (faster than `Fraction` arithmetic).
+        """
+        return False
+
 
 class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transitions, Tuple[bool], Any], Generic[ActionsT]):
     """
@@ -178,6 +236,21 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     transitions : Transitions
         The Transitions object to use to encode/decode transitions over the
         grid.
+
+    Attributes
+    ----------
+    edge_lengths : Optional[Dict[GridEdge, EdgeLength]]
+        Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
+        `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
+        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`), an `int` or a `Fraction` (floats are rejected) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
+        length `DEFAULT_EDGE_LENGTH` (1).
+        Intended workflow: `RailEnv.reset()` calls the rail generator, which builds this transition map and returns
+        the edge lengths as `optionals["edge_lengths"]`; `RailEnv` sets them here, then resets its distance map
+        (constructed once in `RailEnv.__init__`), which computes the distances from them on first use
+        (`RailEnvPersister.set_full_state` does the same when loading). Edge lengths must not change afterwards:
+        derived state (the distance map, and the timetable and shortest paths derived from it, each on-map agent's
+        `speed_counter.edge_length`) is not updated. If they are changed after `reset()` before the first step anyway,
+        call `env.distance_map.reset(env.agents, env.rail)`.
     """
 
     def __init__(self, width, height, transitions: Transitions = Grid4Transitions([]), grid: np.ndarray = None):
@@ -195,7 +268,38 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
             if grid.dtype != self.transitions.get_type():
                 warnings.warn(f"Expected dtype {self.transitions.get_type()}, found {grid.dtype}.")
             self.grid = grid
+        self.edge_lengths = None
         self._reset_cache()
+
+    @property
+    def edge_lengths(self) -> Optional[Dict[GridEdge, EdgeLength]]:
+        return self._edge_lengths
+
+    @edge_lengths.setter
+    def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, EdgeLength]]):
+        for u, v in (edge_lengths or {}):
+            if not self.has_edge(u, v):
+                raise ValueError(f"Edge length given for ({u}, {v}), which is not an edge of the grid.")
+        # empty map normalized to None for edge_length()'s fast path
+        self._edge_lengths = {(u, v): validated_edge_length(length) for (u, v), length in edge_lengths.items()} if edge_lengths else None
+
+    def has_edge(self, u: GridNode, v: GridNode) -> bool:
+        """
+        Whether there is a transition from entry point `u = ((r, c), d)` to `v = ((r2, c2), d2)`, i.e. leaving cell
+        `(r, c)` (entered with heading `d`) with heading `d2` leads into cell `(r2, c2)` - the edges of
+        `GraphTransitionMap.grid_to_digraph`.
+        """
+        (position, _), (next_position, next_direction) = u, v
+        return (self.check_bounds(position) and tuple(get_new_position(position, next_direction)) == tuple(next_position)
+                and bool(self.get_transition(u, next_direction)))
+
+    def edge_length(self, u: GridNode, v: GridNode) -> EdgeLength:
+        if self._edge_lengths is None:
+            return DEFAULT_EDGE_LENGTH
+        return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
+
+    def has_edge_lengths(self) -> bool:
+        return self._edge_lengths is not None
 
     def _reset_cache(self):
         # use __eq__ and __hash__ to control cache lifecycle of instance methods, see https://docs.python.org/3/faq/programming.html#how-do-i-cache-method-calls.

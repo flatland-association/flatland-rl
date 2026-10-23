@@ -1,11 +1,10 @@
-from typing import List, Tuple
+from typing import List
 
 import networkx as nx
 from attr import attrs, attrib
 
-from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
-
-GridNode = Tuple[int, int, int]  # row, column, heading (at cell entry)
+from flatland.core.transition_map import EdgeLength
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap, GraphNode
 
 
 @attrs
@@ -15,14 +14,17 @@ class DecisionPointGraphEdgeData:
 
     Attributes
     ----------
-    path: List[GridNode]
+    path: List[GraphNode]
         The list of collapsed cells, starting on a facing switch (e.g. where a decision has been taken upon entering).
     len: int
         Number of collapsed cells.
+    length: EdgeLength
+        Sum of the lengths of the collapsed edges (see `GraphTransitionMap.edge_length()`).
 
     """
-    path = attrib(type=List[GridNode])
+    path = attrib(type=List[GraphNode])
     len = attrib(type=int)
+    length = attrib(type=EdgeLength)
 
 
 class DecisionPointGraph:
@@ -35,14 +37,14 @@ class DecisionPointGraph:
     Attributes
     ----------
     g: nx.MultiDiGraph
-        The decision point graph. Nodes have type `GridNode` and edge data has an attributed `d` of type `DecisionPointGraphEdgeData`.
+        The decision point graph. Nodes have type `GraphNode` and edge data has an attributed `d` of type `DecisionPointGraphEdgeData`.
     """
 
     def __init__(self, g: nx.MultiDiGraph):
         self.g = g
 
     @staticmethod
-    def _explore_branch(g: nx.DiGraph, u: GridNode, v: GridNode) -> List[GridNode]:
+    def _explore_branch(g: nx.DiGraph, u: GraphNode, v: GraphNode) -> List[GraphNode]:
         branch = [u, v]
         successors = list(g.successors(v))
         assert len(successors) > 0
@@ -55,6 +57,11 @@ class DecisionPointGraph:
             successors = list(g.successors(successor))
             assert len(successors) > 0
         return branch
+
+    @staticmethod
+    def _edge_data(gtm: GraphTransitionMap, branch: List[GraphNode]) -> DecisionPointGraphEdgeData:
+        return DecisionPointGraphEdgeData(path=branch, len=len(branch), length=sum(
+            (gtm.edge_length(u, v) for u, v in zip(branch, branch[1:])), 0))
 
     @staticmethod
     def fromGraphTransitionMap(gtm: GraphTransitionMap) -> "DecisionPointGraph":
@@ -82,7 +89,7 @@ class DecisionPointGraph:
         for dp in decision_nodes:
             for n in micro.successors(dp):
                 branch = DecisionPointGraph._explore_branch(micro, dp, n)
-                g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+                g.add_edge(branch[0], branch[-1], d=DecisionPointGraph._edge_data(gtm, branch))
                 for u, v, in zip(branch, branch[1:]):
                     closed.add((u, v))
 
@@ -91,7 +98,7 @@ class DecisionPointGraph:
         while not len(open) == 0:
             u, v = next(iter(open))
             branch = DecisionPointGraph._explore_branch(micro, u, v)
-            g.add_edge(branch[0], branch[-1], d=DecisionPointGraphEdgeData(path=branch, len=len(branch)))
+            g.add_edge(branch[0], branch[-1], d=DecisionPointGraph._edge_data(gtm, branch))
             for u_, v_, in zip(branch, branch[1:]):
                 open.discard((u_, v_))
 

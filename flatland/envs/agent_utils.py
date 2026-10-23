@@ -7,7 +7,7 @@ import numpy as np
 from attr import attrs, attrib, Factory
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.core.transition_map import TransitionMap
+from flatland.core.transition_map import TransitionMap, DEFAULT_EDGE_LENGTH
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
@@ -335,10 +335,8 @@ class EnvAgent(Generic[EntryPointT]):
         return distance_map.get_shortest_paths(agent_handle=self.handle)[self.handle]
 
     def get_travel_time_on_shortest_path(self, distance_map) -> int:
-        shortest_path = self.get_shortest_path(distance_map)
-        if shortest_path is not None:
-            distance = len(shortest_path)
-        else:
+        distance = distance_map.shortest_path_length(self)
+        if distance is None:
             distance = 0
         speed = self.speed_counter.max_speed
         return int(np.ceil(distance / speed))
@@ -414,7 +412,8 @@ class EnvAgent(Generic[EntryPointT]):
                 # its initial cell entry (distance 0); moving=True -> already underway at max_speed,
                 # same cell entry (this format has no partial within-cell distance to restore).
                 speed_counter = SpeedCounter(max_speed=speed)
-                speed_counter.set(speed if static_agent[3] else Fraction(0), Fraction(0))
+                # legacy formats predate edge lengths - unit-length edges only
+                speed_counter.set(speed if static_agent[3] else Fraction(0), Fraction(0), DEFAULT_EDGE_LENGTH)
                 agent = EnvAgent(
                     initial_entry_point=initial_entry_point,
                     current_entry_point=initial_entry_point,
@@ -432,7 +431,7 @@ class EnvAgent(Generic[EntryPointT]):
                 )
             else:
                 speed_counter = SpeedCounter(max_speed=1.0)
-                speed_counter.set(Fraction(0), Fraction(0))
+                speed_counter.set(Fraction(0), Fraction(0), DEFAULT_EDGE_LENGTH)
                 agent = EnvAgent(
                     initial_entry_point=initial_entry_point,
                     current_entry_point=initial_entry_point,

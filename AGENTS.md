@@ -49,15 +49,16 @@ flags it as unused.
   ```
   python -m pytest tests/ml --retries 2 --retry-delay 5
   ```
-- **Lint**: `flake8 flatland tests examples benchmarks` (config in `tox.ini`'s `[flake8]` section: max line length
-  160, `docs` excluded, a fixed ignore list for whitespace/formatting codes). The CI `lint` job is gated on the
-  `LINT_ENABLED` repo/org Actions variable (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED ==
-  'true' }}`) — unset means disabled — but the config is still the source of truth for style.
+- **Lint**: `flake8 flatland tests examples benchmarks`, or `tox -e lint` (the same with pinned deps). Config in
+  `tox.ini`'s `[flake8]` section: max line length 160, `docs` excluded, a fixed ignore list for
+  whitespace/formatting codes. The CI `lint` job is gated on the `LINT_ENABLED` repo/org Actions variable
+  (`.github/workflows/checks.yml`'s `if: ${{ vars.LINT_ENABLED == 'true' }}`) — unset means disabled — but the
+  config is still the source of truth for style.
 - **Regenerate `requirements*.txt`** after changing `pyproject.toml` dependencies: `tox -e requirements`.
 - **Check for dependency drift** (unused/missing/misdeclared deps across the `flatland`/`flatland/ml`/`tests`
   boundary): `tox -e py3.13-verify-requirements` (uses `deptry`).
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
-- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.14 — slow; prefer targeted `pytest`/`flake8`
+- **Full tox matrix**: `tox` (runs everything across Python 3.11–3.14 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
 - **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
   `tox -e py3.12-verify-cython-build`. To manually build in place and check (Cython auto-provisions via
@@ -109,7 +110,7 @@ flags it as unused.
 
 `flatland/core/` defines the rail network purely in terms of generic abstractions, each with two independent
 concrete implementations — grid-based (`flatland/envs/grid/`) and graph-based (`flatland/envs/graph/`). Neither
-is a layer on top of the other; they're alternative representations selected at env-construction time. A
+is a layer on top of the other; they're alternative representations selected at env-construction time. An
 **entry point** is each representation's network-position primitive: `((row, col), direction)` for grid,
 a node-id string for graph.
 
@@ -123,9 +124,14 @@ a node-id string for graph.
 - **Distance-map subsystem** (`core/entry_point_distance_map.py`, `core/distance_map.py`,
   `core/distance_map_walker.py`) — `EntryPointDistanceMap` (agent-agnostic, keyed by
   `(source_config, target_config)`) → `AgentSourceTargetDistanceMap` (agent-handle-aware, shared template-method
-  `_compute()`) → concrete `DistanceMap` (grid, numpy array) / `GraphDistanceMap` (graph, nested dict).
-  `DistanceMapWalker` does the backward BFS that fills it in, one independent walk per target entry point
-  (a shared visited set across targets silently breaks on cyclic/looped layouts). `RailEnv` keeps one
+  `_compute()`) → concrete `DistanceMap` (grid, numpy array - float without edge lengths, object array of exact
+  distances with them) / `GraphDistanceMap` (graph, nested dict).
+  `DistanceMapWalker` does the label-correcting backward BFS that fills it in (an entry point is re-queued
+  whenever a shorter distance over `edge_length(u, v)` is found - a plain BFS with `int` distances when the rail
+  has no edge lengths), one independent walk per target entry point (a shared visited set across targets
+  silently breaks on cyclic/looped layouts). `shortest_path_length()` is the sum of edge lengths along the
+  shortest path plus 1, reproducing `len(shortest_path)` (waypoints, not edges) - existing timetables and
+  rewards depend on that +1. `RailEnv` keeps one
   `distance_map` instance alive across `reset()` calls rather than reconstructing it per episode.
 
 ### `flatland/envs/` — env control flow
@@ -196,10 +202,16 @@ on the same agent.
 
 ### Speed/distance are `Fraction`s, and `None` while off map
 
+Definition: speed is the distance travelled per step - each step adds the pre-step speed to the distance. Its
+inverse `1 / speed` is the number of steps it takes to pass through an edge of length 1 (`edge_length / speed` steps
+for an edge of length `edge_length`). Don't confuse the two: for at most one edge boundary per step, the
+shortest edge must be at least `MAX_SPEED` long, not `1 / MAX_SPEED`. Hence `MIN_EDGE_LENGTH = MAX_SPEED` (both 1, in
+`core/transition_map.py`).
+
 `SpeedCounter` (`envs/step_utils/speed_counter.py`) stores `max_speed` as a `Fraction` unconditionally, but
 `speed`/`distance` are `Optional[Fraction]`: both `None` until the agent enters the map
 (`TrainState.is_off_map_state()`: `WAITING`/`READY_TO_DEPART`/`MALFUNCTION_OFF_MAP`), and both set back to
-`None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.step()` call as
+`None` the instant it leaves it. Map entry itself flows through the same per-step `SpeedCounter.set()` call as
 every other step - `rail_env.py`'s "(13) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
 from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
 `max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
@@ -215,11 +227,11 @@ A pickle predating this design can carry a stale off-map `speed` pinned at `max_
 load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance left untouched) to guard against this.
 
 `SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
-`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
-truth for the accel/brake/crossing math, all `None` (off map) in, `None` out - used both by `SpeedCounter`
-itself (`step()`/`_distance_update`) and by `rail_env.py`'s post-step postcondition checks to verify the actual
-post-step value against the same formula. Change the math in one place, not independently in `step()` and in
-the postcondition check that verifies it.
+`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of truth
+for the accel/brake/crossing math, all return `None` off map (`pre_speed` resp. `distance` is `None`) - used both
+by `rail_env.py`'s collect phase (candidate speed/distance, then passed to `SpeedCounter.set()`) and by its
+post-step postcondition checks to verify the actual post-step value against the same formula. Change the math in
+one place, not independently in `step()` and in the postcondition check that verifies it.
 
 `design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
 `AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect
@@ -230,6 +242,42 @@ each method's own formula and returned value, plus the shared preconditions/post
 condition is built from. The methods' own docstrings/comments point back into it (e.g. "See design_by_contract.md's
 Table 2") rather than re-deriving the same branch-exclusion reasoning inline - read it before changing any of the
 three methods' branch conditions, not just the code.
+
+### Edge lengths
+
+Every edge `(u, v)` between consecutive entry points has a length of type `EdgeLength` (`int` or `Fraction`). It is
+at least `MIN_EDGE_LENGTH` = 1, so an agent crosses at most one edge boundary per step. The default is
+`DEFAULT_EDGE_LENGTH` = 1. `validated_edge_length()` rejects floats, as most fractions have no exact float
+representation. Distances (sums of edge lengths) have type `Distance`. All of these live in
+`core/transition_map.py`. The `SpeedCounter` formulas take the current edge's length as an explicit argument, and
+`SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
+default.
+
+- Grid: the rail generator returns lengths as `optionals["edge_lengths"]` (`{(u, v): length}`, keyed by the
+  `GridNode = ((row, col), direction)` / `GridEdge` aliases), and `RailEnv` sets them on
+  `GridTransitionMap.edge_lengths`, whose setter rejects keys that are not edges (`has_edge(u, v)`, the same edges
+  as `GraphTransitionMap.grid_to_digraph`). There is no `RailEnv` constructor or distance map `reset()` parameter
+  for them. Persisted with the rail as `(u, v, length)` triples; `rail_from_file` returns them as optionals.
+- Graph: the `length` edge attribute, read and validated once in `GraphTransitionMap.__init__` (an invalid
+  length raises `ValueError` on construction). `GraphRailEnv.from_rail_env` copies grid lengths over. The graph
+  model's node/edge aliases are `GraphNode` / `GraphEdge` - don't mix them up with the grid's `GridNode` /
+  `GridEdge`.
+- Consumers (step, distance map, decision point graph, tree observation, shortest path predictor) only go through
+  `TransitionMap.edge_length(u, v)` / `has_edge_lengths()`; rendering's `show_agent_progress` reads
+  `speed_counter.distance / speed_counter.edge_length`. Without edge lengths, everything stays integer arithmetic,
+  identical to unit lengths.
+- Lengths are set once per `reset()` (rail generator → transition map → distance map reset) and must not change
+  afterwards: derived state (distance map, timetable, on-map agents' `speed_counter.edge_length`) is not updated.
+- `timetable_generator`'s travel times are a heuristic (+1 per segment, the total divided by the agent's speed,
+  intermediate waypoint times not), with segment lengths rounded up so timetable entries stay whole steps. This is
+  documented, not to be "fixed": changing it changes every generated timetable.
+  `EnvAgent.get_travel_time_on_shortest_path()` (rewards) has the analogous map-entry-step issue, tracked in
+  [#544](https://github.com/flatland-association/flatland-rl/issues/544) as an opt-in flag with the default
+  unchanged.
+
+When changing anything edge-length related, run the grid ↔ graph parity tests
+(`tests/test_flatland_edge_lengths.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`) and the regression
+episodes (`BENCHMARK_EPISODES_FOLDER`, see "Commands") - unit lengths must reproduce main's behavior exactly.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
@@ -294,7 +342,7 @@ missing) asserts a wheel's pure-Python fallback via `--expect pure-python` — t
 missing (`optional = true` only ever covers a missing *compiler*, confirmed the hard way — an earlier version
 of this env tried `--no-isolation` with cython omitted from `deps` and just got `ERROR Missing dependencies:
 cython>=3.2.9`).
-`py{3.10,3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
+`py{3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
 sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's real compilation via `--expect
 compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
 by construction, but guards against e.g. stray `.c`/`.so` files accidentally being packaged).
@@ -420,6 +468,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   This runs `test` → `publish-test-pypi` → `docker-publish` instead.
 - PRs are squash-merged; adjust the squashed commit's subject/body to accurately describe the change, since that
   message is what `release-please` parses.
+- Don't edit `CHANGELOG.md` by hand (not even for public API changes) - `release-please` generates it from the
+  commit messages.
+- A PR that closes an issue (`Closes #NNN`) leaves no TODO or comment in the code referencing that issue - resolve
+  them in the PR, or move the remaining work to a new issue and reference that one instead.
 
 ## Conventions (see `CONTRIBUTING.md` for full detail)
 
@@ -471,6 +523,10 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   "genuinely reaches speed 1"/"B is genuinely free"/"the crossing genuinely completed". If a value or transition
   is surprising enough to need emphasis, say the concrete fact that makes it surprising (a number, a state name,
   a contrast with the reader's likely assumption) instead of reaching for an adverb.
+- Keep the syntax of docstrings, comments, and markdown docs simple: prefer short main clauses side by side
+  (parataxis) over sentences with nested subordinate clauses and parentheticals. Write "X is not used here: it may
+  still hold Y. Y would never be improved upon.", not "(not X, which may still hold Y, e.g. when Z, and would then
+  never be improved upon)".
 - Docstrings/comments/markdown docs that describe *behavior* (a test's scenario, a design note, a review-findings
   or PR-tracking doc) should stay at the level a user/reader of the API would observe it - agent positions/entry
   points, speed/distance, state, malfunction status - not the implementation path that produces it. Concretely,

@@ -11,6 +11,7 @@ from flatland.core.env import Environment
 from flatland.core.env_observation_builder import DummyObservationBuilder, ObservationBuilder, gauss_perturbation_observation_builder_wrapper
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.core.grid.grid4_utils import get_new_position
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
@@ -135,7 +136,7 @@ def test_reward_function_conflict(rendering=False):
     for a in env.agents:
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        a.speed_counter.set(speed=a.speed_counter.max_speed, distance=Fraction(0))
+        a.speed_counter.set(speed=a.speed_counter.max_speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)
@@ -230,7 +231,7 @@ def test_reward_function_waiting(rendering=False):
     for a in env.agents:
         # design: distance is None when off map -- the agent is placed directly on the map here,
         # bypassing the state machine's own departure step, so bootstrap distance to 0 explicitly.
-        a.speed_counter.set(speed=a.speed_counter.max_speed, distance=Fraction(0))
+        a.speed_counter.set(speed=a.speed_counter.max_speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         transition = env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, a.current_entry_point)
         assert transition is not None
         a.next_entry_point = _sanitize_entry_point(transition)

@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from fractions import Fraction
 from typing import Optional, Tuple
 
+from flatland.core.transition_map import EdgeLength
 from flatland.envs.rail_env_action import RailEnvActions
 
 
@@ -16,6 +17,9 @@ class AgentTransitionData:
     # pre-step distance (mirrors speed above) - stored so distribute()'s "candidate discarded, on-map"
     # branch can reuse it instead of re-reading agent.speed_counter.distance a second time.
     distance: Optional[Fraction] = None
+    # pre-step length of the edge (current entry point -> next entry point) the agent is on, None off map -
+    # stored so distribute()'s "candidate discarded, on-map" branch can reuse it.
+    edge_length: Optional[EdgeLength] = None
     # collect()'s agent.speed_counter.is_cell_exit() result (mirrors speed/distance above) - stored so
     # distribute()'s resource_check assertion can reuse it instead of calling is_cell_exit() a second
     # time. Not the same as the raw cell_exit formula computed independently inside the 3 _candidate_

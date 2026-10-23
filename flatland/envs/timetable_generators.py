@@ -1,4 +1,5 @@
 """Timetable generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
+import math
 import pickle
 import warnings
 from pathlib import Path
@@ -14,11 +15,10 @@ from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.timetable_utils import Timetable
 
 
-def len_handle_none(v):
-    if v is not None:
-        return len(v)
-    else:
-        return 0
+def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) -> int:
+    length = distance_map.shortest_path_length(agent)
+    # whole steps, as timetable entries are steps - rounded up for fractional edge lengths
+    return int(math.ceil(length)) if length is not None else 0
 
 
 def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
@@ -35,6 +35,14 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         np_random - RNG state for seeding
     returns:
         Timetable with the latest_arrivals, earliest_departures and max_episdode_steps
+
+    N.B. travel times are a heuristic: each segment (between consecutive waypoints) counts the sum of its edge
+    lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`), rounded up to whole steps. The
+    total, divided by the agent's max speed, determines max_episode_steps, the departure window and latest arrival;
+    intermediate waypoint times add the segment lengths without dividing by the speed. Hence the step onto the map is
+    counted per segment and scaled by the speed, giving slow agents and agents with intermediate waypoints some extra
+    slack in total, whereas slow agents' intermediate waypoint times are relatively tight. See
+    `EnvAgent.get_travel_time_on_shortest_path()` for the travel time used for rewards.
     """
     # max_episode_steps calculation
     if agents_hints:
@@ -76,14 +84,13 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
         distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
 
-        shortest_paths = distance_map_with_intermediates.get_shortest_paths()
         shortest_path_segment_lengths = [[] for _ in range(num_agents)]
-        for k, v in shortest_paths.items():
-            shortest_path_segment_lengths[k % num_agents].append(len_handle_none(v))
+        for fake_agent in fake_agents:
+            shortest_path_segment_lengths[fake_agent.handle % num_agents].append(
+                _shortest_path_length_or_zero(distance_map_with_intermediates, fake_agent))
         shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
     else:
-        shortest_paths = distance_map.get_shortest_paths()
-        shortest_paths_lengths = [len_handle_none(v) for k, v in shortest_paths.items()]
+        shortest_paths_lengths = [_shortest_path_length_or_zero(distance_map, agent) for agent in distance_map.agents]
         shortest_path_segment_lengths = [[l] for l in shortest_paths_lengths]
 
     # Find mean_shortest_path_time
