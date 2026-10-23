@@ -226,11 +226,11 @@ A pickle predating this design can carry a stale off-map `speed` pinned at `max_
 load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance left untouched) to guard against this.
 
 `SpeedCounter` also exposes four static, `lru_cache`d formula methods (`speed_after_acceleration`,
-`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of
-truth for the accel/brake/crossing math, all return `None` off map (`pre_speed` resp. `distance` is `None`) - used both by `rail_env.py`'s
-collect phase (candidate speed/distance, then passed to `SpeedCounter.set()`) and by its post-step postcondition checks to verify the actual
-post-step value against the same formula. Change the math in one place, not independently in `step()` and in
-the postcondition check that verifies it.
+`speed_after_braking`, `distance_after_crossing`, `distance_without_crossing`) that are the single source of truth
+for the accel/brake/crossing math, all return `None` off map (`pre_speed` resp. `distance` is `None`) - used both
+by `rail_env.py`'s collect phase (candidate speed/distance, then passed to `SpeedCounter.set()`) and by its
+post-step postcondition checks to verify the actual post-step value against the same formula. Change the math in
+one place, not independently in `step()` and in the postcondition check that verifies it.
 
 `design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
 `AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect
@@ -247,8 +247,9 @@ three methods' branch conditions, not just the code.
 Every edge `(u, v)` between consecutive entry points has a length of type `EdgeLength` (`int` or `Fraction`). It is
 at least `MIN_EDGE_LENGTH` = 1, so an agent crosses at most one edge boundary per step. The default is
 `DEFAULT_EDGE_LENGTH` = 1. `validated_edge_length()` rejects floats, as most fractions have no exact float
-representation. Distances (sums of edge lengths) have type `Distance`. All of these live in `core/transition_map.py`. The `SpeedCounter` formulas take the current edge's length as an explicit argument,
-and `SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
+representation. Distances (sums of edge lengths) have type `Distance`. All of these live in
+`core/transition_map.py`. The `SpeedCounter` formulas take the current edge's length as an explicit argument, and
+`SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
 default.
 
 - Grid: the rail generator returns lengths as `optionals["edge_lengths"]` (`{(u, v): length}`, keyed by the
@@ -267,14 +268,15 @@ default.
 - Lengths are set once per `reset()` (rail generator → transition map → distance map reset) and must not change
   afterwards: derived state (distance map, timetable, on-map agents' `speed_counter.edge_length`) is not updated.
 - `timetable_generator`'s travel times are a heuristic (+1 per segment, the total divided by the agent's speed,
-  intermediate waypoint times not), with segment lengths rounded up so timetable entries stay whole steps. This
-  is documented, not to be "fixed": changing it changes every generated timetable.
+  intermediate waypoint times not), with segment lengths rounded up so timetable entries stay whole steps. This is
+  documented, not to be "fixed": changing it changes every generated timetable.
   `EnvAgent.get_travel_time_on_shortest_path()` (rewards) has the analogous map-entry-step issue, tracked in
-  [#544](https://github.com/flatland-association/flatland-rl/issues/544) as an opt-in flag with the default unchanged.
+  [#544](https://github.com/flatland-association/flatland-rl/issues/544) as an opt-in flag with the default
+  unchanged.
 
-When changing anything edge-length related, run the grid ↔ graph parity tests (`tests/test_flatland_edge_lengths.py`,
-`tests/flatland/envs/graph/test_graph_rail_env.py`) and the regression episodes (`BENCHMARK_EPISODES_FOLDER`, see "Commands") - unit
-lengths must reproduce main's behavior exactly.
+When changing anything edge-length related, run the grid ↔ graph parity tests
+(`tests/test_flatland_edge_lengths.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`) and the regression
+episodes (`BENCHMARK_EPISODES_FOLDER`, see "Commands") - unit lengths must reproduce main's behavior exactly.
 
 ### Step pre/post-condition assertions (`check_step_pre_post_conditions`)
 
