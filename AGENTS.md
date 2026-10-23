@@ -109,7 +109,7 @@ flags it as unused.
 
 `flatland/core/` defines the rail network purely in terms of generic abstractions, each with two independent
 concrete implementations — grid-based (`flatland/envs/grid/`) and graph-based (`flatland/envs/graph/`). Neither
-is a layer on top of the other; they're alternative representations selected at env-construction time. A
+is a layer on top of the other; they're alternative representations selected at env-construction time. An
 **entry point** is each representation's network-position primitive: `((row, col), direction)` for grid,
 a node-id string for graph.
 
