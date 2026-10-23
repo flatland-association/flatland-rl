@@ -57,7 +57,7 @@ flags it as unused.
 - **Check for dependency drift** (unused/missing/misdeclared deps across the `flatland`/`flatland/ml`/`tests`
   boundary): `tox -e py3.13-verify-requirements` (uses `deptry`).
 - **Notebooks** (in `notebooks/`, executed as smoke tests): `tox -e py3.12-notebooks`.
-- **Full tox matrix**: `tox` (runs everything across Python 3.10–3.14 — slow; prefer targeted `pytest`/`flake8`
+- **Full tox matrix**: `tox` (runs everything across Python 3.11–3.14 — slow; prefer targeted `pytest`/`flake8`
   invocations above during iteration).
 - **Verify the Cython build actually compiles** (see "Cython-accelerated hot paths" below):
   `tox -e py3.12-verify-cython-build`. To manually build in place and check (Cython auto-provisions via
@@ -338,7 +338,7 @@ missing) asserts a wheel's pure-Python fallback via `--expect pure-python` — t
 missing (`optional = true` only ever covers a missing *compiler*, confirmed the hard way — an earlier version
 of this env tried `--no-isolation` with cython omitted from `deps` and just got `ERROR Missing dependencies:
 cython>=3.2.9`).
-`py{3.10,3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
+`py{3.11,3.12,3.13,3.14}-verify-cython-build` (plain isolated build, zero flags) and its `-no-isolation`
 sibling (mirrors `pip install --no-build-isolation -e .`) both assert a wheel's real compilation via `--expect
 compiled`; `[testenv:build]` asserts the published artifact is a pure-Python `--artifact sdist` (trivially true
 by construction, but guards against e.g. stray `.c`/`.so` files accidentally being packaged).
