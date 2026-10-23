@@ -12,11 +12,11 @@ def _infinite_agent_distances():
     return defaultdict(_infinite_distance)
 
 
-class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int, Dict[str, int]], str, str]):
+class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int, Dict[str, Distance]], str, str]):
     def __init__(self, agents: List[EnvAgent]):
         super().__init__(agents=agents, waypoint_init=str)
 
-    def _new_distance_map(self, num_agents: int) -> Dict[int, Dict[str, int]]:
+    def _new_distance_map(self, num_agents: int) -> Dict[int, Dict[str, Distance]]:
         return defaultdict(_infinite_agent_distances)
 
     def _valid_targets(self, agent: EnvAgent, rail: GraphTransitionMap) -> Set[str]:
