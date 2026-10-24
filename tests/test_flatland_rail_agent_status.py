@@ -432,3 +432,74 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     assert agent1.current_entry_point in agent1.targets
     assert agent1.speed_counter.distance == SEGMENT_LENGTH
     assert agent1.state == TrainState.DONE
+
+
+@pytest.mark.parametrize("restart_speed,expected_distance_after_crossing", [
+    # TODO bug: physical distance is lost - agent 0 travels to the end of B, but the full leftover 1 is wrapped to 0,
+    #  so it is recorded at the start of B. On longer edges this costs a step. To be fixed as discussed in
+    #  https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364079744 and
+    #  https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364127389.
+    pytest.param(Fraction(1), Fraction(0), id="restart_full_speed"),
+    pytest.param(Fraction(1, 2), Fraction(1, 2), id="restart_half_speed"),
+    pytest.param(Fraction(3, 4), Fraction(3, 4), id="restart_non_dividing_speed"),
+])
+def test_distance_after_crossing_restart_from_edge_exit_into_non_target_edge(restart_speed, expected_distance_after_crossing):
+    """
+    Same set-up as test_distance_without_crossing_reaches_segment_length_on_target_banked_restart above, but on a
+    4-cell corridor A - B - C - D, so the restart from the exit of A crosses into B, which is not agent 0's target
+    (C) - this goes through SpeedCounter.distance_after_crossing, not distance_without_crossing.
+
+    Agent 0 (start A, target C) is denied A->B by agent 1 (STOPPED at B, target D) and waits at the exit of A
+    (distance 1, speed 0). Agent 1 leaves B (B->C, then C->D), then agent 0 restarts with speed `restart_speed`,
+    set via acceleration_delta only after agent 1 is at full speed, so steps 0-3 are the same for every speed:
+    - step 3: agent 0 promoted STOPPED->MOVING, speed ramps 0 -> restart_speed, distance stays 1 (the distance
+      grows by the pre-step speed, which is still 0).
+    - step 4: the new speed takes effect: 1 + restart_speed reaches the exit of A, so agent 0 crosses into B with a
+      leftover of restart_speed, wrapped by `% 1`: 1/2 and 3/4 are carried into B, while the full leftover 1 at full
+      speed is dropped - agent 0 is recorded at the start of B (distance 0) although it travelled to the end of B.
+    - step 5: agent 0 crosses B->C into its target with every restart speed - on edges of length 1, the dropped
+      distance costs no step, as distance 0 and distance 1 both reach the exit of B at speed 1.
+    """
+    rail, optionals = _make_straight_rail(4)
+    env = RailEnv(width=4, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
+                  line_generator=sparse_line_generator(), number_of_agents=2,
+                  obs_builder_object=GlobalObsForRailEnv(), remove_agents_at_target=False)
+    env = RailEnvStateMachineWrapper(env)
+    env.reset()
+    env._max_episode_steps = 1000
+    _place_agent_on_map(env, 0, (0, 0), Grid4TransitionsEnum.WEST, (0, 2), TrainState.MOVING,
+                        Fraction(1), Fraction(1), RailEnvActions.MOVE_FORWARD)
+    _place_agent_on_map(env, 1, (0, 1), Grid4TransitionsEnum.EAST, (0, 3), TrainState.STOPPED,
+                        Fraction(1), Fraction(0), RailEnvActions.MOVE_FORWARD)
+    agent0, agent1 = env.agents[0], env.agents[1]
+
+    actions0 = [RailEnvActions.MOVE_FORWARD, RailEnvActions.DO_NOTHING, RailEnvActions.DO_NOTHING,
+                RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD]
+    actions1 = [RailEnvActions.DO_NOTHING, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD,
+                RailEnvActions.MOVE_FORWARD, RailEnvActions.DO_NOTHING, RailEnvActions.DO_NOTHING]
+    expected_agent0 = [
+        # (pre-step position, distance, speed, state, is_cell_entry)
+        ((0, 0), Fraction(0), Fraction(1), TrainState.MOVING, True),  # about to attempt A->B for real - denied
+        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # waiting at the exit of A
+        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # still waiting (agent 1 not gone yet)
+        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # promoted only next step
+        ((0, 0), Fraction(1), restart_speed, TrainState.MOVING, False),  # about to cross A->B - granted
+        ((0, 1), expected_distance_after_crossing, Fraction(1), TrainState.MOVING, True),  # just entered B, crosses B->C
+    ]
+    for step, (position, distance, speed, state, is_cell_entry) in enumerate(expected_agent0):
+        if step == 3:
+            env.acceleration_delta = restart_speed
+        print(f"[{step}] agent 0: position={agent0.current_entry_point[0]} distance={agent0.speed_counter.distance} "
+              f"speed={agent0.speed_counter.speed} state={agent0.state.name} is_cell_entry={agent0.speed_counter.is_cell_entry}")
+        assert agent0.current_entry_point[0] == position
+        assert agent0.speed_counter.distance == distance
+        assert agent0.speed_counter.speed == speed
+        assert agent0.state == state
+        assert agent0.speed_counter.is_cell_entry == is_cell_entry
+        env.step({0: actions0[step], 1: actions1[step]})
+
+    # every restart speed reaches the target C after the same number of steps
+    assert agent0.current_entry_point[0] == (0, 2)
+    assert agent0.state == TrainState.DONE
+    assert agent1.current_entry_point[0] == (0, 3)
+    assert agent1.state == TrainState.DONE
