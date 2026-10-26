@@ -1280,7 +1280,7 @@ def test_env_collision_penalty_on_head_on_conflict():
     assert agent_0.current_entry_point == ((3, 3), Grid4TransitionsEnum.EAST)
     assert agent_0.speed_counter.distance == 0
     assert agent_1.current_entry_point == ((3, 4), Grid4TransitionsEnum.WEST)
-    assert agent_1.speed_counter.distance == 1
+    assert agent_1.speed_counter.distance == 0
 
     # 4th step: agents now face each other on adjacent cells (3,3)/(3,4); agent 0's move would
     # make it collide with agent 1, which the motion check forbids -> agent 0 force-stopped

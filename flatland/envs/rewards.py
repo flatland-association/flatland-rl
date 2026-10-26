@@ -249,7 +249,7 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 # a non-moving retry of the same denied action (e.g. STOP_MOVING resolving to the same
                 # invalid look-ahead) never promotes and so never re-charges; but a STOPPED agent given a
                 # moving action IS optimistically re-promoted to MOVING (SpeedCounter.is_cell_exit()
-                # requires speed > 0, see design_by_contract.md, so a STOPPED/banked agent never blocks its
+                # requires speed > 0, see design_by_contract.md, so a STOPPED agent never blocks its
                 # own promotion), and if the resulting fresh attempt is denied again, that is itself a new
                 # MOVING->STOPPED transition and is charged again.
                 # Reaching here guarantees movement_allowed was False (see comment above), and
