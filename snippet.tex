@@ -6,7 +6,7 @@ candidates below (mirroring \texttt{collect()}'s own hoisting of these as shared
 
 \begin{align*}
 cellExit_i^t      &:\Leftrightarrow c_i^t \not= \bot \text{ and } s_i^t > 0 \text{ and } d_i^t + s_i^t \geq \lVert c_i^t \rVert \\
-targetReached_i^t &:\Leftrightarrow c_i^t \not= \bot \text{ and } cellExit_i^t \text{ and } \tau(p',\action_i^t) \in targets_i, \text{ for } c_i^t=(p,p') \\
+targetReached_i^t &:\Leftrightarrow c_i^t \not= \bot \text{ and } cellExit_i^t \text{ and } p' \in targets_i, \text{ for } c_i^t=(p,p') \\
 mapEntry_i^t      &:\Leftrightarrow c_i^t = \bot \text{ and } \action_i^t \in \{\text{L},\text{F},\text{R}\} \text{ and } t+1 \geq e_{i,1,1} \text{ and } \tau(p_{i,1,1},\action_i^t) \not= \bot \\
 stayOffMap_i^t    &:\Leftrightarrow c_i^t = \bot \text{ and not } mapEntry_i^t \\
 invalidAction_i^t &:\Leftrightarrow \tau(p',\action_i^t) = \bot \text{ and } cellExit_i^t, \text{ for } c_i^t=(p,p')
