@@ -315,11 +315,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
           distance + speed >= SEGMENT_LENGTH - see design_by_contract.md) - identical for all three
           on-map states, with no special case for MALFUNCTION. Since this requires speed > 0, it reads
           False for any on-map agent parked at speed 0, regardless of distance - including a
-          STOPPED/MALFUNCTION agent banked exactly at a cell boundary (distance == SEGMENT_LENGTH, e.g.
-          after a denied crossing). This makes "malfunctioning agents never need an action" a
+          STOPPED/MALFUNCTION agent after a denied crossing, or parked at its target exactly at the
+          cell boundary (distance == SEGMENT_LENGTH). This makes "malfunctioning agents never need an action" a
           state-level guarantee - a malfunctioning agent's speed is always forced to 0, so this branch
           is always False throughout any malfunction, on map or off - see
-          test_action_required_false_during_malfunction and test_action_required_at_full_segment_length
+          test_action_required_false_during_malfunction and test_action_required_after_refused_crossing
           in test_flatland_envs_rail_env.py.
         - DONE (terminal - neither on map nor off map): always False, even with
           remove_agents_at_target=False leaving the agent parked at a real position - `is_cell_entry`
@@ -804,14 +804,14 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if not resource_check and agent.old_entry_point is None:
             # off map pre-step (agent.old_entry_point is this step's stable pre-step snapshot,
             # untouched by (12) above), denied map-entry attempt - speed_counter is already
-            # (None, None) here (the off-map invariant), and distance_without_crossing(None, None)
-            # is None too, so this is already exactly right: a true no-op.
+            # (None, None) here (the off-map invariant), and a discarded candidate keeps the
+            # pre-step distance (None), so this is already exactly right: a true no-op.
             pass
         elif not resource_check:
-            # on-map, candidate discarded -> speed forced to 0 and distance capped at the pre-step
-            # speed, not credited with the (denied) crossing (SpeedCounter.distance/.speed still
-            # hold their pre-step values here - (12) never touches speed_counter, and this is
-            # (13)'s own first write to it this step). This fallback can't be precomputed inside
+            # on-map, candidate discarded -> speed forced to 0 and distance kept at its pre-step
+            # value: the agent doesn't move this step, neither across nor up to the cell boundary
+            # (SpeedCounter.distance/.speed still hold their pre-step values here - (12) never
+            # touches speed_counter, and this is (13)'s own first write to it this step). This fallback can't be precomputed inside
             # the candidate_ methods themselves: resource_check for any agent isn't known until
             # MotionCheck.find_conflicts() runs across every agent's registered candidate, which
             # happens only after the whole collect phase completes - the candidate_ methods are
@@ -820,8 +820,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             # agent.speed_counter.distance/.speed still hold their pre-step values here (see comment
             # above) - identical to agent_transition_data.distance/.speed, already stored by the
             # collect phase.
-            new_distance = SpeedCounter.distance_without_crossing(
-                agent_transition_data.distance, agent_transition_data.speed)
+            new_distance = agent_transition_data.distance
             agent.speed_counter.set(new_speed, new_distance)
         else:
             # candidates accepted - distance is exactly candidate_distance in every case (already
@@ -836,7 +835,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                 new_speed = None
             else:
                 new_speed = agent_transition_data.candidate_speed
-            agent.speed_counter.set(new_speed, new_distance)
+            # crossed into a new cell this step: on map before and after, and the entry point changed in (12)
+            crossed = (agent.old_entry_point is not None and agent.current_entry_point is not None
+                       and agent.current_entry_point != agent.old_entry_point)
+            agent.speed_counter.set(new_speed, new_distance, crossed=crossed)
 
         # (14) HANDLE DONE STATE ACTIONS, OPTIONALLY REMOVE AGENTS
         self.handle_done_state(agent)
@@ -1414,9 +1416,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             and not off_map):
             # design: an invalid action denies the crossing attempt at the cell boundary, same
             # consequence as a resource_check denial (see the caller's top-level "candidates discarded"
-            # branch, and (13)'s matching MOVING->STOPPED branch in step()) - distance banks up to the
-            # boundary, it just isn't credited with crossing it.
-            return SpeedCounter.distance_without_crossing(distance, speed)
+            # branch, and (13)'s matching MOVING->STOPPED branch in step()) - the agent doesn't move
+            # this step, its distance stays at the pre-step value.
+            return distance
         raise ValueError("no _candidate_distance branch matched - branches are exhaustive by construction")
 
     def _check_speed_distance_speedup_postconditions(self, action_dict: Dict[int, RailEnvActions],
@@ -1430,13 +1432,11 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             speed = snap.speed
             agent = self.agents[h]
 
-            # candidates discarded in distribute phase -> speed 0 and distance updated with pre-speed
-            # (distance_without_crossing(None, None) == None covers the off-map map-entry-failed case
-            # the same way as the on-map case, since snap.distance is None exactly when the agent was
-            # off map pre-step)
+            # candidates discarded in distribute phase -> speed 0 and distance kept at its pre-step value
+            # (snap.distance is None exactly when the agent was off map pre-step, which covers the
+            # off-map map-entry-failed case the same way as the on-map case)
             if not self.temp_transition_data[h].resource_check:
-                assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(
-                    snap.distance, speed)
+                assert agent.speed_counter.distance == snap.distance
 
             # candidates accepted in distribute phase
             else:

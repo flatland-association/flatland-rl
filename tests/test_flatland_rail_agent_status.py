@@ -322,7 +322,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide SEGMENT_LENGTH. Step 0
       settles (speed ramps to 3/4); step 1 advances to distance=3/4 (sum=3/4, no crossing yet); step 2
       crosses into the target with pre_distance=3/4, pre_speed=3/4, sum=3/2 - an excess of 1/2 gets
-      silently discarded by the cap, with no prior blocking/banking involved at all.
+      silently discarded by the cap, with no prior blocking involved at all.
     """
     rail, optionals = _make_straight_rail(2)
     env = RailEnv(width=2, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -348,14 +348,14 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
     assert (final_pre_distance + final_pre_speed) == (SEGMENT_LENGTH + expected_excess)
 
 
-def test_distance_without_crossing_reaches_segment_length_on_target_banked_restart():
+def test_distance_without_crossing_reaches_segment_length_on_target_restart_after_denial():
     """
-    The one case that *does* need prior blocking: max_speed=1 would otherwise never produce excess (see
-    exact_fit-default_speed above) - what makes this different is that the agent's distance is already
-    banked at SEGMENT_LENGTH (from an earlier, real resource_check denial) by the time it makes its
-    successful attempt, rather than arriving mid-cell.
+    A restart after a denied crossing reaches the target without excess at max_speed=1, like an agent that was
+    never blocked (see exact_fit-default_speed above): a denied crossing doesn't move the agent, so its distance
+    is still at its pre-step value (0) when it makes its successful attempt, not at SEGMENT_LENGTH - no momentum
+    is discarded by the cap.
 
-    Why 2 agents: with max_speed=1, banking needs a denied crossing - either an invalid action or a
+    Why 2 agents: the restart needs a denied crossing - either an invalid action or a
     resource_check denial. A switch-free corridor has no invalid action to give (a no-choice cell treats
     every movement action as the same single transition - verified empirically), and a switch
     would cost more cells than a second agent does. So agent 1 is a stationary blocker sitting exactly
@@ -367,19 +367,19 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
 
     Step by step (both agents max_speed=1, so speed jumps 0->1 in one step of ramping):
     - step 0: agent 0 (already MOVING, pre_speed=1) attempts A->B for real; agent 1 (STOPPED, sitting at
-      B, given DO_NOTHING) still holds B this step - denied. Agent 0 banks at distance=1, becomes
+      B, given DO_NOTHING) still holds B this step - denied. Agent 0 stays at distance=0, becomes
       STOPPED. Agent 1 unchanged.
-    - step 1: agent 0 given DO_NOTHING (stays STOPPED, distance still 1). Agent 1 given its first
+    - step 1: agent 0 given DO_NOTHING (stays STOPPED, distance still 0). Agent 1 given its first
       movement action - optimistically promoted STOPPED->MOVING (self-loop, distance stays 0, speed
       ramps to 1).
     - step 2: agent 0 still DO_NOTHING (unchanged). Agent 1's pre_speed is now 1 - its real
       crossing B->C succeeds uncontested (agent 0 isn't contesting B this step), reaching its own target
       C with pre_distance=0, pre_speed=1, sum=1 exactly (zero excess) - agent 1 is now DONE, B is free.
     - step 3: agent 0 given MOVE_FORWARD - optimistically promoted STOPPED->MOVING (self-loop, distance
-      stays at its banked value of 1, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
-    - step 4: agent 0's pre_speed is now 1 again, with pre_distance still 1 (banked) - its real
-      crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=1,
-      pre_speed=1, sum=2 - a full SEGMENT_LENGTH of momentum discarded by the cap.
+      stays 0, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
+    - step 4: agent 0's pre_speed is now 1 again, with pre_distance still 0 - its real
+      crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=0,
+      pre_speed=1, sum=1 exactly (zero excess).
     """
     rail, optionals = _make_straight_rail(3)
     env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -401,10 +401,10 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     expected_agent0 = [
         # (pre-step position, distance, speed, state)
         ((0, 0), Fraction(0), Fraction(1), TrainState.MOVING),  # about to attempt A->B for real - denied
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED),  # banked at the boundary
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED),  # still waiting (agent 1 not gone yet)
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED),  # promoted only next step
-        ((0, 0), Fraction(1), Fraction(1), TrainState.MOVING),  # about to attempt A->B for real again - granted
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED),  # denied: stays where it was
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED),  # still waiting (agent 1 not gone yet)
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED),  # promoted only next step
+        ((0, 0), Fraction(0), Fraction(1), TrainState.MOVING),  # about to attempt A->B for real again - granted
     ]
     pre_step_distance_speed = None
     for step, (position, distance, speed, state) in enumerate(expected_agent0):
@@ -419,11 +419,11 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
 
     # design: distance == SEGMENT_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
     # or excess, and stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a
-    # now-frozen speed=0) - it does not by itself distinguish this banked-restart case from an ordinary
-    # exact-fit one. What is actually specific to this case is the pre-step sum on the final (granted)
-    # crossing attempt: pre_distance(1, banked) + pre_speed(1, ramped) == 2, a full SEGMENT_LENGTH of excess
-    # momentum silently discarded by the cap - captured here from the last iteration's pre-step values.
-    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == SEGMENT_LENGTH + Fraction(1)
+    # now-frozen speed=0) - it does not by itself distinguish an exact fit from an excess. What shows that
+    # the denied crossing left nothing to discard is the pre-step sum on the final (granted) crossing
+    # attempt: pre_distance(0, not moved while denied) + pre_speed(1, ramped) == SEGMENT_LENGTH exactly -
+    # captured here from the last iteration's pre-step values.
+    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == SEGMENT_LENGTH
 
     assert agent0.current_entry_point in agent0.targets
     assert agent0.speed_counter.distance == SEGMENT_LENGTH
@@ -434,31 +434,35 @@ def test_distance_without_crossing_reaches_segment_length_on_target_banked_resta
     assert agent1.state == TrainState.DONE
 
 
-@pytest.mark.parametrize("restart_speed,expected_distance_after_crossing", [
-    # TODO bug: physical distance is lost - agent 0 travels to the end of B, but the full leftover 1 is wrapped to 0,
-    #  so it is recorded at the start of B. On longer edges this costs a step. To be fixed as discussed in
-    #  https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364079744 and
-    #  https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364127389.
-    pytest.param(Fraction(1), Fraction(0), id="restart_full_speed"),
-    pytest.param(Fraction(1, 2), Fraction(1, 2), id="restart_half_speed"),
-    pytest.param(Fraction(3, 4), Fraction(3, 4), id="restart_non_dividing_speed"),
+@pytest.mark.parametrize("restart_speed,expected_after_restart", [
+    pytest.param(Fraction(1), [
+        ((0, 1), Fraction(0), Fraction(1), TrainState.MOVING, True),  # just entered B, crosses B->C
+    ], id="restart_full_speed"),
+    pytest.param(Fraction(1, 2), [
+        ((0, 0), Fraction(1, 2), Fraction(1), TrainState.MOVING, False),  # halfway across A
+        ((0, 1), Fraction(1, 2), Fraction(1), TrainState.MOVING, True),  # just entered B with 1/2 carried, crosses B->C
+    ], id="restart_half_speed"),
+    pytest.param(Fraction(3, 4), [
+        ((0, 0), Fraction(3, 4), Fraction(1), TrainState.MOVING, False),  # 3/4 across A
+        ((0, 1), Fraction(3, 4), Fraction(1), TrainState.MOVING, True),  # just entered B with 3/4 carried, crosses B->C
+    ], id="restart_non_dividing_speed"),
 ])
-def test_distance_after_crossing_restart_from_edge_exit_into_non_target_edge(restart_speed, expected_distance_after_crossing):
+def test_distance_after_crossing_restart_after_denied_crossing_into_non_target_edge(restart_speed, expected_after_restart):
     """
-    Same set-up as test_distance_without_crossing_reaches_segment_length_on_target_banked_restart above, but on a
-    4-cell corridor A - B - C - D, so the restart from the exit of A crosses into B, which is not agent 0's target
-    (C) - this goes through SpeedCounter.distance_after_crossing, not distance_without_crossing.
+    Same set-up as test_distance_without_crossing_reaches_segment_length_on_target_restart_after_denial above, but on a
+    4-cell corridor A - B - C - D, so the restart after the denied crossing crosses into B, which is not agent 0's
+    target (C) - this goes through SpeedCounter.distance_after_crossing, not distance_without_crossing.
 
-    Agent 0 (start A, target C) is denied A->B by agent 1 (STOPPED at B, target D) and waits at the exit of A
-    (distance 1, speed 0). Agent 1 leaves B (B->C, then C->D), then agent 0 restarts with speed `restart_speed`,
-    set via acceleration_delta only after agent 1 is at full speed, so steps 0-3 are the same for every speed:
-    - step 3: agent 0 promoted STOPPED->MOVING, speed ramps 0 -> restart_speed, distance stays 1 (the distance
+    Agent 0 (start A, target C) is denied A->B by agent 1 (STOPPED at B, target D): it doesn't move, it stays at the
+    start of A (distance 0) with speed 0. Agent 1 leaves B (B->C, then C->D), then agent 0 restarts with speed
+    `restart_speed`, set via acceleration_delta only after agent 1 is at full speed, so steps 0-3 are the same for
+    every speed:
+    - step 3: agent 0 promoted STOPPED->MOVING, speed ramps 0 -> restart_speed, distance stays 0 (the distance
       grows by the pre-step speed, which is still 0).
-    - step 4: the new speed takes effect: 1 + restart_speed reaches the exit of A, so agent 0 crosses into B with a
-      leftover of restart_speed, wrapped by `% 1`: 1/2 and 3/4 are carried into B, while the full leftover 1 at full
-      speed is dropped - agent 0 is recorded at the start of B (distance 0) although it travelled to the end of B.
-    - step 5: agent 0 crosses B->C into its target with every restart speed - on edges of length 1, the dropped
-      distance costs no step, as distance 0 and distance 1 both reach the exit of B at speed 1.
+    - step 4 on: the new speed takes effect. At full speed, 0 + 1 reaches the exit of A, so agent 0 crosses into B
+      with a leftover of 0 - nothing is dropped, as agent 0 didn't move during the denied step. At 1/2 and 3/4, agent
+      0 first moves into A and crosses one step later (now at speed 1), carrying 1/2 and 3/4 into B.
+    - agent 0 then crosses B->C into its target - one step later at 1/2 and 3/4 than at full speed.
     """
     rail, optionals = _make_straight_rail(4)
     env = RailEnv(width=4, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -473,19 +477,16 @@ def test_distance_after_crossing_restart_from_edge_exit_into_non_target_edge(res
                         Fraction(1), Fraction(0), RailEnvActions.MOVE_FORWARD)
     agent0, agent1 = env.agents[0], env.agents[1]
 
-    actions0 = [RailEnvActions.MOVE_FORWARD, RailEnvActions.DO_NOTHING, RailEnvActions.DO_NOTHING,
-                RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD]
-    actions1 = [RailEnvActions.DO_NOTHING, RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_FORWARD,
-                RailEnvActions.MOVE_FORWARD, RailEnvActions.DO_NOTHING, RailEnvActions.DO_NOTHING]
+    actions0 = [RailEnvActions.MOVE_FORWARD, RailEnvActions.DO_NOTHING, RailEnvActions.DO_NOTHING] + [RailEnvActions.MOVE_FORWARD] * 4
+    actions1 = [RailEnvActions.DO_NOTHING] + [RailEnvActions.MOVE_FORWARD] * 3 + [RailEnvActions.DO_NOTHING] * 3
     expected_agent0 = [
         # (pre-step position, distance, speed, state, is_cell_entry)
         ((0, 0), Fraction(0), Fraction(1), TrainState.MOVING, True),  # about to attempt A->B for real - denied
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # waiting at the exit of A
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # still waiting (agent 1 not gone yet)
-        ((0, 0), Fraction(1), Fraction(0), TrainState.STOPPED, False),  # promoted only next step
-        ((0, 0), Fraction(1), restart_speed, TrainState.MOVING, False),  # about to cross A->B - granted
-        ((0, 1), expected_distance_after_crossing, Fraction(1), TrainState.MOVING, True),  # just entered B, crosses B->C
-    ]
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED, False),  # denied: stays where it was
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED, False),  # still waiting (agent 1 not gone yet)
+        ((0, 0), Fraction(0), Fraction(0), TrainState.STOPPED, False),  # promoted only next step
+        ((0, 0), Fraction(0), restart_speed, TrainState.MOVING, False),  # restarting with restart_speed
+    ] + expected_after_restart
     for step, (position, distance, speed, state, is_cell_entry) in enumerate(expected_agent0):
         if step == 3:
             env.acceleration_delta = restart_speed
@@ -498,7 +499,7 @@ def test_distance_after_crossing_restart_from_edge_exit_into_non_target_edge(res
         assert agent0.speed_counter.is_cell_entry == is_cell_entry
         env.step({0: actions0[step], 1: actions1[step]})
 
-    # every restart speed reaches the target C after the same number of steps
+    # reaches the target C right after crossing into B
     assert agent0.current_entry_point[0] == (0, 2)
     assert agent0.state == TrainState.DONE
     assert agent1.current_entry_point[0] == (0, 3)
