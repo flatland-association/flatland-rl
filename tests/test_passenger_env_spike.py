@@ -215,8 +215,8 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
       station on exactly that step, advances by exactly one cell per following step, and reaches its
       target - leaving the track immediately - exactly `STATION_DISTANCE` steps after departing,
       matching its timetabled latest arrival exactly.
-    - The passenger shows up at its first stop, A, at a fixed step (`passenger_earliest_departure`)
-      clear of `RailEnv`'s off-map departure timing edge cases, and waits there. Leg 0 (A->B) is the
+    - The passenger is off map after `reset()`, shows up at its first stop, A, on the first step, and
+      waits there. Leg 0 (A->B) is the
       first train heading to the passenger's next stop (B) to ever occupy A - the
       passenger boards it the instant it does, rides its exact position cell by cell, and alights
       onto B the same step that train reaches its own target and is removed from the rail env.
@@ -264,14 +264,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         assert agent.earliest_departure == LEG_EARLIEST_DEPARTURE[handle]
         assert agent.latest_arrival == LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE
 
-    # the passenger's own route/timetable, computed from PASSENGER_JOURNEYS[0] (A, B, C - not skipping
-    # over intermediate B) - real arrival at B/C is no longer on this fixed schedule (see
-    # `_update_passengers()`), so only the very first entry, `passenger_earliest_departure`, is still
-    # behaviorally meaningful: it gates the step the passenger shows up waiting at its first stop, A.
-    assert passenger_env.passenger_earliest_departures == {0: [2, 2 + STATION_DISTANCE, None]}
-    assert passenger_env.passenger_latest_arrivals == {0: [None, 2 + STATION_DISTANCE, 2 + 2 * STATION_DISTANCE]}
-    assert passenger_env.passenger_earliest_departure == {0: 2}
-    assert passenger_env.passenger_latest_arrival == {0: 2 + 2 * STATION_DISTANCE}
+    # the passenger is off map (mode 1) after reset(), until the first step.
+    assert passenger_env.passenger_mode == {0: (None, None)}
+    assert passenger_env.passenger_current_entry_point == {0: None}
 
     rail_env_position_by_step: Dict[int, Dict[int, Tuple[int, int]]] = {handle: {} for handle in LEG_WAYPOINTS}
     passenger_position_by_step: Dict[int, Tuple[int, int]] = {}
@@ -312,21 +307,20 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
             21: None, 22: None, 23: None, 24: (0, 7), 25: (0, 6), 26: (0, 5), 27: None},
     }
 
-    # verbatim expected position trace for the passenger: off map before step 2; waiting at A from
-    # step 2 (its passenger_earliest_departure) until step 6, when leg 0 (A->B) reaches A and it boards;
+    # verbatim expected position trace for the passenger: waiting at A from step 1 until step 6, when leg 0 (A->B) reaches A and it boards;
     # rides leg 0's exact position for steps 6-8; alights onto B the moment leg 0 arrives and is
     # removed, step 9, then waits there considerably longer - until step 20, when the deliberately
     # postponed leg 1 (B->C) finally reaches B and it boards; rides leg 1's exact position for steps
     # 20-22; alights onto C, its own final target, at step 23 and stays there for the remainder of the
     # run (steps 23-27), since there is no next stop left to wait for.
     assert passenger_position_by_step == {
-        1: None, 2: (0, 1), 3: (0, 1), 4: (0, 1), 5: (0, 1), 6: (0, 1), 7: (0, 2), 8: (0, 3), 9: (0, 4),
+        1: (0, 1), 2: (0, 1), 3: (0, 1), 4: (0, 1), 5: (0, 1), 6: (0, 1), 7: (0, 2), 8: (0, 3), 9: (0, 4),
         10: (0, 4), 11: (0, 4), 12: (0, 4), 13: (0, 4), 14: (0, 4), 15: (0, 4), 16: (0, 4), 17: (0, 4),
         18: (0, 4), 19: (0, 4), 20: (0, 4), 21: (0, 5), 22: (0, 6), 23: (0, 7), 24: (0, 7), 25: (0, 7),
         26: (0, 7), 27: (0, 7),
     }
 
-    # matching mode trace: off map (mode 1) up to step 1; waiting at a stop, not riding (mode 2) while
+    # matching mode trace: waiting at a stop, not riding (mode 2) while
     # `passenger_mode[0][1]` (the ridden train's handle) is `None`; riding (mode 3) - that
     # handle, with the ridden agent's own position always equal to the passenger's - while it
     # isn't. Boarding/alighting steps are exactly where `passenger_position_by_step` above holds steady
@@ -334,8 +328,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     # B; step 20, waiting -> riding leg 1 (B->C) at B, after waiting there far longer than at A; step
     # 23, riding -> waiting at C, permanently, since C is the passenger's own last stop.
     assert passenger_mode_by_step == {
-        1: (None, None),
-        2: ((0, 1), None), 3: ((0, 1), None), 4: ((0, 1), None), 5: ((0, 1), None),
+        1: ((0, 1), None), 2: ((0, 1), None), 3: ((0, 1), None), 4: ((0, 1), None), 5: ((0, 1), None),
         6: ((0, 1), 0), 7: ((0, 2), 0), 8: ((0, 3), 0),
         9: ((0, 4), None), 10: ((0, 4), None), 11: ((0, 4), None), 12: ((0, 4), None), 13: ((0, 4), None),
         14: ((0, 4), None), 15: ((0, 4), None), 16: ((0, 4), None), 17: ((0, 4), None), 18: ((0, 4), None),
@@ -365,12 +358,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
             assert rail_env_position_by_step[handle][step] == expected_position, f"leg {handle} at step {step}"
         assert rail_env_position_by_step[handle][arrival_step] is None, f"leg {handle}: still on track at its latest arrival step {arrival_step}"
 
-    # the passenger is off map before its own passenger_earliest_departure, then never off map again -
-    # unlike a train, it is never removed from the map once it boards its first train.
-    passenger_departure_step = passenger_env.passenger_earliest_departure[0]
-    for step in range(1, passenger_departure_step):
-        assert passenger_position_by_step[step] is None, f"passenger: on map before its earliest departure at step {step}"
-    for step in range(passenger_departure_step, 28):
+    # from the first step on, the passenger is never off map again - unlike a train, it is never
+    # removed from the map once it boards its first train.
+    for step in range(1, 28):
         assert passenger_position_by_step[step] is not None, f"passenger: off map at step {step}"
 
     # the passenger only ever rides a leg that is, at that same step, at exactly the
