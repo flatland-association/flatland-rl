@@ -2,7 +2,7 @@
 Collection of environment-specific ObservationBuilder.
 """
 import collections
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict, Tuple, Union
 
 import numpy as np
 
@@ -216,7 +216,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         root_node_observation = Node(dist_own_target_encountered=0, dist_other_target_encountered=0,
                                      dist_other_agent_encountered=0, dist_potential_conflict=0,
                                      dist_unusable_switch=0, dist_to_next_branch=0,
-                                     dist_min_to_target=distance_map[(handle, *agent_virtual_position, agent_virtual_direction)],
+                                     dist_min_to_target=float(distance_map[(handle, *agent_virtual_position, agent_virtual_direction)]),
                                      num_agents_same_direction=0, num_agents_opposite_direction=0,
                                      num_agents_malfunctioning=agent.malfunction_handler.malfunction_down_counter,
                                      speed_min_fractional=speed_min_fractional,
@@ -240,7 +240,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 new_cell = get_new_position(agent_virtual_position, branch_direction)
 
                 branch_observation, branch_visited = \
-                    self._explore_branch(handle, new_cell, branch_direction, 1, 1)
+                    self._explore_branch(handle, new_cell, branch_direction,
+                                         self._edge_length((agent_virtual_position, agent_virtual_direction), (new_cell, branch_direction)), 1)
                 root_node_observation.childs[self.tree_explored_actions_char[i]] = branch_observation
 
                 visited |= branch_visited
@@ -250,6 +251,14 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
         self.env.dev_obs_dict[handle] = visited
 
         return root_node_observation
+
+    def _edge_length(self, u: Tuple[Tuple[int, int], int], v: Tuple[Tuple[int, int], int]) -> Union[int, float]:
+        """
+        Length of the edge `(u, v)` as float - plain int 1 if the env has no edge lengths (all edges of length 1).
+        """
+        if not self.env.rail.has_edge_lengths():
+            return 1
+        return float(self.env.rail.edge_length(u, v))
 
     def _explore_branch(self, handle, position, direction, tot_dist, depth):
         """
@@ -409,10 +418,11 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                     # Keep walking through the tree along `direction`
                     exploring = True
                     # convert one-hot encoding to 0,1,2,3
+                    previous_entry_point = (position, direction)
                     direction = fast_argmax(cell_transitions)
                     position = get_new_position(position, direction)
                     num_steps += 1
-                    tot_dist += 1
+                    tot_dist += self._edge_length(previous_entry_point, (position, direction))
             elif num_transitions > 0:
                 # Switch detected
                 last_is_switch = True
@@ -436,10 +446,10 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
             dist_min_to_target = 0
         elif last_is_terminal:
             dist_to_next_branch = np.inf
-            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
+            dist_min_to_target = float(distance_map_handle[position[0], position[1], direction])
         else:
             dist_to_next_branch = tot_dist
-            dist_min_to_target = distance_map_handle[position[0], position[1], direction]
+            dist_min_to_target = float(distance_map_handle[position[0], position[1], direction])
 
         node = Node(dist_own_target_encountered=own_target_encountered,
                     dist_other_target_encountered=other_target_encountered,
@@ -470,7 +480,8 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 branch_observation, branch_visited = self._explore_branch(handle,
                                                                           new_cell,
                                                                           (branch_direction + 2) % 4,
-                                                                          tot_dist + 1,
+                                                                          tot_dist + self._edge_length(
+                                                                              (position, direction), (new_cell, (branch_direction + 2) % 4)),
                                                                           depth + 1)
                 node.childs[self.tree_explored_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:
@@ -480,7 +491,7 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
                 branch_observation, branch_visited = self._explore_branch(handle,
                                                                           new_cell,
                                                                           branch_direction,
-                                                                          tot_dist + 1,
+                                                                          tot_dist + self._edge_length((position, direction), (new_cell, branch_direction)),
                                                                           depth + 1)
                 node.childs[self.tree_explored_actions_char[i]] = branch_observation
                 if len(branch_visited) != 0:

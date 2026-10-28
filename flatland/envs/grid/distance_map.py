@@ -4,6 +4,7 @@ import numpy as np
 
 from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.envs.agent_utils import EnvAgent
+from flatland.core.transition_map import Distance
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
@@ -29,7 +30,9 @@ class DistanceMap(
         self.env_width = rail.width
 
     def _new_distance_map(self, num_agents: int) -> np.ndarray:
-        return np.full(shape=(num_agents, self.env_height, self.env_width, 4), fill_value=np.inf)
+        # with edge lengths, an object array keeps distances exact (Fractions); a float array would round them
+        dtype = object if self.rail is not None and self.rail.has_edge_lengths() else float
+        return np.full(shape=(num_agents, self.env_height, self.env_width, 4), fill_value=np.inf, dtype=dtype)
 
     def _valid_targets(self, agent: EnvAgent, rail: RailGridTransitionMap) -> List[Tuple[Tuple[int, int], int]]:
         return [target for target in agent.targets if rail.is_valid_entry_point(target)]
@@ -38,10 +41,12 @@ class DistanceMap(
         # just copy the distance map from other agent with same target (performance)
         self.distance_map[target_nr, :, :, :] = np.copy(self.distance_map[source_target_nr, :, :, :])
 
-    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: int):
+    def _set_geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int, new_distance: Distance):
         (r, c), direction = source_entry_point
         self.distance_map[target_nr, r, c, direction] = new_distance
 
-    def _geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int):
+    def _geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int) -> Distance:
         (r, c), direction = source_entry_point
-        return self.distance_map[target_nr, r, c, direction]
+        distance = self.distance_map[target_nr, r, c, direction]
+        # without edge lengths, the float array holds whole numbers: return them as int
+        return int(distance) if isinstance(distance, float) and distance != np.inf else distance

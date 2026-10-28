@@ -22,20 +22,20 @@ import ast
 import math
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple, Optional, Set
+from typing import Dict, Tuple, Optional, Set
 
 import networkx as nx
 
 from flatland.core.grid.grid4_utils import get_new_position
-from flatland.core.transition_map import GridTransitionMap, TransitionMap
+from flatland.core.transition_map import GridTransitionMap, TransitionMap, DEFAULT_EDGE_LENGTH, EdgeLength, validated_edge_length
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 
-GridNode = str
-GridEdge = Tuple[str]
+GraphNode = str
+GraphEdge = Tuple[GraphNode, GraphNode]
 
 
-class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]):
+class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvActions]):
     """
     Flatland 3 Transition map represented by a directed graph.
 
@@ -68,11 +68,17 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
     Attributes
     ----------
     g: nx.DiGraph
+        The optional `length` edge attributes are read when constructed (see `edge_length()`) - like the
+        lru_cache'd topology methods, they must not change on `g` afterwards (see `GridTransitionMap.edge_lengths`
+        for the intended workflow).
     """
 
     def __init__(self, g: nx.DiGraph):
         self.g = g
         self.cell_in_pins = defaultdict(lambda: set())
+        # validated once, not per edge_length() call (called several times per agent and step)
+        self._edge_lengths: Dict[GraphEdge, EdgeLength] = {
+            (u, v): validated_edge_length(d["length"]) for u, v, d in g.edges(data=True) if "length" in d}
 
     @staticmethod
     def grid_to_digraph(transition_map: GridTransitionMap) -> nx.DiGraph:
@@ -83,6 +89,12 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         ---------
         actions : Set[str]
             set of actions to go for this edge
+        length : EdgeLength, optional
+            length of this edge (`int` or `Fraction`, at least `MIN_EDGE_LENGTH`), see `edge_length()`. Design decision:
+            the attribute is not enforced on every edge. An edge without it has `DEFAULT_EDGE_LENGTH` (1), as an edge
+            missing from `GridTransitionMap.edge_lengths`. So graphs without lengths stay valid unchanged, and only edges
+            that differ from the default need the attribute. `grid_to_digraph` itself sets none
+            (see `GraphRailEnv.from_rail_env`).
 
         Node data
         ---------
@@ -141,7 +153,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return GraphTransitionMap(GraphTransitionMap.grid_to_digraph(env.rail))
 
     @lru_cache(maxsize=1_000_000)
-    def apply_action_independent(self, action: RailEnvActions, entry_point: GridNode) -> Optional[GridNode]:
+    def apply_action_independent(self, action: RailEnvActions, entry_point: GraphNode) -> Optional[GraphNode]:
         if action in self.g.nodes[entry_point].get("prohibited_actions", set()):
             return None
         succs = list(self.g.successors(entry_point))
@@ -150,7 +162,7 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
             if action in edge_data["actions"]:
                 return v
 
-    def get_transitions(self, entry_point: GridNode) -> Tuple[bool]:
+    def get_transitions(self, entry_point: GraphNode) -> Tuple[bool]:
         return True,
 
     @staticmethod
@@ -170,13 +182,34 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return ((r, c), d)
 
     @lru_cache
-    def get_successor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+    def get_successor_entry_points(self, entry_point: GraphNode) -> Set[GraphNode]:
         return set(self.g.successors(entry_point))
 
     @lru_cache
-    def get_predecessor_entry_points(self, entry_point: GridNode) -> Set[GridNode]:
+    def get_predecessor_entry_points(self, entry_point: GraphNode) -> Set[GraphNode]:
         return set(self.g.predecessors(entry_point))
 
     @lru_cache
-    def is_valid_entry_point(self, entry_point: GridNode) -> bool:
+    def is_valid_entry_point(self, entry_point: GraphNode) -> bool:
         return entry_point in self.g.nodes
+
+    def edge_length(self, u: GraphNode, v: GraphNode) -> EdgeLength:
+        """
+        The `length` attribute of the edge `(u, v)` (read when constructed), `DEFAULT_EDGE_LENGTH` if undefined.
+        """
+        return self._edge_lengths.get((u, v), DEFAULT_EDGE_LENGTH)
+
+    def has_edge_lengths(self) -> bool:
+        return bool(self._edge_lengths)
+
+    def _assert_actions_partitioned(self):
+        """
+        For each node, every rail env action is either in the node's `prohibited_actions` or in the `actions` of exactly one
+        of its outgoing edges.
+        """
+        for u in self.g.nodes:
+            for a in RailEnvActions:
+                prohibited = a in self.g.nodes[u].get("prohibited_actions", set())
+                edges = [v for v in self.g.successors(u) if a in self.g.edges[u, v].get("actions", set())]
+                assert prohibited + len(edges) == 1, f"{u}: action {a} prohibited={prohibited}, in actions of edges to {edges}"
+

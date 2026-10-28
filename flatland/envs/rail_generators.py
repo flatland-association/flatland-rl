@@ -25,6 +25,9 @@ from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibr
 RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
 """ A rail generator returns a RailGenerator Product, which is just
     a RailGridTransitionMap followed by an (optional) dict/
+    Optional `edge_lengths` key: `{(u, v): length}` with the length (`int` or `Fraction`, floats are rejected, at least 1) of the edge from entry point
+    `u = ((r, c), d)` to its successor `v` - set on the rail by `RailEnv` (see `GridTransitionMap.edge_lengths`), edges not
+    listed have length 1.
 """
 
 RailGenerator = Callable[[int, int, int, int, RandomState], RailGeneratorProduct]
@@ -100,11 +103,15 @@ def rail_from_file(filename: Union[str, Path] = None, load_from_package=None, en
         grid = np.array(_env_dict["grid"])
         rail = RailGridTransitionMap(width=np.shape(grid)[1], height=np.shape(grid)[0], transitions=rail_env_transitions)
         rail.grid = grid
+        optionals = {}
         if "distance_map" in _env_dict:
             distance_map = _env_dict["distance_map"]
             if len(distance_map) > 0:
-                return rail, {'distance_map': distance_map}
-        return [rail, None]
+                optionals['distance_map'] = distance_map
+        edge_lengths = persistence.edge_lengths_from_env_dict(_env_dict)
+        if edge_lengths is not None:
+            optionals['edge_lengths'] = edge_lengths
+        return [rail, optionals if optionals else None]
 
     return generator
 

@@ -5,6 +5,7 @@ from fractions import Fraction
 import numpy as np
 import pytest
 
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
     cached_cell_exit
 
@@ -17,31 +18,31 @@ def test_step_counter_speed025():
     assert sc.distance is None
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(1, 4))
+    sc.set(sc.speed, Fraction(1, 4), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0 -> 0.25): still the same cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(1, 2))
+    sc.set(sc.speed, Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0.25 -> 0.5): still the same cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(3, 4))
+    sc.set(sc.speed, Fraction(3, 4), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0.5 -> 0.75): still the same cell, now at is_cell_exit()
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.75
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell (0.75 -> 0): crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
@@ -56,19 +57,19 @@ def test_step_counter_speed05():
     assert sc.distance is None
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.set(sc.speed, Fraction(1, 2))
+    sc.set(sc.speed, Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0 -> 0.5): still the same cell, now at is_cell_exit()
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0): crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.0
@@ -83,31 +84,31 @@ def test_step_counter_speed025_05():
     assert sc.distance is None
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(1, 4))
+    sc.set(sc.speed, Fraction(1, 4), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0 -> 0.25): still the same cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(0.5, Fraction(1, 2))
+    sc.set(0.5, Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance with a new (higher) speed (0.25 -> 0.5): still the same cell
     assert sc.is_cell_exit() == True
     assert sc.distance == 0.5
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell (0.5 -> 0): crossing
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.5)
 
-    sc.set(0.25, Fraction(1, 2))
+    sc.set(0.25, Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance with a new (lower) speed (0 -> 0.5): still the same cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.5
@@ -122,37 +123,37 @@ def test_step_counter_speed025_03():
     assert sc.distance is None
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(sc.speed, Fraction(1, 4))
+    sc.set(sc.speed, Fraction(1, 4), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0 -> 0.25): still the same cell
     assert sc.is_cell_exit() == False
     assert sc.distance == 0.25
     assert np.isclose(float(sc.speed), 0.25)
 
-    sc.set(Fraction(1, 2), Fraction(1, 2))
+    sc.set(Fraction(1, 2), Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance with a new (capped-to-max_speed) speed (0.25 -> 0.5): still the same cell
     assert sc.is_cell_exit() == False
     assert np.isclose(float(sc.distance), 0.5)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.set(sc.speed, Fraction(4, 5))
+    sc.set(sc.speed, Fraction(4, 5), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == False  # mid-cell advance (0.5 -> 0.8): still the same cell, now at is_cell_exit()
     assert sc.is_cell_exit() == True
     assert np.isclose(float(sc.distance), 0.8)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.set(sc.speed, Fraction(1, 10))
+    sc.set(sc.speed, Fraction(1, 10), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell (0.8 -> 0.1): crossing
     assert sc.is_cell_exit() == False
     assert np.isclose(float(sc.distance), 0.1)
     assert np.isclose(float(sc.speed), 0.3)
 
-    sc.set(-0.5, Fraction(2, 5))
+    sc.set(-0.5, Fraction(2, 5), DEFAULT_EDGE_LENGTH)
     # invalidate cell_entry despite speed 0
     assert sc.is_cell_entry == False  # braking to a stop mid-cell (0.1 -> 0.4, capped at speed=0): still the same cell
     assert sc.is_cell_exit() == False
@@ -164,19 +165,19 @@ def test_step_counter_speed1_every_step_is_a_cell_entry():
     """At speed 1 (max_speed=1), every step crosses a full cell in one go, so is_cell_entry must be
     True on every single step, not just the first (https://github.com/flatland-association/flatland-rl/pull/517/changes#r4104433181).
     A plain "new distance < old distance" comparison misclassifies this: distance_after_crossing's
-    modulo wraps 0 -> 0 at speed == SEGMENT_LENGTH, so "new < old" (0 < 0) is False."""
+    modulo wraps 0 -> 0 at speed == DEFAULT_EDGE_LENGTH, so "new < old" (0 < 0) is False."""
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
     assert sc.is_cell_entry == False  # off map: no cell entered (yet) at all
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # bootstrap onto the map: just entered its first cell
     assert sc.distance == 0
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell (0 -> 0): crossing, not a stall
     assert sc.distance == 0
 
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry == True  # wraps into the next cell again (0 -> 0): still a crossing
     assert sc.distance == 0
 
@@ -191,11 +192,11 @@ def test_clone_speed_counter_fractional_speed():
     """Test that a SpeedCounter stays consistent when restored from a pickled state."""
     sc = SpeedCounter(speed=1 / 5, max_speed=1 / 3)
     assert pickle.loads(pickle.dumps(sc)) == sc
-    sc.set(sc.speed, Fraction(0))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc.is_cell_entry  # bootstrap onto the map: just entered its first cell
     assert sc.distance == 0
     assert pickle.loads(pickle.dumps(sc)) == sc
-    sc.set(1 / 10, Fraction(1, 5))
+    sc.set(1 / 10, Fraction(1, 5), DEFAULT_EDGE_LENGTH)
     assert not sc.is_cell_entry  # mid-cell advance (0 -> 0.2): still the same cell
     # design: distance update with pre-step speed.
     assert np.isclose(float(sc.distance), 0.2)
@@ -292,32 +293,32 @@ def test_cached_cap_speed_passthrough_within_range():
 
 
 def test_cached_cell_exit_true():
-    assert cached_cell_exit(Fraction(1, 2), Fraction(1, 2), Fraction(3, 4)) == True
+    assert cached_cell_exit(Fraction(1, 2), Fraction(1, 2), Fraction(3, 4), DEFAULT_EDGE_LENGTH) == True
 
 
 def test_cached_cell_exit_false():
-    assert cached_cell_exit(Fraction(1, 4), Fraction(1, 4), Fraction(1, 4)) == False
+    assert cached_cell_exit(Fraction(1, 4), Fraction(1, 4), Fraction(1, 4), DEFAULT_EDGE_LENGTH) == False
 
 
 def test_cached_cell_exit_caps_speed_at_max_speed():
     # naive (uncapped) distance(0.5) + speed(0.9) = 1.4 >= 1 -> would be True, but max_speed=0.3 caps the
     # effective speed to 0.3 first: 0.5 + 0.3 = 0.8 < 1 -> False.
-    assert cached_cell_exit(Fraction(3, 10), Fraction(9, 10), Fraction(1, 2)) == False
+    assert cached_cell_exit(Fraction(3, 10), Fraction(9, 10), Fraction(1, 2), DEFAULT_EDGE_LENGTH) == False
 
 
 def test_cached_cell_exit_true_off_map():
     # design: distance is None when off map - trivially "at a cell exit" (matches is_cell_exit()'s own
     # convention), regardless of speed - short-circuits before _cap_speed, which can't handle speed=None.
-    assert cached_cell_exit(Fraction(1, 2), None, None) == True
+    assert cached_cell_exit(Fraction(1, 2), None, None, DEFAULT_EDGE_LENGTH) == True
 
 
 def test_step_crossing_not_completed_caps_at_boundary():
     """A MOVING agent whose transition into the next cell is blocked by a resource conflict this step:
     distance must be capped at the cell boundary, not wrapped into the next cell as if it had moved."""
     sc = SpeedCounter(max_speed=0.5, speed=0.5)
-    sc.set(sc.speed, Fraction(0))
-    sc.set(sc.speed, Fraction(1, 2))  # distance -> 1/2 (from the pre-step speed 1/2); speed stays 1/2 for the next call
-    sc.set(speed=0.5, distance=Fraction(1, 1))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
+    sc.set(sc.speed, Fraction(1, 2), DEFAULT_EDGE_LENGTH)  # distance -> 1/2 (from the pre-step speed 1/2); speed stays 1/2 for the next call
+    sc.set(speed=0.5, distance=Fraction(1, 1), edge_length=DEFAULT_EDGE_LENGTH)
     assert sc.distance == Fraction(1, 1)
     assert not sc.is_cell_entry  # denied at the boundary (1/2 -> 1, capped): still the same cell, not the next one
     assert sc.speed == Fraction(1, 2)
@@ -325,8 +326,8 @@ def test_step_crossing_not_completed_caps_at_boundary():
 
 def test_step_crossing_not_completed_under_boundary_behaves_like_normal_step():
     sc = SpeedCounter(max_speed=0.25, speed=0.25)
-    sc.set(sc.speed, Fraction(0))
-    sc.set(speed=0.25, distance=Fraction(1, 4))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
+    sc.set(speed=0.25, distance=Fraction(1, 4), edge_length=DEFAULT_EDGE_LENGTH)
     assert sc.distance == Fraction(1, 4)
     assert not sc.is_cell_entry  # mid-cell advance (0 -> 1/4), nowhere near the boundary: still the same cell
 
@@ -335,8 +336,8 @@ def test_stop_freezes_speed_without_touching_distance():
     """design: distance update with pre-step speed - stop() must leave already-accumulated in-cell
     distance untouched (e.g. a malfunction interrupting a MOVING agent mid-cell)."""
     sc = SpeedCounter(max_speed=0.5, speed=0.5)
-    sc.set(sc.speed, Fraction(0))
-    sc.set(sc.speed, Fraction(1, 2))  # distance -> 1/2
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
+    sc.set(sc.speed, Fraction(1, 2), DEFAULT_EDGE_LENGTH)  # distance -> 1/2
     sc.stop()
     assert sc.speed == Fraction(0)
     assert sc.distance == Fraction(1, 2)
@@ -345,26 +346,26 @@ def test_stop_freezes_speed_without_touching_distance():
 
 def test_set_is_cell_entry_true_for_crossing_from_banked_boundary():
     """A MOVING agent bootstraps at speed=1 onto the map, is denied/braked to a stop exactly at the next
-    cell boundary (banking distance == SEGMENT_LENGTH), is later promoted back to MOVING while still
+    cell boundary (banking distance == DEFAULT_EDGE_LENGTH), is later promoted back to MOVING while still
     banked (distance unchanged), then completes its crossing into the next cell. is_cell_entry
     correctly reports True for that last step: set() derives it from old vs. new distance crossing the
     segment boundary, which correctly distinguishes a crossing from an agent parked exactly at
     the boundary."""
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
-    sc.set(sc.speed, Fraction(0))  # bootstrap onto the map: distance -> 0, speed -> 1
-    sc.set(speed=0, distance=Fraction(1))  # denied/braked exactly at the boundary: distance -> 1 (banked), speed -> 0
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)  # bootstrap onto the map: distance -> 0, speed -> 1
+    sc.set(speed=0, distance=Fraction(1), edge_length=DEFAULT_EDGE_LENGTH)  # denied/braked exactly at the boundary: distance -> 1 (banked), speed -> 0
     assert sc.distance == Fraction(1)
-    sc.set(speed=0.5, distance=Fraction(1))  # promoted back to MOVING while still banked: distance stays 1, speed -> 1/2
+    sc.set(speed=0.5, distance=Fraction(1), edge_length=DEFAULT_EDGE_LENGTH)  # promoted back to MOVING while still banked: distance stays 1, speed -> 1/2
     assert sc.distance == Fraction(1)
-    sc.set(speed=0.5, distance=Fraction(1, 2))  # crossing completes from the banked boundary
+    sc.set(speed=0.5, distance=Fraction(1, 2), edge_length=DEFAULT_EDGE_LENGTH)  # crossing completes from the banked boundary
     assert sc.distance == Fraction(1, 2)
     assert sc.is_cell_entry  # the train's cell really did just change
 
 
 def test_reset_clears_distance_speed_and_cell_entry():
     sc = SpeedCounter(speed=0.5, max_speed=1.0)
-    sc.set(sc.speed, Fraction(0))
-    sc.set(sc.speed, Fraction(1, 2))
+    sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
+    sc.set(sc.speed, Fraction(1, 2), DEFAULT_EDGE_LENGTH)
     assert sc.distance != 0
     assert not sc.is_cell_entry  # mid-cell advance: still the same cell
     sc.reset()
@@ -395,7 +396,7 @@ def test_eq_between_speed_counters_with_different_state():
 
     sc1 = SpeedCounter(max_speed=0.5, speed=0.5)
     sc2 = SpeedCounter(max_speed=0.5, speed=0.5)
-    sc2.set(sc2.speed, Fraction(0))
+    sc2.set(sc2.speed, Fraction(0), DEFAULT_EDGE_LENGTH)
     assert sc1 != sc2  # differs in distance now
 
 

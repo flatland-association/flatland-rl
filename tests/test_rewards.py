@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.env_generation.env_generator import env_generator_legacy
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
@@ -141,7 +142,7 @@ def test_rewards_intermediate_served_and_stopped_penalty():
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
     agent.current_entry_point = ((2, 2), 2)
     # BasicMultiObjectiveRewards' energy-efficiency term reads agent.speed_counter.speed for an on-map agent.
-    agent.speed_counter.set(Fraction(0), Fraction(0))
+    agent.speed_counter.set(Fraction(0), Fraction(0), DEFAULT_EDGE_LENGTH)
     assert rewards.step_reward(agent, _stopped_here_transition_data(), distance_map, 5) == rewards.empty()
     # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
     # N.B. implementation does not verify the target was reached, only that it just reached its target
@@ -179,7 +180,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_no_earliest_late
     rewards = BasicMultiObjectiveRewards(intermediate_not_served_penalty=intermediate_not_served_penalty)
     agent.current_entry_point = ((2, 2), 2)
     # BasicMultiObjectiveRewards' energy-efficiency term reads agent.speed_counter.speed for an on-map agent.
-    agent.speed_counter.set(Fraction(0), Fraction(0))
+    agent.speed_counter.set(Fraction(0), Fraction(0), DEFAULT_EDGE_LENGTH)
     assert rewards.step_reward(agent, _stopped_here_transition_data(), distance_map, 5) == rewards.empty()
     # if agent is done, intermediate not served is handled in step reward and not in end_of_episode_reward
     assert rewards.step_reward(agent, None, distance_map, elapsed_steps=10) == rewards.empty()
@@ -239,7 +240,7 @@ def test_rewards_intermediate_served_and_stopped_multiple_times_but_late_arrival
     agent.old_entry_point = None
     agent.current_entry_point = ((2, 2), 2)
     # BasicMultiObjectiveRewards' energy-efficiency term reads agent.speed_counter.speed for an on-map agent.
-    agent.speed_counter.set(Fraction(0), Fraction(0))
+    agent.speed_counter.set(Fraction(0), Fraction(0), DEFAULT_EDGE_LENGTH)
     assert rewards.step_reward(agent, _stopped_here_transition_data(), distance_map, 10) == rewards.empty()
 
     # depart
@@ -441,29 +442,29 @@ def test_energy_efficiency_smoothniss_in_morl():
     # progression. current_entry_point/malfunction_down_counter are the state-machine-independent signals
     # BasicMultiObjectiveRewards' current_speed reads (on-map and not malfunctioning) - set consistently
     # alongside the state_machine.set_state() calls below so both stay in agreement.
-    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
+    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0), DEFAULT_EDGE_LENGTH)
     agent.state_machine.set_state(TrainState.WAITING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, 0, 0)
 
     agent.current_entry_point = ((1, 1), 0)
-    agent.speed_counter.set(_pseudo_fractional(1), Fraction(0))
+    agent.speed_counter.set(_pseudo_fractional(1), Fraction(0), DEFAULT_EDGE_LENGTH)
     agent.state_machine.set_state(TrainState.MOVING)
     assert rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1) == (0, -1, -1)
 
-    agent.speed_counter.set(_pseudo_fractional(0.6), Fraction(0))
+    agent.speed_counter.set(_pseudo_fractional(0.6), Fraction(0), DEFAULT_EDGE_LENGTH)
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.36, -0.16))
 
     # speed_counter.speed is pinned at 0 for the whole malfunction, not just at entry - the real
     # invariant _candidate_speed's own malfunction branch enforces on-map (see
     # test_flatland_envs_rail_env.py::test_speed_after_malfunction).
-    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0))
+    agent.speed_counter.set(_pseudo_fractional(0), Fraction(0), DEFAULT_EDGE_LENGTH)
     agent.state_machine.set_state(TrainState.MALFUNCTION)
     agent.malfunction_handler.malfunction_down_counter = 1
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, 0, -0.36))
 
     agent.malfunction_handler._malfunction_down_counter = 0
-    agent.speed_counter.set(_pseudo_fractional(0.3), Fraction(0))
+    agent.speed_counter.set(_pseudo_fractional(0.3), Fraction(0), DEFAULT_EDGE_LENGTH)
     agent.state_machine.set_state(TrainState.MOVING)
     assert np.allclose(rewards.step_reward(agent, agent_transition_data=None, distance_map=None, elapsed_steps=-1), (0, -0.09, -0.09))
 
@@ -964,7 +965,7 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     agent.current_entry_point = (waypoint.position, waypoint.direction)
     agent.next_entry_point = (waypoint.position, waypoint.direction)
     is_stopped = state == TrainState.STOPPED
-    agent.speed_counter.set(Fraction(0) if is_stopped else Fraction(1), agent.speed_counter.distance or Fraction(0))
+    agent.speed_counter.set(Fraction(0) if is_stopped else Fraction(1), agent.speed_counter.distance or Fraction(0), DEFAULT_EDGE_LENGTH)
     # new_speed_zero (derived from candidate_speed == 0.0) and movement_allowed (derived from
     # action_valid and resource_check) are both recomputed by step_reward() itself - action_valid=True,
     # resource_check=True reproduce movement_allowed=True; movement_action_given is state-machine-only
