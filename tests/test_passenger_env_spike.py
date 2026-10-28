@@ -419,3 +419,56 @@ def test_passenger_env_on_graph_rail_env_matches_grid():
     assert grid_trace[6][0] == ((0, 1), 0)
     assert grid_trace[20][0] == ((0, 4), 1)
     assert grid_trace[23][0] == ((0, 7), None)
+
+
+def test_multiple_passengers_share_trains():
+    """
+    Five passengers on the same four trains as above, each with its own journey:
+
+    - 0: A->B->C, as in the single-passenger test.
+    - 1: A->B, boards leg 0 at A together with passenger 0, but gets off for good at B.
+    - 2: B->C, waits at B from the first step and boards leg 1 together with passenger 0.
+    - 3: B->A, waits at B alongside passengers 0 and 2, and alone boards leg 2 (B->A) at step 18 - the
+      others stay, as leg 2 doesn't head to their next stop.
+    - 4: C->B, the only passenger on leg 3.
+
+    Each passenger's mode changes (step -> `passenger_mode[h]`) are asserted verbatim; while riding,
+    the passenger's resource equals its vehicle's every step.
+    """
+    a, b, c = STATION_A, STATION_B, STATION_C
+    east, west = Grid4TransitionsEnum.EAST, Grid4TransitionsEnum.WEST
+    passenger_journeys = {
+        0: [(a, east), (b, east), (c, east)],
+        1: [(a, east), (b, east)],
+        2: [(b, east), (c, east)],
+        3: [(b, west), (a, west)],
+        4: [(c, west), (b, west)],
+    }
+    passenger_env = PassengerEnv(RailEnvHeadingInfoWrapper(_make_three_station_rail_env()), passenger_policy=None,
+                                 passenger_journeys=passenger_journeys)
+    passenger_env.reset()
+
+    mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in passenger_journeys}
+    previous_modes = {handle: None for handle in passenger_journeys}
+    while not passenger_env.done:
+        passenger_env.step({handle: RailEnvActions.MOVE_FORWARD for handle in passenger_env.get_agent_handles()})
+        step = passenger_env.rail_env._elapsed_steps
+        for handle in passenger_journeys:
+            mode = passenger_env.passenger_mode[handle]
+            if mode != previous_modes[handle]:
+                mode_changes[handle][step] = mode
+            previous_modes[handle] = mode
+            passenger_resource, riding_handle = mode
+            if riding_handle is not None:
+                assert passenger_env.rail_env.agents[riding_handle].current_entry_point[0] == passenger_resource
+
+    assert mode_changes == {
+        0: {1: (a, None), 6: (a, 0), 7: ((0, 2), 0), 8: ((0, 3), 0), 9: (b, None),
+            20: (b, 1), 21: ((0, 5), 1), 22: ((0, 6), 1), 23: (c, None)},
+        1: {1: (a, None), 6: (a, 0), 7: ((0, 2), 0), 8: ((0, 3), 0), 9: (b, None)},
+        2: {1: (b, None), 20: (b, 1), 21: ((0, 5), 1), 22: ((0, 6), 1), 23: (c, None)},
+        3: {1: (b, None), 18: (b, 2), 19: ((0, 3), 2), 20: ((0, 2), 2), 21: (a, None)},
+        4: {1: (c, None), 24: (c, 3), 25: ((0, 6), 3), 26: ((0, 5), 3), 27: (b, None)},
+    }
+    assert passenger_env.passenger_arrival_time == {0: 23, 1: 9, 2: 23, 3: 21, 4: 27}
+    assert passenger_env.passenger_target_entry_point == {0: (c, east), 1: (b, east), 2: (c, east), 3: (a, west), 4: (b, west)}
