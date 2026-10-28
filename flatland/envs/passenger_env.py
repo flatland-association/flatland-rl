@@ -8,13 +8,6 @@ from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 
-# `RailEnv`'s off-map departure timing has documented/undocumented edge cases at earliest_departure 0
-# and 1 (e.g. rail_env.py's own "an earliest_departure=0 agent dispatches directly on the very first
-# movement action" comment) where the step an agent actually appears on the map doesn't equal
-# earliest_departure exactly. 2 is the smallest value clear of both, so every passenger's own
-# earliest-departure bookkeeping stays clean, even though (see below) it no longer gates real movement.
-PASSENGER_EARLIEST_DEPARTURE = 2
-
 # A passenger's `passenger_mode[h]` tuple - a position (not a full (position, direction) entry
 # point), then a handle - holds in each of its 3 modes:
 # - off map:                       (None, None)
@@ -44,7 +37,7 @@ class PassengerEnv(Environment):
     pass-through return value - not itself part of the `Environment` contract. A passenger has
     exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (position, handle) pair:
 
-    1. off map (`(None, None)`) - before showing up at its first stop.
+    1. off map (`(None, None)`) - after `reset()`, before the first step shows it up at its first stop.
     2. on map, waiting (`(passenger_position, None)`) - standing at one of its own stops, not
        currently riding a vehicle.
     3. riding (`(passenger_position, vehicle handle)`, the vehicle's own position always equal to
@@ -62,11 +55,6 @@ class PassengerEnv(Environment):
         self.passenger_policy = passenger_policy
         self.passenger_journeys = passenger_journeys
         self.action_space = self.rail_env.action_space
-
-        self.passenger_earliest_departures: Optional[Dict[int, List[Optional[int]]]] = None
-        self.passenger_latest_arrivals: Optional[Dict[int, List[Optional[int]]]] = None
-        self.passenger_earliest_departure: Optional[Dict[int, int]] = None
-        self.passenger_latest_arrival: Optional[Dict[int, int]] = None
 
         # PassengerMode per handle - see the class docstring. Its own second entry, once riding (mode 3),
         # already *is* the handle of the vehicle being ridden - no separate bookkeeping needed.
@@ -88,25 +76,6 @@ class PassengerEnv(Environment):
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
 
-        self.passenger_earliest_departures = {}
-        self.passenger_latest_arrivals = {}
-        self.passenger_earliest_departure = {}
-        self.passenger_latest_arrival = {}
-        for handle, stops in self.passenger_journeys.items():
-            # cumulative distance (cells) from this passenger's first stop up to each of its stops, at
-            # speed 1 - no dwell at an intermediate stop, so its earliest departure and latest arrival
-            # are the same step: the step the vehicle reaches it. Purely informational now (see the
-            # class docstring) - real movement no longer follows this schedule, except for
-            # `passenger_earliest_departure` gating the step the passenger shows up at its first stop.
-            cumulative_distances = [0]
-            for stop, next_stop in zip(stops, stops[1:]):
-                cumulative_distances.append(cumulative_distances[-1] + abs(next_stop.position[1] - stop.position[1]))
-            arrival_steps = [PASSENGER_EARLIEST_DEPARTURE + distance for distance in cumulative_distances]
-            self.passenger_earliest_departures[handle] = arrival_steps[:-1] + [None]
-            self.passenger_latest_arrivals[handle] = [None] + arrival_steps[1:]
-            self.passenger_earliest_departure[handle] = arrival_steps[0]
-            self.passenger_latest_arrival[handle] = arrival_steps[-1]
-
         self.passenger_mode = {handle: (None, None) for handle in self.passenger_journeys}
         self._passenger_stop_index = {handle: 0 for handle in self.passenger_journeys}
         self.passenger_current_entry_point = {handle: None for handle in self.passenger_journeys}
@@ -122,10 +91,6 @@ class PassengerEnv(Environment):
         self.rail_env.clone_from(env.rail_env)
         self.passenger_policy = env.passenger_policy
         self.passenger_journeys = env.passenger_journeys
-        self.passenger_earliest_departures = copy.deepcopy(env.passenger_earliest_departures)
-        self.passenger_latest_arrivals = copy.deepcopy(env.passenger_latest_arrivals)
-        self.passenger_earliest_departure = copy.deepcopy(env.passenger_earliest_departure)
-        self.passenger_latest_arrival = copy.deepcopy(env.passenger_latest_arrival)
         self.passenger_mode = copy.deepcopy(env.passenger_mode)
         self._passenger_stop_index = copy.deepcopy(env._passenger_stop_index)
         self.passenger_current_entry_point = copy.deepcopy(env.passenger_current_entry_point)
@@ -184,13 +149,9 @@ class PassengerEnv(Environment):
             direction = stops[self._passenger_stop_index[handle]].direction
 
             if passenger_position is None:
-                # mode 1 -> mode 2: show up at the first stop once its own earliest departure is reached.
-                if self.rail_env._elapsed_steps >= self.passenger_earliest_departure[handle]:
-                    passenger_position = stops[0].position
-                    self.passenger_mode[handle] = (passenger_position, None)
-                else:
-                    self._sync_passenger(handle, None, direction)
-                    continue
+                # mode 1 -> mode 2: show up at the first stop on the first step.
+                passenger_position = stops[0].position
+                self.passenger_mode[handle] = (passenger_position, None)
 
             if riding_handle is not None:
                 # mode 3: riding - follow the vehicle, or get off once it's gone (arrived/removed).
