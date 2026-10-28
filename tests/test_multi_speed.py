@@ -347,7 +347,7 @@ def test_multispeed_actions_no_malfunction_blocking():
         ),
         # design (D1/D2): agent 1 (speed 0.5) is repeatedly blocked by agent 0 (speed 1/3) ahead of it -
         # each block follows the same 3-step pattern: (a) real crossing attempt denied (agent 0 still
-        # occupies the target) -> forced STOPPED, distance banks to the boundary; (b) given a movement
+        # occupies the target) -> forced STOPPED, distance stays where it was (1/2); (b) given a movement
         # action again, optimistically promoted back to MOVING (self-loop, distance unchanged - see
         # rail_env.py's movement_allowed design note); (c) now pre-speed > 0, the crossing is
         # attempted for real again and this time succeeds (agent 0 has since vacated the target).
@@ -372,6 +372,7 @@ def test_multispeed_actions_no_malfunction_blocking():
                     position=(3, 9),
                     direction=Grid4TransitionsEnum.EAST,
                     state=TrainState.STOPPED,
+                    distance=Fraction(1, 2),  # denied: stays where it was, not moved up to the boundary
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
@@ -391,17 +392,19 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
-                # blocked again immediately - is_cell_exit is already true this same step (banked
-                # momentum from the crossing just completed), and agent 0 still occupies (3,7).
+                # not blocked here - the crossing into (3,8) carried no distance (it restarted from 1/2,
+                # not from the boundary), so it advances mid-cell (0 -> 1/2) while agent 0 leaves (3,7).
                 Replay(  # 5
                     position=(3, 8),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.STOPPED,
+                    state=TrainState.MOVING,
+                    distance=Fraction(1, 2),
 
-                    action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
+                    action=RailEnvActions.MOVE_FORWARD,
                 ),
+                # follows agent 0 into the just-vacated (3,7).
                 Replay(  # 6
-                    position=(3, 8),
+                    position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.MOVING,
 
@@ -414,10 +417,12 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=RailEnvActions.MOVE_FORWARD,
                 ),
+                # blocked a second time - agent 0 still occupies (3,6).
                 Replay(  # 8
                     position=(3, 7),
                     direction=Grid4TransitionsEnum.WEST,
                     state=TrainState.STOPPED,
+                    distance=Fraction(1, 2),
 
                     action=RailEnvActions.MOVE_FORWARD,  # SM: STOPPED -> MOVING needs move action
                 ),
@@ -435,13 +440,14 @@ def test_multispeed_actions_no_malfunction_blocking():
 
                     action=None,
                 ),
-                # blocked a third time - agent 0 still occupies (3,5).
+                # mid-cell (0 -> 1/2), about to attempt (3,5), which agent 0 still occupies.
                 Replay(  # 11
                     position=(3, 6),
                     direction=Grid4TransitionsEnum.WEST,
-                    state=TrainState.STOPPED,
+                    state=TrainState.MOVING,
+                    distance=Fraction(1, 2),
 
-                    action=RailEnvActions.MOVE_LEFT,  # SM: STOPPED -> MOVING needs move action
+                    action=RailEnvActions.MOVE_LEFT,
                 ),
             ],
             target=(3, 0),  # west dead-end
