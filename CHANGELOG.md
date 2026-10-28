@@ -5,6 +5,93 @@ All notable changes to Flatland will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [5.0.0](https://github.com/flatland-association/flatland-rl/compare/v4.3.0...v5.0.0) (2026-10-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* rename Configuration/ConfigurationType to EntryPoint across flatland-rl.
+* revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496))
+* D1 revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) (#504)
+
+### Features
+
+* **envs:** add skip_state_machine_update option to RailEnv ([d48038f](https://github.com/flatland-association/flatland-rl/commit/d48038fd34e137c048df40b2c0a309ba460e83be))
+* **envs:** make load_new/from_graph/load_flatland_environment_from_file wrapping opt-in ([360809c](https://github.com/flatland-association/flatland-rl/commit/360809cdeb055fe72ab1a453b63953fccbe683a4))
+* **evaluators:** bridge pre-refactor recorded episodes via shifted_malfunction option ([7e36bba](https://github.com/flatland-association/flatland-rl/commit/7e36bbaf5e2827f3493326c09cdc0220a1993716))
+* **evaluators:** bridge pre-refactor recorded episodes via shifted_off_map_speed option ([8c2cc2b](https://github.com/flatland-association/flatland-rl/commit/8c2cc2bf44a9f46dee347138d79a81436c383009))
+
+
+### Bug Fixes
+
+* bootstrap speed_counter distance from None in direct on-map test setup ([06ab79b](https://github.com/flatland-association/flatland-rl/commit/06ab79bc4c24fb5691c71bae5b0780b1bffba31e))
+* **ci:** clean up stale gist_dir before cloning in profiling-comment. ([#538](https://github.com/flatland-association/flatland-rl/issues/538)) ([288a970](https://github.com/flatland-association/flatland-rl/commit/288a970b4fca668902ac2b72a9580f1cc2c89ec5))
+* **ci:** guard docker-publish against transitive skip poisoning from publish-test-pypi ([d2d607b](https://github.com/flatland-association/flatland-rl/commit/d2d607bc2d431e5400c83f5ae40a236c37212d82))
+* **ci:** push docker images tagged with release version. ([#495](https://github.com/flatland-association/flatland-rl/issues/495)) ([d2d607b](https://github.com/flatland-association/flatland-rl/commit/d2d607bc2d431e5400c83f5ae40a236c37212d82))
+* **core:** avoid OverflowError clearing transition bits under numpy&gt;=2 ([ca6ead1](https://github.com/flatland-association/flatland-rl/commit/ca6ead1ed94db56bfe3142a982b10c33f9f7bbc7))
+* correct WAITING speed invariant and rename distribute() to assert_speed_matches_if_movement_allowed(). ([104f288](https://github.com/flatland-association/flatland-rl/commit/104f288bea2f643ab4fbc809e3ea0848ce026841))
+* declare action_valid as a real StateTransitionSignals field ([6f782c5](https://github.com/flatland-association/flatland-rl/commit/6f782c543bdf6ab3f7621935b3fed08eacc583b4))
+* **deps:** cap numpy/contourpy/scipy to versions still supporting Python 3.11 ([b4378e4](https://github.com/flatland-association/flatland-rl/commit/b4378e48fe8afb19de94eb3a8c8cb2a2cbb7e8be))
+* **deps:** re-pin networkx&lt;3.7 for Python 3.11 compatibility ([bbe190d](https://github.com/flatland-association/flatland-rl/commit/bbe190d56d92d30320de02f9389bc56d0c3a8efa))
+* drop dead action_saver reference in trajectories notebook, re-execute ([0a39122](https://github.com/flatland-association/flatland-rl/commit/0a391221faa2d190ad3a1c1c73f3d09a1a62cdbb))
+* drop redundant action_valid disjunct in _check_post_position_invariants ([#178](https://github.com/flatland-association/flatland-rl/issues/178)) ([549f895](https://github.com/flatland-association/flatland-rl/commit/549f895ee78924805a4ba725749550d710ff84f9))
+* **envs:** correct SpeedCounter.is_cell_entry at full-speed crossings ([4cb6363](https://github.com/flatland-association/flatland-rl/commit/4cb6363efcd0d28b5bc1077daa85eee73ad83ae0))
+* **envs:** decrement malfunction counter at start of step(), before generating new malfunctions ([a2ba638](https://github.com/flatland-association/flatland-rl/commit/a2ba6382c864ae8b71ca82c0b8787136e7be64c6))
+* **envs:** derive agent state from live attributes, not the state machine ([f245321](https://github.com/flatland-association/flatland-rl/commit/f245321314b60bfbc5eed68e646c79612c3e6f56))
+* **envs:** fail fast when a state-dependent malfunction condition runs on an unwrapped env ([0de91b5](https://github.com/flatland-association/flatland-rl/commit/0de91b57b0af0b90dbc68dbb3896d6460c9b8e7e))
+* **envs:** fall back agent.state to derived_state() when state machine was never driven ([efdfabe](https://github.com/flatland-association/flatland-rl/commit/efdfabe0e19c442428c9d7334ff3bd69b8db62ac))
+* **envs:** gate MALFUNCTION_OFF_MAP's promotion to MOVING on the real ready_to_depart formula ([e786aa4](https://github.com/flatland-association/flatland-rl/commit/e786aa4555ce95f4e3aaeede53267e5d1555a6d8))
+* **envs:** grant STOPPED/MALFUNCTION-&gt;MOVING promotion optimistically, unify forced-stop banking ([8bc162b](https://github.com/flatland-association/flatland-rl/commit/8bc162bcbd6bc3d8934e441731a0862ed16a4574))
+* **envs:** handle NaN in GraphTransitionMap.graph_entry_point_to_grid_entry_point ([5acc36c](https://github.com/flatland-association/flatland-rl/commit/5acc36c218fb8e593f15a56abee54f735f726170))
+* **envs:** normalize legacy pickled speed_counter state on load ([2d0ee3e](https://github.com/flatland-association/flatland-rl/commit/2d0ee3e24d208b6ea8929586e09a2c4b69c488c1))
+* **envs:** remove ready_to_depart's elapsed_steps==1 special case ([6788c0a](https://github.com/flatland-association/flatland-rl/commit/6788c0a734c898ea594360f830890c012153ba87))
+* **envs:** set next_entry_point consistently in load_legacy_static_agent ([7fd1515](https://github.com/flatland-association/flatland-rl/commit/7fd1515cfd24c47d899538129c1aec1bec5dde49))
+* **evaluators:** stop reading agent.state directly for DONE checks ([c331c10](https://github.com/flatland-association/flatland-rl/commit/c331c1057d0d6d3f3f2b20ad65509ed0f6529de2))
+* exclude interactive_ai.py from the run_all_examples.py sweep ([ffe4e9d](https://github.com/flatland-association/flatland-rl/commit/ffe4e9dd19c56f4bd760836aa86cc7b71f01cf9d))
+* let STOP_MOVING complete an in-flight cell-boundary crossing ([1d34d9f](https://github.com/flatland-association/flatland-rl/commit/1d34d9f7c60cf543f3e1b294eab65f3b75a1cf58))
+* make check_step_pre_post_conditions backward-compatible in the profiling script. ([5364bdd](https://github.com/flatland-association/flatland-rl/commit/5364bddf99caae4692b86a1032283831d2a2c730))
+* **notebooks:** import display/HTML from IPython.display instead of IPython.core.display ([2b60440](https://github.com/flatland-association/flatland-rl/commit/2b604404ae030e2a2d1e48cb07c195862735defa))
+* **notebooks:** remove stray indentation before check_socket def in test_service.ipynb ([661b153](https://github.com/flatland-association/flatland-rl/commit/661b153e54e70584bcaa3dbc2cacbf450e46e652))
+* pass -o to unzip in CI workflows to avoid interactive overwrite prompt ([4547608](https://github.com/flatland-association/flatland-rl/commit/4547608d9a7c6eea0ffeaec64c691e822fab68c8))
+* **rail_env:** ready_to_depart excludes a DONE agent ([dd9999b](https://github.com/flatland-association/flatland-rl/commit/dd9999b69308f84582086f92a77c77675fbe044b))
+* **rail_env:** scope action_invalid_on_rail to on-map context ([978523d](https://github.com/flatland-association/flatland-rl/commit/978523dc632fbe3ec332e23b091dba83a62335c0))
+* rename stale agent.current_configuration references in the InteractiveAI callback. ([3cbac25](https://github.com/flatland-association/flatland-rl/commit/3cbac25f34e8051e24002f224a7e73a6d1c86da9))
+* rename stale agent.current_configuration/initial_configuration references in malfunction tests ([93866e5](https://github.com/flatland-association/flatland-rl/commit/93866e5aa47a2ac27992d8dd8d53eb2d0fda51f8))
+* **tests:** de-flake test_env_generator_no_seed_but_post_seed ([22dbcd2](https://github.com/flatland-association/flatland-rl/commit/22dbcd249a019d9eec909d8badd0c2e262afb966))
+* **tests:** de-flake test_env_generator_no_seed_but_post_seed. ([#523](https://github.com/flatland-association/flatland-rl/issues/523)) ([22dbcd2](https://github.com/flatland-association/flatland-rl/commit/22dbcd249a019d9eec909d8badd0c2e262afb966))
+* **tests:** use current_entry_point=None for off-map fixture agents in test_timetable_generator ([9750ae3](https://github.com/flatland-association/flatland-rl/commit/9750ae3330c8faa856642c7951624916d4d600f3))
+* **trajectories:** read graph node ids not of tuple form back unchanged from trains positions ([8948237](https://github.com/flatland-association/flatland-rl/commit/8948237609ebf2eb3d7bb99cb778aa6c3bf99bba))
+* **trajectories:** read graph node ids not of tuple form back unchanged from trains positions. ([#543](https://github.com/flatland-association/flatland-rl/issues/543)) ([3a66efe](https://github.com/flatland-association/flatland-rl/commit/3a66efe96c6c9fcdd293cbeefec0c01e369db0fc))
+* **trajectories:** restore skip_state_machine_update=False for policy_runner's own env ([f66cbfe](https://github.com/flatland-association/flatland-rl/commit/f66cbfe257aba88ee0586a7f425928b1fdfcf44d))
+* update malfunction/variable-speed tests for the next_entry_point invariant and cell-entry timing ([5db0031](https://github.com/flatland-association/flatland-rl/commit/5db003171087104e0ca6c3b30c6030a9700cc614))
+* use pre-step speed for distance/exit-readiness, fix malfunction-interruption distance wrap ([def0a90](https://github.com/flatland-association/flatland-rl/commit/def0a900ebd287ba339be6bbadc6fcd8b1599f43))
+* **utils:** use derived_state() for render visibility, not raw agent.state ([c239ba6](https://github.com/flatland-association/flatland-rl/commit/c239ba6b1f963103525f93a982347fe02009c5d6))
+
+
+### Performance Improvements
+
+* disable RailEnv's step-invariant assertions by default in the performance-profiling script. ([bed60b7](https://github.com/flatland-association/flatland-rl/commit/bed60b7bc399a6c28ee4a0481b5fbeaa37ecb494))
+* **envs:** cache empty reward dict template instead of rebuilding via fromkeys ([9e01a60](https://github.com/flatland-association/flatland-rl/commit/9e01a60d41fde33889d585d67324bf5a7042d6fc))
+* **envs:** drop ineffective lru_cache on candidate_ methods, share zero-Fraction constant ([5c9d65f](https://github.com/flatland-association/flatland-rl/commit/5c9d65f7fe9794b1d9df4db712dae2fd6172bd9b))
+* **envs:** fix Fraction-vs-float comparison hotspot, dedupe agent_targets frozenset ([aded275](https://github.com/flatland-association/flatland-rl/commit/aded275023bf8347e50e449347bb2fd63fad1089))
+* **envs:** skip lru_cache'd float-tolerance conversion for already-Fraction speed ([3d834da](https://github.com/flatland-association/flatland-rl/commit/3d834da39f53b8d4261a7fa1032c8795ddd47115))
+* **rail_env:** dedupe boolean flag computation across step() loops and candidate_ methods ([1960eb1](https://github.com/flatland-association/flatland-rl/commit/1960eb13271c4af68f6617bb9ac769b543870101))
+* **rail_env:** reorder candidate_ methods' branches by empirical frequency ([5a19eaf](https://github.com/flatland-association/flatland-rl/commit/5a19eaf94025429fdfa71d87834fc1642dacadff))
+* **rail_env:** restructure PreStepSnapshot to one struct per agent ([39fa75b](https://github.com/flatland-association/flatland-rl/commit/39fa75ba402f3a37223f4bd43ecd93a51b218379))
+* **rail_env:** skip cell_exit computation entirely for off-map agents ([805a82e](https://github.com/flatland-association/flatland-rl/commit/805a82e461c6dbf5a721a0f953acb2325dda0cd7))
+
+
+### Reverts
+
+* re-pin pandas&lt;3, CI caught a real pandas 3.0 regression ([b233eaf](https://github.com/flatland-association/flatland-rl/commit/b233eaf840462d92241dc75f1999bcbe9a38bf3b))
+
+
+### Code Refactoring
+
+* D1 revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) ([#504](https://github.com/flatland-association/flatland-rl/issues/504)) ([925b147](https://github.com/flatland-association/flatland-rl/commit/925b147853f667a8de44d25e0ea9f3c875ddae7f))
+* rename Configuration/ConfigurationType to EntryPoint across flatland-rl. ([7599b96](https://github.com/flatland-association/flatland-rl/commit/7599b962bc60d02899986ef7ace3858da813fcb2))
+* revise action required, acceleration/braking with pre-step speed. ([#496](https://github.com/flatland-association/flatland-rl/issues/496)) ([925b147](https://github.com/flatland-association/flatland-rl/commit/925b147853f667a8de44d25e0ea9f3c875ddae7f))
+
 ## [4.3.0](https://github.com/flatland-association/flatland-rl/compare/v4.2.6...v4.3.0) (2026-08-10)
 
 
