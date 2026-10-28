@@ -2,8 +2,11 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
+from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
@@ -46,12 +49,12 @@ LEG_EARLIEST_DEPARTURE: Dict[int, int] = {handle: (handle + 1) * HEADWAY for han
 # it actually takes a train heading to its next stop to show up, not just within one headway period,
 # before it can hop on leg 1 and ride it all the way to its own final target, C.
 LEG_EARLIEST_DEPARTURE[1] = 20
-LEG_TARGET_WAYPOINT: Dict[int, Waypoint] = {handle: leg[-1][0] for handle, leg in LEG_WAYPOINTS.items()}
+LEG_TARGET_ENTRY_POINT: Dict[int, Tuple[Tuple[int, int], int]] = {handle: leg[-1][0]._to_tuple() for handle, leg in LEG_WAYPOINTS.items()}
 
 # The single passenger's own route: A->B->C, stopping at B on the way rather than skipping
-# straight to C - one ordered list of stops per passenger handle.
-PASSENGER_JOURNEYS: Dict[int, List[Waypoint]] = {
-    0: [Waypoint(STATION_A, Grid4TransitionsEnum.EAST), Waypoint(STATION_B, Grid4TransitionsEnum.EAST), Waypoint(STATION_C, Grid4TransitionsEnum.EAST)],
+# straight to C - one ordered list of stops (entry points) per passenger handle.
+PASSENGER_JOURNEYS: Dict[int, List[Tuple[Tuple[int, int], int]]] = {
+    0: [(STATION_A, Grid4TransitionsEnum.EAST), (STATION_B, Grid4TransitionsEnum.EAST), (STATION_C, Grid4TransitionsEnum.EAST)],
 }
 
 
@@ -230,7 +233,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     - No train is ever stopped: the rail env's headway leaves enough
       clearance that its four trains never contend for a cell.
     - The rail env is wrapped in `RailEnvHeadingInfoWrapper`, so its info dict's `heading` entry
-      always names the waypoint (position, direction) each of its four trains is heading to - its
+      always names the entry point ((row, col), direction) each of its four trains is heading to - its
       leg's own target waypoint - throughout the run, regardless of whether that train is currently on
       or off the track. This is exactly what the passenger's boarding decision reads to tell which
       train, if any currently sharing its cell, is headed towards its own next stop.
@@ -247,9 +250,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
                                    passenger_journeys=PASSENGER_JOURNEYS)
     obs, _ = passenger_env.reset()
 
-    # the heading info wrapper's info dict already carries each leg's target waypoint right after
+    # the heading info wrapper's info dict already carries each leg's target entry point right after
     # reset(), before any train has moved.
-    assert passenger_env.rail_env_info['heading'] == LEG_TARGET_WAYPOINT
+    assert passenger_env.rail_env_info['heading'] == LEG_TARGET_ENTRY_POINT
 
     # verbatim expected timetable for the rail env: one entry per leg, in handle order 0..3
     # (A->B, B->C, B->A, C->B), departures at HEADWAY=6, 12, 18, 24 and arrivals STATION_DISTANCE=3
@@ -275,7 +278,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         actions = policy.act_many(passenger_env.get_agent_handles(), observations=list(obs.values()))
         obs, _, _, _ = passenger_env.step(actions)
         step = passenger_env.rail_env._elapsed_steps
-        assert passenger_env.rail_env_info['heading'] == LEG_TARGET_WAYPOINT
+        assert passenger_env.rail_env_info['heading'] == LEG_TARGET_ENTRY_POINT
         for handle, agent in enumerate(passenger_env.rail_env.agents):
             rail_env_position_by_step[handle][step] = agent.current_entry_point[0] if agent.current_entry_point is not None else None
             assert agent.state != TrainState.STOPPED
@@ -369,3 +372,50 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     for step, (passenger_position, riding_handle) in passenger_mode_by_step.items():
         if riding_handle is not None:
             assert rail_env_position_by_step[riding_handle][step] == passenger_position
+
+
+def _make_three_station_rail_env() -> RailEnv:
+    return RailEnv(width=N_CELLS, height=1,
+                   rail_generator=rail_from_grid_transition_map(_make_three_station_rail()),
+                   line_generator=_line_generator,
+                   timetable_generator=_timetable_generator,
+                   number_of_agents=len(LEG_WAYPOINTS),
+                   obs_builder_object=FullEnvObservation())
+
+
+def _run_passenger_env(passenger_env: PassengerEnv) -> Dict[int, Tuple]:
+    """ Steps every train forward (a straight corridor needs no other action) until done, recording the passenger's mode and entry point per step. """
+    passenger_env.reset()
+    trace = {}
+    while not passenger_env.done:
+        passenger_env.step({handle: RailEnvActions.MOVE_FORWARD for handle in passenger_env.get_agent_handles()})
+        trace[passenger_env.rail_env._elapsed_steps] = (passenger_env.passenger_mode[0], passenger_env.passenger_current_entry_point[0])
+    return trace
+
+
+def test_passenger_env_on_graph_rail_env_matches_grid():
+    """
+    The same three-station scenario, once on the grid `RailEnv` and once on the `GraphRailEnv`
+    converted from it: `PassengerEnv` only uses the `AbstractRailEnv` interface, so the passenger
+    boards, rides and alights at the same steps on both. Only the representation differs: graph
+    entry points and resources are strings, e.g. `'(0, 1, 1)'` for `((0, 1), 1)` and `'(0, 1)'`
+    for the cell `(0, 1)`.
+    """
+    grid_env = RailEnvHeadingInfoWrapper(_make_three_station_rail_env())
+    grid_trace = _run_passenger_env(PassengerEnv(grid_env, passenger_policy=None, passenger_journeys=PASSENGER_JOURNEYS))
+
+    rail_env = _make_three_station_rail_env()
+    rail_env.reset()
+    graph_env = RailEnvHeadingInfoWrapper(GraphRailEnv.from_rail_env(rail_env, DummyObservationBuilder()))
+    to_graph = GraphTransitionMap.grid_entry_point_to_graph_entry_point
+    graph_journeys = {handle: [to_graph(*position, direction) for position, direction in stops] for handle, stops in PASSENGER_JOURNEYS.items()}
+    graph_trace = _run_passenger_env(PassengerEnv(graph_env, passenger_policy=None, passenger_journeys=graph_journeys))
+
+    expected_graph_trace = {
+        step: ((str(resource), riding_handle), to_graph(*position, direction))
+        for step, ((resource, riding_handle), (position, direction)) in grid_trace.items()
+    }
+    assert graph_trace == expected_graph_trace
+    assert grid_trace[6][0] == ((0, 1), 0)
+    assert grid_trace[20][0] == ((0, 4), 1)
+    assert grid_trace[23][0] == ((0, 7), None)
