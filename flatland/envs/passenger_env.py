@@ -1,12 +1,11 @@
 import copy
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from flatland.core.env import Environment
 from flatland.core.policy import Policy
 from flatland.core.resource_map import ResourceT
 from flatland.envs.agent_utils import EntryPointT, _sanitize_entry_point
 from flatland.envs.rail_env import AbstractRailEnv
-from flatland.envs.rail_env_action import RailEnvActions
 
 # A passenger's `passenger_mode[h]` tuple - a resource (grid cell, graph node's resource; not a full
 # entry point), then a handle - holds in each of its 3 modes:
@@ -26,16 +25,18 @@ class PassengerEnv(Environment):
     agents, separate timetable, separate motion checks. Each passenger follows its own fixed journey:
     an ordered list of stops `passenger_journeys[h]`, each an entry point of the rail env.
 
-    Implements the `Environment` interface as a thin pass-through to the rail env: `step()`
-    takes an `action_dict` for the rail env's vehicles (exactly `AbstractRailEnv.step()`'s own contract
-    - `get_agent_handles()` returns the vehicles' handles, not the passengers') and returns
-    its `(obs, rewards, dones, info)` verbatim. Passengers never take an action of their own -
-    `passenger_policy`'s actions are computed (still required to be a `SetPathPolicy` configured to
-    respect intermediate stops) but ignored; every step, each passenger's location/mode is instead
-    derived purely from the just-stepped rail env's vehicles and its info dict's `heading` entry
-    (see `RailEnvHeadingInfoWrapper`) in `_update_passengers()`, as a side effect alongside the
-    pass-through return value - not itself part of the `Environment` contract. A passenger has
-    exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (resource, handle) pair:
+    Implements the `Environment` interface for the passengers: `get_agent_handles()` returns the
+    passengers' handles, and `step()` takes an `action_dict` for the passengers. The rail env's
+    vehicles are not agents of this env: `step()` drives them itself, with the actions of
+    `vehicle_policy` (the vehicles' "auto-pilot"), before it updates the passengers.
+
+    The passenger side of the interface is formal for now: passengers have no actions (`action_dict` is
+    ignored, as are `passenger_policy`'s actions), no observations, no rewards and no infos, so
+    `reset()`/`step()` return empty dicts and `dones` holds only `'__all__'`. Every step, each passenger's
+    location/mode is derived from the just-stepped rail env's vehicles and its info dict's `heading`
+    entry (see `RailEnvHeadingInfoWrapper`) in `_update_passengers()`; read it from `passenger_mode`/
+    `passenger_current_entry_point`/`passenger_target_entry_point`/`passenger_arrival_time`. A passenger
+    has exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (resource, handle) pair:
 
     1. off map (`(None, None)`) - after `reset()`, before the first step shows it up at its first stop.
     2. on map, waiting (`(passenger_resource, None)`) - standing at one of its own stops, not
@@ -49,12 +50,13 @@ class PassengerEnv(Environment):
        `_is_passenger_done()`).
     """
 
-    def __init__(self, rail_env: AbstractRailEnv, passenger_policy: Policy, passenger_journeys: Dict[int, List[EntryPointT]]):
+    def __init__(self, rail_env: AbstractRailEnv, vehicle_policy: Policy, passenger_policy: Policy,
+                 passenger_journeys: Dict[int, List[EntryPointT]]):
         super().__init__()
         self.rail_env = rail_env
+        self.vehicle_policy = vehicle_policy
         self.passenger_policy = passenger_policy
         self.passenger_journeys = passenger_journeys
-        self.action_space = self.rail_env.action_space
 
         # PassengerMode per handle - see the class docstring. Its own second entry, once riding (mode 3),
         # already *is* the handle of the vehicle being ridden - no separate bookkeeping needed.
@@ -73,6 +75,7 @@ class PassengerEnv(Environment):
         self.rail_env_info: Optional[Dict] = None
 
     def reset(self) -> Tuple[Dict, Dict]:
+        """ Resets the rail env and the passengers. Returns empty passenger observations and infos. """
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
 
@@ -82,13 +85,14 @@ class PassengerEnv(Environment):
         self.passenger_target_entry_point = {handle: None for handle in self.passenger_journeys}
         self.passenger_arrival_time = {handle: None for handle in self.passenger_journeys}
 
-        return self._rail_env_obs, self.rail_env_info
+        return {}, {}
 
     def get_agent_handles(self) -> List[int]:
-        return self.rail_env.get_agent_handles()
+        return list(self.passenger_journeys)
 
     def clone_from(self, env: 'PassengerEnv', **kwargs) -> None:
         self.rail_env.clone_from(env.rail_env)
+        self.vehicle_policy = env.vehicle_policy
         self.passenger_policy = env.passenger_policy
         self.passenger_journeys = env.passenger_journeys
         self.passenger_mode = copy.deepcopy(env.passenger_mode)
@@ -100,31 +104,25 @@ class PassengerEnv(Environment):
         self._rail_env_done = env._rail_env_done
         self.rail_env_info = copy.deepcopy(env.rail_env_info)
 
-    def step(self, action_dict: Dict[int, RailEnvActions]) -> Tuple[Dict, Dict, Dict, Dict]:
+    def step(self, action_dict: Dict[int, Any]) -> Tuple[Dict, Dict, Dict, Dict]:
         """
-        Delegates `action_dict` straight to the rail env's own `step()` and returns its
-        `(obs, rewards, dones, info)` verbatim - passengers take no actions and aren't part of this
-        contract. Also updates every passenger's mode/location from the result as a side effect
-        (see `_update_passengers()`). Once the rail env is done, `AbstractRailEnv.step()` itself
-        refuses further calls - further calls here are a no-op instead, repeating the last observation/
-        info alongside empty rewards and an all-done `dones` dict.
+        Steps the rail env with `vehicle_policy`'s actions for its vehicles, then updates every
+        passenger's mode/location (see `_update_passengers()`). `action_dict` holds the passengers'
+        actions, which are ignored for now. Once the rail env is done, `AbstractRailEnv.step()` itself
+        refuses further calls - further calls here are a no-op instead.
 
         Returns
         -------
         Tuple[Dict, Dict, Dict, Dict]
-            The rail env's own `(obs, rewards, dones, info)`. A passenger's derived
-            location/mode/arrival bookkeeping is available via `passenger_mode`/`passenger_current_entry_point`/
-            `passenger_target_entry_point`/`passenger_arrival_time`, and `_is_passenger_done()`/`done`.
+            Empty passenger observations, rewards and infos, and `dones` with only `'__all__'`: true
+            once the rail env is done, as no passenger can move after that.
         """
-        if self._rail_env_done:
-            dones = {handle: True for handle in self.rail_env.get_agent_handles()}
-            dones['__all__'] = True
-            return self._rail_env_obs, {}, dones, self.rail_env_info
-
-        self._rail_env_obs, rewards, dones, self.rail_env_info = self.rail_env.step(action_dict)
-        self._rail_env_done = dones['__all__']
-        self._update_passengers()
-        return self._rail_env_obs, rewards, dones, self.rail_env_info
+        if not self._rail_env_done:
+            vehicle_actions = self.vehicle_policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()))
+            self._rail_env_obs, _, rail_env_dones, self.rail_env_info = self.rail_env.step(vehicle_actions)
+            self._rail_env_done = rail_env_dones['__all__']
+            self._update_passengers()
+        return {}, {}, {'__all__': self._rail_env_done}, {}
 
     def _is_passenger_done(self, handle: int) -> bool:
         """ Reached its last stop and isn't (or never was) mid-ride away from it. """
