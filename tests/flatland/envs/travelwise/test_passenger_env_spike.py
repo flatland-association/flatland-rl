@@ -12,7 +12,6 @@ from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_heading_info_wrapper import RailEnvHeadingInfoWrapper
 from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.rail_env_policy import RailEnvPolicy
 from flatland.envs.rail_generators import rail_from_grid_transition_map
@@ -21,7 +20,8 @@ from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Line, Timetable
-from flatland.envs.passenger_env import PassengerEnv
+from flatland.envs.travelwise.passenger_env import PassengerEnv
+from flatland.envs.travelwise.rail_env_heading_info_wrapper import RailEnvHeadingInfoWrapper
 
 # A single straight corridor with three stations A, B, C, evenly spaced 3 cells apart, capped by dead
 # ends well beyond either station so no agent ever reaches an end of the corridor.
