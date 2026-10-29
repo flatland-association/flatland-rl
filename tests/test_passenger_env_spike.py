@@ -4,6 +4,7 @@ import numpy as np
 
 from flatland.core.env_observation_builder import DummyObservationBuilder
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.policy import Policy
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
@@ -201,10 +202,9 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     A `PassengerEnv` wraps this `RailEnv` (the "rail env") and adds a passenger, travelling the
     journey `PASSENGER_JOURNEYS[0]` (A->B->C) on the rail env's trains. It shares only the corridor's
     topology with the rail env - never its agents, timetable or motion checks, and never a real `RailEnv`/`EnvAgent` of its own. `PassengerEnv` implements the
-    `Environment` interface as a thin pass-through to the rail env - `step()` takes an
-    `action_dict` for the rail env's own four legs, exactly `RailEnv.step()`'s own contract - so
-    a `ShortestPathPolicy`, driven from the outside exactly as it would drive a plain `RailEnv`, is what
-    actually picks each leg's action every step. The passenger never moves under its own action: it
+    `Environment` interface for the passenger: `step()` takes the passenger's (empty) actions, steps the
+    rail env's four legs with its `vehicle_policy`, a `ShortestPathPolicy`, and returns empty
+    observations, rewards and infos. The passenger never moves under its own action: it
     either waits at one of its own stops for a train heading to its next stop, or - once one shows up -
     rides that train's position exactly, one train at a time, boarding and alighting
     automatically. Its `passenger_policy` (`SetPathPolicy`, ported from flatland-baselines) is still a
@@ -245,10 +245,11 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
                                                  timetable_generator=_timetable_generator,
                                                  number_of_agents=len(LEG_WAYPOINTS),
                                                  obs_builder_object=FullEnvObservation()))
-    policy = ShortestPathPolicy()
-    passenger_env = PassengerEnv(rail_env, passenger_policy=SetPathPolicy(use_always_first_strategy=1),
-                                   passenger_journeys=PASSENGER_JOURNEYS)
-    obs, _ = passenger_env.reset()
+    passenger_env = PassengerEnv(rail_env, vehicle_policy=ShortestPathPolicy(),
+                                 passenger_policy=SetPathPolicy(use_always_first_strategy=1),
+                                 passenger_journeys=PASSENGER_JOURNEYS)
+    assert passenger_env.reset() == ({}, {})
+    assert passenger_env.get_agent_handles() == [0]
 
     # the heading info wrapper's info dict already carries each leg's target entry point right after
     # reset(), before any train has moved.
@@ -275,9 +276,10 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     passenger_position_by_step: Dict[int, Tuple[int, int]] = {}
     passenger_mode_by_step: Dict[int, Tuple] = {}
     while not passenger_env.done:
-        actions = policy.act_many(passenger_env.get_agent_handles(), observations=list(obs.values()))
-        obs, _, _, _ = passenger_env.step(actions)
+        obs, rewards, dones, infos = passenger_env.step({})
         step = passenger_env.rail_env._elapsed_steps
+        assert (obs, rewards, infos) == ({}, {}, {})
+        assert dones == {'__all__': passenger_env.rail_env.dones['__all__']}
         assert passenger_env.rail_env_info['heading'] == LEG_TARGET_ENTRY_POINT
         for handle, agent in enumerate(passenger_env.rail_env.agents):
             rail_env_position_by_step[handle][step] = agent.current_entry_point[0] if agent.current_entry_point is not None else None
@@ -383,12 +385,19 @@ def _make_three_station_rail_env() -> RailEnv:
                    obs_builder_object=FullEnvObservation())
 
 
+class _MoveForwardPolicy(Policy):
+    """ Moves every train forward - a straight corridor needs no other action. """
+
+    def act(self, observation, **kwargs):
+        return RailEnvActions.MOVE_FORWARD
+
+
 def _run_passenger_env(passenger_env: PassengerEnv) -> Dict[int, Tuple]:
-    """ Steps every train forward (a straight corridor needs no other action) until done, recording the passenger's mode and entry point per step. """
+    """ Steps until done, recording the passenger's mode and entry point per step. """
     passenger_env.reset()
     trace = {}
     while not passenger_env.done:
-        passenger_env.step({handle: RailEnvActions.MOVE_FORWARD for handle in passenger_env.get_agent_handles()})
+        passenger_env.step({})
         trace[passenger_env.rail_env._elapsed_steps] = (passenger_env.passenger_mode[0], passenger_env.passenger_current_entry_point[0])
     return trace
 
@@ -402,14 +411,14 @@ def test_passenger_env_on_graph_rail_env_matches_grid():
     for the cell `(0, 1)`.
     """
     grid_env = RailEnvHeadingInfoWrapper(_make_three_station_rail_env())
-    grid_trace = _run_passenger_env(PassengerEnv(grid_env, passenger_policy=None, passenger_journeys=PASSENGER_JOURNEYS))
+    grid_trace = _run_passenger_env(PassengerEnv(grid_env, vehicle_policy=_MoveForwardPolicy(), passenger_policy=None, passenger_journeys=PASSENGER_JOURNEYS))
 
     rail_env = _make_three_station_rail_env()
     rail_env.reset()
     graph_env = RailEnvHeadingInfoWrapper(GraphRailEnv.from_rail_env(rail_env, DummyObservationBuilder()))
     to_graph = GraphTransitionMap.grid_entry_point_to_graph_entry_point
     graph_journeys = {handle: [to_graph(*position, direction) for position, direction in stops] for handle, stops in PASSENGER_JOURNEYS.items()}
-    graph_trace = _run_passenger_env(PassengerEnv(graph_env, passenger_policy=None, passenger_journeys=graph_journeys))
+    graph_trace = _run_passenger_env(PassengerEnv(graph_env, vehicle_policy=_MoveForwardPolicy(), passenger_policy=None, passenger_journeys=graph_journeys))
 
     expected_graph_trace = {
         step: ((str(resource), riding_handle), to_graph(*position, direction))
@@ -444,14 +453,14 @@ def test_multiple_passengers_share_trains():
         3: [(b, west), (a, west)],
         4: [(c, west), (b, west)],
     }
-    passenger_env = PassengerEnv(RailEnvHeadingInfoWrapper(_make_three_station_rail_env()), passenger_policy=None,
+    passenger_env = PassengerEnv(RailEnvHeadingInfoWrapper(_make_three_station_rail_env()), vehicle_policy=_MoveForwardPolicy(), passenger_policy=None,
                                  passenger_journeys=passenger_journeys)
     passenger_env.reset()
 
     mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in passenger_journeys}
     previous_modes = {handle: None for handle in passenger_journeys}
     while not passenger_env.done:
-        passenger_env.step({handle: RailEnvActions.MOVE_FORWARD for handle in passenger_env.get_agent_handles()})
+        passenger_env.step({})
         step = passenger_env.rail_env._elapsed_steps
         for handle in passenger_journeys:
             mode = passenger_env.passenger_mode[handle]
