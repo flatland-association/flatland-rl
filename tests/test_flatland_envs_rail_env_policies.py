@@ -72,10 +72,10 @@ def _corridor_env(graph: bool, waypoints, earliest_departures, latest_arrivals, 
 
     if graph:
         g = GraphTransitionMap.grid_to_digraph(_corridor_rail())
-        resource_map = {node: str(GraphTransitionMap.graph_entry_point_to_grid_entry_point(node)[0]) for node in g.nodes}
         to_graph = GraphTransitionMap.grid_entry_point_to_graph_entry_point
         graph_waypoints = [[to_graph(*position, direction) for position, direction in group] for group in waypoints]
-        return GraphRailEnv.from_graph(g, resource_map, {0: graph_waypoints}, {0: speed}, observation_builder=FullEnvObservation(),
+        return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), {0: graph_waypoints}, {0: speed},
+                                       observation_builder=FullEnvObservation(),
                                        timetable_generator=timetable_generator)
 
     def line_generator(*args, **kwargs) -> Line:
