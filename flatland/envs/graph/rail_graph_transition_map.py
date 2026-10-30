@@ -22,7 +22,7 @@ import ast
 import math
 from collections import defaultdict
 from functools import lru_cache
-from typing import Tuple, Optional, Set
+from typing import Collection, Dict, Tuple, Optional, Set
 
 import networkx as nx
 
@@ -125,6 +125,30 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
         return g
 
     @staticmethod
+    def grid_to_resource_map(g: nx.DiGraph, level_free_positions: Collection[Tuple[int, int]] = ()) -> Dict[str, str]:
+        """
+        The resource map of a graph from `grid_to_digraph()`: maps each node to the resource of its grid cell, see
+        `grid_entry_point_to_graph_resource()`.
+
+        Parameters
+        ----------
+        g : nx.DiGraph
+            the graph from `grid_to_digraph()`
+        level_free_positions : Collection[Tuple[int, int]]
+            the grid cells with a level-free crossing, e.g. `GridResourceMap.level_free_positions`
+
+        Returns
+        -------
+        Dict[str, str]
+            the resource per node, as `GraphRailEnv.from_graph()` takes it
+        """
+        resource_map = {}
+        for n in g.nodes:
+            r, c, d = ast.literal_eval(n)
+            resource_map[n] = GraphTransitionMap.grid_entry_point_to_graph_resource(r, c, d, level_free=(r, c) in level_free_positions)
+        return resource_map
+
+    @staticmethod
     def from_rail_env(env: RailEnv) -> "GraphTransitionMap":
         """
         Factory method to create a graph transition map from a rail env.
@@ -160,7 +184,19 @@ class GraphTransitionMap(TransitionMap[GridNode, GridEdge, bool, RailEnvActions]
 
     @staticmethod
     @lru_cache
-    def graph_entry_point_to_grid_entry_point(s: str) -> Optional[Tuple[Tuple[int, int], int]]:
+    def grid_entry_point_to_graph_resource(r: int, c: int, d: Optional[int] = None, level_free: bool = False) -> str:
+        """
+        The graph resource of the grid cell `(r, c)`: `str((r, c))`, or `str((r, c, d % 2))` at a level-free (diamond)
+        crossing, so the two crossing axes count as distinct resources - mirrors `GridResourceMap.get_resource()`.
+        The direction `d` is needed only with `level_free`.
+        """
+        if level_free:
+            return str((int(r), int(c), int(d) % 2))
+        return str((int(r), int(c)))
+
+    @staticmethod
+    @lru_cache
+    def graph_entry_point_to_grid_entry_point(s: Optional[str]) -> Optional[Tuple[Tuple[int, int], int]]:
         # pandas 3's default string dtype surfaces a missing entry to Series.map() as a raw float NaN
         # (not None, which object-dtype columns passed) - see trajectories.py's normalize_position_read
         # for the same guard against the same pandas behavior.
