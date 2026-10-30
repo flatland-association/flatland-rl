@@ -1,4 +1,3 @@
-import copy
 from typing import Any, Dict, List, Optional, Tuple
 
 from flatland.core.env import Environment
@@ -89,20 +88,6 @@ class PassengerEnv(Environment):
 
     def get_agent_handles(self) -> List[int]:
         return list(self.passenger_journeys)
-
-    def clone_from(self, env: 'PassengerEnv', **kwargs) -> None:
-        self.rail_env.clone_from(env.rail_env)
-        self.vehicle_policy = env.vehicle_policy
-        self.passenger_policy = env.passenger_policy
-        self.passenger_journeys = env.passenger_journeys
-        self.passenger_mode = copy.deepcopy(env.passenger_mode)
-        self._passenger_stop_index = copy.deepcopy(env._passenger_stop_index)
-        self.passenger_current_entry_point = copy.deepcopy(env.passenger_current_entry_point)
-        self.passenger_target_entry_point = copy.deepcopy(env.passenger_target_entry_point)
-        self.passenger_arrival_time = copy.deepcopy(env.passenger_arrival_time)
-        self._rail_env_obs = copy.deepcopy(env._rail_env_obs)
-        self._rail_env_done = env._rail_env_done
-        self.rail_env_info = copy.deepcopy(env.rail_env_info)
 
     def step(self, action_dict: Dict[int, Any]) -> Tuple[Dict, Dict, Dict, Dict]:
         """
