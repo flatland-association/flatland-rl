@@ -5,6 +5,7 @@ from flatland.core.policy import Policy
 from flatland.core.resource_map import ResourceT
 from flatland.envs.agent_utils import EntryPointT, _sanitize_entry_point
 from flatland.envs.rail_env import AbstractRailEnv
+from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint, TimetablePredictor, UnilateralTimetablePredictor
 
 # A passenger's `passenger_mode[h]` tuple - a resource (grid cell, graph node's resource; not a full
 # entry point), then a handle - holds in each of its 3 modes:
@@ -18,7 +19,7 @@ PassengerMode = Tuple[Optional[ResourceT], Optional[int]]
 class PassengerEnv(Environment):
     """
     TravelWise passenger env: passengers (handle `h`) travel on the vehicles (trains, ships etc.) of an
-    `AbstractRailEnv` ("the rail env", grid or graph), see the TravelWise data model
+    `AbstractRailEnv` ("the rail env"; a `GraphRailEnv` with the default `vehicle_predictor`), see the TravelWise data model
     (https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md).
     The passengers share the rail env's topology, but are otherwise independent of it - separate
     agents, separate timetable, separate motion checks. Each passenger follows its own fixed journey:
@@ -27,13 +28,14 @@ class PassengerEnv(Environment):
     Implements the `Environment` interface for the passengers: `get_agent_handles()` returns the
     passengers' handles, and `step()` takes an `action_dict` for the passengers. The rail env's
     vehicles are not agents of this env: `step()` drives them itself, with the actions of
-    `vehicle_policy` (the vehicles' "auto-pilot"), before it updates the passengers.
+    `vehicle_policy` (the vehicles' "auto-pilot"), before it updates the passengers. After each rail env step,
+    `vehicle_predictor` predicts each vehicle's remaining route and its stops (`vehicle_predictions`).
 
     The passenger side of the interface is formal for now: passengers have no actions (`action_dict` is
     ignored, as are `passenger_policy`'s actions), no observations, no rewards and no infos, so
     `reset()`/`step()` return empty dicts and `dones` holds only `'__all__'`. Every step, each passenger's
-    location/mode is derived from the just-stepped rail env's vehicles and its info dict's `heading`
-    entry (see `RailEnvHeadingInfoWrapper`) in `_update_passengers()`; read it from `passenger_mode`/
+    location/mode is derived from the just-stepped rail env's vehicles and their predictions in
+    `_update_passengers()`; read it from `passenger_mode`/
     `passenger_current_entry_point`/`passenger_target_entry_point`/`passenger_arrival_time`. A passenger
     has exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (resource, handle) pair:
 
@@ -41,8 +43,8 @@ class PassengerEnv(Environment):
     2. on map, waiting (`(passenger_resource, None)`) - standing at one of its own stops, not
        currently riding a vehicle.
     3. riding (`(passenger_resource, vehicle handle)`, the vehicle's own resource always equal to
-       `passenger_resource`) - a vehicle is currently at the passenger's resource and heading (per
-       the info dict) for the passenger's *next* stop; the passenger boards it and, every following
+       `passenger_resource`) - a vehicle is currently at the passenger's resource and, as predicted, stops
+       later at the passenger's *next* stop; the passenger boards it and, every following
        step, its location tracks the vehicle's - until the vehicle arrives (is removed from the rail
        env), at which point the passenger gets off, back into
        mode 2, now waiting at that next stop (or, at its own last stop, done - see
@@ -50,12 +52,15 @@ class PassengerEnv(Environment):
     """
 
     def __init__(self, rail_env: AbstractRailEnv, vehicle_policy: Policy, passenger_policy: Policy,
-                 passenger_journeys: Dict[int, List[EntryPointT]]):
+                 passenger_journeys: Dict[int, List[EntryPointT]], vehicle_predictor: Optional[TimetablePredictor] = None):
         super().__init__()
         self.rail_env = rail_env
         self.vehicle_policy = vehicle_policy
         self.passenger_policy = passenger_policy
         self.passenger_journeys = passenger_journeys
+        self.vehicle_predictor = vehicle_predictor if vehicle_predictor is not None else UnilateralTimetablePredictor()
+        # per vehicle handle, its predicted remaining route, updated after each rail env step
+        self.vehicle_predictions: Dict[int, List[ProjectedEntryPoint]] = {}
 
         # PassengerMode per handle - see the class docstring. Its own second entry, once riding (mode 3),
         # already *is* the handle of the vehicle being ridden - no separate bookkeeping needed.
@@ -77,6 +82,8 @@ class PassengerEnv(Environment):
         """ Resets the rail env and the passengers. Returns empty passenger observations and infos. """
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
         self._rail_env_done = False
+        self.vehicle_predictor.reset(self.rail_env)
+        self.vehicle_predictions = self.vehicle_predictor.get()
 
         self.passenger_mode = {handle: (None, None) for handle in self.passenger_journeys}
         self._passenger_stop_index = {handle: 0 for handle in self.passenger_journeys}
@@ -106,6 +113,7 @@ class PassengerEnv(Environment):
             vehicle_actions = self.vehicle_policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()))
             self._rail_env_obs, _, rail_env_dones, self.rail_env_info = self.rail_env.step(vehicle_actions)
             self._rail_env_done = rail_env_dones['__all__']
+            self.vehicle_predictions = self.vehicle_predictor.get()
             self._update_passengers()
         return {}, {}, {'__all__': self._rail_env_done}, {}
 
@@ -117,7 +125,7 @@ class PassengerEnv(Environment):
     def _update_passengers(self):
         """
         One mode-transition pass per passenger, from the rail env's freshly-stepped vehicles
-        and its info dict's `heading` entry - see the class docstring for the 3 modes/transitions. Also
+        and their predictions (`vehicle_predictions`) - see the class docstring for the 3 modes/transitions. Also
         writes the resulting entry point straight into `passenger_current_entry_point`, and, the step a
         passenger's mode-transition reaches its own last stop, its `passenger_target_entry_point`/
         `passenger_arrival_time` - mirroring what `AbstractRailEnv.handle_done_state()` would set on a real
@@ -125,7 +133,8 @@ class PassengerEnv(Environment):
         Locations are compared as resources (`_resource()`), not as entry points: a passenger at a stop
         boards a vehicle at the same cell/node, whatever direction the vehicle enters it from.
         """
-        heading = self.rail_env_info['heading']
+        # per vehicle, the resource of the last stop of its predicted route - its target, where passengers get off
+        vehicle_final_stop_resources = [self._final_stop_resource(self.vehicle_predictions.get(agent.handle, [])) for agent in self.rail_env.agents]
         vehicle_entry_points = [agent.current_entry_point for agent in self.rail_env.agents]
         vehicle_resources = [self._resource(entry_point) for entry_point in vehicle_entry_points]
 
@@ -153,16 +162,21 @@ class PassengerEnv(Environment):
                     self.passenger_arrival_time[handle] = self.rail_env._elapsed_steps
                 continue
 
-            # mode 2: waiting on map for a vehicle heading to the next stop.
+            # mode 2: waiting on map for a vehicle whose last stop is the next stop.
             stop_index = self._passenger_stop_index[handle]
             if stop_index + 1 < len(stops):
                 next_stop_resource = self._resource(stops[stop_index + 1])
                 for vehicle_handle, vehicle_resource in enumerate(vehicle_resources):
-                    if vehicle_resource == passenger_resource and self._resource(heading[vehicle_handle]) == next_stop_resource:
+                    if vehicle_resource == passenger_resource and vehicle_final_stop_resources[vehicle_handle] == next_stop_resource:
                         self.passenger_mode[handle] = (passenger_resource, vehicle_handle)
                         entry_point = vehicle_entry_points[vehicle_handle]
                         break
             self._sync_passenger(handle, entry_point)
+
+    def _final_stop_resource(self, predictions: List[ProjectedEntryPoint]) -> Optional[ResourceT]:
+        """ The resource of the last stop on a vehicle's predicted route - `None` if it has none. """
+        stops = [prediction for prediction in predictions if prediction.stop is not None]
+        return self._resource(stops[-1].entry_point) if len(stops) > 0 else None
 
     def _resource(self, entry_point: Optional[EntryPointT]) -> Optional[ResourceT]:
         """ The resource (grid cell, graph node's resource) at `entry_point` - `None` off map. """

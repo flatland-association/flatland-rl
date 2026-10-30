@@ -13,7 +13,6 @@ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv
-from flatland.envs.travelwise.rail_env_heading_info_wrapper import RailEnvHeadingInfoWrapper
 
 # A single straight corridor with three stations A, B, C, evenly spaced 3 cells apart, capped by dead
 # ends well beyond either station so no agent ever reaches an end of the corridor.
@@ -88,12 +87,21 @@ def _timetable_generator(agents, distance_map, hints, np_random) -> Timetable:
 
 
 def _make_three_station_graph_env() -> GraphRailEnv:
-    """ The corridor as `GraphRailEnv`, each node's resource being its grid cell, wrapped in `RailEnvHeadingInfoWrapper`. """
+    """ The corridor as `GraphRailEnv`, each node's resource being its grid cell. """
     # TODO build the corridor graph natively instead of converting a grid.
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
-    return RailEnvHeadingInfoWrapper(GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS,
-                                                             observation_builder=FullEnvObservation(),
-                                                             timetable_generator=_timetable_generator))
+    return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS, observation_builder=FullEnvObservation(),
+                                   timetable_generator=_timetable_generator)
+
+
+def _assert_predicted_targets(passenger_env: PassengerEnv):
+    """ Each train's prediction ends at its target at its latest arrival, until it has arrived - then it is empty. """
+    for handle, predictions in passenger_env.vehicle_predictions.items():
+        if passenger_env.rail_env.agents[handle].state == TrainState.DONE:
+            assert predictions == []
+        else:
+            assert (predictions[-1].entry_point, predictions[-1].step, predictions[-1].stop) == (
+                LEG_TARGET_ENTRY_POINT[handle], LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE, 1)
 
 
 def _vehicle_policy() -> ShortestPathPolicy:
@@ -145,20 +153,20 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
       written as C.
     - No train is ever stopped: the rail env's headway leaves enough
       clearance that its four trains never contend for a cell.
-    - The rail env is wrapped in `RailEnvHeadingInfoWrapper`, so its info dict's `heading` entry
-      always names the entry point (graph node) each of its four trains is heading to - its
-      leg's own target waypoint - throughout the run, regardless of whether that train is currently on
-      or off the track. This is exactly what the passenger's boarding decision reads to tell which
-      train, if any currently sharing its cell, is headed towards its own next stop.
+    - `PassengerEnv`'s `vehicle_predictor` predicts each train's route up to its target - its leg's own
+      target waypoint - at the step of its timetabled latest arrival, throughout the run until it
+      arrives, whether that train is currently on or off the track. This is exactly what the
+      passenger's boarding decision reads to tell which train, if any currently sharing its cell, is
+      headed towards its own next stop.
     """
     passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_policy=None,
                                  passenger_journeys=PASSENGER_JOURNEYS)
     assert passenger_env.reset() == ({}, {})
     assert passenger_env.get_agent_handles() == [0]
 
-    # the heading info wrapper's info dict already carries each leg's target entry point right after
+    # the predictions already end at each leg's target entry point, at its latest arrival, right after
     # reset(), before any train has moved.
-    assert passenger_env.rail_env_info['heading'] == LEG_TARGET_ENTRY_POINT
+    _assert_predicted_targets(passenger_env)
 
     # verbatim expected timetable for the rail env: one entry per leg, in handle order 0..3
     # (A->B, B->C, B->A, C->B), departures at HEADWAY=6, 12, 18, 24 and arrivals STATION_DISTANCE=3
@@ -185,7 +193,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
         step = passenger_env.rail_env._elapsed_steps
         assert (obs, rewards, infos) == ({}, {}, {})
         assert dones == {'__all__': passenger_env.rail_env.dones['__all__']}
-        assert passenger_env.rail_env_info['heading'] == LEG_TARGET_ENTRY_POINT
+        _assert_predicted_targets(passenger_env)
         for handle, agent in enumerate(passenger_env.rail_env.agents):
             rail_env_position_by_step[handle][step] = GraphTransitionMap.graph_entry_point_to_grid_entry_point(agent.current_entry_point)
             assert agent.state != TrainState.STOPPED
