@@ -15,7 +15,7 @@ from flatland.envs.grid.grid_routing import greedy_grid_route_through_waypoints
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
-from flatland.envs.rail_env_policies import ShortestPathPolicy
+from flatland.envs.rail_env_policies import RailEnvStaticData, ShortestPathObservationBuilder, ShortestPathPolicy
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
@@ -64,8 +64,13 @@ def _corridor_rail() -> RailGridTransitionMap:
     return rail
 
 
-def _corridor_env(graph: bool, waypoints, earliest_departures, latest_arrivals, speed: float):
-    """ One agent on the corridor, as `RailEnv` or as `GraphRailEnv` built from the same grid. """
+def _corridor_env(graph: bool, waypoints, earliest_departures, latest_arrivals, speed: float, observation_builder=None):
+    """
+    One agent on the corridor, as `RailEnv` or as `GraphRailEnv` built from the same grid, observed with
+    `observation_builder` (default: `FullEnvObservation`).
+    """
+    if observation_builder is None:
+        observation_builder = FullEnvObservation()
 
     def timetable_generator(*args, **kwargs) -> Timetable:
         return Timetable(earliest_departures=[earliest_departures], latest_arrivals=[latest_arrivals], max_episode_steps=60)
@@ -75,7 +80,7 @@ def _corridor_env(graph: bool, waypoints, earliest_departures, latest_arrivals, 
         to_graph = GraphTransitionMap.grid_entry_point_to_graph_entry_point
         graph_waypoints = [[to_graph(*position, direction) for position, direction in group] for group in waypoints]
         return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), {0: graph_waypoints}, {0: speed},
-                                       observation_builder=FullEnvObservation(),
+                                       observation_builder=observation_builder,
                                        timetable_generator=timetable_generator)
 
     def line_generator(*args, **kwargs) -> Line:
@@ -83,20 +88,24 @@ def _corridor_env(graph: bool, waypoints, earliest_departures, latest_arrivals, 
                     agent_speeds=[speed])
 
     env = RailEnv(width=CORRIDOR_LENGTH, height=1, rail_generator=rail_from_grid_transition_map(_corridor_rail()), line_generator=line_generator,
-                  timetable_generator=timetable_generator, number_of_agents=1, obs_builder_object=FullEnvObservation())
+                  timetable_generator=timetable_generator, number_of_agents=1, obs_builder_object=observation_builder)
     env.reset()
     return env
 
 
 def _run(env, policy: ShortestPathPolicy) -> Tuple[Dict[int, Optional[Tuple[Tuple[int, int], int]]], float]:
-    """ Runs the policy until done, returns the agent's entry point per step (as grid entry point) and the total reward. """
-    obs, _ = env.reset()
+    """
+    Runs the policy until done, with the env's static data in the infos, returns the agent's entry point per step (as
+    grid entry point) and the total reward.
+    """
+    obs, infos = env.reset()
+    static = RailEnvStaticData.from_env(env)
     trace = {}
     total_reward = 0
     done = False
     while not done:
-        actions = policy.act_many(env.get_agent_handles(), observations=list(obs.values()))
-        obs, rewards, dones, _ = env.step(actions)
+        actions = policy.act_many(env.get_agent_handles(), observations=list(obs.values()), infos=dict(infos, static=static))
+        obs, rewards, dones, infos = env.step(actions)
         entry_point = env.agents[0].current_entry_point
         if isinstance(entry_point, str):
             entry_point = GraphTransitionMap.graph_entry_point_to_grid_entry_point(entry_point)
@@ -112,6 +121,7 @@ def _policy(graph: bool, serve_intermediate_stops: bool) -> ShortestPathPolicy:
     return ShortestPathPolicy(serve_intermediate_stops=serve_intermediate_stops)
 
 
+@pytest.mark.parametrize("observation_builder", [FullEnvObservation, ShortestPathObservationBuilder])
 @pytest.mark.parametrize("graph", [False, True])
 @pytest.mark.parametrize("speed, earliest_departure_b, expected_trace", [
     (1.0, 10, {1: None, 2: A, 3: ((0, 2), 1), 4: ((0, 3), 1), 5: B, 6: B, 7: B, 8: B, 9: B, 10: B, 11: ((0, 5), 1), 12: ((0, 6), 1),
@@ -119,35 +129,40 @@ def _policy(graph: bool, serve_intermediate_stops: bool) -> ShortestPathPolicy:
     (0.5, 14, {1: None, 2: A, 3: A, 4: ((0, 2), 1), 5: ((0, 2), 1), 6: ((0, 3), 1), 7: ((0, 3), 1), 8: B, 9: B, 10: B, 11: B, 12: B, 13: B,
                14: B, 15: B, 16: ((0, 5), 1), 17: ((0, 5), 1), 18: ((0, 6), 1), 19: ((0, 6), 1), 20: None}),
 ])
-def test_shortest_path_policy_waits_at_intermediate_stop_until_earliest_departure(graph, speed, earliest_departure_b, expected_trace):
+def test_shortest_path_policy_waits_at_intermediate_stop_until_earliest_departure(observation_builder, graph, speed, earliest_departure_b, expected_trace):
     """
     A -> B -> C, stopping at B until its earliest departure there, on grid and graph: the agent enters B and stops,
     and moves again in the step of its earliest departure at B. The default rewards count B as served and on
-    time: total reward 0.
+    time: total reward 0. The same with the env as observation (`FullEnvObservation`) and with the dedicated
+    observation (`ShortestPathObservationBuilder`).
     """
     env = _corridor_env(graph, [[A], [B], [C]], earliest_departures=[2, earliest_departure_b, None],
-                        latest_arrivals=[None, earliest_departure_b, 40], speed=speed)
+                        latest_arrivals=[None, earliest_departure_b, 40], speed=speed, observation_builder=observation_builder())
     trace, total_reward = _run(env, _policy(graph, serve_intermediate_stops=True))
     assert trace == expected_trace
     assert total_reward == 0
 
 
+@pytest.mark.parametrize("observation_builder", [FullEnvObservation, ShortestPathObservationBuilder])
 @pytest.mark.parametrize("graph", [False, True])
-def test_shortest_path_policy_stops_once_at_intermediate_stop_when_late(graph):
+def test_shortest_path_policy_stops_once_at_intermediate_stop_when_late(observation_builder, graph):
     """ Arriving at B after its earliest departure there, the agent still stops at B, then moves on at once. """
-    env = _corridor_env(graph, [[A], [B], [C]], earliest_departures=[2, 3, None], latest_arrivals=[None, 5, 40], speed=1.0)
+    env = _corridor_env(graph, [[A], [B], [C]], earliest_departures=[2, 3, None], latest_arrivals=[None, 5, 40], speed=1.0,
+                        observation_builder=observation_builder())
     trace, total_reward = _run(env, _policy(graph, serve_intermediate_stops=True))
     assert trace == {1: None, 2: A, 3: ((0, 2), 1), 4: ((0, 3), 1), 5: B, 6: B, 7: ((0, 5), 1), 8: ((0, 6), 1), 9: None}
     assert total_reward == 0
 
 
+@pytest.mark.parametrize("observation_builder", [FullEnvObservation, ShortestPathObservationBuilder])
 @pytest.mark.parametrize("graph", [False, True])
-def test_shortest_path_policy_ignores_intermediate_stop_by_default(graph):
+def test_shortest_path_policy_ignores_intermediate_stop_by_default(observation_builder, graph):
     """
     Without `serve_intermediate_stops` (the default, the previous behaviour), the agent routes straight to C and
     drives through B: the default rewards count B as not served (intermediate-not-served penalty 1).
     """
-    env = _corridor_env(graph, [[A], [B], [C]], earliest_departures=[2, 10, None], latest_arrivals=[None, 10, 40], speed=1.0)
+    env = _corridor_env(graph, [[A], [B], [C]], earliest_departures=[2, 10, None], latest_arrivals=[None, 10, 40], speed=1.0,
+                        observation_builder=observation_builder())
     trace, total_reward = _run(env, _policy(graph, serve_intermediate_stops=False))
     assert trace == {1: None, 2: A, 3: ((0, 2), 1), 4: ((0, 3), 1), 5: B, 6: ((0, 5), 1), 7: ((0, 6), 1), 8: None}
     assert total_reward == -1

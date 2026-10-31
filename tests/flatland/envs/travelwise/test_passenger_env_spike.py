@@ -7,8 +7,7 @@ from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoin
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
-from flatland.envs.observations import FullEnvObservation
-from flatland.envs.rail_env_policies import ShortestPathPolicy
+from flatland.envs.rail_env_policies import ShortestPathObservationBuilder, ShortestPathPolicy
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Timetable
@@ -81,7 +80,7 @@ def _make_three_station_graph_env() -> GraphRailEnv:
     """ The corridor as `GraphRailEnv`, each node's resource being its grid cell. """
     # TODO build the corridor graph natively instead of converting a grid.
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
-    return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS, observation_builder=FullEnvObservation(),
+    return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS, observation_builder=ShortestPathObservationBuilder(),
                                    timetable_generator=_timetable_generator)
 
 
