@@ -25,8 +25,8 @@ A technical spike of the TravelWise passenger env, in line with the
 | 0 | C0.3 | `refactor(envs): run the passenger env spike and its tests on GraphRailEnv only.` | f90b72da |
 | 1 | C1.1 | `feat(envs): predict vehicles' remaining routes along their timetable in a new TimetablePredictor.` | d1283828 |
 | 2 | C2.1 | `feat(envs): give passengers single-ride journeys with earliest departure and latest arrival.` | 14578ec9 |
-| 3 | C3.0 | `refactor(policies): let ShortestPathPolicy act on a dedicated observation instead of the whole env.` | next |
-| 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | |
+| 3 | C3.0 | `refactor(policies): let ShortestPathPolicy act on a dedicated observation instead of the whole env.` | 6ebe3c72 |
+| 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | next |
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | |
 | 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | |
 
@@ -36,6 +36,8 @@ A technical spike of the TravelWise passenger env, in line with the
   observations, rewards, dones and infos. It never runs the policy of its own agents; a policy (or a controller)
   takes the observations and issues the actions. Entities that are not the env's agents may be driven inside
   `step()` as part of the env's dynamics: `PassengerEnv` steps the vehicles with their own policy.
+- The env is dull: it applies an action if it is physically feasible and ignores it otherwise. What to do - which
+  vehicle to board, when to depart (the earliest departure), where to alight - is the policy's decision (Q23).
 - Observations hold dynamic data only (positions, plans); they hold no position and no plan after `reset()`.
   Data shared by all agents is one immutable object referenced by every observation, not copied per agent.
 - Static data (timetables, journeys, the map) is not part of the observations: it reaches the policies through the
@@ -130,31 +132,31 @@ Actions and validation:
 
 - Action per passenger: `(PassengerAction, vehicle)`, `PassengerAction` one of `WAIT`, `HOP_ON`, `HOP_OFF`
   (`flatland/envs/travelwise/passenger_env_action.py`); the vehicle handle only with `HOP_ON`.
-- Validation is physical only; invalid actions are ignored. `HOP_ON`: the passenger waits and has not arrived, its
-  earliest departure has passed, and the vehicle is on the map at the passenger's resource - checked on the state
-  the passenger observed. Whether the vehicle serves the passenger is the policy's decision. `HOP_OFF`: while
-  riding, at the vehicle's current entry point.
+- The env applies an action if it is physically feasible and ignores it otherwise. `HOP_ON`: the passenger waits
+  and the vehicle is on the map at the passenger's resource - checked on the state the passenger observed.
+  `HOP_OFF`: while riding, at the vehicle's current entry point. Whether the vehicle serves the passenger and
+  whether the passenger's earliest departure has passed are the policy's decisions (Q23).
 - The forced hop-off at a vehicle's final stop stays (phase 2).
-- Arrived: alighted at an entry point of the target; further actions are ignored.
+- Arrived: alighted at an entry point of the target; the passenger is done, and its further actions are ignored.
 
 Observations:
 
-- `VehicleObservationBuilder` (`flatland/envs/travelwise/`, for now) is the rail env's observation builder: it owns
+- `VehicleObservationBuilder` (`flatland/envs/travelwise/vehicle_observations.py`, for now) is the rail env's observation builder: it owns
   the predictor and builds, per vehicle, its `ShortestPathObservation` plus a reference to the shared, immutable
   positions and plans of all vehicles (Q12, Q14) - a plan is a tuple of `ProjectedEntryPoint`s.
-- `PassengerObservation` (`flatland/envs/travelwise/passenger_env_observations.py`): the passenger's mode and next
-  stop, the vehicles it may hop on now that serve it, with their future stops serving its next stop, and whether
+- `PassengerObservation` (`flatland/envs/travelwise/passenger_env_observations.py`): the elapsed steps (for now, as
+  for the vehicles, Q18), the passenger's mode and next stop, the vehicles it can hop on now that serve it, with their future stops serving its next stop, and whether
   the vehicle it rides stops at its next stop now. Built by `PassengerObservationBuilder` from the vehicle
   observations `PassengerEnv` keeps, and from the journeys and timetables in the env. No position and no plan after
   `reset()`: passengers and vehicles are off the map (Q11, Q15).
 
 Policy:
 
-- `BoardForTargetPassengerPolicy` (`flatland/envs/travelwise/passenger_env_policies.py`) acts on the observation
-  only (`act()`):
+- `BoardForTargetPassengerPolicy` (`flatland/envs/travelwise/passenger_env_policies.py`) acts on the observation,
+  with the passenger's journey from the static data in the infos:
   - riding, its vehicle stopping at its next stop: `HOP_OFF`;
-  - waiting, with vehicles to board: `HOP_ON` - first a vehicle stopping at an entry point of the next stop, then
-    the one stopping there soonest;
+  - waiting, from its earliest departure on (in the step it observed), with vehicles to board: `HOP_ON` - first a
+    vehicle stopping at an entry point of the next stop, then the one stopping there soonest;
   - otherwise `WAIT`.
 
 ### Controller and step
@@ -178,7 +180,7 @@ sequenceDiagram
     participant P as PassengerEnv (passenger env)
     participant VP as ShortestPathPolicy (vehicle policy, auto-pilot)
     participant R as GraphRailEnv (rail env, vehicle env)
-    participant VO as VehicleObservationBuilder (vehicle env's obs builder, today FullEnvObservation)
+    participant VO as VehicleObservationBuilder (vehicle env's obs builder)
     participant O as PassengerObservationBuilder
     C->>P: reset()
     P->>R: reset()
@@ -228,7 +230,8 @@ sequenceDiagram
 - Goal: passengers are rewarded the earlier they arrive before their latest arrival, penalized for arriving late or
   not at all; each passenger's journey is done once it arrives.
 - Reward per passenger, once: at its arrival step `waypoints_latest_arrival[-1] - arrival_time` (late negative);
-  when the rail env is done and it has not arrived, `-max_episode_steps` (Q6); otherwise 0.
+  when the rail env is done and it has not arrived, `-max_episode_steps` (Q6); otherwise 0. Whether boarding before
+  the earliest departure is penalized is open (Q23).
 - `step()` returns the passenger observations, rewards per passenger, dones per passenger (arrived) plus
   `'__all__'` (rail env done), and the infos.
 
@@ -274,7 +277,8 @@ observations (phase 3); rewards and dones (phase 4).
 - Q1 Routing: a shared greedy `networkx` router over `rail.g` (nearest alternative per group), injected into
   `ShortestPathPolicy` and the predictor, so both pick the same entry points.
 - Q2 Existing shuttle tests keep their setup; passenger 0 (A -> C) never arrives with single rides.
-- Q3 Boarding only from the passenger's earliest departure on.
+- Q3 Boarding only from the passenger's earliest departure on - since Q23 the passenger policy's decision, not
+  checked by the env.
 - Q5 Layout: `flatland/envs/travelwise/` with `passenger_env.py`, `passenger_env_action.py`,
   `passenger_env_observations.py`, `passenger_env_policies.py`, `timetable_predictor.py`, following
   `rail_env.py`/`rail_env_action.py`/`rail_env_policies.py`; no `PassengerEnvPolicy` base class.
@@ -310,3 +314,15 @@ observations (phase 3); rewards and dones (phase 4).
 - Q22 Backwards compatibility of `ShortestPathPolicy` with `FullEnvObservation` (the env as observation): one
   helper - if an observation is the env, `act_many()` first derives the `ShortestPathObservation` and the static data
   from it, then runs the same code as for the new observation; one code path for the routing and stop logic.
+
+## Open questions
+
+- Q23 Earliest departure: the env no longer enforces it (the env is dull, the policy decides), so a policy may board
+  before it, e.g. the scripted passenger 3 in the scenario test, arriving early. Should the rewards (phase 4)
+  penalize it?
+  - (a) no penalty: the earliest departure is the passenger's own constraint, and arriving early is rewarded
+    anyway - a policy ignoring it gains;
+  - (b) a fixed penalty per passenger boarding before its earliest departure (as Flatland's rewards count an
+    intermediate stop not served);
+  - (c) a penalty per step boarded too early, `earliest departure - boarding step`, symmetric to the lateness reward.
+  Proposal: (c) - one scale with the lateness reward, and no gain from ignoring the constraint.
