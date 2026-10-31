@@ -26,9 +26,9 @@ A technical spike of the TravelWise passenger env, in line with the
 | 1 | C1.1 | `feat(envs): predict vehicles' remaining routes along their timetable in a new TimetablePredictor.` | d1283828 |
 | 2 | C2.1 | `feat(envs): give passengers single-ride journeys with earliest departure and latest arrival.` | 14578ec9 |
 | 3 | C3.0 | `refactor(policies): let ShortestPathPolicy act on a dedicated observation instead of the whole env.` | 6ebe3c72 |
-| 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | next |
-| 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | |
-| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | |
+| 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
+| 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | this commit |
+| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | next |
 
 ## Design principles
 
@@ -155,8 +155,10 @@ Policy:
 - `BoardForTargetPassengerPolicy` (`flatland/envs/travelwise/passenger_env_policies.py`) acts on the observation,
   with the passenger's journey from the static data in the infos:
   - riding, its vehicle stopping at its next stop: `HOP_OFF`;
-  - waiting, from its earliest departure on (in the step it observed), with vehicles to board: `HOP_ON` - first a
-    vehicle stopping at an entry point of the next stop, then the one stopping there soonest;
+  - waiting, boarding not before its earliest departure, with vehicles to board: `HOP_ON` - first a vehicle stopping
+    at an entry point of the next stop, then the one stopping there soonest. The action applies in the step after the
+    one observed, so it boards if `elapsed_steps + 1 >= earliest departure` - the rule `ShortestPathPolicy` departs
+    a vehicle by;
   - otherwise `WAIT`.
 
 ### Controller and step
@@ -229,9 +231,13 @@ sequenceDiagram
 
 - Goal: passengers are rewarded the earlier they arrive before their latest arrival, penalized for arriving late or
   not at all; each passenger's journey is done once it arrives.
-- Reward per passenger, once: at its arrival step `waypoints_latest_arrival[-1] - arrival_time` (late negative);
-  when the rail env is done and it has not arrived, `-max_episode_steps` (Q6); otherwise 0. Whether boarding before
-  the earliest departure is penalized is open (Q23).
+- Rewards per passenger, in the step they occur, otherwise 0. They can be positive (early arrival), unlike
+  Flatland's `DefaultRewards` (`min(latest_arrival - arrival_time, 0)`, never positive): good enough for the
+  spike, to be revisited (follow-up):
+  - at its arrival step: `waypoints_latest_arrival[-1] - arrival_time` (late negative);
+  - at boarding before the earliest departure of the group it waits at: `-(earliest departure - boarding step)`,
+    the boarding step being the step the `HOP_ON` is applied (Q23);
+  - when the rail env is done and it has not arrived: `-max_episode_steps` (Q6).
 - `step()` returns the passenger observations, rewards per passenger, dones per passenger (arrived) plus
   `'__all__'` (rail env done), and the infos.
 
@@ -255,7 +261,7 @@ departure there; T1 C -> B; T2 a later A -> B. Passengers:
 - A -> C rides T0 through B;
 - A -> B on T0 hops off at the intermediate stop B, late (negative reward in phase 4);
 - B -> C boards T0 at B;
-- A -> B with earliest departure after T0 has left A takes T2;
+- A -> B with earliest departure 4, after T0 has left A (boarding T0 at A would be in step 3), takes T2;
 - C -> B on T1: forced hop-off at the vehicle's final stop;
 - C -> A: no vehicle stops at A heading west, so it never arrives.
 
@@ -271,6 +277,7 @@ observations (phase 3); rewards and dones (phase 4).
 - `get_k_shortest_paths()` generalized to graphs, replacing the `networkx` routing.
 - Build the test corridor as a graph natively.
 - `TravelWisePolicyRunner` as a library class instead of the test loop.
+- Rewards: align with Flatland's `DefaultRewards` (no bonus for arriving early) or keep the bonus (phase 4).
 
 ## Decisions
 
@@ -314,15 +321,6 @@ observations (phase 3); rewards and dones (phase 4).
 - Q22 Backwards compatibility of `ShortestPathPolicy` with `FullEnvObservation` (the env as observation): one
   helper - if an observation is the env, `act_many()` first derives the `ShortestPathObservation` and the static data
   from it, then runs the same code as for the new observation; one code path for the routing and stop logic.
-
-## Open questions
-
-- Q23 Earliest departure: the env no longer enforces it (the env is dull, the policy decides), so a policy may board
-  before it, e.g. the scripted passenger 3 in the scenario test, arriving early. Should the rewards (phase 4)
-  penalize it?
-  - (a) no penalty: the earliest departure is the passenger's own constraint, and arriving early is rewarded
-    anyway - a policy ignoring it gains;
-  - (b) a fixed penalty per passenger boarding before its earliest departure (as Flatland's rewards count an
-    intermediate stop not served);
-  - (c) a penalty per step boarded too early, `earliest departure - boarding step`, symmetric to the lateness reward.
-  Proposal: (c) - one scale with the lateness reward, and no gain from ignoring the constraint.
+- Q23 Boarding before the earliest departure: the env does not enforce it (the env is dull, the policy decides); the
+  rewards penalize it per step boarded too early, `earliest departure - boarding step`, on the same scale as the
+  lateness reward, so a policy gains nothing by ignoring the constraint.
