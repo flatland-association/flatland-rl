@@ -1,9 +1,11 @@
+from dataclasses import dataclass
 from functools import partial
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
+from flatland.core.env_observation_builder import AgentHandle, ObservationBuilder
 from flatland.core.policy import Policy
 from flatland.core.transition_map import TransitionMap
-from flatland.envs.agent_utils import EnvAgent, EntryPointT
+from flatland.envs.agent_utils import EntryPointT
 from flatland.envs.grid.grid_routing import greedy_grid_route_through_waypoints
 from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
@@ -15,9 +17,67 @@ from flatland.envs.step_utils.states import TrainState
 Router = Callable[[TransitionMap, EntryPointT, List[List[EntryPointT]]], Tuple[List[EntryPointT], List[int]]]
 
 
-class ShortestPathPolicy(Policy[AbstractRailEnv, AbstractRailEnv, RailEnvActions]):
+class AgentStaticData(NamedTuple):
+    """ An agent's static data for an episode, as in `EnvAgent`: its initial entry point and its waypoint groups with their timetable. """
+    initial_entry_point: EntryPointT
+    waypoints: Tuple[Tuple[EntryPointT, ...], ...]
+    waypoints_earliest_departure: Tuple[Optional[int], ...]
+    waypoints_latest_arrival: Tuple[Optional[int], ...]
+
+
+class RailEnvStaticData(NamedTuple):
     """
-    Works with `FullEnvObservation` only.
+    A rail env's static data for an episode, immutable: the transition map (read-only by convention) and per agent
+    handle its `AgentStaticData`. Not part of the observations: handed to the policies in the infos (key `"static"`),
+    as one object shared by all agents.
+    """
+    rail: TransitionMap
+    agents: Tuple[AgentStaticData, ...]
+
+    @staticmethod
+    def from_env(env: AbstractRailEnv) -> "RailEnvStaticData":
+        return RailEnvStaticData(rail=env.rail, agents=tuple(
+            AgentStaticData(initial_entry_point=agent.initial_entry_point,
+                            waypoints=tuple(tuple(group) for group in agent.waypoints),
+                            waypoints_earliest_departure=tuple(agent.waypoints_earliest_departure),
+                            waypoints_latest_arrival=tuple(agent.waypoints_latest_arrival))
+            for agent in env.agents))
+
+
+@dataclass(frozen=True)
+class ShortestPathObservation:
+    """
+    What `ShortestPathPolicy` observes of an agent: its dynamic state. Its static data (route, timetable) and the map
+    come with the infos (`RailEnvStaticData`). After `reset()`, it has no position (`current_entry_point` is `None`).
+    TODO move `elapsed_steps` to the infos, once the rail env hands them out.
+    """
+    handle: int
+    elapsed_steps: int
+    done: bool
+    current_entry_point: Optional[EntryPointT]
+    next_entry_point: Optional[EntryPointT]
+    is_cell_exit: bool
+
+    @staticmethod
+    def from_env(env: AbstractRailEnv, handle: int) -> "ShortestPathObservation":
+        agent = env.agents[handle]
+        return ShortestPathObservation(handle=handle, elapsed_steps=env._elapsed_steps, done=agent.state == TrainState.DONE,
+                                       current_entry_point=agent.current_entry_point, next_entry_point=agent.next_entry_point,
+                                       is_cell_exit=agent.speed_counter.is_cell_exit())
+
+
+class ShortestPathObservationBuilder(ObservationBuilder[AbstractRailEnv, ShortestPathObservation]):
+    """ Builds the `ShortestPathObservation`s `ShortestPathPolicy` acts on. """
+
+    def get(self, handle: AgentHandle = 0) -> ShortestPathObservation:
+        return ShortestPathObservation.from_env(self.env, handle)
+
+
+class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, AbstractRailEnv], RailEnvActions]):
+    """
+    Acts on `ShortestPathObservation`s (`ShortestPathObservationBuilder`), with the rail env's static data
+    (`RailEnvStaticData`) in the infos passed to `act_many()` (`infos["static"]`). Backwards compatible: with
+    `FullEnvObservation` (the env itself as observation), it derives both from the env.
 
     Each agent follows its route from its initial entry point, as computed once by the injected `router`, e.g.
     `greedy_grid_route_through_waypoints()` for `RailEnv` or `greedy_graph_route_through_waypoints()` for
@@ -63,56 +123,67 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, AbstractRailEnv, RailEnvActions
         # entry point twice is followed in order
         self._route_index: Dict[int, int] = {}
 
-    def act_many(self, handles: List[int], observations: List[AbstractRailEnv], **kwargs):
+    def act_many(self, handles: List[int], observations: List[Union[ShortestPathObservation, AbstractRailEnv]],
+                 infos: Optional[Dict] = None, **kwargs):
         actions = {}
-        for handle, env in zip(handles, observations):
-            agent = env.agents[handle]
-            self._update_agent(agent, env)
-            actions[handle] = self._act(env, agent)
+        static = None
+        for handle, observation in zip(handles, observations):
+            if isinstance(observation, AbstractRailEnv):
+                # `FullEnvObservation`: derive the observation and the static data from the env
+                if static is None:
+                    static = RailEnvStaticData.from_env(observation)
+                observation = ShortestPathObservation.from_env(observation, handle)
+            elif static is None:
+                static = infos["static"]
+            self._update_agent(observation, static)
+            actions[handle] = self._act(observation, static)
         return actions
 
-    def _update_agent(self, agent: EnvAgent, env: AbstractRailEnv):
+    def _update_agent(self, observation: ShortestPathObservation, static: RailEnvStaticData):
         """
         Update `_routes`, `_stop_indices` and `_route_index`.
         """
-        if agent.handle not in self._routes:
+        handle = observation.handle
+        if handle not in self._routes:
+            agent = static.agents[handle]
             # TODO https://github.com/flatland-association/flatland-rl/issues/527 drop the conversion once EnvAgent.waypoints is also of EntryPointT
             #  instead of Waypoint.
             waypoint_groups = [[wp._to_tuple() if isinstance(wp, Waypoint) else wp for wp in group] for group in agent.waypoints[1:]]
             if not self.serve_intermediate_stops:
                 waypoint_groups = waypoint_groups[-1:]
-            route, stop_indices = self.router(env.rail, agent.initial_entry_point, waypoint_groups)
-            self._routes[agent.handle] = route
-            self._stop_indices[agent.handle] = [0] + stop_indices
-            self._route_index[agent.handle] = 0
-        if agent.current_entry_point is None:
+            route, stop_indices = self.router(static.rail, agent.initial_entry_point, waypoint_groups)
+            self._routes[handle] = route
+            self._stop_indices[handle] = [0] + stop_indices
+            self._route_index[handle] = 0
+        if observation.current_entry_point is None:
             return
-        route = self._routes[agent.handle]
-        index = self._route_index[agent.handle]
-        while route[index] != agent.current_entry_point:
+        route = self._routes[handle]
+        index = self._route_index[handle]
+        while route[index] != observation.current_entry_point:
             index += 1
-            assert index < len(route), f"Agent {agent.handle} at {agent.current_entry_point} is off its route {route}."
-        self._route_index[agent.handle] = index
+            assert index < len(route), f"Agent {handle} at {observation.current_entry_point} is off its route {route}."
+        self._route_index[handle] = index
 
-    def _act(self, env: AbstractRailEnv, agent: EnvAgent) -> RailEnvActions:
-        if agent.state == TrainState.DONE:
+    def _act(self, observation: ShortestPathObservation, static: RailEnvStaticData) -> RailEnvActions:
+        if observation.done:
             return RailEnvActions.DO_NOTHING
-        if agent.current_entry_point is None:
+        if observation.current_entry_point is None:
             return RailEnvActions.MOVE_FORWARD
 
-        route = self._routes[agent.handle]
-        index = self._route_index[agent.handle]
+        handle = observation.handle
+        route = self._routes[handle]
+        index = self._route_index[handle]
 
         if self.serve_intermediate_stops:
             # intermediate stops only: neither the initial entry point nor the target
-            intermediate_stops = {stop_index: group for group, stop_index in enumerate(self._stop_indices[agent.handle][1:-1], start=1)}
+            intermediate_stops = {stop_index: group for group, stop_index in enumerate(self._stop_indices[handle][1:-1], start=1)}
             if index in intermediate_stops:
-                earliest_departure = agent.waypoints_earliest_departure[intermediate_stops[index]]
+                earliest_departure = static.agents[handle].waypoints_earliest_departure[intermediate_stops[index]]
                 # the action is applied in step `_elapsed_steps + 1` (`step()` increments `_elapsed_steps` first), so the
                 # agent starts moving in the step of its earliest departure - as it enters the map at the initial stop
-                if earliest_departure is not None and env._elapsed_steps + 1 < earliest_departure:
+                if earliest_departure is not None and observation.elapsed_steps + 1 < earliest_departure:
                     return RailEnvActions.STOP_MOVING
-            if index + 1 in intermediate_stops and agent.next_entry_point == route[index + 1] and agent.speed_counter.is_cell_exit():
+            if index + 1 in intermediate_stops and observation.next_entry_point == route[index + 1] and observation.is_cell_exit:
                 return RailEnvActions.STOP_MOVING
 
         # design: actions applied at cell entry -- once agent.next_entry_point holds a
@@ -120,13 +191,13 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, AbstractRailEnv, RailEnvActions
         # transition (already settled) but the look-ahead beyond it, so it must be evaluated from
         # next_entry_point against the route entry *after* it, not from current_entry_point against
         # the immediate next route entry.
-        has_pending_target = agent.next_entry_point is not None and agent.next_entry_point != agent.current_entry_point
-        lookahead_from = agent.next_entry_point if has_pending_target else agent.current_entry_point
+        has_pending_target = observation.next_entry_point is not None and observation.next_entry_point != observation.current_entry_point
+        lookahead_from = observation.next_entry_point if has_pending_target else observation.current_entry_point
         target_index = index + (2 if has_pending_target else 1)
         if target_index >= len(route):
             return RailEnvActions.MOVE_FORWARD
 
         for a in [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]:
-            if env.rail.apply_action_independent(a, lookahead_from) == route[target_index]:
+            if static.rail.apply_action_independent(a, lookahead_from) == route[target_index]:
                 return a
         raise Exception("Invalid state")

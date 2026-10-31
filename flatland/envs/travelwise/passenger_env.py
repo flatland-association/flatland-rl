@@ -6,6 +6,7 @@ from flatland.core.policy import Policy
 from flatland.core.resource_map import ResourceT
 from flatland.envs.agent_utils import EntryPointT, _sanitize_entry_point
 from flatland.envs.rail_env import AbstractRailEnv
+from flatland.envs.rail_env_policies import RailEnvStaticData
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint, TimetablePredictor, UnilateralTimetablePredictor
 
@@ -52,7 +53,8 @@ class PassengerEnv(Environment):
     Implements the `Environment` interface for the passengers: `get_agent_handles()` returns the
     passengers' handles, and `step()` takes an `action_dict` for the passengers. The rail env's
     vehicles are not agents of this env: `step()` drives them itself, with the actions of
-    `vehicle_policy` (the vehicles' "auto-pilot"), before it updates the passengers. After each rail env step,
+    `vehicle_policy` (the vehicles' "auto-pilot") on the rail env's observations, with the rail env's static data
+    (`RailEnvStaticData`) in its infos (`infos["static"]`), before it updates the passengers. After each rail env step,
     `vehicle_predictor` predicts each vehicle's remaining route and its stops (`vehicle_predictions`).
 
     The passenger side of the interface is formal for now: passengers have no actions (`action_dict` is
@@ -114,10 +116,13 @@ class PassengerEnv(Environment):
         self._rail_env_obs = None
         self._rail_env_done = False
         self.rail_env_info: Optional[Dict] = None
+        # the rail env's static data, added to the infos the vehicle policy gets
+        self._rail_env_static: Optional[RailEnvStaticData] = None
 
     def reset(self) -> Tuple[Dict, Dict]:
         """ Resets the rail env and the passengers. Returns empty passenger observations and infos. """
         self._rail_env_obs, self.rail_env_info = self.rail_env.reset()
+        self._rail_env_static = RailEnvStaticData.from_env(self.rail_env)
         self._rail_env_done = False
         self.vehicle_predictor.reset(self.rail_env)
         self.vehicle_predictions = self.vehicle_predictor.get()
@@ -147,7 +152,8 @@ class PassengerEnv(Environment):
             once the rail env is done, as no passenger can move after that.
         """
         if not self._rail_env_done:
-            vehicle_actions = self.vehicle_policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()))
+            vehicle_actions = self.vehicle_policy.act_many(self.rail_env.get_agent_handles(), observations=list(self._rail_env_obs.values()),
+                                                           infos=dict(self.rail_env_info, static=self._rail_env_static))
             self._rail_env_obs, _, rail_env_dones, self.rail_env_info = self.rail_env.step(vehicle_actions)
             self._rail_env_done = rail_env_dones['__all__']
             self.vehicle_predictions = self.vehicle_predictor.get()

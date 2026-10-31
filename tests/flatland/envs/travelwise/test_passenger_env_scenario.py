@@ -3,8 +3,7 @@ from typing import Dict, Tuple
 from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoints
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
-from flatland.envs.observations import FullEnvObservation
-from flatland.envs.rail_env_policies import ShortestPathPolicy
+from flatland.envs.rail_env_policies import ShortestPathObservationBuilder, ShortestPathPolicy
 from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourney
 from tests.flatland.envs.travelwise.test_passenger_env_spike import _make_three_station_rail, _modes
@@ -40,7 +39,7 @@ PASSENGER_JOURNEYS = {
 
 def _make_scenario_env() -> PassengerEnv:
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
-    rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=FullEnvObservation(),
+    rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=ShortestPathObservationBuilder(),
                                        timetable_generator=lambda *args, **kwargs: VEHICLE_TIMETABLE)
     vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=True)
     return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_policy=None, passenger_journeys=PASSENGER_JOURNEYS)
