@@ -13,7 +13,8 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
     target, not before its earliest departure, and hops off where the vehicle stops at its target:
 
     - riding, the vehicle stopping at an entry point of its target (`vehicle_stops_at_next_stop`): `HOP_OFF`;
-    - waiting, from its earliest departure on (the step it observed), with vehicles it can hop on and that serve it
+    - waiting, boarding not before its earliest departure (the action applies in the step after the one observed, as
+      for the vehicles), with vehicles it can hop on and that serve it
       (`vehicles_to_board`): `HOP_ON` a vehicle - first one
       whose predicted route stops at an entry point of the target, then the one predicted to stop there soonest;
     - otherwise `WAIT`.
@@ -39,6 +40,9 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
 
     @staticmethod
     def _may_depart(observation: PassengerObservation, journey: PassengerJourney) -> bool:
-        """ Whether the passenger's earliest departure at the group it waits at has passed, in the step it observed. """
+        """
+        Whether boarding now respects the passenger's earliest departure at the group it waits at: the action applies in
+        step `elapsed_steps + 1`, as `ShortestPathPolicy` departs a vehicle.
+        """
         earliest_departure = journey.waypoints_earliest_departure[journey.waypoints.index(observation.next_stop) - 1]
-        return earliest_departure is None or observation.elapsed_steps >= earliest_departure
+        return earliest_departure is None or observation.elapsed_steps + 1 >= earliest_departure

@@ -80,7 +80,16 @@ class PassengerEnv(Environment):
             observations, _, _, infos = passenger_env.step(
                 passenger_policy.act_many(handles, observations=[observations[h] for h in handles], infos=infos))
 
-    Passengers have no rewards yet, so `step()` returns empty rewards, and `dones` holds only `'__all__'`.
+    Rewards per passenger, in the step they occur (0 otherwise), integers that can be positive (an early arrival) -
+    unlike Flatland's `DefaultRewards`, which never reward arriving early (TODO align with them or keep the bonus
+    once the TravelWise rewards are settled):
+
+    - arriving: `waypoints_latest_arrival[-1] - arrival time` - positive when early, negative when late;
+    - boarding before its earliest departure at the group it waits at: `-(earliest departure - boarding step)` -
+      respecting it is the policy's decision, the env does not enforce it;
+    - not arrived when the rail env is done: `-max_episode_steps`.
+
+    `dones` holds per passenger whether it has arrived, and `'__all__'`: whether the rail env is done.
     Read the passengers' state from `passenger_mode`/
     `passenger_current_entry_point`/`passenger_target_entry_point`/`passenger_arrival_time`. A passenger
     has exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (resource, handle) pair:
@@ -145,6 +154,7 @@ class PassengerEnv(Environment):
         self._vehicle_infos: Dict = {}
         self._static: Optional[PassengerEnvStaticData] = None
         self._passenger_obs: Dict = {}
+        self._rewards: Dict[int, int] = {}
         self._rail_env_done = False
 
     def reset(self) -> Tuple[Dict, Dict]:
@@ -184,9 +194,11 @@ class PassengerEnv(Environment):
         Returns
         -------
         Tuple[Dict, Dict, Dict, Dict]
-            The passengers' observations, empty rewards, `dones` with only `'__all__'` (true once the rail env is done,
-            as no passenger can move after that), and the infos with the static data.
+            The passengers' observations, their rewards (see the class docstring), `dones` per passenger (arrived) and
+            `'__all__'` (true once the rail env is done, as no passenger can move after that), and the infos with the
+            static data.
         """
+        self._rewards = {handle: 0 for handle in self.passenger_journeys}
         if not self._rail_env_done:
             self._update_passengers(action_dict)
             vehicle_handles = self.rail_env.get_agent_handles()
@@ -196,8 +208,13 @@ class PassengerEnv(Environment):
             self._vehicle_infos = dict(vehicle_infos, static=self._static.rail_env)
             self._rail_env_done = rail_env_dones['__all__']
             self._move_passengers()
+            if self._rail_env_done:
+                for handle in self.passenger_journeys:
+                    if self.passenger_arrival_time[handle] is None:
+                        self._rewards[handle] -= self.rail_env._max_episode_steps
             self._passenger_obs = self.obs_builder.get_many(self.get_agent_handles())
-        return self._passenger_obs, {}, {'__all__': self._rail_env_done}, {"static": self._static}
+        dones = {handle: self.passenger_arrival_time[handle] is not None for handle in self.passenger_journeys}
+        return self._passenger_obs, self._rewards, dict(dones, __all__=self._rail_env_done), {"static": self._static}
 
     def next_stop(self, passenger_handle: int) -> Optional[List[EntryPointT]]:
         """ The waypoint group the passenger travels to next (its target) - `None` once arrived. """
@@ -248,6 +265,10 @@ class PassengerEnv(Environment):
                 self._alight(handle, self.rail_env.agents[riding_handle].current_entry_point, self.rail_env._elapsed_steps + 1)
             elif riding_handle is None and action == PassengerAction.HOP_ON and vehicle_handle is not None and self.can_hop_on(vehicle_handle, handle):
                 self._set_passenger(handle, self.rail_env.agents[vehicle_handle].current_entry_point, vehicle_handle)
+                earliest_departure = self.passenger_journeys[handle].waypoints_earliest_departure[self._passenger_stop_index[handle]]
+                boarding_step = self.rail_env._elapsed_steps + 1
+                if earliest_departure is not None and boarding_step < earliest_departure:
+                    self._rewards[handle] -= earliest_departure - boarding_step
 
     def _alight(self, handle: int, entry_point: EntryPointT, step: int):
         """ Sets the passenger down at `entry_point` in `step`; it has arrived if `entry_point` is in its next stop (its target). """
@@ -257,6 +278,7 @@ class PassengerEnv(Environment):
             self._passenger_stop_index[handle] += 1
             self.passenger_target_entry_point[handle] = self.passenger_current_entry_point[handle]
             self.passenger_arrival_time[handle] = step
+            self._rewards[handle] += self.passenger_journeys[handle].waypoints_latest_arrival[-1] - step
 
     def _resource(self, entry_point: Optional[EntryPointT]) -> Optional[ResourceT]:
         """ The resource (grid cell, graph node's resource) at `entry_point` - `None` off map. """
