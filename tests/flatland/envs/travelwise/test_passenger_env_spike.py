@@ -7,11 +7,14 @@ from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoin
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
-from flatland.envs.rail_env_policies import ShortestPathObservationBuilder, ShortestPathPolicy
+from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourney
+from flatland.envs.travelwise.passenger_env_observations import PassengerObservationBuilder
+from flatland.envs.travelwise.passenger_env_policies import BoardForTargetPassengerPolicy
+from flatland.envs.travelwise.vehicle_observations import VehicleObservationBuilder
 
 # A single straight corridor with three stations A, B, C, evenly spaced 3 cells apart, capped by dead
 # ends well beyond either station so no agent ever reaches an end of the corridor.
@@ -80,15 +83,15 @@ def _make_three_station_graph_env() -> GraphRailEnv:
     """ The corridor as `GraphRailEnv`, each node's resource being its grid cell. """
     # TODO build the corridor graph natively instead of converting a grid.
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
-    return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS, observation_builder=ShortestPathObservationBuilder(),
+    return GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), LEG_WAYPOINTS, observation_builder=VehicleObservationBuilder(),
                                    timetable_generator=_timetable_generator)
 
 
 def _assert_predicted_targets(passenger_env: PassengerEnv):
-    """ Each train's prediction ends at its target at its latest arrival, until it has arrived - then it is empty. """
-    for handle, predictions in passenger_env.vehicle_predictions.items():
+    """ Each train's plan, as observed, ends at its target at its latest arrival, until it has arrived - then it is empty. """
+    for handle, predictions in enumerate(passenger_env.vehicle_observations[0].vehicles.plans):
         if passenger_env.rail_env.agents[handle].state == TrainState.DONE:
-            assert predictions == []
+            assert predictions == ()
         else:
             assert (predictions[-1].entry_point, predictions[-1].step, predictions[-1].stop) == (
                 LEG_TARGET_ENTRY_POINT[handle], LEG_EARLIEST_DEPARTURE[handle] + STATION_DISTANCE, 1)
@@ -121,18 +124,18 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
       matching its timetabled latest arrival exactly.
     - No train is ever stopped: the rail env's headway leaves enough
       clearance that its four trains never contend for a cell.
-    - `PassengerEnv`'s `vehicle_predictor` predicts each train's route up to its target - its leg's own
-      target waypoint - at the step of its timetabled latest arrival, throughout the run until it
-      arrives, whether that train is currently on or off the track.
+    - The vehicle observations hold no plan after `reset()`. From the first step on, each train's plan ends at its
+      target - its leg's own target waypoint - at the step of its timetabled latest arrival, until it arrives,
+      whether that train is currently on or off the track.
+    - `reset()` and `step()` return no passenger observations, no rewards, and the static data in the infos.
     """
-    passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_policy=None,
-                                 passenger_journeys={})
-    assert passenger_env.reset() == ({}, {})
+    passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_journeys={},
+                                 obs_builder=PassengerObservationBuilder())
+    observations, infos = passenger_env.reset()
+    assert observations == {}
+    assert list(infos) == ["static"] and infos["static"].passenger_journeys == {}
     assert passenger_env.get_agent_handles() == []
-
-    # the predictions already end at each leg's target entry point, at its latest arrival, right after
-    # reset(), before any train has moved.
-    _assert_predicted_targets(passenger_env)
+    assert passenger_env.vehicle_observations[0].vehicles.plans == ((), (), (), ())
 
     # verbatim expected timetable for the rail env: one entry per leg, in handle order 0..3
     # (A->B, B->C, B->A, C->B), departures at HEADWAY=6, 12, 18, 24 and arrivals STATION_DISTANCE=3
@@ -151,7 +154,7 @@ def test_shortest_path_policy_runs_shuttle_trains_exactly_on_timetable():
     while not passenger_env.done:
         obs, rewards, dones, infos = passenger_env.step({})
         step = passenger_env.rail_env._elapsed_steps
-        assert (obs, rewards, infos) == ({}, {}, {})
+        assert (obs, rewards, list(infos)) == ({}, {}, ["static"])
         assert dones == {'__all__': passenger_env.rail_env.dones['__all__']}
         _assert_predicted_targets(passenger_env)
         for handle, agent in enumerate(passenger_env.rail_env.agents):
@@ -200,8 +203,11 @@ def test_multiple_passengers_share_trains():
       never boards and waits at A until the end, without arriving.
     - 1: A->B, boards leg 0 at A and gets off at B.
     - 2: B->C, waits at B from the first step and boards leg 1.
-    - 3: B->A, waits at B alongside passenger 2, and alone boards leg 2 (B->A) at step 18 - passenger 2
+    - 3: B->A, waits at B alongside passenger 2, and alone boards leg 2 (B->A), which is at B at step 18 - passenger 2
       stays, as leg 2 doesn't stop at its target.
+
+    The passengers board in the step after they observe their train at their origin, before the train moves on: their
+    mode changes from waiting at the origin straight to riding on the next cell.
     - 4: C->B, the only passenger on leg 3.
 
     All journeys have earliest departure 1 at the origin. Each passenger's mode changes (step -> `passenger_mode[h]`) are asserted verbatim; while riding,
@@ -213,14 +219,17 @@ def test_multiple_passengers_share_trains():
                    [GraphTransitionMap.grid_entry_point_to_graph_entry_point(*target, direction)]],
         waypoints_earliest_departure=[1, None], waypoints_latest_arrival=[None, 30])
         for handle, (origin, target, direction) in enumerate([(a, c, EAST), (a, b, EAST), (b, c, EAST), (b, a, WEST), (c, b, WEST)])}
-    passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_policy=None,
-                                 passenger_journeys=passenger_journeys)
-    passenger_env.reset()
+    passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_journeys=passenger_journeys,
+                                 obs_builder=PassengerObservationBuilder())
+    passenger_policy = BoardForTargetPassengerPolicy()
+    handles = passenger_env.get_agent_handles()
+    observations, infos = passenger_env.reset()
 
     mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in passenger_journeys}
     previous_modes = {handle: None for handle in passenger_journeys}
     while not passenger_env.done:
-        passenger_env.step({})
+        observations, _, _, infos = passenger_env.step(
+            passenger_policy.act_many(handles, observations=[observations[handle] for handle in handles], infos=infos))
         step = passenger_env.rail_env._elapsed_steps
         for handle in passenger_journeys:
             mode = passenger_env.passenger_mode[handle]
@@ -234,10 +243,10 @@ def test_multiple_passengers_share_trains():
 
     assert mode_changes == {handle: _modes(changes) for handle, changes in {
         0: {1: (a, None)},
-        1: {1: (a, None), 6: (a, 0), 7: ((0, 2), 0), 8: ((0, 3), 0), 9: (b, None)},
-        2: {1: (b, None), 20: (b, 1), 21: ((0, 5), 1), 22: ((0, 6), 1), 23: (c, None)},
-        3: {1: (b, None), 18: (b, 2), 19: ((0, 3), 2), 20: ((0, 2), 2), 21: (a, None)},
-        4: {1: (c, None), 24: (c, 3), 25: ((0, 6), 3), 26: ((0, 5), 3), 27: (b, None)},
+        1: {1: (a, None), 7: ((0, 2), 0), 8: ((0, 3), 0), 9: (b, None)},
+        2: {1: (b, None), 21: ((0, 5), 1), 22: ((0, 6), 1), 23: (c, None)},
+        3: {1: (b, None), 19: ((0, 3), 2), 20: ((0, 2), 2), 21: (a, None)},
+        4: {1: (c, None), 25: ((0, 6), 3), 26: ((0, 5), 3), 27: (b, None)},
     }.items()}
     assert passenger_env.passenger_arrival_time == {0: None, 1: 9, 2: 23, 3: 21, 4: 27}
     assert passenger_env.passenger_target_entry_point == {handle: journey.waypoints[-1][0] if handle > 0 else None

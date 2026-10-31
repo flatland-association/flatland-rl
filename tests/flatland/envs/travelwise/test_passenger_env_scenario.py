@@ -1,11 +1,17 @@
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
+from flatland.core.policy import Policy
 from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoints
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
-from flatland.envs.rail_env_policies import ShortestPathObservationBuilder, ShortestPathPolicy
+from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourney
+from flatland.envs.travelwise.passenger_env_action import PassengerAction, PassengerActionT
+from flatland.envs.travelwise.passenger_env_observations import PassengerObservation, PassengerObservationBuilder
+from flatland.envs.travelwise.passenger_env_policies import BoardForTargetPassengerPolicy
+from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint
+from flatland.envs.travelwise.vehicle_observations import VehicleObservationBuilder
 from tests.flatland.envs.travelwise.test_passenger_env_spike import _make_three_station_rail, _modes
 
 EAST, WEST = 1, 3
@@ -39,10 +45,34 @@ PASSENGER_JOURNEYS = {
 
 def _make_scenario_env() -> PassengerEnv:
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
-    rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=ShortestPathObservationBuilder(),
+    rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=VehicleObservationBuilder(),
                                        timetable_generator=lambda *args, **kwargs: VEHICLE_TIMETABLE)
     vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=True)
-    return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_policy=None, passenger_journeys=PASSENGER_JOURNEYS)
+    return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_journeys=PASSENGER_JOURNEYS, obs_builder=PassengerObservationBuilder())
+
+
+def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[int, Dict[int, PassengerObservation]], Dict[int, Dict[int, Tuple]]]:
+    """
+    Drives the passengers of `passenger_env` with `passenger_policy` (the controller) until the rail env is done:
+    per step, the policy acts on the observations of the previous step. Returns the observations per step (0 after
+    `reset()`) and the mode changes per passenger (step -> `passenger_mode[h]`).
+    """
+    handles = passenger_env.get_agent_handles()
+    observations, infos = passenger_env.reset()
+    observations_by_step = {0: observations}
+    mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in handles}
+    previous_modes = {handle: None for handle in handles}
+    while not passenger_env.done:
+        observations, _, _, infos = passenger_env.step(
+            passenger_policy.act_many(handles, observations=[observations[handle] for handle in handles], infos=infos))
+        step = passenger_env.rail_env._elapsed_steps
+        observations_by_step[step] = observations
+        for handle in handles:
+            mode = passenger_env.passenger_mode[handle]
+            if mode != previous_modes[handle]:
+                mode_changes[handle][step] = mode
+            previous_modes[handle] = mode
+    return observations_by_step, mode_changes
 
 
 def test_passenger_env_scenario_single_rides():
@@ -50,36 +80,112 @@ def test_passenger_env_scenario_single_rides():
     Single-ride journeys on the scenario's vehicles - mode changes (step -> `passenger_mode[h]`, given with grid cells)
     and arrivals asserted verbatim:
 
-    - 0: A -> C boards T0 at A at step 2, its earliest departure there being 1, stays on board at T0's intermediate
-      stop B (5-10), as B is not its target, and arrives at C at 13, T0's final stop.
-    - 1: A -> B boards T0 together with passenger 0 and alights at T0's intermediate stop B, in the step T0 stops
-      there (5).
-    - 2: B -> C waits at B and boards T0 in the step it stops at B (5).
-    - 3: A -> B with earliest departure 3 does not board T0, which is at A only at step 2, and takes T2 at 15.
-    - 4: C -> B rides T1 to its final stop B, where Flatland removes T1 in the step it arrives (17).
+    The passengers act on what they observed in the previous step: they board and alight in the step after they
+    observe the vehicle, before it moves on.
+
+    - 0: A -> C observes T0 at A at step 2, its earliest departure there being 1, boards it at step 3 as T0 moves on,
+      stays on board at T0's intermediate stop B (5-10), as B is not its target, and arrives at C at 13, T0's final
+      stop.
+    - 1: A -> B boards T0 together with passenger 0, observes T0 stopping at its target B at step 5 and alights there
+      at step 6.
+    - 2: B -> C waits at B, observes T0 stopping at B at step 5 and boards it at step 6.
+    - 3: A -> B with earliest departure 3: its policy does not board T0, observed at A only at step 2, before the
+      earliest departure, and takes T2, at A at step 15, at step 16.
+    - 4: C -> B boards T1 at step 15, at C at step 14, and rides it to its final stop B, where Flatland removes T1 in
+      the step it arrives (17).
     - 5: C -> A never boards: T1 stops at B only, so it waits at C until the end, without arriving.
     """
     passenger_env = _make_scenario_env()
-    passenger_env.reset()
-
-    mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in PASSENGER_JOURNEYS}
-    previous_modes = {handle: None for handle in PASSENGER_JOURNEYS}
-    while not passenger_env.done:
-        passenger_env.step({})
-        step = passenger_env.rail_env._elapsed_steps
-        for handle in PASSENGER_JOURNEYS:
-            mode = passenger_env.passenger_mode[handle]
-            if mode != previous_modes[handle]:
-                mode_changes[handle][step] = mode
-            previous_modes[handle] = mode
+    _, mode_changes = _run(passenger_env, BoardForTargetPassengerPolicy())
 
     assert mode_changes == {handle: _modes(changes) for handle, changes in {
-        0: {1: (A, None), 2: (A, 0), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)},
-        1: {1: (A, None), 2: (A, 0), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, None)},
-        2: {1: (B, None), 5: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)},
-        3: {1: (A, None), 15: (A, 2), 16: ((0, 2), 2), 17: ((0, 3), 2), 18: (B, None)},
-        4: {1: (C, None), 14: (C, 1), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)},
+        0: {1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)},
+        1: {1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: (B, None)},
+        2: {1: (B, None), 6: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)},
+        3: {1: (A, None), 16: ((0, 2), 2), 17: ((0, 3), 2), 18: (B, None)},
+        4: {1: (C, None), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)},
         5: {1: (C, None)},
     }.items()}
-    assert passenger_env.passenger_arrival_time == {0: 13, 1: 5, 2: 13, 3: 18, 4: 17, 5: None}
+    assert passenger_env.passenger_arrival_time == {0: 13, 1: 6, 2: 13, 3: 18, 4: 17, 5: None}
     assert passenger_env.passenger_target_entry_point == {0: C_EAST, 1: B_EAST, 2: C_EAST, 3: B_EAST, 4: B_WEST, 5: None}
+
+
+class _ScriptedPassengerPolicy(BoardForTargetPassengerPolicy):
+    """
+    `BoardForTargetPassengerPolicy`, except for the actions scripted per (passenger handle, step the action is applied
+    in), counting the steps itself.
+    """
+
+    def __init__(self, script: Dict[Tuple[int, int], PassengerActionT]):
+        super().__init__()
+        self.script = script
+        self._step = 0
+
+    def act_many(self, handles: List[int], observations: List[PassengerObservation], **kwargs) -> Dict[int, PassengerActionT]:
+        self._step += 1
+        actions = super().act_many(handles, observations, **kwargs)
+        return {handle: self.script.get((handle, self._step), action) for handle, action in actions.items()}
+
+
+def test_passenger_env_scenario_ignores_invalid_actions_and_hops_off_anywhere():
+    """
+    The scenario with scripted actions on top of `BoardForTargetPassengerPolicy`:
+
+    - 0: hops off T0 at step 4, at (0, 2) between stations: it waits there, without arriving - no vehicle serving C
+      ever comes by.
+    - 5 (C -> A): hops on T1 at C at step 15, which doesn't stop at A - valid, as whether a vehicle serves the
+      passenger is the policy's decision: it is forced off at T1's final stop B (17), without arriving.
+    - 3 (A -> B, earliest departure 3): hops on T0 at A at step 3, having observed it there at step 2, before its
+      earliest departure - feasible, as respecting the earliest departure is the policy's decision: it rides T0 and
+      arrives at B at 6, alighting the step after observing T0 stop there.
+    - Ignored, as infeasible: 2 hops on T0 at step 3, while T0 is at A, not at B where 2 waits; 1 hops on T0 at B at
+      step 8, after having arrived there.
+    """
+    passenger_env = _make_scenario_env()
+    _, mode_changes = _run(passenger_env, _ScriptedPassengerPolicy({
+        (0, 4): (PassengerAction.HOP_OFF, None),
+        (3, 3): (PassengerAction.HOP_ON, 0),
+        (2, 3): (PassengerAction.HOP_ON, 0),
+        (5, 15): (PassengerAction.HOP_ON, 1),
+        (1, 8): (PassengerAction.HOP_ON, 0),
+    }))
+
+    assert mode_changes[0] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 2), None)})
+    assert mode_changes[2] == _modes({1: (B, None), 6: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
+    assert mode_changes[3] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: (B, None)})
+    assert mode_changes[5] == _modes({1: (C, None), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)})
+    assert passenger_env.passenger_arrival_time == {0: None, 1: 6, 2: 13, 3: 6, 4: 17, 5: None}
+    assert passenger_env.passenger_current_entry_point[0] == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
+
+
+def test_passenger_env_scenario_observations():
+    """
+    The observations `reset()`/`step()` return, which the passenger policy acts on in the next step, for passengers 0
+    (A -> C) and 1 (A -> B): off map after `reset()`; at step 2, waiting at A, with T0 to board - stopping at C at 13
+    for 0, at B at 5 for 1; riding T0 from step 3 on; at step 5, T0 stopping at B, 1's target; at step 6, 1 has
+    arrived. Passenger 3 (A -> B, earliest departure 3) observes T0 at A at step 2 as a vehicle to board too: whether
+    to board before the earliest departure is its policy's decision.
+    """
+    passenger_env = _make_scenario_env()
+    observations_by_step, _ = _run(passenger_env, BoardForTargetPassengerPolicy())
+    cell = GraphTransitionMap.grid_entry_point_to_graph_resource
+
+    assert observations_by_step[0][1] == PassengerObservation(elapsed_steps=0, mode=(None, None), next_stop=[B_EAST], vehicles_to_board={},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[2][0] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[C_EAST],
+                                                              vehicles_to_board={0: [ProjectedEntryPoint(C_EAST, 13, 2)]},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[2][1] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[B_EAST],
+                                                              vehicles_to_board={0: [ProjectedEntryPoint(B_EAST, 5, 1)]},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[2][3] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[B_EAST],
+                                                              vehicles_to_board={0: [ProjectedEntryPoint(B_EAST, 5, 1)]},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[3][1] == PassengerObservation(elapsed_steps=3, mode=(cell(0, 2), 0), next_stop=[B_EAST], vehicles_to_board={},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[5][0] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), next_stop=[C_EAST], vehicles_to_board={},
+                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[5][1] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), next_stop=[B_EAST], vehicles_to_board={},
+                                                              vehicle_stops_at_next_stop=True)
+    assert observations_by_step[6][1] == PassengerObservation(elapsed_steps=6, mode=(cell(*B), None), next_stop=None, vehicles_to_board={},
+                                                              vehicle_stops_at_next_stop=False)
