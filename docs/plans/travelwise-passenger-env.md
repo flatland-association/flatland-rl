@@ -372,7 +372,8 @@ working (Q22). Everything under `flatland/envs/travelwise/` is new. Changes visi
 - `TravelWisePolicyRunner` as a library class instead of the test loop.
 - Rewards: align with Flatland's `DefaultRewards` (no bonus for arriving early) or keep the bonus (phase 4).
 - Waypoint groups are tacitly assumed to be disjoint and visited once (rail env target check, rewards,
-  `BoardForTargetPassengerPolicy`, the predictor): validate or support repeated visits, in a separate PR.
+  `BoardForTargetPassengerPolicy`, the predictor): validate or support repeated visits, in a separate PR
+  ([#557](https://github.com/flatland-association/flatland-rl/issues/557)).
 
 ## Findings
 
