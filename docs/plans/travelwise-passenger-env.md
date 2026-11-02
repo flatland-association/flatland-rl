@@ -28,7 +28,7 @@ A technical spike of the TravelWise passenger env, in line with the
 | 3 | C3.0 | `refactor(policies): let ShortestPathPolicy act on a dedicated observation instead of the whole env.` | 6ebe3c72 |
 | 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
-| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | this commit |
+| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | d2837293 |
 
 ## Design principles
 
@@ -57,6 +57,58 @@ Reused concepts:
 | Controller | the usual env/policy loop | the passenger policy inside `PassengerEnv.step()` |
 | Passenger actions | an enum like `RailEnvActions` | - |
 | Graph routing | `networkx` on `rail.g`, injected into `ShortestPathPolicy` and the predictor as a router | a hand-written search |
+
+## Terms
+
+Mapped to the TravelWise terms of flatland-book's
+[TravelWise page](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise.md) and
+[data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)
+(no glossary there; terms from its environments table, prose and diagram notes). "-": no TravelWise term.
+
+| Term (code) | TravelWise term | Meaning here, and what it is not |
+|---|---|---|
+| vehicle (`GraphRailEnv` agent, `handle`) | vehicle; agent of the infrastructure (ground) level | A train running on the rail env, on auto-pilot, with no notion of passengers. The tests also say "train"; not a passenger's ride (a leg). |
+| rail env, vehicle env (`GraphRailEnv`) | `InfrastructureEnv` (a generalized `RailEnv`) | The vehicles' env on the network (graph) view. Rail only: no multimodal edges, no walkways. |
+| passenger (`PassengerEnv` agent, `handle`) | passenger (a group of N people) | One agent per passenger; group size and capacities are not modelled. |
+| passenger env (`PassengerEnv`) | `PassengerEnv` (passenger level) | Steps the passengers on top of a rail env it holds. Not a subclass of the rail env, as the data model draws it; no `TravelWiseEnv` combining both. |
+| entry point (graph node), resource | configuration (aka node, grid cell entry point) | Where a vehicle or a waiting passenger is; a resource is what two vehicles cannot occupy at once (a cell). |
+| stop (one entry point) | `StoppingPoint` (Haltepunkt) | A station track where a vehicle stops. Not a station: stations are not modelled. |
+| waypoint group (`waypoints[i]`) | `LineFlexibleStoppingPoint` | Alternative stops of which a vehicle uses one, or at which a passenger boards, changes or arrives. |
+| line and timetable (`EnvAgent.waypoints`, `Timetable`) | line; timetable | A vehicle's stops, and its earliest departure and latest arrival per stop. |
+| journey (`PassengerJourney`) | journey (origin and destination); partly initial itinerary | Origin, given changes and target, with earliest departure and latest arrival per group. More than TravelWise's journey (the changes and times), less than an itinerary (no vehicles chosen). |
+| change (intermediate group of a journey) | transfer | Where the passenger gets off and waits for the next vehicle. Given, not planned; no minimum transfer time. Its meaning may change with the query view (see follow-ups). |
+| ride (two consecutive groups of a journey) | leg | Part of a journey on one vehicle. |
+| itinerary | initial itinerary | Not modelled: the passenger policy picks the vehicle at each stop at runtime. |
+| hop on, hop off (`PassengerAction.HOP_ON`, `HOP_OFF`) | hop down on, hop back up | Board a vehicle at the passenger's resource; get off at the vehicle's current entry point. |
+| wait (`PassengerAction.WAIT`) | move to edge (the passenger's only action) | Stay where it is. Passengers do not walk: no walkways. |
+| passenger mode (`passenger_mode`, `PassengerMode`) | - | Where a passenger is: waiting at a resource, or riding a vehicle. Not TravelWise's mode of transport. |
+| next stop (`PassengerEnv.next_stop()`) | - | The passenger's next change or its target. |
+| plan (tuple of `ProjectedEntryPoint`) | - | A vehicle's predicted remaining route and stop times, as if it ran alone and on time. Not its timetable, not its policy's intent. |
+| query view | global observation of the graph and timetables | All vehicles' future stops, to plan connections. Not built (follow-up). |
+| vehicle policy, auto-pilot (`ShortestPathPolicy`) | auto-pilot; `FlatlandPolicy` | Drives the vehicles inside `PassengerEnv.step()`. |
+| passenger policy (`BoardForTargetPassengerPolicy`) | `PassengerPolicy` | Decides the passengers' actions. Not an itinerary planner yet, which TravelWise expects it to become. |
+| controller (the test loop) | `TravelWisePolicyRunner` | Holds the passenger policy and steps `PassengerEnv`. No library class yet (follow-up). |
+| static data (`infos["static"]`) | - | What doesn't change during an episode (map, timetables, journeys), handed to the policies in the infos. |
+| milestone, event | milestone; event | Not modelled in this PR. |
+
+## Components
+
+Added and modified by this PR (🟩 added, 🟨 modified):
+
+| Component | Responsibility | Change |
+|---|---|---|
+| `PassengerEnv` | Simulates passengers travelling on the trains of a rail env: applies their hop-on and hop-off decisions, carries riding passengers along, and rewards punctual arrival. Not for deciding what passengers do (that is the passenger policy), nor for driving the trains (it delegates them to the vehicle policy). | 🟨 modified: passengers now decide themselves when to board and get off, can change vehicles at given stops, and are rewarded for being on time; it runs on the network (graph) view only. |
+| `PassengerJourney` | A passenger's travel request: where it starts, where it changes vehicles, where it ends, and when. Not a plan of which vehicles to take. | 🟩 added: passengers get an origin, changes and a target with earliest departures and latest arrivals, written like a train's timetable. |
+| `PassengerAction` | What a passenger can do in a step: wait, board a vehicle, or get off. Not whether doing so is wise. | 🟩 added: boarding and getting off are passenger actions instead of happening automatically. |
+| `PassengerObservation` (`PassengerObservationBuilder`) | What a passenger sees in a step: its own situation and the vehicles it could take towards its next stop. Not the static journey or timetable data, which come with the infos. | 🟩 added: passengers can see which vehicles will take them to their next stop, and when. |
+| `BoardForTargetPassengerPolicy` | A simple passenger behaviour: board the first suitable vehicle towards the next stop and get off there. Not a journey planner: it does not choose connections. | 🟩 added: a ready-made passenger behaviour to run the env with, and a baseline to compare others to. |
+| `VehicleObservation` (`VehicleObservationBuilder`) | What each vehicle (and, through it, every passenger) knows of all vehicles in a step: where they are and where and when they will stop. Not the timetable itself. | 🟩 added: every vehicle's position and announced stops are visible to all, shared rather than copied per agent. |
+| `TimetablePredictor` (`UnilateralTimetablePredictor`) | Announces each vehicle's remaining route and stop times, assuming it runs undisturbed and on time. Not a forecast of delays or of conflicts between vehicles. | 🟩 added: vehicles announce where they will stop and when, so passengers can plan their boarding. |
+| `ShortestPathObservation` (`ShortestPathObservationBuilder`) | What the auto-pilot needs to know of its own vehicle in a step. Not the map or the timetable, which come with the infos. | 🟩 added: the auto-pilot can run on a small observation instead of the whole env. |
+| `RailEnvStaticData` (`AgentStaticData`) | The rail env's data that doesn't change during an episode (map, routes, timetables), handed to policies once instead of in every observation. Not dynamic state. | 🟩 added: policies get the map and timetables through the infos, without reading the env. |
+| `ShortestPathPolicy` | The auto-pilot: drives each vehicle along a shortest route through its stops, keeping to its timetable at intermediate stops on request. Not for avoiding conflicts with other vehicles. | 🟨 modified: trains can now wait at intermediate stops until their departure, run on the graph, and use the small observation; existing callers keep working unchanged. |
+| Routers (`greedy_grid_route_through_waypoints`, `greedy_graph_route_through_waypoints`) | Find a route through a vehicle's stops on the grid or the graph, shared by the auto-pilot and the predictor so both agree. Not optimal over all alternatives (greedy per stop). | 🟩 added: routing is pluggable, and what the vehicles announce matches how they drive. |
+| `GraphTransitionMap` (`grid_to_digraph`, `grid_to_resource_map`) | Converts a grid map into the network (graph) view. Not a native graph builder. | 🟨 modified: a graph and its resources can be built from a grid map without creating a `RailEnv` first. |
 
 ## Phase 0: graph-only spike (done)
 
@@ -219,7 +271,8 @@ sequenceDiagram
 
 ### Limitations (`PassengerEnv`'s docstring)
 
-- Single ride only (phase 5 replaces it).
+- The changes are given, not planned: no search for connections (comes with the query view). No minimum transfer
+  time (TODO).
 - A passenger may board where the vehicle does not stop, and hop off at any step (TODOs).
 - Missed stop at another alternative of a stop group: not covered by a test, as every group on the corridor has one
   entry point (TODO).
@@ -274,10 +327,15 @@ observations (phase 3); rewards and dones (phase 4).
 - Board only where the vehicle stops; hop off only at stops; missed stop at another alternative.
 - Minimum transfer time (phase 5).
 - Query view: a multi-vehicle projection of all vehicles' future stops, replacing the per-vehicle predictor.
+  With it, passengers plan their connections, and a journey may go back to only an origin and a target (as
+  TravelWise's journey). If journeys keep intermediate groups, fix what they mean: hints where to change, or stops
+  the passenger must make for their own sake (an activity such as shopping or leisure, maybe with a dwell time).
 - `get_k_shortest_paths()` generalized to graphs, replacing the `networkx` routing.
 - Build the test corridor as a graph natively.
 - `TravelWisePolicyRunner` as a library class instead of the test loop.
 - Rewards: align with Flatland's `DefaultRewards` (no bonus for arriving early) or keep the bonus (phase 4).
+- Waypoint groups are tacitly assumed to be disjoint and visited once (rail env target check, rewards,
+  `BoardForTargetPassengerPolicy`, the predictor): validate or support repeated visits, in a separate PR.
 
 ## Decisions
 
