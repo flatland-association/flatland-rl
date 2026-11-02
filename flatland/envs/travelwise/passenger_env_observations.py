@@ -16,7 +16,8 @@ class PassengerObservation:
 
     - `elapsed_steps`: the env's elapsed steps (TODO move to the infos, as for the vehicles);
     - `mode`: its `(resource, riding vehicle handle)`, see `PassengerEnv`;
-    - `next_stop`: the entry points of the waypoint group it travels to next (its target) - `None` once arrived;
+    - `next_stop`: the entry points of the waypoint group it travels to next (a change or its target) - `None` once
+      arrived;
     - `vehicles_to_board`: per vehicle it can hop on now (`PassengerEnv.can_hop_on()`) and that serves it, the
       vehicle's planned future stops serving its next stop (`PassengerObservationBuilder.future_stops_serving()`);
     - `vehicle_stops_at_next_stop`: whether the vehicle it rides stops at an entry point of its next stop now

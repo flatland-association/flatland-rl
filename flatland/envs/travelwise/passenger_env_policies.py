@@ -10,16 +10,17 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
     """
     Acts on `PassengerObservation`s, with the passengers' journeys from the static data in the infos passed to
     `act_many()` (`infos["static"]`, a `PassengerEnvStaticData`). Each passenger boards a vehicle that serves its
-    target, not before its earliest departure, and hops off where the vehicle stops at its target:
+    next stop (a change or its target), not before its earliest departure, and hops off where the vehicle stops at
+    its next stop:
 
-    - riding, the vehicle stopping at an entry point of its target (`vehicle_stops_at_next_stop`): `HOP_OFF`;
+    - riding, the vehicle stopping at an entry point of its next stop (`vehicle_stops_at_next_stop`): `HOP_OFF`;
     - waiting, boarding not before its earliest departure (the action applies in the step after the one observed, as
       for the vehicles), with vehicles it can hop on and that serve it
       (`vehicles_to_board`): `HOP_ON` a vehicle - first one
-      whose predicted route stops at an entry point of the target, then the one predicted to stop there soonest;
+      whose predicted route stops at an entry point of the next stop, then the one predicted to stop there soonest;
     - otherwise `WAIT`.
 
-    A vehicle stopping at another alternative of the target's group is not left: the passenger stays on board up to
+    A vehicle stopping at another alternative of the next stop's group is not left: the passenger stays on board up to
     the vehicle's final stop.
     """
 
