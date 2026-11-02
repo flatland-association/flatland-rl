@@ -26,19 +26,18 @@ class PassengerJourney:
     """
     A passenger's journey, with the same fields and conventions as a vehicle's `EnvAgent`:
 
-    - `waypoints`: the waypoint groups in order, each a list of accepted entry points (e.g. the tracks of a station).
-      The origin group has exactly one entry point, where the passenger waits.
+    - `waypoints`: the waypoint groups in order, each a list of accepted entry points (e.g. the tracks of a station):
+      the origin, the stops where the passenger changes vehicles, and the target. Each pair of consecutive groups is
+      one ride. The origin group has exactly one entry point, where the passenger waits.
     - `waypoints_earliest_departure`: per group, the earliest step to leave it - `None` at the target.
     - `waypoints_latest_arrival`: per group, the latest step to reach it - `None` at the origin.
-
-    Single ride for now: exactly two groups, origin and target.
     """
     waypoints: List[List[EntryPointT]]
     waypoints_earliest_departure: List[Optional[int]]
     waypoints_latest_arrival: List[Optional[int]]
 
     def __post_init__(self):
-        assert len(self.waypoints) == 2, f"single ride only: origin and target, got {self.waypoints}"
+        assert len(self.waypoints) >= 2, f"at least origin and target, got {self.waypoints}"
         assert len(self.waypoints[0]) == 1, f"the origin must have exactly one entry point, got {self.waypoints[0]}"
         assert len(self.waypoints_earliest_departure) == len(self.waypoints_latest_arrival) == len(self.waypoints)
 
@@ -59,7 +58,7 @@ class PassengerEnv(Environment):
     (https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md).
     The passengers share the rail env's topology, but are otherwise independent of it - separate
     agents, separate timetable, separate motion checks. Each passenger travels its own journey
-    `passenger_journeys[h]`, a `PassengerJourney` from an origin to a target on a single vehicle.
+    `passenger_journeys[h]`, a `PassengerJourney` from an origin to a target, changing vehicles at given stops.
 
     Implements the `Environment` interface for the passengers: `get_agent_handles()` returns the
     passengers' handles, and `step()` takes an `action_dict` with the passengers' `PassengerActionT` actions. The rail
@@ -110,13 +109,14 @@ class PassengerEnv(Environment):
 
     Alighting (3 -> 2): `HOP_OFF`, at the vehicle's current entry point; and forced at the vehicle's final stop, where
     Flatland removes it in the step it reaches its target, at the entry point it reached
-    (`EnvAgent.target_entry_point`). The passenger has arrived if it alights at an entry point of its target; then it
-    stays there and its further actions are ignored. Alighting elsewhere leaves it waiting there.
+    (`EnvAgent.target_entry_point`). Alighting at an entry point of its next stop (`next_stop()`) completes the ride:
+    at a change, the passenger waits there for the next vehicle; at its target, it has arrived, stays there and its
+    further actions are ignored. Alighting elsewhere leaves it waiting there, with the same next stop.
 
     Limitations:
 
-    - Single ride: no change of vehicles. A passenger set down outside its target arrives only on a vehicle from
-      there that stops at its target.
+    - The changes are given, not planned: a passenger set down outside its next stop continues only on a vehicle
+      from there that stops at its next stop. No minimum transfer time. TODO plan connections with the query view.
     - A passenger may board a vehicle at its resource even where the vehicle doesn't stop, e.g. passing through.
       TODO board only at a vehicle's stop.
     - A passenger may hop off at any step. TODO hop off only where the vehicle stops.
@@ -217,7 +217,7 @@ class PassengerEnv(Environment):
         return self._passenger_obs, self._rewards, dict(dones, __all__=self._rail_env_done), {"static": self._static}
 
     def next_stop(self, passenger_handle: int) -> Optional[List[EntryPointT]]:
-        """ The waypoint group the passenger travels to next (its target) - `None` once arrived. """
+        """ The waypoint group the passenger travels to next (a change or its target) - `None` once arrived. """
         waypoints = self.passenger_journeys[passenger_handle].waypoints
         stop_index = self._passenger_stop_index[passenger_handle]
         return waypoints[stop_index + 1] if stop_index + 1 < len(waypoints) else None
@@ -271,11 +271,16 @@ class PassengerEnv(Environment):
                     self._rewards[handle] -= earliest_departure - boarding_step
 
     def _alight(self, handle: int, entry_point: EntryPointT, step: int):
-        """ Sets the passenger down at `entry_point` in `step`; it has arrived if `entry_point` is in its next stop (its target). """
+        """
+        Sets the passenger down at `entry_point` in `step`. If `entry_point` is in its next stop, the ride is complete:
+        the passenger travels on to the following group; it has arrived if the next stop was its target.
+        """
         next_stop = self.next_stop(handle)
         self._set_passenger(handle, entry_point, None)
         if entry_point in next_stop:
             self._passenger_stop_index[handle] += 1
+            if self.next_stop(handle) is not None:
+                return
             self.passenger_target_entry_point[handle] = self.passenger_current_entry_point[handle]
             self.passenger_arrival_time[handle] = step
             self._rewards[handle] += self.passenger_journeys[handle].waypoints_latest_arrival[-1] - step

@@ -27,8 +27,8 @@ A technical spike of the TravelWise passenger env, in line with the
 | 2 | C2.1 | `feat(envs): give passengers single-ride journeys with earliest departure and latest arrival.` | 14578ec9 |
 | 3 | C3.0 | `refactor(policies): let ShortestPathPolicy act on a dedicated observation instead of the whole env.` | 6ebe3c72 |
 | 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
-| 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | this commit |
-| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | next |
+| 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
+| 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | this commit |
 
 ## Design principles
 
@@ -247,8 +247,8 @@ sequenceDiagram
 - `PassengerJourney.waypoints` may have intermediate groups, the stops where the passenger changes; each pair of
   consecutive groups is one ride. `next_stop(p)` is the first group not yet reached; boarding, alighting, the
   forced hop-off and the missed stop apply per ride.
-- At a change the passenger alights, waits and boards the next vehicle serving it, not before the group's earliest
-  departure. No minimum transfer time (TODO).
+- At a change the passenger alights, waits and boards the next vehicle serving it; respecting the group's earliest
+  departure is the passenger policy's decision (Q23). No minimum transfer time (TODO).
 - Arrived and rewards: at the target only.
 - The stops are given, not planned: no search for connections (that comes with the query view).
 - Tests: passenger 0 of the shuttle tests becomes A -> B -> C and arrives again.
@@ -283,7 +283,8 @@ observations (phase 3); rewards and dones (phase 4).
 
 - Q1 Routing: a shared greedy `networkx` router over `rail.g` (nearest alternative per group), injected into
   `ShortestPathPolicy` and the predictor, so both pick the same entry points.
-- Q2 Existing shuttle tests keep their setup; passenger 0 (A -> C) never arrives with single rides.
+- Q2 Existing shuttle tests keep their setup; passenger 0 (A -> C) never arrives with single rides, and becomes
+  A -> B -> C in phase 5.
 - Q3 Boarding only from the passenger's earliest departure on - since Q23 the passenger policy's decision, not
   checked by the env.
 - Q5 Layout: `flatland/envs/travelwise/` with `passenger_env.py`, `passenger_env_action.py`,
