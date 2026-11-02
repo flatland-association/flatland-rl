@@ -182,6 +182,82 @@ is a full graph-native sibling to `RailEnv`, not just an implementation detail o
 envs share `AbstractRailEnv.step()`/`handle_done_state()` verbatim (a single shared definition), so behavior
 differences between the two are almost entirely about topology/entry-point representation, not control flow.
 
+### Envs, observations and policies
+
+Flatland follows the RL split of responsibilities (see the flatland-book and the RLlib docs): an env's `step()`
+takes the agents' actions, updates the env state (including what follows from it physically, e.g. a passenger on
+a train moving with it) and returns observations, rewards, dones and infos - nothing else. It never runs the
+policy of its own agents: a policy (or a controller) takes the observations and issues the actions. Entities that
+are not the env's agents may be driven inside `step()` as part of the env's dynamics, with their policy, actions and
+observations local to `step()` - e.g. `PassengerEnv` steps its rail env's vehicles with a vehicle policy.
+The env is dull: it applies an action if it is physically feasible and ignores it otherwise. Deciding what to do
+(e.g. respecting a timetable's earliest departure) is the policy's job; the rewards may penalize bad decisions.
+
+- Observations are built by an `ObservationBuilder` (`core/env_observation_builder.py`) the env holds and calls in
+  `reset()`/`step()`. Predictions about other agents come from a `PredictionBuilder`
+  (`core/env_prediction_builder.py`) owned by the observation builder, as `TreeObsForRailEnv(predictor=...)` owns
+  its predictor - not by the env.
+- A policy should act on the information it needs, not reach into the env: `FullEnvObservation` (the env itself as
+  observation) is a convenience, e.g. for `ShortestPathPolicy`.
+- Observations hold dynamic data only (positions, predictions/plans); they are empty after `reset()` when nothing
+  is on the map yet. Data shared by all agents is one object referenced by every observation, not copied per agent
+  (quadratic in the number of agents otherwise), and immutable (frozen dataclasses, tuples), so sharing is safe.
+- Static data (timetables, journeys, the map) is not part of the observations. The env hands it out in the infos of
+  `reset()` and of every `step()`, as a reference to one immutable object, and the runner passes the infos to the
+  policy: `act_many(handles, observations, infos=...)`, through `**kwargs`, so policies not needing them ignore them.
+  This follows RLlib (infos keyed by agent id, a `"__common__"` key for data shared by all agents; the old API's
+  `Policy.compute_actions(..., info_batch=...)`) and Flatland's own decision data in infos (`action_required`),
+  though gymnasium describes infos as auxiliary. Observation builders, part of the env, may read the env directly.
+- `Policy.act_many()`'s default calls `act(observations[handle])`: it assumes the observations are indexed by handle
+  (handles `0..n-1` in a list). A policy whose observation carries no handle overrides `act_many()` to zip handles
+  and observations.
+
+### Step timing
+
+- `step()` increments `_elapsed_steps` first: an action decided while `env._elapsed_steps == t` is applied in step
+  `t + 1`, and its effect is visible after that step.
+- An agent off the map enters at its initial entry point in the step `max(earliest departure, elapsed + 1)` it is
+  told to move, with distance 0.
+- Moving at `max_speed` (with the default `acceleration_delta`), an agent enters the next entry point after
+  `ceil((1 - distance) / max_speed)` steps.
+- An agent starting from a full stop (speed 0) covers no distance in its first moving step (D1, #496): it reaches
+  its speed, and enters the next cell `ceil(1 / max_speed)` steps later. So a train halting at an intermediate
+  stop in the step it enters it moves again at `max(arrival + 1, earliest departure)`.
+- An agent reaching its target is removed in that step (`remove_agents_at_target`): `current_entry_point` is `None`,
+  `target_entry_point` holds the entry point reached, `state` is `DONE` - on `GraphRailEnv` too.
+- Derive timing rules from measured traces (entry point, speed, distance per step) of a small scenario, not from
+  reading `step()`.
+
+### Routing and `ShortestPathPolicy`
+
+`ShortestPathPolicy` (`envs/rail_env_policies.py`) works on grid and graph envs: the router is injected -
+`greedy_grid_route_through_waypoints()` (`envs/grid/grid_routing.py`, `get_k_shortest_paths()`) or
+`greedy_graph_route_through_waypoints()` (`envs/graph/graph_routing.py`, `networkx`). Both are greedy: each leg to
+the next waypoint group is fixed once chosen (no backtracking). With `serve_intermediate_stops`, the policy routes
+through the intermediate stops, halts at each in the step it enters it and waits until its earliest departure;
+without it (default), it routes straight to the target, as before. Actions are found with
+`TransitionMap.apply_action_independent()`, which both transition maps implement, using the cell-entry look-ahead
+from `next_entry_point`.
+
+Grid-to-graph conversions live in `GraphTransitionMap` as static methods: `grid_to_digraph()`,
+`grid_to_resource_map()`, `grid_entry_point_to_graph_entry_point()`, `graph_entry_point_to_grid_entry_point()`
+(`None` in, `None` out) and `grid_entry_point_to_graph_resource()`. Call them directly instead of wrapping them in
+test-local helpers.
+
+### `flatland/envs/travelwise/`
+
+The TravelWise passenger overlay (a spike, see the
+[data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)):
+`PassengerEnv` lets passengers ride the vehicles of a rail env (`GraphRailEnv`), and is the vehicles' runner: it
+keeps the vehicle observations and infos, and its vehicle policy acts on them in the next step. The rail env's
+`VehicleObservationBuilder` owns a `TimetablePredictor` (`UnilateralTimetablePredictor`: each vehicle's remaining
+route as if alone on the map, exact for a single vehicle, otherwise optimistic) and observes all vehicles' positions
+and plans in one shared, immutable object. Passengers observe them through `PassengerObservationBuilder` and decide
+via a passenger policy (`BoardForTargetPassengerPolicy`), run by the caller, with `PassengerAction`s. The env only
+checks whether an action is physically feasible; which vehicle serves a passenger and respecting its earliest
+departure are the policy's decisions. See
+`docs/plans/travelwise-passenger-env.md`.
+
 ### Entry point values are sanitized against numpy-dtype taint
 
 `agent_utils.py`'s `_sanitize_entry_point()` coerces a grid `(position, direction)` entry point's numpy
@@ -341,6 +417,11 @@ that step, then the `action` to apply - so a test reads as a step-by-step table 
 imperative code. `skip_reward_check`/`skip_action_required_check` opt out of the (fragile) reward/action-required
 assertions when a test only cares about position/speed/state progression.
 
+For a timing-sensitive expectation (when an agent enters an entry point, a prediction of it), write an exactness
+test: run the scenario, record per step what actually happens, and compare it with what was predicted at each
+step - parametrized over speeds (e.g. 1, 1/2, 1/3) and departures before/after the agent is on the map (see
+`tests/flatland/envs/travelwise/test_timetable_predictor.py`).
+
 For a specific env state that's tedious or fragile to reach by scripting actions from scratch (e.g. deep into a
 multi-agent malfunction/deadlock scenario), prefer capturing a one-off snapshot via `RailEnvPersister.save()` once
 and loading it in the test via `RailEnvPersister.load_new()`, rather than replaying a long action script - the
@@ -427,10 +508,20 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
   (`type(scope): summary`, e.g. `fix(envs): ...`, `docs: ...`, `refactor(rail_env): ...`) - not just PR titles
   (see "Releases and versioning" above for why PR titles specifically matter to `release-please`); every commit
   on the branch should follow the same convention.
+- **Write the spec before the code** for anything larger than a fix, as a plan
+  in `docs/plans/`. Issues stay short: a summary, acceptance criteria and a
+  link to the plan.
+- Keep diffs minimal: change only what the task needs, keep existing signatures and behavior where possible
+  (backwards-compatible defaults, e.g. a flag that keeps the previous behavior), and don't add test-local wrappers
+  around library functions. If tests rebuild a library convention by hand (e.g. a resource naming), make the
+  library's helper public as a static method next to its counterpart and use it in both places.
 - Call a method/function with more than a couple of parameters using keyword arguments at the call site
   (`self._foo(action=action, state=state, ...)`), not positional - positional args for a long signature are
   easy to silently mis-order (especially several same-typed/`Optional` params in a row) and a keyword mismatch
   fails loudly instead.
+- Avoid `if TYPE_CHECKING:` imports (and string annotations of names not imported): needing one is a design smell,
+  an import cycle between modules. Put the code where its dependencies can be imported instead (e.g. next to the
+  class it takes, in the module that already imports it), or split the module.
 - Prefer `NamedTuple` over a plain unnamed `Tuple` or `Dict` for structured data that doesn't need methods.
 - Use `attrs` (`@attrs`/`attrib`) for classes that must keep multiple members in sync as an invariant.
 - Use `abc.ABCMeta`/`abc.abstractmethod` for extension-point base classes.
