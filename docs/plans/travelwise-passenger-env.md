@@ -1,7 +1,7 @@
 # Plan: TravelWise passenger env spike
 
 PR [#528](https://github.com/flatland-association/flatland-rl/pull/528), branch
-`feature/travelwise-passenger-overlway-spike`.
+`feature/travelwise-passenger-overlway-spike`, based on `main` 3a66efe9. Status of 2026-11-02: all steps done.
 
 ## Goal
 
@@ -10,7 +10,7 @@ A technical spike of the TravelWise passenger env, in line with the
 
 - The spike and its tests run on `GraphRailEnv` only, in the subpackage `flatland/envs/travelwise/` (phase 0).
 - Each vehicle's remaining route is projected with optimistic times (phase 1).
-- Passengers ride one vehicle from origin to target (phase 2); changes of trains at given stops follow (phase 5).
+- Passengers ride one vehicle from origin to target (phase 2), then with changes of trains at given stops (phase 5).
 - Passengers observe the vehicles' positions and plans and decide themselves when to hop on and off; a controller
   holding the passenger policy steps `PassengerEnv`, which steps the vehicles with their own policy (phase 3).
 - Passengers are rewarded for lateness (phase 4).
@@ -97,7 +97,7 @@ Added and modified by this PR (🟩 added, 🟨 modified):
 
 | Component | Responsibility | Change |
 |---|---|---|
-| `PassengerEnv` | Simulates passengers travelling on the trains of a rail env: applies their hop-on and hop-off decisions, carries riding passengers along, and rewards punctual arrival. Not for deciding what passengers do (that is the passenger policy), nor for driving the trains (it delegates them to the vehicle policy). | 🟨 modified: passengers now decide themselves when to board and get off, can change vehicles at given stops, and are rewarded for being on time; it runs on the network (graph) view only. |
+| `PassengerEnv` | Simulates passengers travelling on the trains of a rail env: applies their hop-on and hop-off decisions, carries riding passengers along, and rewards punctual arrival. Not for deciding what passengers do (that is the passenger policy), nor for driving the trains (it delegates them to the vehicle policy). | 🟩 added: passengers ride the trains of a rail env on the network (graph) view, decide themselves when to board and get off, can change vehicles at given stops, and are rewarded for being on time. |
 | `PassengerJourney` | A passenger's travel request: where it starts, where it changes vehicles, where it ends, and when. Not a plan of which vehicles to take. | 🟩 added: passengers get an origin, changes and a target with earliest departures and latest arrivals, written like a train's timetable. |
 | `PassengerAction` | What a passenger can do in a step: wait, board a vehicle, or get off. Not whether doing so is wise. | 🟩 added: boarding and getting off are passenger actions instead of happening automatically. |
 | `PassengerObservation` (`PassengerObservationBuilder`) | What a passenger sees in a step: its own situation and the vehicles it could take towards its next stop. Not the static journey or timetable data, which come with the infos. | 🟩 added: passengers can see which vehicles will take them to their next stop, and when. |
@@ -150,7 +150,7 @@ Added and modified by this PR (🟩 added, 🟨 modified):
 - A vehicle reaching its target is removed in that step: riding passengers are forced off at
   `EnvAgent.target_entry_point`.
 
-## Phase 3: passenger decisions
+## Phase 3: passenger decisions (done)
 
 ### Goal
 
@@ -269,18 +269,7 @@ sequenceDiagram
     end
 ```
 
-### Limitations (`PassengerEnv`'s docstring)
-
-- The changes are given, not planned: no search for connections (comes with the query view). No minimum transfer
-  time (TODO).
-- A passenger may board where the vehicle does not stop, and hop off at any step (TODOs).
-- Missed stop at another alternative of a stop group: not covered by a test, as every group on the corridor has one
-  entry point (TODO).
-- The per-vehicle projection is optimistic; no query view yet.
-- Stops are station tracks (entry points), not stations.
-- Graph edges count as length 1 ([#542](https://github.com/flatland-association/flatland-rl/pull/542)).
-
-## Phase 4: lateness rewards and dones
+## Phase 4: lateness rewards and dones (done)
 
 - Goal: passengers are rewarded the earlier they arrive before their latest arrival, penalized for arriving late or
   not at all; each passenger's journey is done once it arrives.
@@ -294,7 +283,7 @@ sequenceDiagram
 - `step()` returns the passenger observations, rewards per passenger, dones per passenger (arrived) plus
   `'__all__'` (rail env done), and the infos.
 
-## Phase 5: journeys with changes of trains
+## Phase 5: journeys with changes of trains (done)
 
 - Goal: passengers can change trains at given stops along their journey.
 - `PassengerJourney.waypoints` may have intermediate groups, the stops where the passenger changes; each pair of
@@ -303,8 +292,18 @@ sequenceDiagram
 - At a change the passenger alights, waits and boards the next vehicle serving it; respecting the group's earliest
   departure is the passenger policy's decision (Q23). No minimum transfer time (TODO).
 - Arrived and rewards: at the target only.
-- The stops are given, not planned: no search for connections (that comes with the query view).
 - Tests: passenger 0 of the shuttle tests becomes A -> B -> C and arrives again.
+
+## Limitations (`PassengerEnv`'s docstring)
+
+- The changes are given, not planned: no search for connections (comes with the query view). No minimum transfer
+  time (TODO).
+- A passenger may board where the vehicle does not stop, and hop off at any step (TODOs).
+- Missed stop at another alternative of a stop group: not covered by a test, as every group on the corridor has one
+  entry point (TODO).
+- The per-vehicle projection is optimistic; no query view yet.
+- Stops are station tracks (entry points), not stations.
+- Graph edges count as length 1 ([#542](https://github.com/flatland-association/flatland-rl/pull/542)).
 
 ## Test scenario (on the graph)
 
@@ -320,7 +319,45 @@ departure there; T1 C -> B; T2 a later A -> B. Passengers:
 
 Tests per phase: predictor unit tests and a single-vehicle exactness test (speeds 1, 1/2, 1/3; departure before and
 after the vehicle is on the map); mode changes and arrivals (phase 2); decisions via the passenger policy and the
-observations (phase 3); rewards and dones (phase 4).
+observations (phase 3); rewards and dones (phase 4); changes of trains in the shuttle tests (phase 5).
+
+## Assumptions
+
+Not checked in code; they hold by construction of the tests and the env's setup:
+
+- Vehicles have no capacity limit: any number of passengers can ride one vehicle.
+- Static data (the map, the timetables, the journeys) does not change during an episode; the objects handed out in
+  the infos are read-only by convention.
+- The vehicles follow the routes the predictor computes: both use the same router (Q1, Q14). A vehicle policy with
+  another router makes the plans wrong.
+- Waypoint groups are disjoint and visited once per vehicle and per journey (see the follow-ups).
+- The rail env is a `GraphRailEnv`: the spike and its tests do not run on the grid view.
+
+## New patterns
+
+Compared with `main`; the reused concepts are listed under the design principles.
+
+| New | Reuses | Defined in |
+|---|---|---|
+| Static data handed to policies in the infos (`infos["static"]`, passed to `act_many()`), not in the observations | RLlib's infos, Flatland's `action_required` in the infos | Design principles, Q19, Q20 |
+| An env that is the runner of another env's agents: `PassengerEnv` steps the vehicles with their policy inside its `step()` | the usual env/policy loop | Controller and step |
+| Data shared by all agents as one immutable object referenced by every observation | - | Q12 |
+| A policy and a predictor with an injected router, so both pick the same entry points | - | Phase 0, Q1 |
+
+Not new on purpose: the rail env's observations, infos and rewards, the trajectory format, `PolicyRunner` and the
+dependencies (`networkx` is already one) stay as they are.
+
+## Breaking changes
+
+None for callers: `ShortestPathPolicy()` keeps its defaults, and the env as observation (`FullEnvObservation`) keeps
+working (Q22). Everything under `flatland/envs/travelwise/` is new. Changes visible only to subclasses or type checks:
+
+- `ShortestPathPolicy` no longer subclasses `RailEnvPolicy`, which binds the env to `RailEnv`: it is a `Policy` over
+  `AbstractRailEnv`, to run on `GraphRailEnv` too. An `isinstance(policy, RailEnvPolicy)` check fails; there is none
+  in flatland-rl or flatland-baselines.
+- `ShortestPathPolicy`'s private `_act()` and `_update_agent()` take the observation and the static data instead of
+  the env and the agent: a subclass overriding them breaks; none is known.
+- `GraphRailEnv._grid_resource_map()` (private) is replaced by the public `GraphTransitionMap.grid_to_resource_map()`.
 
 ## Follow-ups (not in this PR)
 
