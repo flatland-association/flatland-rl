@@ -31,7 +31,7 @@ A technical spike of the TravelWise passenger env, in line with the
 | 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
 | 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | d2837293 |
-| 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | open |
+| 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | done |
 | 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | open |
 | 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | open |
 | 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | open |
@@ -99,7 +99,7 @@ are copied into this repo, [`docs/travelwise.md`](../travelwise.md) and
 | query view | global observation of the graph and timetables | All vehicles' future stops, to plan connections. Not built (follow-up). |
 | vehicle policy, auto-pilot (`ShortestPathPolicy`) | auto-pilot; `FlatlandPolicy` | Drives the vehicles inside `PassengerEnv.step()`. |
 | passenger policy (`BoardForTargetPassengerPolicy`) | `PassengerPolicy` | Decides the passengers' actions. Not an itinerary planner yet, which TravelWise expects it to become. |
-| controller, runner (`TravelWisePolicyRunner`) | `TravelWisePolicyRunner` | Holds the passenger policy and steps `PassengerEnv`; the vehicles are stepped by `PassengerEnv`. For now the test loop; a library class in C6.1. |
+| controller, runner (`TravelWisePolicyRunner`) | `TravelWisePolicyRunner` | Holds the passenger policy and steps `PassengerEnv`; the vehicles are stepped by `PassengerEnv`. A library class since C6.1. |
 | static data (`infos["static"]`) | - | What doesn't change during an episode (map, timetables, journeys), handed to the policies in the infos. |
 | milestone, event | milestone; event | Not modelled in this PR. |
 
@@ -120,7 +120,7 @@ Added and modified by this PR (🟩 added, 🟨 modified):
 | `RailEnvStaticData` (`AgentStaticData`) | The rail env's data that doesn't change during an episode (map, routes, timetables), handed to policies once instead of in every observation. Not dynamic state. | 🟩 added: policies get the map and timetables through the infos, without reading the env. |
 | `ShortestPathPolicy` | The auto-pilot: drives each vehicle along a shortest route through its stops, keeping to its timetable at intermediate stops on request. Not for avoiding conflicts with other vehicles. | 🟨 modified: trains can now wait at intermediate stops until their departure, run on the graph, and use the small observation; existing callers keep working unchanged. |
 | Routers (`greedy_grid_route_through_waypoints`, `greedy_graph_route_through_waypoints`) | Find a route through a vehicle's stops on the grid or the graph, shared by the auto-pilot and the predictor so both agree. Not optimal over all alternatives (greedy per stop). | 🟩 added: routing is pluggable, and what the vehicles announce matches how they drive. |
-| `TravelWisePolicyRunner` (planned, C6.1) | Runs a passenger episode: resets the passenger env, then steps it until it is done, each time with the passenger policy's actions on the previous observations and infos. Not for stepping the vehicles (`PassengerEnv` does) and not for recording trajectories. | 🟩 added: a passenger episode runs in one call, without writing the loop. |
+| `TravelWisePolicyRunner` | Runs a passenger episode: resets the passenger env, then steps it until it is done, each time with the passenger policy's actions on the previous observations and infos. Not for stepping the vehicles (`PassengerEnv` does) and not for recording trajectories. | 🟩 added: a passenger episode runs in one call, without writing the loop. |
 | `GraphTransitionMap` (`grid_to_digraph`, `grid_to_resource_map`) | Converts a grid map into the network (graph) view. Not a native graph builder. | 🟨 modified: a graph and its resources can be built from a grid map without creating a `RailEnv` first. |
 
 ## Phase 0: graph-only spike (done)
@@ -228,7 +228,7 @@ Policy:
 
 ### Controller and step
 
-The controller (the data model's `TravelWisePolicyRunner`, for now the test loop, a library class in C6.1) holds the passenger policy and
+The controller (`TravelWisePolicyRunner`, the data model's name, C6.1) holds the passenger policy and
 steps only `PassengerEnv`, with the passengers' actions. `PassengerEnv` holds the rail env and the vehicle policy
 (the auto-pilot), and is the runner of the vehicles: it keeps their last observations and infos, the vehicle policy
 acts on them in the next step, and the passengers' observations are built from them - each state is observed once.
@@ -242,7 +242,7 @@ happens in the step the vehicle arrives.
 
 ```mermaid
 sequenceDiagram
-    participant C as TravelWisePolicyRunner (controller, for now the test loop)
+    participant C as TravelWisePolicyRunner (controller)
     participant PP as BoardForTargetPassengerPolicy (passenger policy)
     participant P as PassengerEnv (passenger env)
     participant VP as ShortestPathPolicy (vehicle policy, auto-pilot)
@@ -313,7 +313,7 @@ Goal: clean up the spike's code before merging - a runner instead of the test lo
 findings 40-46 fixed (C6.2-C6.8). No new feature, and no change to the test traces. Each step is one commit, green
 on its own, with its tests.
 
-### C6.1: the runner as a library class
+### C6.1: the runner as a library class (done)
 
 - Goal: a library user runs a passenger episode in one call instead of copying the test loop; the tests use the
   same runner (finding 16).
@@ -331,9 +331,10 @@ on its own, with its tests.
     `on_episode_step` and `on_episode_end` with `env=passenger_env`, as `PolicyRunner` does; returns
     `total_rewards`.
 - Unchanged: `PassengerEnv` steps the vehicles with the vehicle policy (Controller and step, Q25); no trajectories.
-- Tests: `_run()` becomes a thin wrapper over `runner.reset()`/`runner.step()`, still recording mode changes and
-  rewards per step, with the traces unchanged; a new test checks the rewards `run()` returns and the order of the
-  callbacks.
+- Tests: the test loops (`_run()` in the scenario test, the changes test in the spike test) step the runner
+  (`runner.reset()`/`runner.step()`), still recording mode changes and rewards per step, with the traces unchanged; a
+  new test checks the rewards `run()` returns and the order of the callbacks. A second `run()` on the same passenger
+  env needs C6.2: the vehicle policy keeps its routes across episodes (finding 40); C6.2's test covers it.
 - Docs: `PassengerEnv`'s docstring loop example uses the runner; the controller in the terms, the components and the
   sequence diagram is the runner.
 
@@ -341,7 +342,7 @@ on its own, with its tests.
 
 | ID | Finding | Change | Tests |
 |---|---|---|---|
-| C6.2 | 40 | `ShortestPathPolicy` drops its routes when a new episode starts: at the first observation with `elapsed_steps == 0` (or the env as observation at step 0). Also fixes the failure on `main` for agents not done in the first episode. | The policy reused for two episodes on different lines; both run to the end. |
+| C6.2 | 40 | `ShortestPathPolicy` drops its routes when a new episode starts: at the first observation with `elapsed_steps == 0` (or the env as observation at step 0). Also fixes the failure on `main` for agents not done in the first episode. | The policy reused for two episodes on different lines; both run to the end. `TravelWisePolicyRunner.run()` twice on the same passenger env returns the same total rewards. |
 | C6.3 | 43 | `ShortestPathPolicy` raises when the router routes fewer waypoint groups than given, as `main` asserted. The routers keep returning the groups they reached; the predictor keeps ending its plan there. | An unreachable group raises in `act_many()`. |
 | C6.4 | 41 | `PassengerObservation` gets `earliest_departure`, the earliest departure of the group the passenger waits at (`None` while riding or once arrived); `BoardForTargetPassengerPolicy` reads it instead of searching the journey by `next_stop`. Repeated visits stay tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). | The observation test asserts the field; the scenario traces stay unchanged. |
 | C6.5 | 42 | `PassengerEnv` ignores a `HOP_ON` whose vehicle handle is not one of `rail_env.get_agent_handles()`, and an action that is not an `(action, handle)` pair. | Scripted actions with handles `-1` and out of range, and a bare `PassengerAction`, are ignored. |

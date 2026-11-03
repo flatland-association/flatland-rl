@@ -11,6 +11,7 @@ from flatland.envs.travelwise.passenger_env_action import PassengerAction, Passe
 from flatland.envs.travelwise.passenger_env_observations import PassengerObservation, PassengerObservationBuilder
 from flatland.envs.travelwise.passenger_env_policies import BoardForTargetPassengerPolicy
 from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint
+from flatland.envs.travelwise.travelwise_policy_runner import TravelWisePolicyRunner
 from flatland.envs.travelwise.vehicle_observations import VehicleObservationBuilder
 from tests.flatland.envs.travelwise.test_passenger_env_spike import _make_three_station_rail, _modes
 
@@ -54,21 +55,21 @@ def _make_scenario_env() -> PassengerEnv:
 def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[int, Dict[int, PassengerObservation]], Dict[int, Dict[int, Tuple]],
                                                                          Dict[int, Dict[int, int]], Dict]:
     """
-    Drives the passengers of `passenger_env` with `passenger_policy` (the controller) until the rail env is done:
-    per step, the policy acts on the observations of the previous step. Returns the observations per step (0 after
-    `reset()`), the mode changes per passenger (step -> `passenger_mode[h]`), the non-zero rewards per passenger
+    Drives the passengers of `passenger_env` with `passenger_policy` (`TravelWisePolicyRunner`) until the rail env is
+    done: per step, the policy acts on the observations of the previous step. Returns the observations per step (0
+    after `reset()`), the mode changes per passenger (step -> `passenger_mode[h]`), the non-zero rewards per passenger
     (step -> reward) and the last dones.
     """
     handles = passenger_env.get_agent_handles()
-    observations, infos = passenger_env.reset()
+    runner = TravelWisePolicyRunner(passenger_env, passenger_policy)
+    observations, _ = runner.reset()
     observations_by_step = {0: observations}
     mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in handles}
     previous_modes = {handle: None for handle in handles}
     rewards_by_step: Dict[int, Dict[int, int]] = {handle: {} for handle in handles}
     dones = {}
     while not passenger_env.done:
-        observations, rewards, dones, infos = passenger_env.step(
-            passenger_policy.act_many(handles, observations=[observations[handle] for handle in handles], infos=infos))
+        observations, rewards, dones, _ = runner.step()
         step = passenger_env.rail_env._elapsed_steps
         observations_by_step[step] = observations
         for handle in handles:

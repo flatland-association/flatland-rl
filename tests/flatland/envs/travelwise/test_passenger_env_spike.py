@@ -14,6 +14,7 @@ from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourney
 from flatland.envs.travelwise.passenger_env_observations import PassengerObservationBuilder
 from flatland.envs.travelwise.passenger_env_policies import BoardForTargetPassengerPolicy
+from flatland.envs.travelwise.travelwise_policy_runner import TravelWisePolicyRunner
 from flatland.envs.travelwise.vehicle_observations import VehicleObservationBuilder
 
 # A single straight corridor with three stations A, B, C, evenly spaced 3 cells apart, capped by dead
@@ -222,16 +223,14 @@ def test_multiple_passengers_share_trains():
         for handle, (stops, direction) in enumerate([((a, b, c), EAST), ((a, b), EAST), ((b, c), EAST), ((b, a), WEST), ((c, b), WEST)])}
     passenger_env = PassengerEnv(_make_three_station_graph_env(), vehicle_policy=_vehicle_policy(), passenger_journeys=passenger_journeys,
                                  obs_builder=PassengerObservationBuilder())
-    passenger_policy = BoardForTargetPassengerPolicy()
-    handles = passenger_env.get_agent_handles()
-    observations, infos = passenger_env.reset()
+    runner = TravelWisePolicyRunner(passenger_env, BoardForTargetPassengerPolicy())
+    runner.reset()
 
     mode_changes: Dict[int, Dict[int, Tuple]] = {handle: {} for handle in passenger_journeys}
     previous_modes = {handle: None for handle in passenger_journeys}
     rewards_by_step: Dict[int, Dict[int, int]] = {handle: {} for handle in passenger_journeys}
     while not passenger_env.done:
-        observations, rewards, _, infos = passenger_env.step(
-            passenger_policy.act_many(handles, observations=[observations[handle] for handle in handles], infos=infos))
+        _, rewards, _, _ = runner.step()
         step = passenger_env.rail_env._elapsed_steps
         for handle in passenger_journeys:
             if rewards[handle] != 0:
