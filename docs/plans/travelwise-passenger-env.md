@@ -1,7 +1,8 @@
 # Plan: TravelWise passenger env spike
 
 PR [#528](https://github.com/flatland-association/flatland-rl/pull/528), branch
-`feature/travelwise-passenger-overlway-spike`, based on `main` 3a66efe9. Status of 2026-11-02: all steps done.
+`feature/travelwise-passenger-overlway-spike`, based on `main` 3a66efe9. Status of 2026-11-03: phases 0-5 done, phase 6
+(refactorings and cleanup) planned.
 
 ## Goal
 
@@ -14,6 +15,7 @@ A technical spike of the TravelWise passenger env, in line with the
 - Passengers observe the vehicles' positions and plans and decide themselves when to hop on and off; a controller
   holding the passenger policy steps `PassengerEnv`, which steps the vehicles with their own policy (phase 3).
 - Passengers are rewarded for lateness (phase 4).
+- Refactorings and cleanup: a runner instead of the test loop, and the code review findings fixed (phase 6).
 
 ## Status
 
@@ -29,6 +31,14 @@ A technical spike of the TravelWise passenger env, in line with the
 | 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
 | 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | d2837293 |
+| 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | open |
+| 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | open |
+| 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | open |
+| 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | open |
+| 6 | C6.5 | `fix(envs): ignore passenger actions with unknown vehicle handles.` | open |
+| 6 | C6.6 | `refactor(policies): extract the stop decision and the first projected step into their own methods.` | open |
+| 6 | C6.7 | `refactor(envs): tighten the type hints of the passenger env.` | open |
+| 6 | C6.8 | `perf(envs): compute a vehicle's stops serving a passenger once per observation.` | open |
 
 ## Design principles
 
@@ -63,7 +73,9 @@ Reused concepts:
 Mapped to the TravelWise terms of flatland-book's
 [TravelWise page](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise.md) and
 [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)
-(no glossary there; terms from its environments table, prose and diagram notes). "-": no TravelWise term.
+(no glossary there; terms from its environments table, prose and diagram notes). "-": no TravelWise term. Both pages
+are copied into this repo, [`docs/travelwise.md`](../travelwise.md) and
+[`docs/travelwise/data_model.md`](../travelwise/data_model.md), and updated to the decisions of this plan.
 
 | Term (code) | TravelWise term | Meaning here, and what it is not |
 |---|---|---|
@@ -87,7 +99,7 @@ Mapped to the TravelWise terms of flatland-book's
 | query view | global observation of the graph and timetables | All vehicles' future stops, to plan connections. Not built (follow-up). |
 | vehicle policy, auto-pilot (`ShortestPathPolicy`) | auto-pilot; `FlatlandPolicy` | Drives the vehicles inside `PassengerEnv.step()`. |
 | passenger policy (`BoardForTargetPassengerPolicy`) | `PassengerPolicy` | Decides the passengers' actions. Not an itinerary planner yet, which TravelWise expects it to become. |
-| controller (the test loop) | `TravelWisePolicyRunner` | Holds the passenger policy and steps `PassengerEnv`. No library class yet (follow-up). |
+| controller, runner (`TravelWisePolicyRunner`) | `TravelWisePolicyRunner` | Holds the passenger policy and steps `PassengerEnv`; the vehicles are stepped by `PassengerEnv`. For now the test loop; a library class in C6.1. |
 | static data (`infos["static"]`) | - | What doesn't change during an episode (map, timetables, journeys), handed to the policies in the infos. |
 | milestone, event | milestone; event | Not modelled in this PR. |
 
@@ -108,6 +120,7 @@ Added and modified by this PR (🟩 added, 🟨 modified):
 | `RailEnvStaticData` (`AgentStaticData`) | The rail env's data that doesn't change during an episode (map, routes, timetables), handed to policies once instead of in every observation. Not dynamic state. | 🟩 added: policies get the map and timetables through the infos, without reading the env. |
 | `ShortestPathPolicy` | The auto-pilot: drives each vehicle along a shortest route through its stops, keeping to its timetable at intermediate stops on request. Not for avoiding conflicts with other vehicles. | 🟨 modified: trains can now wait at intermediate stops until their departure, run on the graph, and use the small observation; existing callers keep working unchanged. |
 | Routers (`greedy_grid_route_through_waypoints`, `greedy_graph_route_through_waypoints`) | Find a route through a vehicle's stops on the grid or the graph, shared by the auto-pilot and the predictor so both agree. Not optimal over all alternatives (greedy per stop). | 🟩 added: routing is pluggable, and what the vehicles announce matches how they drive. |
+| `TravelWisePolicyRunner` (planned, C6.1) | Runs a passenger episode: resets the passenger env, then steps it until it is done, each time with the passenger policy's actions on the previous observations and infos. Not for stepping the vehicles (`PassengerEnv` does) and not for recording trajectories. | 🟩 added: a passenger episode runs in one call, without writing the loop. |
 | `GraphTransitionMap` (`grid_to_digraph`, `grid_to_resource_map`) | Converts a grid map into the network (graph) view. Not a native graph builder. | 🟨 modified: a graph and its resources can be built from a grid map without creating a `RailEnv` first. |
 
 ## Phase 0: graph-only spike (done)
@@ -215,7 +228,7 @@ Policy:
 
 ### Controller and step
 
-The controller (the data model's `TravelWisePolicyRunner`, for now the test loop) holds the passenger policy and
+The controller (the data model's `TravelWisePolicyRunner`, for now the test loop, a library class in C6.1) holds the passenger policy and
 steps only `PassengerEnv`, with the passengers' actions. `PassengerEnv` holds the rail env and the vehicle policy
 (the auto-pilot), and is the runner of the vehicles: it keeps their last observations and infos, the vehicle policy
 acts on them in the next step, and the passengers' observations are built from them - each state is observed once.
@@ -294,6 +307,51 @@ sequenceDiagram
 - Arrived and rewards: at the target only.
 - Tests: passenger 0 of the shuttle tests becomes A -> B -> C and arrives again.
 
+## Phase 6: refactorings and cleanup (planned)
+
+Goal: clean up the spike's code before merging - a runner instead of the test loop (C6.1), and the code review
+findings 40-46 fixed (C6.2-C6.8). No new feature, and no change to the test traces. Each step is one commit, green
+on its own, with its tests.
+
+### C6.1: the runner as a library class
+
+- Goal: a library user runs a passenger episode in one call instead of copying the test loop; the tests use the
+  same runner (finding 16).
+- Today the controller is the test helper `_run()` in `tests/flatland/envs/travelwise/test_passenger_env_scenario.py`.
+  `PolicyRunner` is not reused: it is bound to `RailEnv` and trajectories (it loads the env from a trajectory and
+  records actions, positions and rewards per train), and it does not pass the infos (static data, Q19) to the
+  policy. Recording passenger runs in trajectories stays a follow-up (finding 22).
+- `TravelWisePolicyRunner(passenger_env, passenger_policy, callbacks=None)` in
+  `flatland/envs/travelwise/travelwise_policy_runner.py` (Q24):
+  - `reset()`: resets the passenger env, keeps the observations and infos and returns them;
+  - `step()`: the passenger policy's actions on the kept observations and infos, then `passenger_env.step()`; keeps
+    the new observations and infos, sums the rewards per passenger (`total_rewards`), returns
+    `(observations, rewards, dones, infos)`;
+  - `run()`: `reset()`, then `step()` until `passenger_env.done`; calls `FlatlandCallbacks`' `on_episode_start`,
+    `on_episode_step` and `on_episode_end` with `env=passenger_env`, as `PolicyRunner` does; returns
+    `total_rewards`.
+- Unchanged: `PassengerEnv` steps the vehicles with the vehicle policy (Controller and step, Q25); no trajectories.
+- Tests: `_run()` becomes a thin wrapper over `runner.reset()`/`runner.step()`, still recording mode changes and
+  rewards per step, with the traces unchanged; a new test checks the rewards `run()` returns and the order of the
+  callbacks.
+- Docs: `PassengerEnv`'s docstring loop example uses the runner; the controller in the terms, the components and the
+  sequence diagram is the runner.
+
+### C6.2-C6.8: code review findings
+
+| ID | Finding | Change | Tests |
+|---|---|---|---|
+| C6.2 | 40 | `ShortestPathPolicy` drops its routes when a new episode starts: at the first observation with `elapsed_steps == 0` (or the env as observation at step 0). Also fixes the failure on `main` for agents not done in the first episode. | The policy reused for two episodes on different lines; both run to the end. |
+| C6.3 | 43 | `ShortestPathPolicy` raises when the router routes fewer waypoint groups than given, as `main` asserted. The routers keep returning the groups they reached; the predictor keeps ending its plan there. | An unreachable group raises in `act_many()`. |
+| C6.4 | 41 | `PassengerObservation` gets `earliest_departure`, the earliest departure of the group the passenger waits at (`None` while riding or once arrived); `BoardForTargetPassengerPolicy` reads it instead of searching the journey by `next_stop`. Repeated visits stay tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). | The observation test asserts the field; the scenario traces stay unchanged. |
+| C6.5 | 42 | `PassengerEnv` ignores a `HOP_ON` whose vehicle handle is not one of `rail_env.get_agent_handles()`, and an action that is not an `(action, handle)` pair. | Scripted actions with handles `-1` and out of range, and a bare `PassengerAction`, are ignored. |
+| C6.6 | 46 | `ShortestPathPolicy._act()`: the stop decision at intermediate stops moves into its own method. `UnilateralTimetablePredictor._predict()`: the first projected step (off the map, halted, moving) moves into its own method. No behaviour change. | The existing policy and predictor tests. |
+| C6.7 | 44 | `PassengerObservation.mode` is a `PassengerMode`; `BoardForTargetPassengerPolicy.act()` requires `journey` (or drops it, once C6.4 makes it unused); `PassengerEnv.vehicle_observations` is a `Dict[int, VehicleObservation]`. | flake8 and the existing tests. |
+| C6.8 | 45 | `PassengerObservationBuilder.get()` computes `future_stops_serving()` once per vehicle and keeps the non-empty results; `serves()` goes if unused. | The existing observation tests. |
+
+Not in phase 6: the spike's test module keeps its name until the design is stable (finding 15); the other open
+findings are follow-ups.
+
 ## Limitations (`PassengerEnv`'s docstring)
 
 - The changes are given, not planned: no search for connections (comes with the query view). No minimum transfer
@@ -319,7 +377,8 @@ departure there; T1 C -> B; T2 a later A -> B. Passengers:
 
 Tests per phase: predictor unit tests and a single-vehicle exactness test (speeds 1, 1/2, 1/3; departure before and
 after the vehicle is on the map); mode changes and arrivals (phase 2); decisions via the passenger policy and the
-observations (phase 3); rewards and dones (phase 4); changes of trains in the shuttle tests (phase 5).
+observations (phase 3); rewards and dones (phase 4); changes of trains in the shuttle tests (phase 5); the runner and
+the fixes of phase 6.
 
 ## Assumptions
 
@@ -369,7 +428,6 @@ working (Q22). Everything under `flatland/envs/travelwise/` is new. Changes visi
   the passenger must make for their own sake (an activity such as shopping or leisure, maybe with a dwell time).
 - `get_k_shortest_paths()` generalized to graphs, replacing the `networkx` routing.
 - Build the test corridor as a graph natively.
-- `TravelWisePolicyRunner` as a library class instead of the test loop.
 - Rewards: align with Flatland's `DefaultRewards` (no bonus for arriving early) or keep the bonus (phase 4).
 - Waypoint groups are tacitly assumed to be disjoint and visited once (rail env target check, rewards,
   `BoardForTargetPassengerPolicy`, the predictor): validate or support repeated visits, in a separate PR
@@ -416,7 +474,7 @@ Code review findings, PR review comments and TODOs added in the PR, as of 24b61b
 |  | 7 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/528#discussion_r4047955787) | design | medium | `flatland/envs/travelwise_overlay_env.py:136`: refine passenger actions/policy while the agent waits (mode 2). Today it boards the first train heading to its next stop, without a decision of its own. Related to finding 13. [Refined](https://github.com/flatland-association/flatland-rl/pull/528#discussion_r4403466997): add a query view and a passenger policy following it, including hopping on at intermediate stops (see finding 12). Partly addressed in 2711d24d: `BoardForTargetPassengerPolicy` decides `HOP_ON`/`HOP_OFF`/`WAIT` on the passenger's observation, including hopping on and off at intermediate stops; since d2837293 also at changes. Still open: the query view (all vehicles' future stops) - the observation holds per-vehicle predictions only. Same concern: the TODO in `flatland/envs/travelwise/passenger_env.py:119` (plan connections with the query view). | feat(envs): add a query view and a passenger policy following it to PassengerEnv. |
 |  | 8 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/528#discussion_r4047962172) | design | low | `flatland/envs/travelwise_overlay_env.py:24`: use `GraphRailEnv` as the rail env once #542 (edge lengths) is merged. With it, model the `OverlayMode` tuple as a `PassengerConfiguration`; modes 1/2/3 can be derived from it. Since f9e1f98d the tuple is `PassengerMode` and holds the rail env's resource as the passenger's location. A resource is the trains' occupancy unit, not a passenger location: it can be coarser or finer than a stopping point. [Refined](https://github.com/flatland-association/flatland-rl/pull/528#discussion_r4403462760): hold the configuration (entry point) instead of the resource in `PassengerConfiguration`. Partly addressed in f90b72da: the spike and its tests run on `GraphRailEnv` only. The `PassengerConfiguration` holding the entry point is still open (`PassengerMode` still holds the resource), waits for #542 (open). | refactor(envs): use GraphRailEnv and a PassengerConfiguration holding the entry point in PassengerEnv. |
 |  | 15 | PR description (Remaining) | style | low | `tests/test_travelwise_passenger_overlay_spike.py`: the test module is still named a "spike" (`tests/test_passenger_env_spike.py` since c02af811). Promote it (rename, drop the exploratory framing) once the design is stable. Open: still `tests/flatland/envs/travelwise/test_passenger_env_spike.py`. | refactor(envs): promote PassengerEnv spike out of spike status. |
-|  | 16 | data model gap | design | medium | `flatland/envs/passenger_env.py:103`: the [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md) has a `TravelWisePolicyRunner` that steps the rail env with a Flatland policy, then the passenger env with a passenger policy based on the new rail state. `PassengerEnv.step()` steps the rail env itself and updates passengers as a side effect; there is no separate passenger step and no runner. Related to finding 6. Partly addressed by 56fccf5e: `PassengerEnv.step()` now steps the rail env with its `vehicle_policy`, then updates the passengers - the runner lives inside the env. Since 2711d24d the passenger policy runs outside the env, in the controller (for now the test loop), which steps `PassengerEnv` with the passengers' actions; `PassengerEnv` steps the vehicles with their policy by design (the plan's controller and step). Still open: the runner as a library class (the plan's follow-ups). | feat(envs): add a TravelWise policy runner stepping the rail env and then the passenger env. |
+|  | 16 | data model gap | design | medium | `flatland/envs/passenger_env.py:103`: the [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md) has a `TravelWisePolicyRunner` that steps the rail env with a Flatland policy, then the passenger env with a passenger policy based on the new rail state. `PassengerEnv.step()` steps the rail env itself and updates passengers as a side effect; there is no separate passenger step and no runner. Related to finding 6. Partly addressed by 56fccf5e: `PassengerEnv.step()` now steps the rail env with its `vehicle_policy`, then updates the passengers - the runner lives inside the env. Since 2711d24d the passenger policy runs outside the env, in the controller (for now the test loop), which steps `PassengerEnv` with the passengers' actions; `PassengerEnv` steps the vehicles with their policy by design (the plan's controller and step). Still open: the runner as a library class, planned in C6.1. | feat(envs): add a TravelWise policy runner stepping the rail env and then the passenger env. |
 |  | 18 | data model gap | design | low | `flatland/envs/passenger_env.py:20`: the [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md) has `PassengerEnv` inherit from `RailEnv` (travelwise.md: from `InfrastructureEnv`) and refer to a rail env. `PassengerEnv` uses composition only. Either inherit, or drop the inheritance from the data model. Open: composition is kept by design; the plan states the divergence (Terms), the data model is unchanged. | docs(travelwise): model PassengerEnv as composition over the rail env. |
 |  | 19 | data model gap | design | medium | `flatland/envs/passenger_env.py:63-67`: the [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)'s `EnvAgent` has `current()`, `next_configuration()`, `timetable` and `next_stop()`. Passengers are not `EnvAgent`s: their state is in separate per-passenger dicts (`passenger_current_entry_point`, ...), and the next stop is only the internal `_passenger_stop_index`. Partly addressed in 2711d24d: `PassengerEnv.next_stop()` is public. Still open: the per-passenger dicts. | refactor(envs): give passengers an EnvAgent-like API with current/next configuration and next stop. |
 |  | 20 | data model gap | design | medium | `flatland/envs/passenger_env.py:20`: the [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)'s `RailEnv` has `effects_generator`, `events_generator` and `register()`/`deregister()` for event topics, which `PassengerEnv` would inherit. The spike has none of them on the passenger side, so passenger milestones and events can't be raised. Open. | feat(envs): raise passenger events in PassengerEnv. |
@@ -438,13 +496,13 @@ Code review findings, PR review comments and TODOs added in the PR, as of 24b61b
 |  | 37 | TODO | design | low | `flatland/envs/travelwise/passenger_env.py:83`: passenger rewards can be positive (an early arrival), unlike `DefaultRewards`. Align with them or keep the bonus once the TravelWise rewards are settled. Open. | fix(envs): align the passenger rewards with Flatland's DefaultRewards. |
 |  | 38 | TODO | correctness | medium | `flatland/envs/travelwise/passenger_env.py:121-122`: a passenger may board a vehicle where it doesn't stop (passing through), and hop off at any step. Board and alight only where the vehicle stops. Open. | feat(envs): let passengers board and alight only where the vehicle stops. |
 |  | 39 | TODO | test-coverage | low | `flatland/envs/travelwise/passenger_env.py:125`: no test covers a vehicle stopping at another alternative of the passenger's next stop group (the passenger stays on board), as every group on the test corridor has one entry point. Open. | test(envs): cover a passenger missing its stop at another alternative of a group. |
-|  | 40 | code review | bug | medium | `flatland/envs/rail_env_policies.py:119,147`: `ShortestPathPolicy` routes each agent once and keeps the route for good. Reused for a second episode (another line), it follows the first episode's routes and fails with "off its route". On `main` the policy failed as well (`IndexError`), but only for agents not done in the first episode, as it dropped the routes of agents once done. Reset the routes when a new episode starts (e.g. `elapsed_steps == 0`), and cover a policy reused across two episodes in a test. Open. | fix(policies): reset ShortestPathPolicy's routes when a new episode starts. |
-|  | 41 | code review | bug | medium | `flatland/envs/travelwise/passenger_env_policies.py:48`: `_may_depart()` finds the group the passenger waits at by `journey.waypoints.index(next_stop) - 1`, the first match. On a journey visiting a group twice (A -> B -> A), waiting at B it gets index -1, the target's `None`, and boards before its earliest departure at B. `PassengerEnv` itself counts the stop index correctly. Hand the earliest departure (or the stop index) out in the observation instead. Repeated visits are tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). Open. | fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation. |
-|  | 42 | code review | robustness | low | `flatland/envs/travelwise/passenger_env.py:233,262,266`: the docstring says invalid actions are ignored. A `HOP_ON` with a negative vehicle handle indexes from the end (`-1` boards the last vehicle, if at the passenger's resource); a handle out of range raises `IndexError`; an action that is not an `(action, handle)` tuple fails to unpack. Check the handle against `rail_env.get_agent_handles()` and ignore malformed actions. Open. | fix(envs): ignore passenger actions with unknown vehicle handles. |
-|  | 43 | code review | robustness | medium | `flatland/envs/rail_env_policies.py:154`: with an unreachable waypoint group, the router returns a truncated route, and `ShortestPathPolicy` follows it silently: it moves forward past its end, and the last routed intermediate stop counts as the target (`_stop_indices[1:-1]`), so it is not stopped at. On `main` the policy asserted that a path was found. Fail (or warn) when fewer groups are routed than given, and cover it in a test. Open. | fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups. |
-|  | 44 | code review | type-hints | low | `flatland/envs/travelwise/passenger_env_observations.py:29`: `PassengerObservation.mode` spells out `PassengerMode` again. `flatland/envs/travelwise/passenger_env_policies.py:31`: `act(journey: PassengerJourney = None)` is not `Optional`, and `_may_depart()` fails on `None` - make `journey` required. `flatland/envs/travelwise/passenger_env.py:153`: `vehicle_observations: Dict[int, object]` can be `Dict[int, VehicleObservation]`. Open. | refactor(envs): tighten the type hints of the passenger env. |
-|  | 45 | code review | performance | low | `flatland/envs/travelwise/passenger_env_observations.py:57-58`: per passenger and vehicle, `get()` computes `future_stops_serving()` twice: once in `serves()`, once for the value. Compute it once and keep non-empty results. Open. | perf(envs): compute a vehicle's stops serving a passenger once per observation. |
-|  | 46 | code review | style | low | Two long methods: `ShortestPathPolicy._act()` (`flatland/envs/rail_env_policies.py:167`) mixes stopping at intermediate stops with steering; extract the stop decision into its own method. `UnilateralTimetablePredictor._predict()` (`flatland/envs/travelwise/timetable_predictor.py:109`) mixes the first step (off map, halted, moving) with the loop over the route; extract the first step. The greedy loops of the grid and graph routers duplicate each other, tracked in [#553](https://github.com/flatland-association/flatland-rl/issues/553). Open. | refactor(policies): extract the stop decision and the first projected step into their own methods. |
+|  | 40 | code review | bug | medium | `flatland/envs/rail_env_policies.py:119,147`: `ShortestPathPolicy` routes each agent once and keeps the route for good. Reused for a second episode (another line), it follows the first episode's routes and fails with "off its route". On `main` the policy failed as well (`IndexError`), but only for agents not done in the first episode, as it dropped the routes of agents once done. Reset the routes when a new episode starts (e.g. `elapsed_steps == 0`), and cover a policy reused across two episodes in a test. Open: planned in C6.2. | fix(policies): reset ShortestPathPolicy's routes when a new episode starts. |
+|  | 41 | code review | bug | medium | `flatland/envs/travelwise/passenger_env_policies.py:48`: `_may_depart()` finds the group the passenger waits at by `journey.waypoints.index(next_stop) - 1`, the first match. On a journey visiting a group twice (A -> B -> A), waiting at B it gets index -1, the target's `None`, and boards before its earliest departure at B. `PassengerEnv` itself counts the stop index correctly. Hand the earliest departure (or the stop index) out in the observation instead. Repeated visits are tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). Open: planned in C6.4. | fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation. |
+|  | 42 | code review | robustness | low | `flatland/envs/travelwise/passenger_env.py:233,262,266`: the docstring says invalid actions are ignored. A `HOP_ON` with a negative vehicle handle indexes from the end (`-1` boards the last vehicle, if at the passenger's resource); a handle out of range raises `IndexError`; an action that is not an `(action, handle)` tuple fails to unpack. Check the handle against `rail_env.get_agent_handles()` and ignore malformed actions. Open: planned in C6.5. | fix(envs): ignore passenger actions with unknown vehicle handles. |
+|  | 43 | code review | robustness | medium | `flatland/envs/rail_env_policies.py:154`: with an unreachable waypoint group, the router returns a truncated route, and `ShortestPathPolicy` follows it silently: it moves forward past its end, and the last routed intermediate stop counts as the target (`_stop_indices[1:-1]`), so it is not stopped at. On `main` the policy asserted that a path was found. Fail (or warn) when fewer groups are routed than given, and cover it in a test. Open: planned in C6.3. | fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups. |
+|  | 44 | code review | type-hints | low | `flatland/envs/travelwise/passenger_env_observations.py:29`: `PassengerObservation.mode` spells out `PassengerMode` again. `flatland/envs/travelwise/passenger_env_policies.py:31`: `act(journey: PassengerJourney = None)` is not `Optional`, and `_may_depart()` fails on `None` - make `journey` required. `flatland/envs/travelwise/passenger_env.py:153`: `vehicle_observations: Dict[int, object]` can be `Dict[int, VehicleObservation]`. Open: planned in C6.7. | refactor(envs): tighten the type hints of the passenger env. |
+|  | 45 | code review | performance | low | `flatland/envs/travelwise/passenger_env_observations.py:57-58`: per passenger and vehicle, `get()` computes `future_stops_serving()` twice: once in `serves()`, once for the value. Compute it once and keep non-empty results. Open: planned in C6.8. | perf(envs): compute a vehicle's stops serving a passenger once per observation. |
+|  | 46 | code review | style | low | Two long methods: `ShortestPathPolicy._act()` (`flatland/envs/rail_env_policies.py:167`) mixes stopping at intermediate stops with steering; extract the stop decision into its own method. `UnilateralTimetablePredictor._predict()` (`flatland/envs/travelwise/timetable_predictor.py:109`) mixes the first step (off map, halted, moving) with the loop over the route; extract the first step. The greedy loops of the grid and graph routers duplicate each other, tracked in [#553](https://github.com/flatland-association/flatland-rl/issues/553). Open: planned in C6.6. | refactor(policies): extract the stop decision and the first projected step into their own methods. |
 
 Issue references: the PR description links no issue, so the PR closes none. The `main..HEAD` diff references #527
 and #553 (TODOs, see above); the PR closes neither.
@@ -495,3 +553,7 @@ and #553 (TODOs, see above); the PR closes neither.
 - Q23 Boarding before the earliest departure: the env does not enforce it (the env is dull, the policy decides); the
   rewards penalize it per step boarded too early, `earliest departure - boarding step`, on the same scale as the
   lateness reward, so a policy gains nothing by ignoring the constraint.
+- Q24 The runner is `TravelWisePolicyRunner`, the data model's name, in `flatland/envs/travelwise/`, for the
+  passenger env only; a generic runner for any `Environment` waits for a second env needing it (decided 2026-11-03).
+- Q25 The runner does not step the vehicles: `PassengerEnv` keeps stepping them with the vehicle policy (Controller
+  and step), unlike the data model's rail env step before the passenger env step (decided 2026-11-03).
