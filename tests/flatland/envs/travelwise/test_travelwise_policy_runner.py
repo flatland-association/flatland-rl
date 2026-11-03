@@ -37,3 +37,12 @@ def test_travelwise_policy_runner_runs_an_episode():
     assert passenger_env.done
     assert callbacks.calls == ["start 0"] + [f"step {step}" for step in range(1, 19)] + ["end 18"]
 
+
+def test_travelwise_policy_runner_runs_a_second_episode():
+    """
+    A second `run()` starts a new episode with the same policies: the same total rewards, not summed up with the first
+    episode's - the vehicle policy routes its vehicles anew.
+    """
+    runner = TravelWisePolicyRunner(_make_scenario_env(), BoardForTargetPassengerPolicy())
+
+    assert runner.run() == runner.run() == {0: 2, 1: -2, 2: 2, 3: 2, 4: 3, 5: -25}

@@ -48,6 +48,33 @@ def test_shortest_path_policy_with_intermediate_targets(gen_movies=False):
         assert np.isclose(trajectory.trains_arrived_lookup()["success_rate"], 2 / 7)
 
 
+def _run_positions(env: RailEnv, policy: ShortestPathPolicy) -> Dict[int, list]:
+    """ Runs an episode of `env` with `policy` from `reset()` to done; returns each agent's entry point per step. """
+    observations, _ = env.reset()
+    handles = env.get_agent_handles()
+    positions = {handle: [] for handle in handles}
+    done = False
+    while not done:
+        observations, _, dones, _ = env.step(policy.act_many(handles, [observations[handle] for handle in handles]))
+        done = dones["__all__"]
+        for handle in handles:
+            positions[handle].append(env.agents[handle].current_entry_point)
+    return positions
+
+
+def test_shortest_path_policy_reused_for_a_second_episode():
+    """
+    A policy reused for a second episode on another line routes its agents anew: the second episode runs as with a
+    fresh policy.
+    """
+    policy = ShortestPathPolicy()
+    _run_positions(env_generator_legacy(obs_builder_object=FullEnvObservation(), seed=42)[0], policy)
+
+    second_episode = _run_positions(env_generator_legacy(obs_builder_object=FullEnvObservation(), seed=43)[0], policy)
+
+    assert second_episode == _run_positions(env_generator_legacy(obs_builder_object=FullEnvObservation(), seed=43)[0], ShortestPathPolicy())
+
+
 # A straight corridor of 9 cells with dead ends, stations A, B, C on the eastbound track.
 CORRIDOR_LENGTH = 9
 A, B, C = ((0, 1), 1), ((0, 4), 1), ((0, 7), 1)
