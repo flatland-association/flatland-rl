@@ -71,13 +71,11 @@ class PassengerEnv(Environment):
     The passengers decide themselves when to board and when to leave a vehicle, based on what they observe of the
     vehicles: `reset()`/`step()` return the passengers' observations, built by `obs_builder` (e.g.
     `PassengerObservationBuilder`, observing the vehicles' positions and plans in `vehicle_observations`), and infos
-    with the env's static data (`infos["static"]`, a `PassengerEnvStaticData`). A controller acts on them with a
-    passenger policy, e.g. `BoardForTargetPassengerPolicy`, and passes the actions to the next `step()`:
+    with the env's static data (`infos["static"]`, a `PassengerEnvStaticData`). A controller, `TravelWisePolicyRunner`,
+    acts on them with a passenger policy, e.g. `BoardForTargetPassengerPolicy`, and passes the actions to the next
+    `step()`:
 
-        observations, infos = passenger_env.reset()
-        while not passenger_env.done:
-            observations, _, _, infos = passenger_env.step(
-                passenger_policy.act_many(handles, observations=[observations[h] for h in handles], infos=infos))
+        total_rewards = TravelWisePolicyRunner(passenger_env, passenger_policy).run()
 
     Rewards per passenger, in the step they occur (0 otherwise), integers that can be positive (an early arrival) -
     unlike Flatland's `DefaultRewards`, which never reward arriving early (TODO align with them or keep the bonus
