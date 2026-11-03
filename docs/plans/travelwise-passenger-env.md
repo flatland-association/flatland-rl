@@ -31,8 +31,8 @@ A technical spike of the TravelWise passenger env, in line with the
 | 3 | C3.1 | `feat(envs): let passengers hop on and off via actions, decided by a passenger policy on their observations.` | 2711d24d |
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
 | 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | d2837293 |
-| 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | done |
-| 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | open |
+| 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | b5324b2b |
+| 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | done |
 | 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | open |
 | 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | open |
 | 6 | C6.5 | `fix(envs): ignore passenger actions with unknown vehicle handles.` | open |

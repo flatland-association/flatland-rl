@@ -79,7 +79,7 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
     (`RailEnvStaticData`) in the infos passed to `act_many()` (`infos["static"]`). Backwards compatible: with
     `FullEnvObservation` (the env itself as observation), it derives both from the env.
 
-    Each agent follows its route from its initial entry point, as computed once by the injected `router`, e.g.
+    Each agent follows its route from its initial entry point, as computed once per episode by the injected `router`, e.g.
     `greedy_grid_route_through_waypoints()` for `RailEnv` or `greedy_graph_route_through_waypoints()` for
     `GraphRailEnv`. Both are greedy, see there. With `router=None` (default), the grid router picks per waypoint group
     the first reachable alternative without `serve_intermediate_stops` (the previous behaviour), and the nearest one
@@ -141,10 +141,11 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
 
     def _update_agent(self, observation: ShortestPathObservation, static: RailEnvStaticData):
         """
-        Update `_routes`, `_stop_indices` and `_route_index`.
+        Update `_routes`, `_stop_indices` and `_route_index`. An agent is routed at its first observation of an
+        episode (elapsed steps 0, after the env's `reset()`), so the policy can be reused for several episodes.
         """
         handle = observation.handle
-        if handle not in self._routes:
+        if handle not in self._routes or observation.elapsed_steps == 0:
             agent = static.agents[handle]
             # TODO https://github.com/flatland-association/flatland-rl/issues/527 drop the conversion once EnvAgent.waypoints is also of EntryPointT
             #  instead of Waypoint.
