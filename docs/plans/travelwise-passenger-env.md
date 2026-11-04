@@ -34,7 +34,7 @@ A technical spike of the TravelWise passenger env, in line with the
 | 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | b5324b2b |
 | 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | d19bbc88 |
 | 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | 673953fd |
-| 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | open |
+| 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | 6835da3e |
 | 6 | C6.5 | `fix(envs): ignore passenger actions with unknown vehicle handles.` | open |
 | 6 | C6.6 | `refactor(policies): extract the stop decision and the first projected step into their own methods.` | open |
 | 6 | C6.7 | `refactor(envs): tighten the type hints of the passenger env.` | open |
@@ -512,37 +512,37 @@ and #553 (TODOs, see above); the PR closes neither.
 
 ## Decisions
 
-- Q1 Routing: a shared greedy `networkx` router over `rail.g` (nearest alternative per group), injected into
+- ✅ Q1 Routing: a shared greedy `networkx` router over `rail.g` (nearest alternative per group), injected into
   `ShortestPathPolicy` and the predictor, so both pick the same entry points.
-- Q2 Existing shuttle tests keep their setup; passenger 0 (A -> C) never arrives with single rides, and becomes
+- ✅ Q2 Existing shuttle tests keep their setup; passenger 0 (A -> C) never arrives with single rides, and becomes
   A -> B -> C in phase 5.
-- Q3 Boarding only from the passenger's earliest departure on - since Q23 the passenger policy's decision, not
+- ✅ Q3 Boarding only from the passenger's earliest departure on - since Q23 the passenger policy's decision, not
   checked by the env.
-- Q5 Layout: `flatland/envs/travelwise/` with `passenger_env.py`, `passenger_env_action.py`,
+- ✅ Q5 Layout: `flatland/envs/travelwise/` with `passenger_env.py`, `passenger_env_action.py`,
   `passenger_env_observations.py`, `passenger_env_policies.py`, `timetable_predictor.py`, following
   `rail_env.py`/`rail_env_action.py`/`rail_env_policies.py`; no `PassengerEnvPolicy` base class.
-- Q6 An arrival in the step the rail env finishes is rewarded as an arrival.
-- Q7 The test timetable generator takes a departure time per stop.
-- Q8 The late passenger is the A -> B passenger on T0.
-- Q9 The passenger without a vehicle is C -> A.
-- Q10 Boarding rule: a vehicle's future stop group shares an entry point with the passenger's next stop.
-- Q11 Observations are empty after `reset()` and hold only dynamic data; static data via the infos (Q19).
-- Q12 Data shared by all agents (positions and plans) is one immutable object referenced by every observation: with
+- ✅ Q6 An arrival in the step the rail env finishes is rewarded as an arrival.
+- ✅ Q7 The test timetable generator takes a departure time per stop.
+- ✅ Q8 The late passenger is the A -> B passenger on T0.
+- ✅ Q9 The passenger without a vehicle is C -> A.
+- ✅ Q10 Boarding rule: a vehicle's future stop group shares an entry point with the passenger's next stop.
+- ✅ Q11 Observations are empty after `reset()` and hold only dynamic data; static data via the infos (Q19).
+- ✅ Q12 Data shared by all agents (positions and plans) is one immutable object referenced by every observation: with
   n vehicles, a copy per vehicle would be n * n plans.
-- Q13 The plan is the projection, per entry point with stop marks; the timetable is static data.
-- Q14 The plans are the env's prediction (same router as the vehicle policy), not the policy's intent.
-- Q15 Passengers are off the map after `reset()`.
-- Q16 The vehicles' dedicated observation comes first, as C3.0.
-- Q17 `VehicleObservationBuilder` lives in `flatland/envs/travelwise/` for now.
-- Q18 The vehicle's state (`done`, entry points, `is_cell_exit`) is dynamic: it goes into the observation. The
+- ✅ Q13 The plan is the projection, per entry point with stop marks; the timetable is static data.
+- ✅ Q14 The plans are the env's prediction (same router as the vehicle policy), not the policy's intent.
+- ✅ Q15 Passengers are off the map after `reset()`.
+- ✅ Q16 The vehicles' dedicated observation comes first, as C3.0.
+- ✅ Q17 `VehicleObservationBuilder` lives in `flatland/envs/travelwise/` for now.
+- ✅ Q18 The vehicle's state (`done`, entry points, `is_cell_exit`) is dynamic: it goes into the observation. The
   elapsed steps belong into the infos, but the rail env's infos do not have them, and adding them is a rail env
   change: for now they go into the observation too (`ShortestPathObservation.elapsed_steps`). TODO: move them to the
   infos with the rail env change of Q20.
-- Q19 Static data reaches the policies through the infos, as a reference to one immutable object; runners pass the
+- ✅ Q19 Static data reaches the policies through the infos, as a reference to one immutable object; runners pass the
   infos to `act_many()` through `**kwargs`. Follows RLlib (infos keyed by agent id, `"__common__"` for data shared
   by all agents; the old API's `Policy.compute_actions(..., info_batch=...)`) and Flatland's own decision data in the
   infos (`action_required`); gymnasium describes infos as auxiliary.
-- Q20 Who puts the vehicles' static data into the infos: Flatland's infos are `infos[key][handle]` (RLlib:
+- ✅ Q20 Who puts the vehicles' static data into the infos: Flatland's infos are `infos[key][handle]` (RLlib:
   `infos[handle][key]`), and `PolicyRunner` persists `{key: infos[key][handle]}` per agent and step into the
   trajectory - static data in the rail env's infos would be persisted every step, and the map does not serialize.
   Decided: the rail env's infos stay unchanged in this PR. `PassengerEnv`, the vehicles' runner, adds the vehicles'
@@ -550,13 +550,13 @@ and #553 (TODOs, see above); the PR closes neither.
   connector), and hands out the passengers' static data in its own infos. Other runners (`PolicyRunner`) keep
   using `ShortestPathPolicy` with `FullEnvObservation` until the rail env hands out its static data (TODO, a core
   change with trajectory persistence skipping it).
-- Q22 Backwards compatibility of `ShortestPathPolicy` with `FullEnvObservation` (the env as observation): one
+- ✅ Q22 Backwards compatibility of `ShortestPathPolicy` with `FullEnvObservation` (the env as observation): one
   helper - if an observation is the env, `act_many()` first derives the `ShortestPathObservation` and the static data
   from it, then runs the same code as for the new observation; one code path for the routing and stop logic.
-- Q23 Boarding before the earliest departure: the env does not enforce it (the env is dull, the policy decides); the
+- ✅ Q23 Boarding before the earliest departure: the env does not enforce it (the env is dull, the policy decides); the
   rewards penalize it per step boarded too early, `earliest departure - boarding step`, on the same scale as the
   lateness reward, so a policy gains nothing by ignoring the constraint.
-- Q24 The runner is `TravelWisePolicyRunner`, the data model's name, in `flatland/envs/travelwise/`, for the
+- ✅ Q24 The runner is `TravelWisePolicyRunner`, the data model's name, in `flatland/envs/travelwise/`, for the
   passenger env only; a generic runner for any `Environment` waits for a second env needing it (decided 2026-11-03).
-- Q25 The runner does not step the vehicles: `PassengerEnv` keeps stepping them with the vehicle policy (Controller
+- ✅ Q25 The runner does not step the vehicles: `PassengerEnv` keeps stepping them with the vehicle policy (Controller
   and step), unlike the data model's rail env step before the passenger env step (decided 2026-11-03).
