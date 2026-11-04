@@ -28,6 +28,9 @@ Technically, it implements the `Environment` interface for the passengers and ho
 The passenger env steps the rail env itself, with an "auto-pilot" Flatland policy for the vehicles
 (`ShortestPathPolicy`): in each step it first applies the passengers' actions, then steps the rail env, and the riding
 passengers move with their vehicles. So passengers and vehicles decide on the same state.
+The auto-pilot drives each vehicle along a route: every entry point the vehicle passes, in order (on the grid each
+cell entered, with its direction; on the graph each node), through one alternative of each waypoint group (aka.
+`LineFlexibleStoppingPoint`) of its line. The waypoints are a few entries of the route.
 The Travel Wise policy runner holds the passenger policy and steps the passenger env only, with the passengers'
 actions based on their observations of the previous step.
 Agents controlled in rail env are vehicles, agents controlled in the passenger env are passengers.
