@@ -83,7 +83,8 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
     `greedy_grid_route_through_waypoints()` for `RailEnv` or `greedy_graph_route_through_waypoints()` for
     `GraphRailEnv`. Both are greedy, see there. With `router=None` (default), the grid router picks per waypoint group
     the first reachable alternative without `serve_intermediate_stops` (the previous behaviour), and the nearest one
-    with it (a new mode, so nothing to stay compatible with).
+    with it (a new mode, so nothing to stay compatible with). If the router cannot reach a waypoint group, the policy
+    fails at the agent's first observation.
 
     Without `serve_intermediate_stops` (default, the previous behaviour), the route goes straight to the target,
     ignoring intermediate stops and their earliest departures.
@@ -117,7 +118,11 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
         self.router = router
         self.serve_intermediate_stops = serve_intermediate_stops
         self._routes: Dict[int, List[EntryPointT]] = {}
-        # per agent, route index of each routed waypoint group's alternative picked, starting with the initial entry point
+        # per agent, route index of each routed waypoint group's alternative picked, starting with the initial entry point:
+        # e.g. for the timetable's waypoints [[p0], [q2, p2], [p4]] (incl. the initial group, of size one, and the target
+        # group), the route [p0, p1, p2, p3, p4] through the waypoint groups after the initial one, [[q2, p2], [p4]], gives
+        # [0, 2, 4] (p2 picked), and without `serve_intermediate_stops` the route [p0, p1, p4] through the target group
+        # [[p4]] alone gives [0, 2]
         self._stop_indices: Dict[int, List[int]] = {}
         # per agent, route index of its current entry point - only moves forward, so a route visiting an
         # entry point twice is followed in order
@@ -153,6 +158,8 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
             if not self.serve_intermediate_stops:
                 waypoint_groups = waypoint_groups[-1:]
             route, stop_indices = self.router(static.rail, agent.initial_entry_point, waypoint_groups)
+            assert len(stop_indices) == len(waypoint_groups), \
+                f"Agent {handle} cannot be routed from {route[-1]} through {waypoint_groups[len(stop_indices)]}, waypoint groups {waypoint_groups}."
             self._routes[handle] = route
             self._stop_indices[handle] = [0] + stop_indices
             self._route_index[handle] = 0

@@ -195,6 +195,17 @@ def test_shortest_path_policy_ignores_intermediate_stop_by_default(observation_b
     assert total_reward == -1
 
 
+@pytest.mark.parametrize("graph", [False, True])
+def test_shortest_path_policy_fails_on_an_unreachable_waypoint_group(graph):
+    """
+    An intermediate stop heading north at B, where the corridor has no northbound track: the router cannot reach it,
+    and the policy fails at the agent's first observation instead of following the route as far as it was routed.
+    """
+    env = _corridor_env(graph, [[A], [((0, 4), 0)], [C]], earliest_departures=[2, 10, None], latest_arrivals=[None, 10, 40], speed=1.0)
+    with pytest.raises(AssertionError, match="Agent 0 cannot be routed"):
+        _run(env, _policy(graph, serve_intermediate_stops=True))
+
+
 @pytest.mark.parametrize("router, expected_stop", [
     # default router with serve_intermediate_stops: the nearest alternative
     (None, B),
