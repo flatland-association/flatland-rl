@@ -178,28 +178,48 @@ def test_passenger_env_scenario_observations():
     (A -> C) and 1 (A -> B): off map after `reset()`; at step 2, waiting at A, with T0 to board - stopping at C at 13
     for 0, at B at 5 for 1; riding T0 from step 3 on; at step 5, T0 stopping at B, 1's target; at step 6, 1 has
     arrived. Passenger 3 (A -> B, earliest departure 4) observes T0 at A at step 2 as a vehicle to board too: whether
-    to board before the earliest departure is its policy's decision.
+    to board before the earliest departure is its policy's decision. Each passenger observes the index of its journey's
+    group it is at or last left: its origin (0) until it arrives at its target (1).
     """
     passenger_env = _make_scenario_env()
     observations_by_step, _, _, _ = _run(passenger_env, BoardForTargetPassengerPolicy())
     cell = GraphTransitionMap.grid_entry_point_to_graph_resource
 
-    assert observations_by_step[0][1] == PassengerObservation(elapsed_steps=0, mode=(None, None), next_stop=[B_EAST], vehicles_to_board={},
-                                                              vehicle_stops_at_next_stop=False)
-    assert observations_by_step[2][0] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[C_EAST],
+    assert observations_by_step[0][1] == PassengerObservation(elapsed_steps=0, mode=(None, None), stop_index=0,
+                                                              vehicles_to_board={}, vehicle_stops_at_next_stop=False)
+    assert observations_by_step[2][0] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), stop_index=0,
                                                               vehicles_to_board={0: [ProjectedEntryPoint(C_EAST, 13, 2)]},
                                                               vehicle_stops_at_next_stop=False)
-    assert observations_by_step[2][1] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[B_EAST],
+    assert observations_by_step[2][1] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), stop_index=0,
                                                               vehicles_to_board={0: [ProjectedEntryPoint(B_EAST, 5, 1)]},
                                                               vehicle_stops_at_next_stop=False)
-    assert observations_by_step[2][3] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), next_stop=[B_EAST],
+    assert observations_by_step[2][3] == PassengerObservation(elapsed_steps=2, mode=(cell(*A), None), stop_index=0,
                                                               vehicles_to_board={0: [ProjectedEntryPoint(B_EAST, 5, 1)]},
                                                               vehicle_stops_at_next_stop=False)
-    assert observations_by_step[3][1] == PassengerObservation(elapsed_steps=3, mode=(cell(0, 2), 0), next_stop=[B_EAST], vehicles_to_board={},
-                                                              vehicle_stops_at_next_stop=False)
-    assert observations_by_step[5][0] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), next_stop=[C_EAST], vehicles_to_board={},
-                                                              vehicle_stops_at_next_stop=False)
-    assert observations_by_step[5][1] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), next_stop=[B_EAST], vehicles_to_board={},
-                                                              vehicle_stops_at_next_stop=True)
-    assert observations_by_step[6][1] == PassengerObservation(elapsed_steps=6, mode=(cell(*B), None), next_stop=None, vehicles_to_board={},
-                                                              vehicle_stops_at_next_stop=False)
+    assert observations_by_step[3][1] == PassengerObservation(elapsed_steps=3, mode=(cell(0, 2), 0), stop_index=0,
+                                                              vehicles_to_board={}, vehicle_stops_at_next_stop=False)
+    assert observations_by_step[5][0] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), stop_index=0,
+                                                              vehicles_to_board={}, vehicle_stops_at_next_stop=False)
+    assert observations_by_step[5][1] == PassengerObservation(elapsed_steps=5, mode=(cell(*B), 0), stop_index=0,
+                                                              vehicles_to_board={}, vehicle_stops_at_next_stop=True)
+    assert observations_by_step[6][1] == PassengerObservation(elapsed_steps=6, mode=(cell(*B), None), stop_index=1,
+                                                              vehicles_to_board={}, vehicle_stops_at_next_stop=False)
+
+
+def test_board_for_target_passenger_policy_waits_for_the_earliest_departure_at_its_stop_index():
+    """
+    The policy boards not before the earliest departure of the group at its observed stop index, also on a journey
+    visiting a group twice: on A -> B -> A, waiting at B (stop index 1, earliest departure 10) for A. Boarding applies
+    in the step after the one observed.
+    """
+    cell = GraphTransitionMap.grid_entry_point_to_graph_resource
+    journey = PassengerJourney(waypoints=[[A_EAST], [B_EAST], [A_EAST]], waypoints_earliest_departure=[1, 10, None],
+                               waypoints_latest_arrival=[None, 8, 30])
+
+    def observation(elapsed_steps: int) -> PassengerObservation:
+        return PassengerObservation(elapsed_steps=elapsed_steps, mode=(cell(*B), None), stop_index=1,
+                                    vehicles_to_board={1: [ProjectedEntryPoint(A_EAST, 20, 2)]}, vehicle_stops_at_next_stop=False)
+
+    policy = BoardForTargetPassengerPolicy()
+    assert policy.act(observation(8), journey=journey) == (PassengerAction.WAIT, None)
+    assert policy.act(observation(9), journey=journey) == (PassengerAction.HOP_ON, 1)

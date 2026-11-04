@@ -214,6 +214,13 @@ class PassengerEnv(Environment):
         dones = {handle: self.passenger_arrival_time[handle] is not None for handle in self.passenger_journeys}
         return self._passenger_obs, self._rewards, dict(dones, __all__=self._rail_env_done), {"static": self._static}
 
+    def stop_index(self, passenger_handle: int) -> int:
+        """
+        The index of the journey's waypoint group the passenger is at or last left (`PassengerJourney.waypoints`): its
+        origin until it has completed its first ride, the target's index once arrived. Counts repeated visits of a group.
+        """
+        return self._passenger_stop_index[passenger_handle]
+
     def next_stop(self, passenger_handle: int) -> Optional[List[EntryPointT]]:
         """ The waypoint group the passenger travels to next (a change or its target) - `None` once arrived. """
         waypoints = self.passenger_journeys[passenger_handle].waypoints
