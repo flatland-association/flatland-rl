@@ -3,6 +3,7 @@ from fractions import Fraction
 import numpy as np
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.env_generation.env_generator import _sparse_rail_generator_legacy
 from flatland.envs.agent_utils import _sanitize_entry_point
 from flatland.envs.line_generators import sparse_line_generator
@@ -97,7 +98,7 @@ def test_multi_speed_init():
         # design: distance is None when off map -- the agent is already on the map here, so mark
         # the fresh speed_counter as having just entered (distance 0), not off-map (None).
         sc = env.agents[i_agent].speed_counter
-        sc.set(speed=sc.speed, distance=Fraction(0))
+        sc.set(speed=sc.speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)
         old_pos.append(_position(env.agents[i_agent]))
         print(_position(env.agents[i_agent]))
     # Run episode

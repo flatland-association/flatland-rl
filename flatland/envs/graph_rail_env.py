@@ -41,6 +41,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `GraphRailEnv`'s own default).
         """
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
+        GraphRailEnv._grid_edge_lengths(rail_env, g)
         resource_map = GraphRailEnv._grid_resource_map(rail_env, g)
         agent_waypoints, agent_speeds = GraphRailEnv._grid_agent_waypoints_and_speeds(rail_env)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
@@ -79,6 +80,23 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             else:
                 resource_map[n] = str((r, c))
         return resource_map
+
+    @staticmethod
+    def _grid_edge_lengths(rail_env: RailEnv, g: nx.DiGraph) -> None:
+        """
+        Copies `rail_env.rail.edge_lengths` onto the `length` attribute of the corresponding edges of the
+        grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length,
+        by design - see `GraphTransitionMap.grid_to_digraph`).
+        Every key is an edge of `g`, as `GridTransitionMap.edge_lengths` only accepts edges of the grid.
+        """
+        if not rail_env.rail.edge_lengths:
+            return
+        gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
+        for (((r, c), d), ((r2, c2), d2)), length in rail_env.rail.edge_lengths.items():
+            u = gctgc(r, c, d)
+            v = gctgc(r2, c2, d2)
+            assert g.has_edge(u, v), (u, v)
+            g.edges[u, v]["length"] = length
 
     @staticmethod
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
@@ -123,9 +141,10 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         Parameters
         ----------
         g: nx.DiGraph
-            the rail topology, with `actions`/`straight` edge attributes and an optional
+            the rail topology, with `actions` edge attributes and an optional
             `prohibited_actions` node attribute - see `GraphTransitionMap.grid_to_digraph` for the
-            shape expected by `RailEnv.step()`.
+            shape expected by `RailEnv.step()`. An optional `length` edge attribute (`int` or `Fraction`) gives the edge's length
+            (see `GraphTransitionMap.edge_length()`), read when the env is constructed - must not change afterwards.
         resource_map: Dict[str, str]
             maps each node in `g` to the resource (occupancy unit) used for conflict detection.
         agent_waypoints: Dict[int, List[List[str]]]

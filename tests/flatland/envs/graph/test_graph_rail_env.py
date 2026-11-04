@@ -28,6 +28,7 @@ def test_graph_transition_map_from_with_random_policy(seed, malfunction_interval
     # across parametrize cases or between the grid and graph env (see GraphRailEnv.from_rail_env).
     grid_env, _, _ = env_generator(seed=seed, malfunction_interval=malfunction_interval, rewards=rewards_cls())
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed, rewards=rewards_cls())
+    graph_env.rail._assert_actions_partitioned()
     assert random_state_to_hashablestate(grid_env.np_random) == random_state_to_hashablestate(graph_env.np_random)
 
     for r in range(grid_env.height):
@@ -102,6 +103,7 @@ def test_apply_timetable_to_agents_waypoints_well_formed(seed):
     (e.g. not a direction blocked by a dead end) may be included."""
     grid_env, _, _ = env_generator(seed=seed)
     graph_env: GraphRailEnv = GraphRailEnv.from_rail_env(grid_env, DummyObservationBuilder(), seed=seed)
+    graph_env.rail._assert_actions_partitioned()
 
     for agent in graph_env.agents:
         assert all(isinstance(wps, list) for wps in agent.waypoints)

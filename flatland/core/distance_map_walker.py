@@ -1,12 +1,17 @@
+import math
 from collections import deque
-from typing import List, Generic, Set, TypeVar
+from typing import Dict, List, Generic, Set, TypeVar
 
 from flatland.core.entry_point_distance_map import EntryPointDistanceMap
-from flatland.core.transition_map import TransitionMap
+from flatland.core.transition_map import Distance, TransitionMap
 
 EntryPointDistanceMapT = TypeVar('EntryPointDistanceMapT', bound=EntryPointDistanceMap)
 TransitionMapT = TypeVar('TransitionMapT', bound=TransitionMap)
 EntryPointT = TypeVar('EntryPointT')
+
+
+def _unit_edge_length(u, v) -> int:
+    return 1
 
 
 class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPointT]):
@@ -43,37 +48,42 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
             the set of all entry points backwards-reachable from any of the target entry points (i.e.
             those a distance was filled in for).
         """
+        # plain integer unit lengths if the rail has no edge lengths (faster than Fraction arithmetic)
+        self._edge_length = rail.edge_length if rail.has_edge_lengths() else _unit_edge_length
         reachable_entry_points = set()
         for target_entry_point in target_entry_points:
-            reachable_entry_points |= self._walk_to_target(rail, target_entry_point)
+            reachable_entry_points.update(self._walk_to_target(rail, target_entry_point))
         return reachable_entry_points
 
     def _walk_to_target(self, rail: TransitionMapT, target_entry_point: EntryPointT
-                        ) -> Set[EntryPointT]:
+                        ) -> Dict[EntryPointT, Distance]:
         """
         Backward BFS from a single target entry point to every entry point that can reach it, filling in
-        the minimum distances.
+        the minimum distances. Returns the reached entry points with their distance to the target entry point.
         """
         self.distance_map._set_distance(target_entry_point, target_entry_point, 0)
+
+        # entry point -> minimum distance found so far by this walk. With edge lengths, an entry point may first be
+        # reached on a longer path. It is then queued again with the shorter distance. Without edge lengths, every edge
+        # adds 1 and the queue is processed in order of distance, so the first distance found is the minimum. The distance
+        # map's own distances are not used for this: they may still hold a previous walk's distances, e.g. when
+        # re-computed. These would never be improved upon.
+        visited = {target_entry_point: 0}
 
         # Fill in the (up to) 4 neighboring nodes
         # direction is the direction of movement, meaning that at least one possible orientation of an agent
         # in cell (row,col) allows a movement in direction `direction'
-        nodes_queue = deque(self._get_and_update_neighbors(rail, target_entry_point, 0, target_entry_point))
+        nodes_queue = deque(self._get_and_update_neighbors(rail, target_entry_point, 0, target_entry_point, visited))
 
         # BFS from target `position' to all the reachable nodes in the grid
-        # Stop the search if the target position is re-visited, in any direction
-        visited = {target_entry_point}
-
         while nodes_queue:
             entry_point, distance = nodes_queue.popleft()
 
-            if entry_point not in visited:
-                visited.add(entry_point)
-
+            # skip if a shorter distance has been found since queued (and the entry point re-queued with it)
+            if distance == visited[entry_point]:
                 # From the list of possible neighbors that have at least a path to the current node, only keep those
                 # whose new orientation in the current cell would allow a transition to the entry point
-                valid_neighbors = self._get_and_update_neighbors(rail, entry_point, distance, target_entry_point)
+                valid_neighbors = self._get_and_update_neighbors(rail, entry_point, distance, target_entry_point, visited)
 
                 for n in valid_neighbors:
                     nodes_queue.append(n)
@@ -81,17 +91,20 @@ class DistanceMapWalker(Generic[EntryPointDistanceMapT, TransitionMapT, EntryPoi
         return visited
 
     def _get_and_update_neighbors(self, rail: TransitionMapT, entry_point: EntryPointT,
-                                  current_distance: int, target_entry_point: EntryPointT):
+                                  current_distance: Distance, target_entry_point: EntryPointT,
+                                  visited: Dict[EntryPointT, Distance]):
         """
         Utility function used by _walk_to_target to perform a BFS walk over the rail, filling in the
         minimum distances to a single target entry point.
         """
         neighbors = []
         for predecessor_entry_point in rail.get_predecessor_entry_points(entry_point):
-            new_distance = min(
-                self.distance_map._get_distance(predecessor_entry_point, target_entry_point),
-                current_distance + 1
-            )
-            neighbors.append((predecessor_entry_point, new_distance))
-            self.distance_map._set_distance(predecessor_entry_point, target_entry_point, new_distance)
+            new_distance = current_distance + self._edge_length(predecessor_entry_point, entry_point)
+            if new_distance < visited.get(predecessor_entry_point, math.inf):
+                visited[predecessor_entry_point] = new_distance
+                neighbors.append((predecessor_entry_point, new_distance))
+                self.distance_map._set_distance(predecessor_entry_point, target_entry_point, min(
+                    self.distance_map._get_distance(predecessor_entry_point, target_entry_point),
+                    new_distance
+                ))
         return neighbors

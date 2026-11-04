@@ -19,7 +19,7 @@ def get_positions(g: nx.DiGraph, delta=0.2):
 
     Returns
     -------
-    Dict[GridNode, Tuple[int,int]]
+    Dict[GraphNode, Tuple[int,int]]
         The position dict
     """
     offsets = {
