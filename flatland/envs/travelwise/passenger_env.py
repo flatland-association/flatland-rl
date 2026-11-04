@@ -1,4 +1,6 @@
+import warnings
 from dataclasses import dataclass
+from numbers import Integral
 from types import MappingProxyType
 from typing import Dict, List, Mapping, NamedTuple, Optional, Tuple
 
@@ -187,7 +189,7 @@ class PassengerEnv(Environment):
         Parameters
         ----------
         action_dict : Dict[int, PassengerActionT]
-            Per passenger handle, its action - a missing passenger waits. Invalid actions are ignored.
+            Per passenger handle, its action - a missing passenger waits. Infeasible actions are ignored, malformed ones with a warning.
 
         Returns
         -------
@@ -258,22 +260,44 @@ class PassengerEnv(Environment):
     def _update_passengers(self, actions: Dict[int, PassengerActionT]):
         """
         Applies the passengers' actions, before the rail env steps, on the state they observed - see the class docstring
-        for the 3 modes/transitions. Invalid actions are ignored. Also writes the resulting entry point straight into
-        `passenger_current_entry_point`, and, the step a passenger arrives at its target (the step being executed), its
-        `passenger_target_entry_point`/`passenger_arrival_time` - mirroring what `AbstractRailEnv.handle_done_state()`
-        sets on an `EnvAgent` reaching its target.
+        for the 3 modes/transitions. Infeasible actions are ignored, malformed ones with a warning (`_is_well_formed()`).
+        Also writes the resulting entry point straight into `passenger_current_entry_point`, and, the step a passenger
+        arrives at its target (the step being executed), its `passenger_target_entry_point`/`passenger_arrival_time` -
+        mirroring what `AbstractRailEnv.handle_done_state()` sets on an `EnvAgent` reaching its target.
         """
         for handle in self.passenger_journeys:
-            action, vehicle_handle = actions.get(handle, (PassengerAction.WAIT, None))
+            action = actions.get(handle, (PassengerAction.WAIT, None))
+            if not self._is_well_formed(handle, action):
+                continue
+            action, vehicle_handle = action
             riding_handle = self.passenger_mode[handle][1]
             if riding_handle is not None and action == PassengerAction.HOP_OFF:
                 self._alight(handle, self.rail_env.agents[riding_handle].current_entry_point, self.rail_env._elapsed_steps + 1)
-            elif riding_handle is None and action == PassengerAction.HOP_ON and vehicle_handle is not None and self.can_hop_on(vehicle_handle, handle):
+            elif riding_handle is None and action == PassengerAction.HOP_ON and self.can_hop_on(vehicle_handle, handle):
                 self._set_passenger(handle, self.rail_env.agents[vehicle_handle].current_entry_point, vehicle_handle)
                 earliest_departure = self.passenger_journeys[handle].waypoints_earliest_departure[self._passenger_stop_index[handle]]
                 boarding_step = self.rail_env._elapsed_steps + 1
                 if earliest_departure is not None and boarding_step < earliest_departure:
                     self._rewards[handle] -= earliest_departure - boarding_step
+
+    def _is_well_formed(self, handle: int, action) -> bool:
+        """
+        Whether the passenger's action is an `(action, vehicle handle)` pair, with a vehicle handle of the rail env for
+        `HOP_ON`. Otherwise warns: the passenger policy has a bug (e.g. an RL policy's action space not bounding the
+        vehicle handle), and the passenger waits. The rail env's handles are its agents' indices `0, ..., n - 1`, so
+        the vehicle handle is checked by range: used as an index, a negative handle would board a vehicle counted from
+        the end, and one out of range would raise. A well-formed action can still be infeasible, e.g. hopping on a
+        vehicle elsewhere: such actions are part of the passengers' decisions and ignored without a warning.
+        """
+        if not isinstance(action, tuple) or len(action) != 2:
+            warnings.warn(f"Passenger {handle}: action {action!r} is not an (action, vehicle handle) pair, ignored.")
+            return False
+        action, vehicle_handle = action
+        if action == PassengerAction.HOP_ON and not (isinstance(vehicle_handle, Integral) and 0 <= vehicle_handle < self.rail_env.get_num_agents()):
+            warnings.warn(f"Passenger {handle}: HOP_ON vehicle handle {vehicle_handle!r} is not one of the rail env's "
+                          f"0, ..., {self.rail_env.get_num_agents() - 1}, ignored.")
+            return False
+        return True
 
     def _alight(self, handle: int, entry_point: EntryPointT, step: int):
         """

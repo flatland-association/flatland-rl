@@ -1,5 +1,8 @@
 from typing import Dict, List, Tuple
 
+import numpy as np
+import pytest
+
 from flatland.core.policy import Policy
 from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoints
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
@@ -170,6 +173,24 @@ def test_passenger_env_scenario_ignores_invalid_actions_and_hops_off_anywhere():
     assert rewards == {0: {18: -25}, 1: {6: -2}, 2: {13: 2}, 3: {3: -1, 6: 14}, 4: {17: 3}, 5: {18: -25}}
     assert dones == {0: False, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
     assert passenger_env.passenger_current_entry_point[0] == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
+
+
+@pytest.mark.parametrize("action", [(PassengerAction.HOP_ON, -3), (PassengerAction.HOP_ON, 3), (PassengerAction.HOP_ON, "0"), PassengerAction.HOP_ON,
+                                    (PassengerAction.HOP_ON, np.int64(-3))],
+                         ids=["negative handle", "handle out of range", "handle not an int", "not a pair", "negative numpy handle"])
+def test_passenger_env_scenario_warns_on_unknown_vehicle_handles_and_malformed_actions(action):
+    """
+    Passenger 2 waits at B, where T0 (vehicle 0 of 3) stands from step 5 to 10. An invalid action at step 6 is ignored -
+    a negative handle (-3, T0 if indexed from the end), one out of range, one that is not an int, or an action that is
+    not an `(action, vehicle handle)` pair - with a warning, and the passenger boards T0 one step later, by its policy.
+    """
+    passenger_env = _make_scenario_env()
+    with pytest.warns(UserWarning, match="Passenger 2: .*, ignored."):
+        _, mode_changes, rewards, _ = _run(passenger_env, _ScriptedPassengerPolicy({(2, 6): action}))
+
+    assert mode_changes[2] == _modes({1: (B, None), 7: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
+    assert passenger_env.passenger_arrival_time[2] == 13
+    assert rewards[2] == {13: 2}
 
 
 def test_passenger_env_scenario_observations():

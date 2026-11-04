@@ -35,7 +35,7 @@ A technical spike of the TravelWise passenger env, in line with the
 | 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | d19bbc88 |
 | 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | 673953fd |
 | 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | 6835da3e |
-| 6 | C6.5 | `fix(envs): ignore passenger actions with unknown vehicle handles.` | open |
+| 6 | C6.5 | `fix(envs): warn on and ignore malformed passenger actions and unknown vehicle handles.` | open |
 | 6 | C6.6 | `refactor(policies): extract the stop decision and the first projected step into their own methods.` | open |
 | 6 | C6.7 | `refactor(envs): tighten the type hints of the passenger env.` | open |
 | 6 | C6.8 | `perf(envs): compute a vehicle's stops serving a passenger once per observation.` | open |
@@ -347,7 +347,7 @@ on its own, with its tests.
 | C6.2 | 40 | `ShortestPathPolicy` drops its routes when a new episode starts: at the first observation with `elapsed_steps == 0` (or the env as observation at step 0). Also fixes the failure on `main` for agents not done in the first episode. | The policy reused for two episodes on different lines; both run to the end. `TravelWisePolicyRunner.run()` twice on the same passenger env returns the same total rewards. |
 | C6.3 | 43 | `ShortestPathPolicy` raises when the router routes fewer waypoint groups than given, as `main` asserted. The routers keep returning the groups they reached; the predictor keeps ending its plan there. | An unreachable group raises in `act_many()`. |
 | C6.4 | 41 | `PassengerObservation` gets `stop_index` (`PassengerEnv.stop_index()`), the index of the journey's group the passenger is at or last left, in place of `next_stop`: the observation keeps only dynamic data (Q11), the groups and their times are static data in the infos. `BoardForTargetPassengerPolicy` reads the earliest departure and the next stop from the journey at that index, instead of searching the journey by `next_stop`. Repeated visits stay tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). | The observation test asserts the field; the scenario traces stay unchanged. A policy test on a journey A -> B -> A boards at B not before B's earliest departure (with the search by `next_stop`, it boards too early). |
-| C6.5 | 42 | `PassengerEnv` ignores a `HOP_ON` whose vehicle handle is not one of `rail_env.get_agent_handles()`, and an action that is not an `(action, handle)` pair. | Scripted actions with handles `-1` and out of range, and a bare `PassengerAction`, are ignored. |
+| C6.5 | 42 | `PassengerEnv` ignores, with a warning, an action that is not an `(action, handle)` pair, and a `HOP_ON` whose vehicle handle is not one of the rail env's. `BoardForTargetPassengerPolicy` never sends such actions (it boards only vehicles from its observation); they come from other policies, e.g. an RL policy whose action space does not bound the vehicle handle, so the env warns instead of hiding the bug. The rail env's handles are its agents' indices `0, ..., n - 1` (`AbstractRailEnv.get_agent_handles()`), so the handle is checked by range (an integer, numpy integers included, with `0 <= handle < get_num_agents()`): a negative handle no longer boards a vehicle counted from the end, one out of range no longer raises. Infeasible but well-formed actions (e.g. hopping on a vehicle elsewhere) stay ignored without a warning. | A passenger waiting at a vehicle gets a warning for scripted actions with a negative handle, one out of range, one not an integer, a negative numpy integer, and a bare `PassengerAction`, and boards one step later by its policy. The other tests run without the warning. |
 | C6.6 | 46 | `ShortestPathPolicy._act()`: the stop decision at intermediate stops moves into its own method. `UnilateralTimetablePredictor._predict()`: the first projected step (off the map, halted, moving) moves into its own method. No behaviour change. | The existing policy and predictor tests. |
 | C6.7 | 44 | `PassengerObservation.mode` is a `PassengerMode`; `BoardForTargetPassengerPolicy.act()` requires `journey`; `PassengerEnv.vehicle_observations` is a `Dict[int, VehicleObservation]`. | flake8 and the existing tests. |
 | C6.8 | 45 | `PassengerObservationBuilder.get()` computes `future_stops_serving()` once per vehicle and keeps the non-empty results; `serves()` goes if unused. | The existing observation tests. |
@@ -435,6 +435,9 @@ working (Q22). Everything under `flatland/envs/travelwise/` is new. Changes visi
 - Waypoint groups are tacitly assumed to be disjoint and visited once (rail env target check, rewards,
   `BoardForTargetPassengerPolicy`, the predictor): validate or support repeated visits, in a separate PR
   ([#557](https://github.com/flatland-association/flatland-rl/issues/557)).
+- An RL wrapper for the passenger env (e.g. for RLlib or gymnasium): its action space bounds the vehicle handle of
+  `HOP_ON` to the rail env's `0, ..., n - 1`, so an RL policy cannot send the unknown handles that `PassengerEnv` now
+  warns on and ignores (C6.5).
 
 ## Findings
 
