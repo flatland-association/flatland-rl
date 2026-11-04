@@ -46,7 +46,7 @@ class EffectsGenerator(Generic[EnvironmentT]):
         """
         if self._on_episode_start is None:
             return env
-        return self._on_episode_start(*args, **kwargs)
+        return self._on_episode_start(env, *args, **kwargs)
 
     def on_episode_step_start(self, env: EnvironmentT, *args, **kwargs) -> EnvironmentT:
         """
@@ -68,7 +68,7 @@ class EffectsGenerator(Generic[EnvironmentT]):
         """
         if self._on_episode_step_start is None:
             return env
-        return self._on_episode_step_start(*args, **kwargs)
+        return self._on_episode_step_start(env, *args, **kwargs)
 
     def on_episode_step_end(self, env: EnvironmentT, *args, **kwargs) -> EnvironmentT:
         """
@@ -90,7 +90,7 @@ class EffectsGenerator(Generic[EnvironmentT]):
         """
         if self._on_episode_step_end is None:
             return env
-        return self._on_episode_step_end(*args, **kwargs)
+        return self._on_episode_step_end(env, *args, **kwargs)
 
     @property
     def fullname(self):
