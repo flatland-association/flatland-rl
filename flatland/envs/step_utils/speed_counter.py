@@ -81,6 +81,11 @@ class SpeedCounter:
     Tracks an agent's speed and within-cell distance as Fractions of SEGMENT_LENGTH. speed/distance are
     None while off map (see set()) and become concrete Fractions once the agent enters the map.
 
+    On map, distance is in [0, SEGMENT_LENGTH): an agent never sits on the exit of its cell - a crossing wraps
+    into the next cell, and a denied crossing keeps the pre-step distance. The only exception is an agent parked
+    at its target (remove_agents_at_target=False, then DONE), capped at exactly SEGMENT_LENGTH
+    (distance_without_crossing).
+
     Four static, lru_cache'd formulas compute the expected post-step speed/distance from explicit
     pre-step inputs - used by RailEnv.step() to compute candidate speed/distance (which set() is then
     called with directly), and again by its post-step invariant checks
@@ -95,7 +100,10 @@ class SpeedCounter:
     | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
     | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
     | `distance_after_crossing` | `(distance + pre_speed) % SEGMENT_LENGTH` | cell boundary crossed |
-    | `distance_without_crossing` | `min(distance + pre_speed, SEGMENT_LENGTH)` | cell boundary not crossed |
+    | `distance_without_crossing` | `min(distance + pre_speed, SEGMENT_LENGTH)` | target reached, not removed |
+
+    A denied crossing (invalid action or resource_check) uses none of them: the agent doesn't move, its
+    distance stays at the pre-step value and its speed is set to 0 (see RailEnv.step()'s (13)).
     """
 
     def __init__(self, max_speed: float, speed: Optional[float] = None):
@@ -109,13 +117,13 @@ class SpeedCounter:
         self._distance: Optional[Fraction] = None
         self._is_cell_entry = False
 
-    def set(self, speed: Optional[Fraction], distance: Optional[Fraction]) -> None:
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], crossed: bool = False) -> None:
         """
         Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
-        candidate_speed/candidate_distance (accepted), or the discarded-candidate formulas
-        (distance_without_crossing/Fraction(0)) when the candidate was rejected. Unlike the old step(),
-        this does not itself derive distance from a crossing decision - the caller has already made
-        that decision; set() only tracks the resulting state and derives is_cell_entry from it.
+        candidate_speed/candidate_distance (accepted), or the pre-step distance with speed Fraction(0)
+        when the candidate was rejected. Unlike the old step(), this does not itself derive distance from
+        a crossing decision - the caller has already made that decision and passes it as `crossed`;
+        set() only tracks the resulting state and derives is_cell_entry from it.
 
         Parameters
         ----------
@@ -124,25 +132,15 @@ class SpeedCounter:
         distance : Optional[Fraction]
             The new within-cell distance, or None while off map. Both speed and distance are None
             together, or both concrete Fractions together - never mixed (see the class docstring).
+        crossed : bool
+            Whether the agent crossed into a new cell with this update (on map before and after).
         """
         # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
-        # bootstrapped onto the map (previous distance None, new distance concrete), or the pre-step
-        # distance/speed pair implies a crossing was attempted (old_distance + old_speed reaches or
-        # exceeds SEGMENT_LENGTH) *and* the new distance shows it landed inside the fresh cell rather
-        # than banked at the exit (new_distance < SEGMENT_LENGTH). A plain "new < old" comparison isn't
-        # enough on its own: at speed == SEGMENT_LENGTH (e.g. max_speed=1), distance_after_crossing's
-        # modulo wraps exactly back to the pre-step value (0 -> 0), so "new < old" and even "new <= old"
-        # both misclassify it - the latter also misfires on a stopped/banked agent whose distance is
-        # unchanged for an unrelated reason (denied at the boundary, or genuinely at rest). Old_speed
-        # here is this call's *pre*-step self._speed - it isn't overwritten until after this block.
-        self._is_cell_entry = (
-            (self._distance is None and distance is not None)
-            or (
-                self._distance is not None and distance is not None and self._speed is not None
-                and self._distance + self._speed >= SEGMENT_LENGTH
-                and distance < SEGMENT_LENGTH
-            )
-        )
+        # bootstrapped onto the map (previous distance None, new distance concrete), or the caller says it
+        # crossed. It can't be derived from the distances alone: at speed == SEGMENT_LENGTH (e.g.
+        # max_speed=1), distance_after_crossing wraps exactly back to the pre-step value (0 -> 0), and a
+        # denied crossing keeps the pre-step distance (with speed 0), just like an agent at rest.
+        self._is_cell_entry = distance is not None and (self._distance is None or crossed)
         self._distance = distance
         # design: speed and distance are None together while off map - force speed None whenever
         # distance is None, regardless of what was passed, so a caller's off-map placeholder speed
@@ -192,7 +190,7 @@ class SpeedCounter:
         Physical motivation: braking is the operator's own controlled deceleration, not an instant
         halt - braking_delta models the brake's fixed deceleration rate per step, the mirror image of
         acceleration_delta. This is the operator's deliberate choice (distinct from being force-stopped
-        by an invalid action or a resource_check denial, see distance_without_crossing below) - a train
+        by an invalid action or a resource_check denial, see RailEnv.step()'s (13)) - a train
         already at or very near the cell boundary when STOP_MOVING is given can still complete an
         already-in-flight crossing on the very step it comes to a stop (see distance_after_crossing).
         """
@@ -218,8 +216,8 @@ class SpeedCounter:
 
         Never returns exactly SEGMENT_LENGTH: a modulo result is always in [0, SEGMENT_LENGTH) by
         construction - physically, having actually crossed into the new cell, the train is now somewhere
-        inside it, never still sitting exactly on the boundary it just crossed (that "sitting on the
-        boundary" case is distance_without_crossing below, where the crossing does *not* happen).
+        inside it, never still sitting exactly on the boundary it just crossed (the only agent sitting on
+        the boundary is one parked at its target, see distance_without_crossing below).
         """
         if distance is None:
             return None
@@ -229,33 +227,16 @@ class SpeedCounter:
     @lru_cache()
     def distance_without_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction]) -> Optional[Fraction]:
         """
-        Expected distance when this step's cell-boundary crossing did not complete (denied by an
-        invalid action or resource_check, or parked at/beyond a just-reached target): pre-step distance
-        plus pre-step speed, capped at the cell boundary rather than wrapping into a new cell. None (off
-        map) in, None out.
+        Expected distance of an agent parked at/beyond a just-reached target (remove_agents_at_target=False,
+        and DONE afterwards): pre-step distance plus pre-step speed, capped at the cell boundary rather than
+        wrapping into a new cell, since there is no further cell to wrap into. None (off map) in, None out.
 
-        Physical motivation: the train's momentum this step still carries it right up to the cell
-        boundary - it just isn't credited with crossing it, so it's parked exactly there instead of
-        past it. This is real physical distance actually covered this step (pre_speed is always > 0 in
-        every case below - a MOVING agent's pre-step speed can never be 0).
-        This formula is deliberately the *same* for an invalid action and a resource_check denial - both
-        are the environment overriding the operator's request against its will, physically identical
-        (a real, momentum-carrying train braked to a stop right at the boundary), so both get the same
-        consequence. A granted STOP_MOVING never lands here on its own: if resource_check grants a
-        in-flight crossing (is_cell_exit() already true pre-step), the crossing completes via
-        distance_after_crossing above regardless of the action - STOP_MOVING cannot itself hold a
-        crossing back once resource_check has approved it.
+        The result equals exactly SEGMENT_LENGTH once the target is reached, as reaching it requires
+        `is_cell_exit()` pre-step (distance + speed at least SEGMENT_LENGTH).
 
-        The result equals exactly SEGMENT_LENGTH (never something less) in each of the following cases -
-        all three only ever apply once `is_cell_exit()` was already true pre-step (i.e. distance at SEGMENT_LENGTH):
-        - an invalid action denies the crossing attempt at the cell boundary (e.g. going straight
-          through a symmetric switch, which only allows turning) - the operator's own mistaken
-          instruction, physically a real train braking hard right at the switch rather than derailing;
-        - resource_check denies the crossing to another agent (a real motion conflict - the track ahead
-          is physically occupied, so the train brakes to a stop just short of it, same as an emergency
-          stop signal);
-        - the agent reaches its target this step (remove_agents_at_target=False) - parked at the target,
-          capped since there is no further cell to wrap into.
+        Not used for a denied crossing (invalid action or resource_check): there the agent doesn't move at
+        all - its distance stays at the pre-step value (see RailEnv.step()'s (13)), so a restart after the
+        denial covers the remaining distance to the boundary, and no distance is dropped when it crosses.
         """
         if distance is None:
             return None

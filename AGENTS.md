@@ -378,7 +378,7 @@ how `step()`, `TrainStateMachine`, or `MotionCheck` internally arrive at that ou
   the fact itself ("the leader is exactly at its own boundary ... so that crossing is already in flight and still
   completes"), not as a note about the test author's process.
 - See `test_platoon_all_stop_together_once_leader_stops_and_stays_stopped` and
-  `test_agent_blocked_at_boundary_cannot_accelerate_nor_advance_into_stopped_neighbor` in
+  `test_agent_blocked_behind_cannot_accelerate_nor_advance_into_stopped_neighbor` in
   `tests/test_flatland_envs_rail_env.py` for the target shape.
 
 ### Other top-level dirs
