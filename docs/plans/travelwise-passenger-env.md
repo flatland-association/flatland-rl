@@ -32,8 +32,8 @@ A technical spike of the TravelWise passenger env, in line with the
 | 4 | C4.1 | `feat(envs): reward passengers for lateness and report per-passenger dones.` | 93a6de3f |
 | 5 | C5.1 | `feat(envs): support passenger journeys with changes of trains at given stops.` | d2837293 |
 | 6 | C6.1 | `feat(envs): add a TravelWisePolicyRunner running a passenger env episode with a passenger policy.` | b5324b2b |
-| 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | done |
-| 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | open |
+| 6 | C6.2 | `fix(policies): reset ShortestPathPolicy's routes when a new episode starts.` | d19bbc88 |
+| 6 | C6.3 | `fix(policies): fail when ShortestPathPolicy cannot route through all waypoint groups.` | 673953fd |
 | 6 | C6.4 | `fix(envs): let the passenger policy read the earliest departure of the group it waits at from its observation.` | open |
 | 6 | C6.5 | `fix(envs): ignore passenger actions with unknown vehicle handles.` | open |
 | 6 | C6.6 | `refactor(policies): extract the stop decision and the first projected step into their own methods.` | open |
@@ -87,6 +87,7 @@ are copied into this repo, [`docs/travelwise.md`](../travelwise.md) and
 | stop (one entry point) | `StoppingPoint` (Haltepunkt) | A station track where a vehicle stops. Not a station: stations are not modelled. |
 | waypoint group (`waypoints[i]`) | `LineFlexibleStoppingPoint` | Alternative stops of which a vehicle uses one, or at which a passenger boards, changes or arrives. |
 | line and timetable (`EnvAgent.waypoints`, `Timetable`) | line; timetable | A vehicle's stops, and its earliest departure and latest arrival per stop. |
+| route (list of `EntryPointT`, from a `Router`) | - | Every entry point a vehicle passes, in order (on the grid each cell entered, with its direction; on the graph each node), from its initial entry point through one alternative per waypoint group. Neighbouring entries are connected by a transition. The waypoints are the few entries the stop indices point to. Found greedily per group, so not the shortest over all alternatives. Not its line (the stops only), not a passenger's itinerary. |
 | journey (`PassengerJourney`) | journey (origin and destination); partly initial itinerary | Origin, given changes and target, with earliest departure and latest arrival per group. More than TravelWise's journey (the changes and times), less than an itinerary (no vehicles chosen). |
 | change (intermediate group of a journey) | transfer | Where the passenger gets off and waits for the next vehicle. Given, not planned; no minimum transfer time. Its meaning may change with the query view (see follow-ups). |
 | ride (two consecutive groups of a journey) | leg | Part of a journey on one vehicle. |

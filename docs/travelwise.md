@@ -22,6 +22,7 @@ The Flatland framework represents a systemic view of a given infrastructure map 
 | Itinerary | The itinerary describes the planned route (space and time) for a given journey. The initial itinerary might be updated during the scenario according to a given metric (default: shortest time). |
 | Transfer  | Each change of mode of transportation is a transfer, even if the mode is the same, e.g. from one train to another.                                                                               |
 | Leg       | The part of a journey on one vehicle, between two transfers (in flatland-rl: a ride).                                                                                                             |
+| Route     | In flatland-rl, a vehicle's route is every entry point it passes, in order (on the grid each cell entered, with its direction; on the graph each node), from its initial entry point through one alternative per stop. Its stops are a few of these entries. Not the passenger's itinerary. |
 
 ## High-Level Description
 
