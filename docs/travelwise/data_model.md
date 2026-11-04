@@ -150,7 +150,7 @@ classDiagram
         }
         class PassengerObservation {
             mode
-            next_stop
+            stop_index
             vehicles_to_board
             vehicle_stops_at_next_stop
         }

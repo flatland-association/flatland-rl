@@ -211,7 +211,8 @@ Observations:
   the predictor and builds, per vehicle, its `ShortestPathObservation` plus a reference to the shared, immutable
   positions and plans of all vehicles (Q12, Q14) - a plan is a tuple of `ProjectedEntryPoint`s.
 - `PassengerObservation` (`flatland/envs/travelwise/passenger_env_observations.py`): the elapsed steps (for now, as
-  for the vehicles, Q18), the passenger's mode and next stop, the vehicles it can hop on now that serve it, with their future stops serving its next stop, and whether
+  for the vehicles, Q18), the passenger's mode and stop index (the journey's group it is at or last left; its next
+  stop is the group after it, read from the journey in the static data, Q11), the vehicles it can hop on now that serve it, with their future stops serving its next stop, and whether
   the vehicle it rides stops at its next stop now. Built by `PassengerObservationBuilder` from the vehicle
   observations `PassengerEnv` keeps, and from the journeys and timetables in the env. No position and no plan after
   `reset()`: passengers and vehicles are off the map (Q11, Q15).
@@ -345,10 +346,10 @@ on its own, with its tests.
 |---|---|---|---|
 | C6.2 | 40 | `ShortestPathPolicy` drops its routes when a new episode starts: at the first observation with `elapsed_steps == 0` (or the env as observation at step 0). Also fixes the failure on `main` for agents not done in the first episode. | The policy reused for two episodes on different lines; both run to the end. `TravelWisePolicyRunner.run()` twice on the same passenger env returns the same total rewards. |
 | C6.3 | 43 | `ShortestPathPolicy` raises when the router routes fewer waypoint groups than given, as `main` asserted. The routers keep returning the groups they reached; the predictor keeps ending its plan there. | An unreachable group raises in `act_many()`. |
-| C6.4 | 41 | `PassengerObservation` gets `earliest_departure`, the earliest departure of the group the passenger waits at (`None` while riding or once arrived); `BoardForTargetPassengerPolicy` reads it instead of searching the journey by `next_stop`. Repeated visits stay tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). | The observation test asserts the field; the scenario traces stay unchanged. |
+| C6.4 | 41 | `PassengerObservation` gets `stop_index` (`PassengerEnv.stop_index()`), the index of the journey's group the passenger is at or last left, in place of `next_stop`: the observation keeps only dynamic data (Q11), the groups and their times are static data in the infos. `BoardForTargetPassengerPolicy` reads the earliest departure and the next stop from the journey at that index, instead of searching the journey by `next_stop`. Repeated visits stay tracked in [#557](https://github.com/flatland-association/flatland-rl/issues/557). | The observation test asserts the field; the scenario traces stay unchanged. A policy test on a journey A -> B -> A boards at B not before B's earliest departure (with the search by `next_stop`, it boards too early). |
 | C6.5 | 42 | `PassengerEnv` ignores a `HOP_ON` whose vehicle handle is not one of `rail_env.get_agent_handles()`, and an action that is not an `(action, handle)` pair. | Scripted actions with handles `-1` and out of range, and a bare `PassengerAction`, are ignored. |
 | C6.6 | 46 | `ShortestPathPolicy._act()`: the stop decision at intermediate stops moves into its own method. `UnilateralTimetablePredictor._predict()`: the first projected step (off the map, halted, moving) moves into its own method. No behaviour change. | The existing policy and predictor tests. |
-| C6.7 | 44 | `PassengerObservation.mode` is a `PassengerMode`; `BoardForTargetPassengerPolicy.act()` requires `journey` (or drops it, once C6.4 makes it unused); `PassengerEnv.vehicle_observations` is a `Dict[int, VehicleObservation]`. | flake8 and the existing tests. |
+| C6.7 | 44 | `PassengerObservation.mode` is a `PassengerMode`; `BoardForTargetPassengerPolicy.act()` requires `journey`; `PassengerEnv.vehicle_observations` is a `Dict[int, VehicleObservation]`. | flake8 and the existing tests. |
 | C6.8 | 45 | `PassengerObservationBuilder.get()` computes `future_stops_serving()` once per vehicle and keeps the non-empty results; `serves()` goes if unused. | The existing observation tests. |
 
 Not in phase 6: the spike's test module keeps its name until the design is stable (finding 15); the other open

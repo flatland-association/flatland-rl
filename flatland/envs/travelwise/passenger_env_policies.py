@@ -33,9 +33,10 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
             return PassengerAction.HOP_OFF, None
         if len(observation.vehicles_to_board) == 0 or not self._may_depart(observation, journey):
             return PassengerAction.WAIT, None
+        next_stop = journey.waypoints[observation.stop_index + 1]
         # first a vehicle stopping at an entry point of the next stop, then the one stopping there soonest
         vehicle_handle = min(observation.vehicles_to_board,
-                             key=lambda candidate: min((stop.entry_point not in observation.next_stop, stop.step)
+                             key=lambda candidate: min((stop.entry_point not in next_stop, stop.step)
                                                        for stop in observation.vehicles_to_board[candidate]))
         return PassengerAction.HOP_ON, vehicle_handle
 
@@ -45,5 +46,5 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
         Whether boarding now respects the passenger's earliest departure at the group it waits at: the action applies in
         step `elapsed_steps + 1`, as `ShortestPathPolicy` departs a vehicle.
         """
-        earliest_departure = journey.waypoints_earliest_departure[journey.waypoints.index(observation.next_stop) - 1]
+        earliest_departure = journey.waypoints_earliest_departure[observation.stop_index]
         return earliest_departure is None or observation.elapsed_steps + 1 >= earliest_departure

@@ -3,7 +3,6 @@ from typing import Dict, List, Optional, Tuple
 
 from flatland.core.env_observation_builder import AgentHandle, ObservationBuilder
 from flatland.core.resource_map import ResourceT
-from flatland.envs.agent_utils import EntryPointT
 from flatland.envs.travelwise.passenger_env import PassengerEnv
 from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint
 from flatland.envs.travelwise.vehicle_observations import VehiclePositionsAndPlans
@@ -16,18 +15,19 @@ class PassengerObservation:
 
     - `elapsed_steps`: the env's elapsed steps (TODO move to the infos, as for the vehicles);
     - `mode`: its `(resource, riding vehicle handle)`, see `PassengerEnv`;
-    - `next_stop`: the entry points of the waypoint group it travels to next (a change or its target) - `None` once
-      arrived;
+    - `stop_index`: the index of its journey's waypoint group it is at or last left (`PassengerEnv.stop_index()`) -
+      its next stop (a change or its target) is the group after it, none once arrived;
     - `vehicles_to_board`: per vehicle it can hop on now (`PassengerEnv.can_hop_on()`) and that serves it, the
       vehicle's planned future stops serving its next stop (`PassengerObservationBuilder.future_stops_serving()`);
     - `vehicle_stops_at_next_stop`: whether the vehicle it rides stops at an entry point of its next stop now
       (`PassengerObservationBuilder.stops_at_next_stop()`).
 
-    After `reset()`, the passenger is off the map and observes no vehicle.
+    After `reset()`, the passenger is off the map and observes no vehicle. Its journey (the waypoint groups and their
+    times) is static data, in the infos (`PassengerEnvStaticData`).
     """
     elapsed_steps: int
     mode: Tuple[Optional[ResourceT], Optional[int]]
-    next_stop: Optional[List[EntryPointT]]
+    stop_index: int
     vehicles_to_board: Dict[int, List[ProjectedEntryPoint]]
     vehicle_stops_at_next_stop: bool
 
@@ -53,7 +53,7 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
         return PassengerObservation(
             elapsed_steps=self.env.rail_env._elapsed_steps,
             mode=self.env.passenger_mode[handle],
-            next_stop=self.env.next_stop(handle),
+            stop_index=self.env.stop_index(handle),
             vehicles_to_board={vehicle.handle: self.future_stops_serving(vehicle.handle, handle) for vehicle in self.env.rail_env.agents
                                if self.env.can_hop_on(vehicle.handle, handle) and self.serves(vehicle.handle, handle)},
             vehicle_stops_at_next_stop=riding_handle is not None and self.stops_at_next_stop(riding_handle, handle),
