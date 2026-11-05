@@ -80,8 +80,7 @@ class PassengerEnv(Environment):
         total_rewards = TravelWisePolicyRunner(passenger_env, passenger_policy).run()
 
     Rewards per passenger, in the step they occur (0 otherwise), integers that can be positive (an early arrival) -
-    unlike Flatland's `DefaultRewards`, which never reward arriving early (TODO align with them or keep the bonus
-    once the TravelWise rewards are settled):
+    unlike Flatland's `DefaultRewards`, which never reward arriving early:
 
     - arriving: `waypoints_latest_arrival[-1] - arrival time` - positive when early, negative when late;
     - boarding before its earliest departure at the group it waits at: `-(earliest departure - boarding step)` -
@@ -116,7 +115,8 @@ class PassengerEnv(Environment):
     Limitations:
 
     - The changes are given, not planned: a passenger set down outside its next stop continues only on a vehicle
-      from there that stops at its next stop. No minimum transfer time. TODO plan connections with the query view.
+      from there that stops at its next stop. No minimum transfer time.
+      TODO https://github.com/flatland-association/flatland-rl/issues/562 plan connections with the query view.
     - A passenger may board a vehicle at its resource even where the vehicle doesn't stop, e.g. passing through.
       TODO board only at a vehicle's stop.
     - A passenger may hop off at any step. TODO hop off only where the vehicle stops.

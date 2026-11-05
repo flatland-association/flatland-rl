@@ -49,7 +49,7 @@ class ShortestPathObservation:
     """
     What `ShortestPathPolicy` observes of an agent: its dynamic state. Its static data (route, timetable) and the map
     come with the infos (`RailEnvStaticData`). After `reset()`, it has no position (`current_entry_point` is `None`).
-    TODO move `elapsed_steps` to the infos, once the rail env hands them out.
+    TODO https://github.com/flatland-association/flatland-rl/issues/561 move `elapsed_steps` to the infos, once the rail env hands them out.
     """
     handle: int
     elapsed_steps: int
