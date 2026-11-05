@@ -172,6 +172,21 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
             assert index < len(route), f"Agent {handle} at {observation.current_entry_point} is off its route {route}."
         self._route_index[handle] = index
 
+    def _halts_at_intermediate_stop(self, observation: ShortestPathObservation, static: RailEnvStaticData, route: List[EntryPointT], index: int) -> bool:
+        """
+        Whether the agent at `route[index]` halts for an intermediate stop (neither the initial entry point nor the
+        target): it stands on one before its earliest departure, or enters the next one at this cell exit.
+        """
+        handle = observation.handle
+        intermediate_stops = {stop_index: group for group, stop_index in enumerate(self._stop_indices[handle][1:-1], start=1)}
+        if index in intermediate_stops:
+            earliest_departure = static.agents[handle].waypoints_earliest_departure[intermediate_stops[index]]
+            # the action is applied in step `_elapsed_steps + 1` (`step()` increments `_elapsed_steps` first), so the
+            # agent starts moving in the step of its earliest departure - as it enters the map at the initial stop
+            if earliest_departure is not None and observation.elapsed_steps + 1 < earliest_departure:
+                return True
+        return index + 1 in intermediate_stops and observation.next_entry_point == route[index + 1] and observation.is_cell_exit
+
     def _act(self, observation: ShortestPathObservation, static: RailEnvStaticData) -> RailEnvActions:
         if observation.done:
             return RailEnvActions.DO_NOTHING
@@ -182,17 +197,8 @@ class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, 
         route = self._routes[handle]
         index = self._route_index[handle]
 
-        if self.serve_intermediate_stops:
-            # intermediate stops only: neither the initial entry point nor the target
-            intermediate_stops = {stop_index: group for group, stop_index in enumerate(self._stop_indices[handle][1:-1], start=1)}
-            if index in intermediate_stops:
-                earliest_departure = static.agents[handle].waypoints_earliest_departure[intermediate_stops[index]]
-                # the action is applied in step `_elapsed_steps + 1` (`step()` increments `_elapsed_steps` first), so the
-                # agent starts moving in the step of its earliest departure - as it enters the map at the initial stop
-                if earliest_departure is not None and observation.elapsed_steps + 1 < earliest_departure:
-                    return RailEnvActions.STOP_MOVING
-            if index + 1 in intermediate_stops and observation.next_entry_point == route[index + 1] and observation.is_cell_exit:
-                return RailEnvActions.STOP_MOVING
+        if self.serve_intermediate_stops and self._halts_at_intermediate_stop(observation=observation, static=static, route=route, index=index):
+            return RailEnvActions.STOP_MOVING
 
         # design: actions applied at cell entry -- once agent.next_entry_point holds a
         # pending target (decided one cell ago), this step's action no longer decides *that*
