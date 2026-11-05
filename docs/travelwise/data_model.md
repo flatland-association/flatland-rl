@@ -9,7 +9,10 @@
 >   observations, the runner, a vehicle's route, the glossary;
 > - the diagram shows what is implemented, with flatland-rl's names (entry points, `EnvAgent`'s fields, `Line`,
 >   `Timetable`, `Policy`, `BoardForTargetPassengerPolicy`; no `AgentTimetable`), marks the target design, and adds `ResourceMap`, `MalfunctionGenerator`, `ObservationBuilder`, `PredictionBuilder`,
->   `Rewards` and `Trajectory`.
+>   `Rewards` and `Trajectory`;
+> - the glossary names the TravelWise concepts not built yet (passenger state, group size, modes of transportation,
+>   conditional paths, capacities, milestones, the demand generator), and the diagram notes the roles of
+>   `InfrastructureEnv` and `TravelWiseEnv` and what a journey is.
 
 This page gives technical details to the general approach of [Travel Wise](../travelwise.md).
 
@@ -21,7 +24,7 @@ and its implementation status in flatland-rl: ✅ implemented, 💡 partly imple
 | Term | Description | Implementing class | Status |
 |---|---|---|---|
 | journey | A journey is a travel from point A to point B using potentially different modes of transportation. | `PassengerJourney` | 💡 origin, given transfers and destination with their times; no modes of transportation (any vehicle of the rail env) |
-| itinerary | The itinerary describes the planned route (space and time) for a given journey. The initial itinerary might be updated during the scenario according to a given metric (default: shortest time). | - | 🔴 not modelled: the passenger policy (`BoardForTargetPassengerPolicy`) picks the vehicle at each stop at runtime |
+| itinerary | The itinerary describes the planned route (space and time) for a given journey. The initial itinerary might be updated during the scenario according to a given metric (default: shortest time). | - | 🔴 not modelled: the passenger policy (`BoardForTargetPassengerPolicy`) picks the vehicle at each stop at runtime; planning it needs a query view of all vehicles' future stops ([#562](https://github.com/flatland-association/flatland-rl/issues/562)) |
 | transfer | Each change of mode of transportation is a transfer, even if the mode is the same, e.g. from one train to another. | `PassengerJourney.waypoints[1:-1]`, `LineFlexibleStoppingPoint` | 💡 the groups between origin and destination, each a `LineFlexibleStoppingPoint`; given, not planned; no minimum transfer time; no walkways |
 | leg | The part of a journey on one vehicle, between two transfers (in flatland-rl: a ride). | `PassengerJourney.waypoints[i:i + 2]` | 💡 two consecutive groups; the vehicle ridden is not recorded, and a ride may use several vehicles (e.g. forced off at a vehicle's final stop) |
 | route | In flatland-rl, a vehicle's route is every entry point it passes, in order (on the grid each cell entered, with its direction; on the graph each node), from its initial entry point through one alternative per stop. Its stops are a few of these entries. Not the passenger's itinerary. | `Policy`, `ShortestPathPolicy`, `Router` | ✅ the auto-pilot (`ShortestPathPolicy`) follows the route its `Router` finds |
@@ -29,17 +32,24 @@ and its implementation status in flatland-rl: ✅ implemented, 💡 partly imple
 | `PassengerEnv` | The passenger layer: all properties correspond to those of the `InfrastructureEnv` (inheritance in OO terms), and it depends on an existing `InfrastructureEnv` to be generated. | `PassengerEnv` | ✅ composition instead of inheritance: it holds the rail env and implements `Environment` for the passengers |
 | `TravelWiseEnv` | `InfrastructureEnv` and `PassengerEnv` together. | `PassengerEnv` | ✅ `PassengerEnv` steps the vehicles with the auto-pilot, so it plays this role; no class of its own |
 | infrastructure (`InfrastructureEnv`) | Graph consisting of nodes and multimodal edges. | `TransitionMap`, `GraphTransitionMap` | 💡 nodes are entry points; edges carry no mode of transportation |
+| mode of transportation (`InfrastructureEnv`) | Train, bus, plane, ship, walkway, ..., as properties of the edges. | - | 🔴 not modelled: rail only, no walkways |
+| conditional path (`InfrastructureEnv`) | Optional paths and the conditions under which they can be used, e.g. a shorter walkway for passengers with reduced mobility, or fast-track lanes for delayed passengers. | - | 🔴 not modelled |
+| capacity (`InfrastructureEnv`) | Capacities of (some) modes of transportation. | - | 🔴 not modelled: any number of passengers rides a vehicle |
 | passenger graph (`PassengerEnv`) | The passenger's own graph, a subgraph of the infrastructure graph. | - | 🔴 not modelled: the passenger sees the vehicles it can board and their planned stops |
+| passenger (`PassengerEnv`) | A group of people (N=1..n). | `PassengerEnv` agent (`handle`) | 💡 one agent per passenger; no group size |
+| passenger state (`PassengerEnv`) | Where a passenger is: at a stopping point while waiting, on a vehicle while riding; it changes by hopping on and off. | `PassengerMode` | 💡 off the map, waiting at a resource, or riding a vehicle; no passenger configuration (the entry point instead of the resource); one object per passenger (`Passenger`) is planned |
 | line (`InfrastructureEnv`) | List of stations that are served successively. | `Line`, `LineFlexibleStoppingPoint` | ✅ a vehicle's waypoint groups (`EnvAgent.waypoints`), each with alternative stops; stations are not modelled |
 | timetable (`InfrastructureEnv`) | List of time windows (latest arrival, earliest departure) for a given line. | `Timetable`, `EnvAgent.waypoints_earliest_departure`, `EnvAgent.waypoints_latest_arrival` | ✅ |
 | action (`InfrastructureEnv`) | Generalized version of the railway case actions, including _move to edge a1_, _accelerate_, _brake_ (a larger action space, since there can be more than two outgoing edges at a node). | `RailEnvActions` | 💡 the railway actions (left, forward, right, stop), also on the graph; no generalized _move to edge_ |
 | action (`PassengerEnv`) | In principle the same actions; in practice only _move to edge a1_, since passengers leave their graph as soon as they _hop on_ a vehicle. | `PassengerAction` | ✅ `WAIT`, `HOP_ON` a given vehicle, `HOP_OFF`; hopping on is an explicit action, and passengers do not walk |
 | observation (`InfrastructureEnv`) | Conventional `RailEnv` observations, e.g. tree observation. | `ShortestPathObservation`, `VehicleObservation` | ✅ the auto-pilot's own observation, with the positions and plans of all vehicles; the conventional observations (e.g. tree observation) remain for `RailEnv` on the grid |
-| observation (`PassengerEnv`) | Global observation of the infrastructure graph and timetables; potentially a list of itineraries to choose from. | `PassengerObservation` | 💡 its own situation and the vehicles it can board now with their planned stops; the map, timetables and journeys come with the infos; no global view of all vehicles' future stops (query view), no itineraries |
-| event (`InfrastructureEnv`, `PassengerEnv`) | Triggers for milestones, e.g. delayed trains, trains passing a specific node, or passenger specific: _my_ train is delayed. | - | 🔴 not modelled |
+| observation (`PassengerEnv`) | Global observation of the infrastructure graph and timetables; potentially a list of itineraries to choose from. | `PassengerObservation` | 💡 its own situation and the vehicles it can board now with their planned stops; the map, timetables and journeys come with the infos; no global view of all vehicles' future stops (query view, [#562](https://github.com/flatland-association/flatland-rl/issues/562)), no itineraries |
+| event (`InfrastructureEnv`, `PassengerEnv`) | Triggers for milestones, e.g. delayed trains, trains passing a specific node, or passenger specific: _my_ train is delayed. | - | 🔴 not modelled; waits for an event generator in Flatland ([#424](https://github.com/flatland-association/flatland-rl/issues/424)) |
+| milestone (`PassengerEnv`) | Passed on a journey; passing it triggers communication with the Travel Wise layer, which is above and outside Flatland. | - | 🔴 not modelled; builds on events |
 | reward (`InfrastructureEnv`) | Conventional `RailEnv` rewards. | `Rewards`, `DefaultRewards` | ✅ |
-| reward (`PassengerEnv`) | - | `PassengerEnv` | ✅ arriving before the latest arrival is rewarded; arriving late or not at all and boarding before the earliest departure are penalized |
+| reward (`PassengerEnv`) | What the passenger policy optimizes, e.g. shortest time, fewest transfers, longer transfer times (e.g. for passengers with reduced mobility). | `PassengerEnv` | 💡 arriving before the latest arrival is rewarded; arriving late or not at all and boarding before the earliest departure are penalized; transfers and transfer times are not rewarded |
 | malfunction (`InfrastructureEnv`) | Includes breakdowns, departure delays, ... | `MalfunctionGenerator` | ✅ also on the graph view; the auto-pilot does not react to them (it waits on its fixed route) |
+| demand generator | A generalization of the line and timetable generators to journeys and itineraries. | - | 🔴 not modelled: the journeys are fixed input to `PassengerEnv` |
 
 ## Building Blocks
 
@@ -81,8 +91,9 @@ The diagram shows what is implemented on this branch. Target design, not impleme
 ```mermaid
 classDiagram
     direction LR
-    note for PassengerEnv "Agents reflect passengers, waiting at an entry point or riding a vehicle. Actions: WAIT, HOP_ON, HOP_OFF."
-    note for RailEnv "Agents reflect trains/ships/etc. Positions are entry points: graph nodes or grid cell entry points (r,c,d)."
+    note for PassengerEnv "Agents reflect passengers, waiting at an entry point or riding a vehicle. Actions: WAIT, HOP_ON, HOP_OFF. Plays the TravelWiseEnv: it steps the vehicles itself."
+    note for RailEnv "Agents reflect trains/ships/etc. Positions are entry points: graph nodes or grid cell entry points (r,c,d). RailEnv and GraphRailEnv play the InfrastructureEnv."
+    note for PassengerJourney "A journey: origin, given transfers and destination, each a waypoint group, with their times. A leg is two consecutive groups. No itinerary: the vehicles are picked at runtime."
     note for TransitionMap "Topology"
     note for Line "Services in Space. Waypoints are Waypoint objects on the grid, entry points on the graph. Passenger journeys have the same shape."
     note for Timetable "Services in Space and Time"
