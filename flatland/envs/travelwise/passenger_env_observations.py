@@ -13,7 +13,7 @@ class PassengerObservation:
     """
     What a passenger observes to decide on its action:
 
-    - `elapsed_steps`: the env's elapsed steps (TODO move to the infos, as for the vehicles);
+    - `elapsed_steps`: the env's elapsed steps (TODO https://github.com/flatland-association/flatland-rl/issues/561 move to the infos, as for the vehicles);
     - `mode`: its `(resource, riding vehicle handle)`, see `PassengerEnv`;
     - `stop_index`: the index of its journey's waypoint group it is at or last left (`PassengerEnv.stop_index()`) -
       its next stop (a change or its target) is the group after it, none once arrived;
