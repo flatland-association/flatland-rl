@@ -15,6 +15,7 @@ from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourne
 from flatland.envs.travelwise.passenger_env_action import PassengerAction, PassengerActionT
 from flatland.envs.travelwise.passenger_env_observations import PassengerObservation, PassengerObservationBuilder
 from flatland.envs.travelwise.passenger_env_policies import BoardForTargetPassengerPolicy
+from flatland.envs.travelwise.passenger_env_rewards import PassengerRewards, PassengerTransitionData
 from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint
 from flatland.envs.travelwise.travelwise_policy_runner import TravelWisePolicyRunner
 from flatland.envs.travelwise.vehicle_observations import VehicleObservationBuilder
@@ -49,12 +50,13 @@ PASSENGER_JOURNEYS = {
 }
 
 
-def _make_scenario_env() -> PassengerEnv:
+def _make_scenario_env(rewards: PassengerRewards = None) -> PassengerEnv:
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
     rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=VehicleObservationBuilder(),
                                        timetable_generator=lambda *args, **kwargs: VEHICLE_TIMETABLE)
     vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=True)
-    return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_journeys=PASSENGER_JOURNEYS, obs_builder=PassengerObservationBuilder())
+    return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_journeys=PASSENGER_JOURNEYS, obs_builder=PassengerObservationBuilder(),
+                        rewards=rewards)
 
 
 def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[int, Dict[int, PassengerObservation]], Dict[int, Dict[int, Tuple]],
@@ -283,3 +285,23 @@ def test_board_for_target_passenger_policy_boards_only_vehicles_planned_to_stop_
     assert passenger_env.passenger_mode == {0: ("A", None), 1: ("B2", None)}
     assert passenger_env.passenger_arrival_time[0] is None
     assert passenger_env.passenger_arrival_time[1] is not None
+
+
+class _ArrivalCountingRewards(PassengerRewards):
+    """ 1 for arriving, -100 for not arriving by the end of the episode. """
+
+    def step_reward(self, journey: PassengerJourney, transition: PassengerTransitionData, elapsed_steps: int) -> int:
+        return 1 if transition.arrival_step is not None else 0
+
+    def end_of_episode_reward(self, journey: PassengerJourney, arrived: bool, max_episode_steps: int) -> int:
+        return 0 if arrived else -100
+
+
+def test_passenger_env_scenario_takes_its_rewards_from_a_passenger_rewards_class():
+    """
+    The scenario's single rides, with a rewards class passed to `PassengerEnv` that gives 1 for arriving and -100 for
+    not arriving: passengers 0-4 arrive and total 1, passenger 5 (C -> A, no vehicle) totals -100.
+    """
+    total_rewards = TravelWisePolicyRunner(_make_scenario_env(rewards=_ArrivalCountingRewards()), BoardForTargetPassengerPolicy()).run()
+
+    assert total_rewards == {0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: -100}
