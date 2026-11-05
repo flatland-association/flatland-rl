@@ -1,5 +1,4 @@
 import warnings
-from dataclasses import dataclass
 from numbers import Integral
 from types import MappingProxyType
 from typing import Dict, List, Mapping, NamedTuple, Optional, Tuple
@@ -13,6 +12,8 @@ from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_policies import RailEnvStaticData
 from flatland.envs.step_utils.states import TrainState
 from flatland.envs.travelwise.passenger_env_action import PassengerAction, PassengerActionT
+from flatland.envs.travelwise.passenger_env_rewards import DefaultPassengerRewards, PassengerRewards, PassengerTransitionData
+from flatland.envs.travelwise.passenger_journey import PassengerJourney
 
 # A passenger's `passenger_mode[h]` tuple - a resource (grid cell, graph node's resource; not a full
 # entry point), then a handle - holds in each of its 3 modes:
@@ -21,27 +22,6 @@ from flatland.envs.travelwise.passenger_env_action import PassengerAction, Passe
 # - riding a vehicle:              (passenger_resource, vehicle handle), with the vehicle's own
 #   resource always equal to passenger_resource
 PassengerMode = Tuple[Optional[ResourceT], Optional[int]]
-
-
-@dataclass(frozen=True)
-class PassengerJourney:
-    """
-    A passenger's journey, with the same fields and conventions as a vehicle's `EnvAgent`:
-
-    - `waypoints`: the waypoint groups in order, each a list of accepted entry points (e.g. the tracks of a station):
-      the origin, the stops where the passenger changes vehicles, and the target. Each pair of consecutive groups is
-      one ride. The origin group has exactly one entry point, where the passenger waits.
-    - `waypoints_earliest_departure`: per group, the earliest step to leave it - `None` at the target.
-    - `waypoints_latest_arrival`: per group, the latest step to reach it - `None` at the origin.
-    """
-    waypoints: List[List[EntryPointT]]
-    waypoints_earliest_departure: List[Optional[int]]
-    waypoints_latest_arrival: List[Optional[int]]
-
-    def __post_init__(self):
-        assert len(self.waypoints) >= 2, f"at least origin and target, got {self.waypoints}"
-        assert len(self.waypoints[0]) == 1, f"the origin must have exactly one entry point, got {self.waypoints[0]}"
-        assert len(self.waypoints_earliest_departure) == len(self.waypoints_latest_arrival) == len(self.waypoints)
 
 
 class PassengerEnvStaticData(NamedTuple):
@@ -79,13 +59,9 @@ class PassengerEnv(Environment):
 
         total_rewards = TravelWisePolicyRunner(passenger_env, passenger_policy).run()
 
-    Rewards per passenger, in the step they occur (0 otherwise), integers that can be positive (an early arrival) -
-    unlike Flatland's `DefaultRewards`, which never reward arriving early:
-
-    - arriving: `waypoints_latest_arrival[-1] - arrival time` - positive when early, negative when late;
-    - boarding before its earliest departure at the group it waits at: `-(earliest departure - boarding step)` -
-      respecting it is the policy's decision, the env does not enforce it;
-    - not arrived when the rail env is done: `-max_episode_steps`.
+    Rewards per passenger and step come from `rewards` (a `PassengerRewards`, `DefaultPassengerRewards` by default),
+    as a rail env's from its `Rewards`: the step reward after the vehicles and the riding passengers moved, and the
+    end-of-episode reward once the rail env is done.
 
     `dones` holds per passenger whether it has arrived, and `'__all__'`: whether the rail env is done.
     Read the passengers' state from `passenger_mode`/
@@ -127,9 +103,10 @@ class PassengerEnv(Environment):
     """
 
     def __init__(self, rail_env: AbstractRailEnv, vehicle_policy: Policy, passenger_journeys: Dict[int, PassengerJourney],
-                 obs_builder: ObservationBuilder):
+                 obs_builder: ObservationBuilder, rewards: PassengerRewards = None):
         super().__init__()
         self.rail_env = rail_env
+        self.rewards = rewards if rewards is not None else DefaultPassengerRewards()
         self.vehicle_policy = vehicle_policy
         self.passenger_journeys = passenger_journeys
         self.obs_builder = obs_builder
@@ -152,6 +129,8 @@ class PassengerEnv(Environment):
         self._static: Optional[PassengerEnvStaticData] = None
         self._passenger_obs: Dict = {}
         self._rewards: Dict[int, int] = {}
+        # per passenger, what its current step did - for the step reward
+        self._transitions: Dict[int, PassengerTransitionData] = {}
         self._rail_env_done = False
 
     def reset(self) -> Tuple[Dict, Dict]:
@@ -195,7 +174,8 @@ class PassengerEnv(Environment):
             `'__all__'` (true once the rail env is done, as no passenger can move after that), and the infos with the
             static data.
         """
-        self._rewards = {handle: 0 for handle in self.passenger_journeys}
+        self._rewards = {handle: self.rewards.empty() for handle in self.passenger_journeys}
+        self._transitions = {handle: PassengerTransitionData() for handle in self.passenger_journeys}
         if not self._rail_env_done:
             self._update_passengers(action_dict)
             vehicle_handles = self.rail_env.get_agent_handles()
@@ -205,10 +185,13 @@ class PassengerEnv(Environment):
             self._vehicle_infos = dict(vehicle_infos, static=self._static.rail_env)
             self._rail_env_done = rail_env_dones['__all__']
             self._move_passengers()
-            if self._rail_env_done:
-                for handle in self.passenger_journeys:
-                    if self.passenger_arrival_time[handle] is None:
-                        self._rewards[handle] -= self.rail_env._max_episode_steps
+            for handle, journey in self.passenger_journeys.items():
+                self._rewards[handle] = self.rewards.cumulate(
+                    self._rewards[handle], self.rewards.step_reward(journey, self._transitions[handle], self.rail_env._elapsed_steps))
+                if self._rail_env_done:
+                    self._rewards[handle] = self.rewards.cumulate(
+                        self._rewards[handle],
+                        self.rewards.end_of_episode_reward(journey, self.passenger_arrival_time[handle] is not None, self.rail_env._max_episode_steps))
             self._passenger_obs = self.obs_builder.get_many(self.get_agent_handles())
         dones = {handle: self.passenger_arrival_time[handle] is not None for handle in self.passenger_journeys}
         return self._passenger_obs, self._rewards, dict(dones, __all__=self._rail_env_done), {"static": self._static}
@@ -272,10 +255,8 @@ class PassengerEnv(Environment):
                 self._alight(handle, self.rail_env.agents[riding_handle].current_entry_point, self.rail_env._elapsed_steps + 1)
             elif riding_handle is None and action == PassengerAction.HOP_ON and self.can_hop_on(vehicle_handle, handle):
                 self._set_passenger(handle, self.rail_env.agents[vehicle_handle].current_entry_point, vehicle_handle)
-                earliest_departure = self.passenger_journeys[handle].waypoints_earliest_departure[self._passenger_stop_index[handle]]
-                boarding_step = self.rail_env._elapsed_steps + 1
-                if earliest_departure is not None and boarding_step < earliest_departure:
-                    self._rewards[handle] -= earliest_departure - boarding_step
+                self._transitions[handle] = self._transitions[handle]._replace(
+                    boarding_step=self.rail_env._elapsed_steps + 1, boarding_stop_index=self._passenger_stop_index[handle])
 
     def _is_well_formed(self, handle: int, action) -> bool:
         """
@@ -309,7 +290,7 @@ class PassengerEnv(Environment):
                 return
             self.passenger_target_entry_point[handle] = self.passenger_current_entry_point[handle]
             self.passenger_arrival_time[handle] = step
-            self._rewards[handle] += self.passenger_journeys[handle].waypoints_latest_arrival[-1] - step
+            self._transitions[handle] = self._transitions[handle]._replace(arrival_step=step)
 
     def _resource(self, entry_point: Optional[EntryPointT]) -> Optional[ResourceT]:
         """ The resource (grid cell, graph node's resource) at `entry_point` - `None` off map. """

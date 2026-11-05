@@ -12,7 +12,8 @@
 >   `Rewards` and `Trajectory`;
 > - the glossary names the TravelWise concepts not built yet (passenger state, group size, modes of transportation,
 >   conditional paths, capacities, milestones, the demand generator), and the diagram notes the roles of
->   `InfrastructureEnv` and `TravelWiseEnv` and what a journey is.
+>   `InfrastructureEnv` and `TravelWiseEnv` and what a journey is;
+> - the passenger rewards class (`PassengerRewards`).
 
 This page gives technical details to the general approach of [Travel Wise](../travelwise.md).
 
@@ -47,7 +48,7 @@ and its implementation status in flatland-rl: ✅ implemented, 💡 partly imple
 | event (`InfrastructureEnv`, `PassengerEnv`) | Triggers for milestones, e.g. delayed trains, trains passing a specific node, or passenger specific: _my_ train is delayed. | - | 🔴 not modelled; waits for an event generator in Flatland ([#424](https://github.com/flatland-association/flatland-rl/issues/424)) |
 | milestone (`PassengerEnv`) | Passed on a journey; passing it triggers communication with the Travel Wise layer, which is above and outside Flatland. | - | 🔴 not modelled; builds on events |
 | reward (`InfrastructureEnv`) | Conventional `RailEnv` rewards. | `Rewards`, `DefaultRewards` | ✅ |
-| reward (`PassengerEnv`) | What the passenger policy optimizes, e.g. shortest time, fewest transfers, longer transfer times (e.g. for passengers with reduced mobility). | `PassengerEnv` | 💡 arriving before the latest arrival is rewarded; arriving late or not at all and boarding before the earliest departure are penalized; transfers and transfer times are not rewarded |
+| reward (`PassengerEnv`) | What the passenger policy optimizes, e.g. shortest time, fewest transfers, longer transfer times (e.g. for passengers with reduced mobility). | `PassengerRewards`, `DefaultPassengerRewards` | 💡 arriving before the latest arrival is rewarded; arriving late or not at all and boarding before the earliest departure are penalized; transfers and transfer times are not rewarded |
 | malfunction (`InfrastructureEnv`) | Includes breakdowns, departure delays, ... | `MalfunctionGenerator` | ✅ also on the graph view; the auto-pilot does not react to them (it waits on its fixed route) |
 | demand generator | A generalization of the line and timetable generators to journeys and itineraries. | - | 🔴 not modelled: the journeys are fixed input to `PassengerEnv` |
 
@@ -115,6 +116,8 @@ classDiagram
     PassengerEnv --> RailEnv : rail_env, passengers use trains, ships etc.
     PassengerEnv --> ShortestPathPolicy : vehicle_policy, auto-pilot
     PassengerEnv --> PassengerObservationBuilder : obs_builder
+    PassengerEnv --> PassengerRewards : rewards
+    DefaultPassengerRewards --|> PassengerRewards
     PassengerEnv "1" --> "1.." PassengerJourney : passenger_journeys
     PassengerJourney "1" --> "2.." LineFlexibleStoppingPoint : waypoints
     ShortestPathPolicy ..|> Policy
@@ -286,6 +289,13 @@ classDiagram
         class PassengerObservationBuilder {
         }
         class TimetablePredictor {
+        }
+        class PassengerRewards {
+            <<abstract>>
+            step_reward(journey, transition, elapsed_steps)
+            end_of_episode_reward(journey, arrived, max_episode_steps)
+        }
+        class DefaultPassengerRewards {
         }
     }
 
