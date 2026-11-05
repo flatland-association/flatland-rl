@@ -61,16 +61,15 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
 
     def future_stops_serving(self, vehicle_handle: int, passenger_handle: int) -> List[ProjectedEntryPoint]:
         """
-        The vehicle's future stops, as planned - after the group it stands on or last left - whose group shares an
-        entry point with the passenger's next stop. The vehicle stops at one entry point of such a group, chosen by its
-        policy, possibly one outside the passenger's next stop.
+        The vehicle's future stops, as planned - after the group it stands on or last left - at an entry point of the
+        passenger's next stop. A vehicle stopping at another entry point of a group it shares with the next stop (e.g.
+        the other track of the same station) does not serve the passenger.
         """
         next_stop = self.env.next_stop(passenger_handle)
         if next_stop is None:
             return []
-        vehicle_waypoints = self.env.rail_env.agents[vehicle_handle].waypoints
         return [prediction for prediction in self._vehicles.plans[vehicle_handle][1:]
-                if prediction.stop is not None and not set(next_stop).isdisjoint(vehicle_waypoints[prediction.stop])]
+                if prediction.stop is not None and prediction.entry_point in next_stop]
 
     def serves(self, vehicle_handle: int, passenger_handle: int) -> bool:
         """ Whether the vehicle serves the passenger: it has a future stop serving the passenger's next stop, see `future_stops_serving()`. """
