@@ -16,12 +16,9 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
     - riding, the vehicle stopping at an entry point of its next stop (`vehicle_stops_at_next_stop`): `HOP_OFF`;
     - waiting, boarding not before its earliest departure (the action applies in the step after the one observed, as
       for the vehicles), with vehicles it can hop on and that serve it
-      (`vehicles_to_board`): `HOP_ON` a vehicle - first one
-      whose predicted route stops at an entry point of the next stop, then the one predicted to stop there soonest;
+      (`vehicles_to_board`, planned to stop at an entry point of the next stop): `HOP_ON` the vehicle planned to stop
+      there soonest;
     - otherwise `WAIT`.
-
-    A vehicle stopping at another alternative of the next stop's group is not left: the passenger stays on board up to
-    the vehicle's final stop.
     """
 
     def act_many(self, handles: List[int], observations: List[PassengerObservation], infos: Optional[Dict] = None, **kwargs) -> Dict[int, PassengerActionT]:
@@ -33,11 +30,8 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
             return PassengerAction.HOP_OFF, None
         if len(observation.vehicles_to_board) == 0 or not self._may_depart(observation, journey):
             return PassengerAction.WAIT, None
-        next_stop = journey.waypoints[observation.stop_index + 1]
-        # first a vehicle stopping at an entry point of the next stop, then the one stopping there soonest
         vehicle_handle = min(observation.vehicles_to_board,
-                             key=lambda candidate: min((stop.entry_point not in next_stop, stop.step)
-                                                       for stop in observation.vehicles_to_board[candidate]))
+                             key=lambda candidate: min(stop.step for stop in observation.vehicles_to_board[candidate]))
         return PassengerAction.HOP_ON, vehicle_handle
 
     @staticmethod

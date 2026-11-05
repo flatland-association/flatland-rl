@@ -120,9 +120,6 @@ class PassengerEnv(Environment):
     - A passenger may board a vehicle at its resource even where the vehicle doesn't stop, e.g. passing through.
       TODO board only at a vehicle's stop.
     - A passenger may hop off at any step. TODO hop off only where the vehicle stops.
-    - Missed stop: a vehicle serving the passenger may stop at another alternative of the group sharing an entry
-      point with the target; then `BoardForTargetPassengerPolicy` stays on board, up to the vehicle's final stop.
-      TODO not covered by a test, as every group on the test corridor has one entry point.
     - The vehicles' plans are per-vehicle predictions, optimistic (`UnilateralTimetablePredictor`); there is no query view
       of all vehicles' future stops yet.
     - Stops are entry points (station tracks), not stations.

@@ -1,5 +1,6 @@
 from typing import Dict, List, Tuple
 
+import networkx as nx
 import numpy as np
 import pytest
 
@@ -7,6 +8,7 @@ from flatland.core.policy import Policy
 from flatland.envs.graph.graph_routing import greedy_graph_route_through_waypoints
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.graph_rail_env import GraphRailEnv
+from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_policies import ShortestPathPolicy
 from flatland.envs.timetable_utils import Timetable
 from flatland.envs.travelwise.passenger_env import PassengerEnv, PassengerJourney
@@ -244,3 +246,40 @@ def test_board_for_target_passenger_policy_waits_for_the_earliest_departure_at_i
     policy = BoardForTargetPassengerPolicy()
     assert policy.act(observation(8), journey=journey) == (PassengerAction.WAIT, None)
     assert policy.act(observation(9), journey=journey) == (PassengerAction.HOP_ON, 1)
+
+
+def _make_two_track_station_env(passenger_journeys: Dict[int, PassengerJourney]) -> PassengerEnv:
+    """
+    A line A -> S -> {B1, B2} -> J -> C -> D (track beyond C, never reached): at the switch S, `MOVE_LEFT` leads to track B2, the other actions to track B1;
+    each node is its own resource. One vehicle A -> B -> C, its stop at B the group `[B2, B1]`: both tracks are equally
+    far, so its router picks B2, the first of the group. It enters A in step 2 and halts at B2 until its earliest
+    departure.
+    """
+    g = nx.DiGraph()
+    all_actions = set(RailEnvActions)
+    for u, v in [("A", "S"), ("B1", "J"), ("B2", "J"), ("J", "C"), ("C", "D")]:
+        g.add_edge(u, v, actions=all_actions)
+    g.add_edge("S", "B1", actions=all_actions - {RailEnvActions.MOVE_LEFT})
+    g.add_edge("S", "B2", actions={RailEnvActions.MOVE_LEFT})
+    timetable = Timetable(earliest_departures=[[2, 7, None]], latest_arrivals=[[None, 5, 12]], max_episode_steps=15)
+    rail_env = GraphRailEnv.from_graph(g, {node: node for node in g.nodes}, {0: [["A"], ["B2", "B1"], ["C"]]},
+                                       observation_builder=VehicleObservationBuilder(), timetable_generator=lambda *args, **kwargs: timetable)
+    vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=True)
+    return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_journeys=passenger_journeys, obs_builder=PassengerObservationBuilder())
+
+
+def test_board_for_target_passenger_policy_boards_only_vehicles_planned_to_stop_at_its_next_stop():
+    """
+    Two passengers at A, on a station B with two tracks B1 and B2, and one vehicle planned to stop at B2:
+
+    - vehicle 0: waypoints `[["A"], ["B2", "B1"], ["C"]]` - its router picks B2, the first of the equally far tracks;
+    - passenger 0: waypoints `[["A"], ["B1"]]` - does not board: the vehicle's group at B shares B1 with its next
+      stop, but the vehicle stops on the other track. It stays waiting at A and never arrives;
+    - passenger 1: waypoints `[["A"], ["B2"]]` - boards at A, hops off at B2 and arrives.
+    """
+    passenger_env = _make_two_track_station_env({0: _journey("A", "B1", 1, 20), 1: _journey("A", "B2", 1, 20)})
+    TravelWisePolicyRunner(passenger_env, BoardForTargetPassengerPolicy()).run()
+
+    assert passenger_env.passenger_mode == {0: ("A", None), 1: ("B2", None)}
+    assert passenger_env.passenger_arrival_time[0] is None
+    assert passenger_env.passenger_arrival_time[1] is not None
