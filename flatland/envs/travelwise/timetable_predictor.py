@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from flatland.core.env_prediction_builder import PredictionBuilder
 from flatland.envs.agent_utils import EnvAgent, EntryPointT
@@ -121,17 +121,8 @@ class UnilateralTimetablePredictor(TimetablePredictor):
         route, stop_indices = self.router(self.env.rail, source, agent.waypoints[first_group:])
         stops = {route_index: first_group + i for i, route_index in enumerate(stop_indices)}
 
-        max_speed = agent.speed_counter.max_speed
-        steps_per_cell = math.ceil(1 / max_speed)
-        if agent.current_entry_point is None:
-            step = max(agent.earliest_departure, elapsed_steps + 1)
-            next_step = step + steps_per_cell
-        else:
-            step = elapsed_steps
-            moving_from = step
-            if agent.speed_counter.speed == 0:
-                moving_from = max(step + 1, self._earliest_departure(agent, stops.get(0)) or 0)
-            next_step = moving_from + math.ceil((1 - agent.speed_counter.distance) / max_speed)
+        steps_per_cell = math.ceil(1 / agent.speed_counter.max_speed)
+        step, next_step = self._first_steps(agent=agent, first_stop=stops.get(0), elapsed_steps=elapsed_steps, steps_per_cell=steps_per_cell)
 
         predictions = [ProjectedEntryPoint(route[0], step, stops.get(0))]
         for index in range(1, len(route)):
@@ -144,6 +135,20 @@ class UnilateralTimetablePredictor(TimetablePredictor):
                 step = max(step + 1, earliest_departure or 0)
             next_step = step + steps_per_cell
         return predictions
+
+    def _first_steps(self, agent: EnvAgent, first_stop: Optional[int], elapsed_steps: int, steps_per_cell: int) -> Tuple[int, int]:
+        """
+        The step the vehicle is at the first entry point of its route, and the step it enters the second: off the map,
+        it enters at `max(earliest departure, elapsed + 1)`; on the map, it is there now, and moves on after its halt
+        (speed 0, at the earliest departure of the stop `first_stop` it stands on) and its remaining distance.
+        """
+        if agent.current_entry_point is None:
+            step = max(agent.earliest_departure, elapsed_steps + 1)
+            return step, step + steps_per_cell
+        moving_from = elapsed_steps
+        if agent.speed_counter.speed == 0:
+            moving_from = max(elapsed_steps + 1, self._earliest_departure(agent, first_stop) or 0)
+        return elapsed_steps, moving_from + math.ceil((1 - agent.speed_counter.distance) / agent.speed_counter.max_speed)
 
     @staticmethod
     def _earliest_departure(agent: EnvAgent, stop: Optional[int]) -> Optional[int]:
