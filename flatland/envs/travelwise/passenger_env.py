@@ -11,17 +11,10 @@ from flatland.envs.agent_utils import EntryPointT, _sanitize_entry_point
 from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_policies import RailEnvStaticData
 from flatland.envs.step_utils.states import TrainState
+from flatland.envs.travelwise.passenger import Passenger
 from flatland.envs.travelwise.passenger_env_action import PassengerAction, PassengerActionT
 from flatland.envs.travelwise.passenger_env_rewards import DefaultPassengerRewards, PassengerRewards, PassengerTransitionData
 from flatland.envs.travelwise.passenger_journey import PassengerJourney
-
-# A passenger's `passenger_mode[h]` tuple - a resource (grid cell, graph node's resource; not a full
-# entry point), then a handle - holds in each of its 3 modes:
-# - off map:                       (None, None)
-# - on map, waiting:               (passenger_resource, None)
-# - riding a vehicle:              (passenger_resource, vehicle handle), with the vehicle's own
-#   resource always equal to passenger_resource
-PassengerMode = Tuple[Optional[ResourceT], Optional[int]]
 
 
 class PassengerEnvStaticData(NamedTuple):
@@ -64,9 +57,8 @@ class PassengerEnv(Environment):
     end-of-episode reward once the rail env is done.
 
     `dones` holds per passenger whether it has arrived, and `'__all__'`: whether the rail env is done.
-    Read the passengers' state from `passenger_mode`/
-    `passenger_current_entry_point`/`passenger_target_entry_point`/`passenger_arrival_time`. A passenger
-    has exactly 3 modes, tracked in `passenger_mode[h]` as a `PassengerMode` (resource, handle) pair:
+    Read the passengers' state from `passengers`, a `Passenger` per handle. A passenger has exactly 3 modes, tracked in
+    its `mode`, a `PassengerMode` (resource, handle) pair:
 
     1. off map (`(None, None)`) - after `reset()`, before the first step shows it up at its origin.
     2. on map, waiting (`(passenger_resource, None)`) - at its origin, at its target once arrived, or where a vehicle
@@ -84,7 +76,7 @@ class PassengerEnv(Environment):
 
     Alighting (3 -> 2): `HOP_OFF`, at the vehicle's current entry point; and forced at the vehicle's final stop, where
     Flatland removes it in the step it reaches its target, at the entry point it reached
-    (`EnvAgent.target_entry_point`). Alighting at an entry point of its next stop (`next_stop()`) completes the ride:
+    (`EnvAgent.target_entry_point`). Alighting at an entry point of its next stop (`Passenger.next_stop()`) completes the ride:
     at a change, the passenger waits there for the next vehicle; at its target, it has arrived, stays there and its
     further actions are ignored. Alighting elsewhere leaves it waiting there, with the same next stop.
 
@@ -111,17 +103,8 @@ class PassengerEnv(Environment):
         self.passenger_journeys = passenger_journeys
         self.obs_builder = obs_builder
 
-        # PassengerMode per handle - see the class docstring. Its own second entry, once riding (mode 3),
-        # already *is* the handle of the vehicle being ridden - no separate bookkeeping needed.
-        self.passenger_mode: Dict[int, PassengerMode] = {}
-        # index into passenger_journeys[h].waypoints of the group the passenger is at/last departed, once it's shown up.
-        self._passenger_stop_index: Dict[int, int] = {}
-
-        # per-handle bookkeeping mirroring the entry-point/arrival fields an `EnvAgent` would carry,
-        # since a passenger is never a real `EnvAgent` - written directly by `_update_passengers()`.
-        self.passenger_current_entry_point: Dict[int, Optional[EntryPointT]] = {}
-        self.passenger_target_entry_point: Dict[int, Optional[EntryPointT]] = {}
-        self.passenger_arrival_time: Dict[int, Optional[int]] = {}
+        # the passengers' state by handle, see the class docstring
+        self.passengers: Dict[int, Passenger] = {}
 
         # the rail env's last vehicle observations and infos, which the vehicle policy acts on in the next step
         self.vehicle_observations: Dict[int, object] = {}
@@ -141,11 +124,7 @@ class PassengerEnv(Environment):
         self._static = PassengerEnvStaticData(passenger_journeys=MappingProxyType(dict(self.passenger_journeys)), rail_env=rail_env_static)
         self._rail_env_done = False
 
-        self.passenger_mode = {handle: (None, None) for handle in self.passenger_journeys}
-        self._passenger_stop_index = {handle: 0 for handle in self.passenger_journeys}
-        self.passenger_current_entry_point = {handle: None for handle in self.passenger_journeys}
-        self.passenger_target_entry_point = {handle: None for handle in self.passenger_journeys}
-        self.passenger_arrival_time = {handle: None for handle in self.passenger_journeys}
+        self.passengers = {handle: Passenger(handle=handle, journey=journey) for handle, journey in self.passenger_journeys.items()}
 
         self.obs_builder.reset(self)
         self._passenger_obs = self.obs_builder.get_many(self.get_agent_handles())
@@ -191,31 +170,19 @@ class PassengerEnv(Environment):
                 if self._rail_env_done:
                     self._rewards[handle] = self.rewards.cumulate(
                         self._rewards[handle],
-                        self.rewards.end_of_episode_reward(journey, self.passenger_arrival_time[handle] is not None, self.rail_env._max_episode_steps))
+                        self.rewards.end_of_episode_reward(journey, self.passengers[handle].arrival_time is not None, self.rail_env._max_episode_steps))
             self._passenger_obs = self.obs_builder.get_many(self.get_agent_handles())
-        dones = {handle: self.passenger_arrival_time[handle] is not None for handle in self.passenger_journeys}
+        dones = {handle: passenger.arrival_time is not None for handle, passenger in self.passengers.items()}
         return self._passenger_obs, self._rewards, dict(dones, __all__=self._rail_env_done), {"static": self._static}
-
-    def stop_index(self, passenger_handle: int) -> int:
-        """
-        The index of the journey's waypoint group the passenger is at or last left (`PassengerJourney.waypoints`): its
-        origin until it has completed its first ride, the target's index once arrived. Counts repeated visits of a group.
-        """
-        return self._passenger_stop_index[passenger_handle]
-
-    def next_stop(self, passenger_handle: int) -> Optional[List[EntryPointT]]:
-        """ The waypoint group the passenger travels to next (a change or its target) - `None` once arrived. """
-        waypoints = self.passenger_journeys[passenger_handle].waypoints
-        stop_index = self._passenger_stop_index[passenger_handle]
-        return waypoints[stop_index + 1] if stop_index + 1 < len(waypoints) else None
 
     def can_hop_on(self, vehicle_handle: int, passenger_handle: int) -> bool:
         """
         Whether the passenger can hop on the vehicle physically: it waits, and the vehicle is on the map at its
         resource. A passenger who has arrived is done: its actions are ignored.
         """
-        passenger_resource, riding_handle = self.passenger_mode[passenger_handle]
-        if riding_handle is not None or passenger_resource is None or self.next_stop(passenger_handle) is None:
+        passenger = self.passengers[passenger_handle]
+        passenger_resource, riding_handle = passenger.mode
+        if riding_handle is not None or passenger_resource is None or passenger.next_stop() is None:
             return False
         vehicle_entry_point = self.rail_env.agents[vehicle_handle].current_entry_point
         return vehicle_entry_point is not None and self._resource(vehicle_entry_point) == passenger_resource
@@ -226,10 +193,10 @@ class PassengerEnv(Environment):
         their origin on the first step (mode 1 -> mode 2), riding passengers follow their vehicles, and are forced off
         at a vehicle's final stop, where Flatland removes it in the step it reaches its target (mode 3 -> mode 2).
         """
-        for handle, journey in self.passenger_journeys.items():
-            passenger_resource, riding_handle = self.passenger_mode[handle]
+        for handle, passenger in self.passengers.items():
+            passenger_resource, riding_handle = passenger.mode
             if passenger_resource is None:
-                self._set_passenger(handle, journey.waypoints[0][0], None)
+                self._set_passenger(handle, passenger.journey.waypoints[0][0], None)
             elif riding_handle is not None:
                 vehicle = self.rail_env.agents[riding_handle]
                 if vehicle.state == TrainState.DONE:
@@ -241,22 +208,22 @@ class PassengerEnv(Environment):
         """
         Applies the passengers' actions, before the rail env steps, on the state they observed - see the class docstring
         for the 3 modes/transitions. Infeasible actions are ignored, malformed ones with a warning (`_is_well_formed()`).
-        Also writes the resulting entry point straight into `passenger_current_entry_point`, and, the step a passenger
-        arrives at its target (the step being executed), its `passenger_target_entry_point`/`passenger_arrival_time` -
-        mirroring what `AbstractRailEnv.handle_done_state()` sets on an `EnvAgent` reaching its target.
+        Also writes the resulting entry point straight into the passenger's `current_entry_point`, and, the step a
+        passenger arrives at its target (the step being executed), its `target_entry_point`/`arrival_time` - mirroring
+        what `AbstractRailEnv.handle_done_state()` sets on an `EnvAgent` reaching its target.
         """
         for handle in self.passenger_journeys:
             action = actions.get(handle, (PassengerAction.WAIT, None))
             if not self._is_well_formed(handle, action):
                 continue
             action, vehicle_handle = action
-            riding_handle = self.passenger_mode[handle][1]
+            riding_handle = self.passengers[handle].mode[1]
             if riding_handle is not None and action == PassengerAction.HOP_OFF:
                 self._alight(handle, self.rail_env.agents[riding_handle].current_entry_point, self.rail_env._elapsed_steps + 1)
             elif riding_handle is None and action == PassengerAction.HOP_ON and self.can_hop_on(vehicle_handle, handle):
                 self._set_passenger(handle, self.rail_env.agents[vehicle_handle].current_entry_point, vehicle_handle)
                 self._transitions[handle] = self._transitions[handle]._replace(
-                    boarding_step=self.rail_env._elapsed_steps + 1, boarding_stop_index=self._passenger_stop_index[handle])
+                    boarding_step=self.rail_env._elapsed_steps + 1, boarding_stop_index=self.passengers[handle].stop_index)
 
     def _is_well_formed(self, handle: int, action) -> bool:
         """
@@ -282,14 +249,15 @@ class PassengerEnv(Environment):
         Sets the passenger down at `entry_point` in `step`. If `entry_point` is in its next stop, the ride is complete:
         the passenger travels on to the following group; it has arrived if the next stop was its target.
         """
-        next_stop = self.next_stop(handle)
+        passenger = self.passengers[handle]
+        next_stop = passenger.next_stop()
         self._set_passenger(handle, entry_point, None)
         if entry_point in next_stop:
-            self._passenger_stop_index[handle] += 1
-            if self.next_stop(handle) is not None:
+            passenger.stop_index += 1
+            if passenger.next_stop() is not None:
                 return
-            self.passenger_target_entry_point[handle] = self.passenger_current_entry_point[handle]
-            self.passenger_arrival_time[handle] = step
+            passenger.target_entry_point = passenger.current_entry_point
+            passenger.arrival_time = step
             self._transitions[handle] = self._transitions[handle]._replace(arrival_step=step)
 
     def _resource(self, entry_point: Optional[EntryPointT]) -> Optional[ResourceT]:
@@ -297,9 +265,10 @@ class PassengerEnv(Environment):
         return self.rail_env.resource_map.get_resource(entry_point, None)
 
     def _set_passenger(self, handle: int, entry_point: EntryPointT, riding_handle: Optional[int]):
-        """ Writes the passenger's entry point into `passenger_current_entry_point` and its mode into `passenger_mode`. """
-        self.passenger_current_entry_point[handle] = _sanitize_entry_point(entry_point)
-        self.passenger_mode[handle] = (self._resource(entry_point), riding_handle)
+        """ Writes the passenger's entry point into its `current_entry_point` and its mode into its `mode`. """
+        passenger = self.passengers[handle]
+        passenger.current_entry_point = _sanitize_entry_point(entry_point)
+        passenger.mode = (self._resource(entry_point), riding_handle)
 
     @property
     def done(self) -> bool:

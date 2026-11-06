@@ -15,7 +15,7 @@ class PassengerObservation:
 
     - `elapsed_steps`: the env's elapsed steps (TODO https://github.com/flatland-association/flatland-rl/issues/561 move to the infos, as for the vehicles);
     - `mode`: its `(resource, riding vehicle handle)`, see `PassengerEnv`;
-    - `stop_index`: the index of its journey's waypoint group it is at or last left (`PassengerEnv.stop_index()`) -
+    - `stop_index`: the index of its journey's waypoint group it is at or last left (`Passenger.stop_index`) -
       its next stop (a change or its target) is the group after it, none once arrived;
     - `vehicles_to_board`: per vehicle it can hop on now (`PassengerEnv.can_hop_on()`) and that serves it, the
       vehicle's planned future stops serving its next stop (`PassengerObservationBuilder.future_stops_serving()`);
@@ -49,11 +49,12 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
         return super().get_many(handles)
 
     def get(self, handle: AgentHandle = 0) -> PassengerObservation:
-        riding_handle = self.env.passenger_mode[handle][1]
+        passenger = self.env.passengers[handle]
+        riding_handle = passenger.mode[1]
         return PassengerObservation(
             elapsed_steps=self.env.rail_env._elapsed_steps,
-            mode=self.env.passenger_mode[handle],
-            stop_index=self.env.stop_index(handle),
+            mode=passenger.mode,
+            stop_index=passenger.stop_index,
             vehicles_to_board={vehicle.handle: self.future_stops_serving(vehicle.handle, handle) for vehicle in self.env.rail_env.agents
                                if self.env.can_hop_on(vehicle.handle, handle) and self.serves(vehicle.handle, handle)},
             vehicle_stops_at_next_stop=riding_handle is not None and self.stops_at_next_stop(riding_handle, handle),
@@ -65,7 +66,7 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
         passenger's next stop. A vehicle stopping at another entry point of a group it shares with the next stop (e.g.
         the other track of the same station) does not serve the passenger.
         """
-        next_stop = self.env.next_stop(passenger_handle)
+        next_stop = self.env.passengers[passenger_handle].next_stop()
         if next_stop is None:
             return []
         return [prediction for prediction in self._vehicles.plans[vehicle_handle][1:]
@@ -77,6 +78,6 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
 
     def stops_at_next_stop(self, vehicle_handle: int, passenger_handle: int) -> bool:
         """ Whether the vehicle is at the entry point it stops at for one of its groups, and it is in the passenger's next stop. """
-        next_stop = self.env.next_stop(passenger_handle)
+        next_stop = self.env.passengers[passenger_handle].next_stop()
         plan = self._vehicles.plans[vehicle_handle]
         return next_stop is not None and len(plan) > 0 and plan[0].stop is not None and plan[0].entry_point in next_stop
