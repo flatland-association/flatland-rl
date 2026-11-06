@@ -194,7 +194,8 @@ class PassengerEnv(Environment):
         Whether the vehicle stops where it is, so passengers can hop on and off: it stands still (speed 0) at an entry
         point of one of its waypoint groups - the exact entry point, as the predictor marks stops. A vehicle passing
         through a stop, or standing between stops (e.g. in a malfunction), does not stop. At its origin, it stops in
-        the step it enters the map (distance 0), though moving, as it cannot enter the map standing still.
+        the step it enters the map (no previous entry point), though moving, as it cannot enter the map standing still -
+        not when it passes its origin again later.
         TODO https://github.com/flatland-association/flatland-rl/issues/563 enter the map with STOP_MOVING, then drop
         the exception for the origin.
         """
@@ -202,7 +203,7 @@ class PassengerEnv(Environment):
         entry_point = vehicle.current_entry_point
         if entry_point is None:
             return False
-        if entry_point == vehicle.initial_entry_point and vehicle.speed_counter.distance == 0:
+        if entry_point == vehicle.initial_entry_point and vehicle.old_entry_point is None:
             return True
         return vehicle.speed_counter.speed == 0 and any(entry_point in group for group in vehicle.waypoints)
 
