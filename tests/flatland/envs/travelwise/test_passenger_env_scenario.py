@@ -203,6 +203,34 @@ def test_passenger_env_scenario_passengers_neither_board_nor_alight_where_the_ve
     assert {h: passenger_env.passengers[h].arrival_time for h in (0, 1, 2)} == {0: 8, 1: None, 2: None}
 
 
+def test_passenger_env_vehicle_stops_at_its_origin_only_in_the_step_it_enters_the_map():
+    """
+    T0 enters the map at its origin A at step 2, at speed 1, and is at (0, 2) at step 3, also at speed 1 with distance 0.
+
+    - Step 2: T0 stops at A, though moving - it cannot enter the map standing still.
+    - Step 3: with (0, 2) taken as T0's origin, as for a route passing its origin again, T0 does not stop there: it
+      passes through, coming from A.
+    """
+    passenger_env = _make_scenario_env()
+    passenger_env.reset()
+    vehicle = passenger_env.rail_env.agents[0]
+    _run_steps(passenger_env, 2)
+    assert vehicle.current_entry_point == A_EAST and vehicle.speed_counter.speed == 1
+    assert passenger_env.vehicle_stops(0)
+
+    _run_steps(passenger_env, 1)
+    assert vehicle.current_entry_point == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
+    assert vehicle.speed_counter.speed == 1 and vehicle.speed_counter.distance == 0
+    vehicle.initial_entry_point = vehicle.current_entry_point
+    assert not passenger_env.vehicle_stops(0)
+
+
+def _run_steps(passenger_env: PassengerEnv, steps: int):
+    """ Steps the passenger env `steps` times, the passengers waiting. """
+    for _ in range(steps):
+        passenger_env.step({})
+
+
 @pytest.mark.parametrize("hop_on_step, boards", [(10, True), (11, False)], ids=["standing still", "moving on"])
 def test_passenger_env_scenario_passenger_boards_while_the_vehicle_stands_still_not_as_it_moves_on(hop_on_step, boards):
     """
