@@ -29,11 +29,12 @@ class SingleAgentNavigationObs(ObservationBuilder):
     def get(self, handle: int = 0) -> List[int]:
         agent = self.env.agents[handle]
 
-        if agent.current_entry_point is not None:
-            possible_transitions = self.env.rail.get_transitions(agent.current_entry_point)
-        else:
-            possible_transitions = self.env.rail.get_transitions(agent.initial_entry_point)
+        # Entry points are ((row, column), direction). Actions are applied at cell entry: the action decides how the agent
+        # leaves the cell it enters next, i.e. its next entry point; off the map, the one at which it enters the map.
+        entry_point = agent.next_entry_point if agent.next_entry_point is not None else agent.initial_entry_point
+        position, direction = entry_point
 
+        possible_transitions = self.env.rail.get_transitions(entry_point)
         num_transitions = np.count_nonzero(possible_transitions)
 
         # Start from the current orientation, and see which transitions are available;
@@ -42,14 +43,12 @@ class SingleAgentNavigationObs(ObservationBuilder):
         if num_transitions == 1:
             observation = [0, 1, 0]
         else:
-            agent_direction = agent.current_entry_point[1] if agent.current_entry_point is not None \
-                else agent.initial_entry_point[1]
             min_distances = []
-            for direction in [(agent_direction + i) % 4 for i in range(-1, 2)]:
-                if possible_transitions[direction]:
-                    new_position = get_new_position(agent.current_entry_point[0], direction)
+            for new_direction in [(direction + i) % 4 for i in range(-1, 2)]:
+                if possible_transitions[new_direction]:
+                    new_position = get_new_position(position, new_direction)
                     min_distances.append(
-                        self.env.distance_map.get()[handle, new_position[0], new_position[1], direction])
+                        self.env.distance_map.get()[handle, new_position[0], new_position[1], new_direction])
                 else:
                     min_distances.append(np.inf)
 
