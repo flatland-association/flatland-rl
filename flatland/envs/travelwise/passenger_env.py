@@ -43,6 +43,10 @@ class PassengerEnv(Environment):
     keeps the vehicle observations (`vehicle_observations`, built by the rail env's `VehicleObservationBuilder`) and
     infos the rail env returned, and the vehicle policy acts on them in the next step, with the rail env's static data
     in the infos (`infos["static"]`, a `RailEnvStaticData`).
+    The vehicle policy is assumed to halt the vehicles at their intermediate stops (e.g. `ShortestPathPolicy` with
+    `serve_intermediate_stops`), as `UnilateralTimetablePredictor` predicts them - not checked: otherwise passengers
+    board a vehicle planned to stop at their next stop that passes through it, cannot alight there, and are forced off
+    at its final stop.
 
     The passengers decide themselves when to board and when to leave a vehicle, based on what they observe of the
     vehicles: `reset()`/`step()` return the passengers' observations, built by `obs_builder` (e.g.
