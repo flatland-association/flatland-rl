@@ -64,7 +64,7 @@ def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[in
     """
     Drives the passengers of `passenger_env` with `passenger_policy` (`TravelWisePolicyRunner`) until the rail env is
     done: per step, the policy acts on the observations of the previous step. Returns the observations per step (0
-    after `reset()`), the mode changes per passenger (step -> `passenger_mode[h]`), the non-zero rewards per passenger
+    after `reset()`), the mode changes per passenger (step -> `passengers[h].mode`), the non-zero rewards per passenger
     (step -> reward) and the last dones.
     """
     handles = passenger_env.get_agent_handles()
@@ -82,7 +82,7 @@ def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[in
         for handle in handles:
             if rewards[handle] != 0:
                 rewards_by_step[handle][step] = rewards[handle]
-            mode = passenger_env.passenger_mode[handle]
+            mode = passenger_env.passengers[handle].mode
             if mode != previous_modes[handle]:
                 mode_changes[handle][step] = mode
             previous_modes[handle] = mode
@@ -91,7 +91,7 @@ def _run(passenger_env: PassengerEnv, passenger_policy: Policy) -> Tuple[Dict[in
 
 def test_passenger_env_scenario_single_rides():
     """
-    Single-ride journeys on the scenario's vehicles - mode changes (step -> `passenger_mode[h]`, given with grid cells)
+    Single-ride journeys on the scenario's vehicles - mode changes (step -> `passengers[h].mode`, given with grid cells)
     and arrivals asserted verbatim:
 
     The passengers act on what they observed in the previous step: they board and alight in the step after they
@@ -123,8 +123,8 @@ def test_passenger_env_scenario_single_rides():
         4: {1: (C, None), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)},
         5: {1: (C, None)},
     }.items()}
-    assert passenger_env.passenger_arrival_time == {0: 13, 1: 6, 2: 13, 3: 18, 4: 17, 5: None}
-    assert passenger_env.passenger_target_entry_point == {0: C_EAST, 1: B_EAST, 2: C_EAST, 3: B_EAST, 4: B_WEST, 5: None}
+    assert {h: p.arrival_time for h, p in passenger_env.passengers.items()} == {0: 13, 1: 6, 2: 13, 3: 18, 4: 17, 5: None}
+    assert {h: p.target_entry_point for h, p in passenger_env.passengers.items()} == {0: C_EAST, 1: B_EAST, 2: C_EAST, 3: B_EAST, 4: B_WEST, 5: None}
     assert rewards == {0: {13: 2}, 1: {6: -2}, 2: {13: 2}, 3: {18: 2}, 4: {17: 3}, 5: {18: -25}}
     assert dones == {0: True, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
 
@@ -173,10 +173,10 @@ def test_passenger_env_scenario_ignores_invalid_actions_and_hops_off_anywhere():
     assert mode_changes[2] == _modes({1: (B, None), 6: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
     assert mode_changes[3] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: (B, None)})
     assert mode_changes[5] == _modes({1: (C, None), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)})
-    assert passenger_env.passenger_arrival_time == {0: None, 1: 6, 2: 13, 3: 6, 4: 17, 5: None}
+    assert {h: p.arrival_time for h, p in passenger_env.passengers.items()} == {0: None, 1: 6, 2: 13, 3: 6, 4: 17, 5: None}
     assert rewards == {0: {18: -25}, 1: {6: -2}, 2: {13: 2}, 3: {3: -1, 6: 14}, 4: {17: 3}, 5: {18: -25}}
     assert dones == {0: False, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
-    assert passenger_env.passenger_current_entry_point[0] == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
+    assert passenger_env.passengers[0].current_entry_point == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
 
 
 @pytest.mark.parametrize("action", [(PassengerAction.HOP_ON, -3), (PassengerAction.HOP_ON, 3), (PassengerAction.HOP_ON, "0"), PassengerAction.HOP_ON,
@@ -193,7 +193,7 @@ def test_passenger_env_scenario_warns_on_unknown_vehicle_handles_and_malformed_a
         _, mode_changes, rewards, _ = _run(passenger_env, _ScriptedPassengerPolicy({(2, 6): action}))
 
     assert mode_changes[2] == _modes({1: (B, None), 7: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
-    assert passenger_env.passenger_arrival_time[2] == 13
+    assert passenger_env.passengers[2].arrival_time == 13
     assert rewards[2] == {13: 2}
 
 
@@ -282,9 +282,9 @@ def test_board_for_target_passenger_policy_boards_only_vehicles_planned_to_stop_
     passenger_env = _make_two_track_station_env({0: _journey("A", "B1", 1, 20), 1: _journey("A", "B2", 1, 20)})
     TravelWisePolicyRunner(passenger_env, BoardForTargetPassengerPolicy()).run()
 
-    assert passenger_env.passenger_mode == {0: ("A", None), 1: ("B2", None)}
-    assert passenger_env.passenger_arrival_time[0] is None
-    assert passenger_env.passenger_arrival_time[1] is not None
+    assert {h: p.mode for h, p in passenger_env.passengers.items()} == {0: ("A", None), 1: ("B2", None)}
+    assert passenger_env.passengers[0].arrival_time is None
+    assert passenger_env.passengers[1].arrival_time is not None
 
 
 class _ArrivalCountingRewards(PassengerRewards):

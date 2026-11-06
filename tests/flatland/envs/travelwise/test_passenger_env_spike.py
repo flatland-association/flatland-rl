@@ -213,7 +213,7 @@ def test_multiple_passengers_share_trains():
     mode changes from waiting at the origin straight to riding on the next cell.
 
     All journeys have earliest departure 1 at the origin (and at B for passenger 0). Each passenger's mode changes
-    (step -> `passenger_mode[h]`) are asserted verbatim; while riding, the passenger's resource equals its vehicle's
+    (step -> `passengers[h].mode`) are asserted verbatim; while riding, the passenger's resource equals its vehicle's
     every step. Each is rewarded at its target only.
     """
     a, b, c = STATION_A, STATION_B, STATION_C
@@ -235,7 +235,7 @@ def test_multiple_passengers_share_trains():
         for handle in passenger_journeys:
             if rewards[handle] != 0:
                 rewards_by_step[handle][step] = rewards[handle]
-            mode = passenger_env.passenger_mode[handle]
+            mode = passenger_env.passengers[handle].mode
             if mode != previous_modes[handle]:
                 mode_changes[handle][step] = mode
             previous_modes[handle] = mode
@@ -251,7 +251,7 @@ def test_multiple_passengers_share_trains():
         3: {1: (b, None), 19: ((0, 3), 2), 20: ((0, 2), 2), 21: (a, None)},
         4: {1: (c, None), 25: ((0, 6), 3), 26: ((0, 5), 3), 27: (b, None)},
     }.items()}
-    assert passenger_env.passenger_arrival_time == {0: 23, 1: 9, 2: 23, 3: 21, 4: 27}
-    assert passenger_env.passenger_target_entry_point == {handle: journey.waypoints[-1][0] for handle, journey in passenger_journeys.items()}
+    assert {h: p.arrival_time for h, p in passenger_env.passengers.items()} == {0: 23, 1: 9, 2: 23, 3: 21, 4: 27}
+    assert {h: p.target_entry_point for h, p in passenger_env.passengers.items()} == {h: journey.waypoints[-1][0] for h, journey in passenger_journeys.items()}
     # rewarded at the target only, not at the change: latest arrival 30 minus the arrival step
     assert rewards_by_step == {0: {23: 7}, 1: {9: 21}, 2: {23: 7}, 3: {21: 9}, 4: {27: 3}}
