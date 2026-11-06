@@ -25,7 +25,7 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
         journeys = infos["static"].passenger_journeys
         return {handle: self.act(observation, journey=journeys[handle]) for handle, observation in zip(handles, observations)}
 
-    def act(self, observation: PassengerObservation, journey: PassengerJourney = None, **kwargs) -> PassengerActionT:
+    def act(self, observation: PassengerObservation, *, journey: PassengerJourney, **kwargs) -> PassengerActionT:
         if observation.vehicle_stops_at_next_stop:
             return PassengerAction.HOP_OFF, None
         if len(observation.vehicles_to_board) == 0 or not self._may_depart(observation, journey):

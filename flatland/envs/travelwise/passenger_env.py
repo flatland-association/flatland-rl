@@ -15,6 +15,7 @@ from flatland.envs.travelwise.passenger import Passenger
 from flatland.envs.travelwise.passenger_env_action import PassengerAction, PassengerActionT
 from flatland.envs.travelwise.passenger_env_rewards import DefaultPassengerRewards, PassengerRewards, PassengerTransitionData
 from flatland.envs.travelwise.passenger_journey import PassengerJourney
+from flatland.envs.travelwise.vehicle_observations import VehicleObservation
 
 
 class PassengerEnvStaticData(NamedTuple):
@@ -109,7 +110,7 @@ class PassengerEnv(Environment):
         self.passengers: Dict[int, Passenger] = {}
 
         # the rail env's last vehicle observations and infos, which the vehicle policy acts on in the next step
-        self.vehicle_observations: Dict[int, object] = {}
+        self.vehicle_observations: Dict[int, VehicleObservation] = {}
         self._vehicle_infos: Dict = {}
         self._static: Optional[PassengerEnvStaticData] = None
         self._passenger_obs: Dict = {}

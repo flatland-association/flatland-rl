@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from flatland.core.env_observation_builder import AgentHandle, ObservationBuilder
-from flatland.core.resource_map import ResourceT
+from flatland.envs.travelwise.passenger import PassengerMode
 from flatland.envs.travelwise.passenger_env import PassengerEnv
 from flatland.envs.travelwise.timetable_predictor import ProjectedEntryPoint
 from flatland.envs.travelwise.vehicle_observations import VehiclePositionsAndPlans
@@ -26,7 +26,7 @@ class PassengerObservation:
     times) is static data, in the infos (`PassengerEnvStaticData`).
     """
     elapsed_steps: int
-    mode: Tuple[Optional[ResourceT], Optional[int]]
+    mode: PassengerMode
     stop_index: int
     vehicles_to_board: Dict[int, List[ProjectedEntryPoint]]
     vehicle_stops_at_next_stop: bool
