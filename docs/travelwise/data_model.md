@@ -82,7 +82,8 @@ Technically, it implements the `Environment` interface for the passengers and ho
 Agents controlled in rail env are vehicles, agents controlled in the passenger env are passengers.
 
 A passenger waits at an entry point or rides a vehicle. Its actions are `WAIT`, `HOP_ON` a given vehicle and
-`HOP_OFF`; the env applies an action if it is feasible and ignores it otherwise. It observes the vehicles it can board
+`HOP_OFF`; the env applies an action if it is feasible and ignores it otherwise: a passenger hops on and off only
+where the vehicle stops, standing still at a stop of its line. It observes the vehicles it can board
 and their planned stops (`TimetablePredictor`); static data (map, timetables, journeys) comes with the infos.
 
 ### Class diagrams
@@ -119,7 +120,7 @@ classDiagram
     note for TransitionMap "Topology"
     note for Line "Services in Space. Waypoints are Waypoint objects on the grid, entry points on the graph. Passenger journeys have the same shape."
     note for Timetable "Services in Space and Time"
-    note for StoppingPoint "aka. Haltepunkt. Today a stop is an entry point of a waypoint group."
+    note for StoppingPoint "aka. Haltepunkt. The physical location where a vehicle takes up and sets down passengers when it stands still there. Today the entry points of a vehicle's waypoint groups serve as its stopping points."
     RailEnv --> TransitionMap : rail
     RailEnv --> ResourceMap : resource_map
     RailEnv "1" --> "1.." EnvAgent : agents
@@ -416,7 +417,7 @@ Each building block's responsibility, by concern (domain, RL or both) and namesp
 | `TransitionMap` | domain | `flatland.core` | Holds the infrastructure's topology: which entry point follows which, under which action. | 🟨 |
 | `ResourceMap` | domain | `flatland.core` | Maps entry points to the resources they occupy, so that no two vehicles hold the same resource. | 🟩 |
 | `Station` | domain | `flatland.envs` | Groups the stopping points where passengers change between vehicles and walkways. | 🟦 |
-| `StoppingPoint` | domain | `flatland.envs` | Names a place where a vehicle can stop at a station; today a stop is an entry point of a waypoint group. | 🟦 |
+| `StoppingPoint` | domain | `flatland.envs` | The physical location where a vehicle takes up and sets down passengers when it stands still there; today the entry points of a vehicle's waypoint groups serve as its stopping points. | 🟦 |
 | `Line` | domain | `flatland.envs` | Describes the services in space: each vehicle's waypoint groups and its speed. | 🟨 |
 | `LineFlexibleStoppingPoint` | domain | `flatland.envs` | Lists the alternatives a vehicle (or passenger) may stop at for one waypoint group. | 🟨 |
 | `Timetable` | domain | `flatland.envs` | Adds the times to the line: earliest departure and latest arrival per waypoint group, and the episode's length. | 🟨 |
