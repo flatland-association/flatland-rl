@@ -182,20 +182,22 @@ def test_passenger_env_scenario_passengers_neither_board_nor_alight_where_the_ve
     """
     The scenario with an auto-pilot not serving intermediate stops: T0 passes through B (`B_EAST`, an entry point of
     its waypoint group `[B_EAST]`) at speed 1 at step 5, without stopping, and is at (0, 5) at step 6. Passengers act by
-    `BoardForTargetPassengerPolicy`, except passenger 2's scripted hop-on:
+    `BoardForTargetPassengerPolicy`, except the scripted hop-off of 1 and hop-on of 2:
 
-    - 1 (A -> B) rides T0 from A, observes it at B at step 5 and hops off at step 6 - ignored: it rides on to T0's
-      final stop C, where it is forced off at 8, without arriving.
+    - 1 (A -> B) rides T0 from A, does not observe it stopping at B at step 5, and hops off at step 6 - ignored: it
+      rides on to T0's final stop C, where it is forced off at 8, without arriving.
     - 2 (B -> C) waits at B, observes no vehicle to board at step 5, and hops on T0 at step 6 - ignored: it never
       boards.
     - 0 (A -> C) rides T0 through B and arrives at C at 8, T0's final stop.
     """
     assert B_EAST in VEHICLE_WAYPOINTS[0][1]
     passenger_env = _make_scenario_env(serve_intermediate_stops=False)
-    observations, mode_changes, _, _ = _run(passenger_env, _ScriptedPassengerPolicy({(2, 6): (PassengerAction.HOP_ON, 0)}))
+    observations, mode_changes, _, _ = _run(passenger_env, _ScriptedPassengerPolicy({(1, 6): (PassengerAction.HOP_OFF, None),
+                                                                                     (2, 6): (PassengerAction.HOP_ON, 0)}))
 
     # T0 is at B at step 5 only, moving on to (0, 5) at step 6: it does not stand still at B
     assert mode_changes[1] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: ((0, 5), 0), 7: ((0, 6), 0), 8: (C, None)})
+    assert not observations[5][1].vehicle_stops_at_next_stop
     assert observations[5][2].vehicles_to_board == {}
     assert mode_changes[2] == _modes({1: (B, None)})
     assert {h: passenger_env.passengers[h].arrival_time for h in (0, 1, 2)} == {0: 8, 1: None, 2: None}

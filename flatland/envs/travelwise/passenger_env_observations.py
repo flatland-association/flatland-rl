@@ -19,8 +19,8 @@ class PassengerObservation:
       its next stop (a change or its target) is the group after it, none once arrived;
     - `vehicles_to_board`: per vehicle it can hop on now (`PassengerEnv.can_hop_on()`) and that serves it - one with a
       planned future stop at its next stop - those stops (`PassengerObservationBuilder.future_stops_serving()`);
-    - `vehicle_stops_at_next_stop`: whether the vehicle it rides stops at an entry point of its next stop now
-      (`PassengerObservationBuilder.stops_at_next_stop()`).
+    - `vehicle_stops_at_next_stop`: whether the vehicle it rides stops now (`PassengerEnv.vehicle_stops()`) at an
+      entry point of its next stop - where `HOP_OFF` completes its ride.
 
     After `reset()`, the passenger is off the map and observes no vehicle. Its journey (the waypoint groups and their
     times) is static data, in the infos (`PassengerEnvStaticData`).
@@ -62,7 +62,8 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
             mode=passenger.mode,
             stop_index=passenger.stop_index,
             vehicles_to_board=vehicles_to_board,
-            vehicle_stops_at_next_stop=riding_handle is not None and self.stops_at_next_stop(riding_handle, handle),
+            vehicle_stops_at_next_stop=riding_handle is not None and self.env.vehicle_stops(riding_handle)
+            and self.env.rail_env.agents[riding_handle].current_entry_point in (passenger.next_stop() or ()),
         )
 
     def future_stops_serving(self, vehicle_handle: int, passenger_handle: int) -> List[ProjectedEntryPoint]:
@@ -76,9 +77,3 @@ class PassengerObservationBuilder(ObservationBuilder[PassengerEnv, PassengerObse
             return []
         return [prediction for prediction in self._vehicles.plans[vehicle_handle][1:]
                 if prediction.stop is not None and prediction.entry_point in next_stop]
-
-    def stops_at_next_stop(self, vehicle_handle: int, passenger_handle: int) -> bool:
-        """ Whether the vehicle is at the entry point it stops at for one of its groups, and it is in the passenger's next stop. """
-        next_stop = self.env.passengers[passenger_handle].next_stop()
-        plan = self._vehicles.plans[vehicle_handle]
-        return next_stop is not None and len(plan) > 0 and plan[0].stop is not None and plan[0].entry_point in next_stop
