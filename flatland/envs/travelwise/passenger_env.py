@@ -70,11 +70,14 @@ class PassengerEnv(Environment):
     do is the passenger policy's decision - e.g. whether a vehicle serves the passenger's target, and respecting the
     passenger's earliest departure.
 
-    Boarding (2 -> 3): `HOP_ON` a vehicle, feasible if `can_hop_on()` - the vehicle on the map at the passenger's
-    resource. A passenger on a vehicle not stopping at its target is forced off at the vehicle's final stop, without
+    A passenger boards and alights only where the vehicle stops (`vehicle_stops()`): it stands still at an entry point
+    of one of its waypoint groups. Hopping on a vehicle passing through, or off between stops, is ignored.
+
+    Boarding (2 -> 3): `HOP_ON` a vehicle, feasible if `can_hop_on()` - the vehicle stops at the passenger's resource.
+    A passenger on a vehicle not stopping at its target is forced off at the vehicle's final stop, without
     arriving.
 
-    Alighting (3 -> 2): `HOP_OFF`, at the vehicle's current entry point; and forced at the vehicle's final stop, where
+    Alighting (3 -> 2): `HOP_OFF`, feasible where the vehicle stops, at its current entry point; and forced at the vehicle's final stop, where
     Flatland removes it in the step it reaches its target, at the entry point it reached
     (`EnvAgent.target_entry_point`). Alighting at an entry point of its next stop (`Passenger.next_stop()`) completes the ride:
     at a change, the passenger waits there for the next vehicle; at its target, it has arrived, stays there and its
@@ -85,9 +88,8 @@ class PassengerEnv(Environment):
     - The changes are given, not planned: a passenger set down outside its next stop continues only on a vehicle
       from there that stops at its next stop. No minimum transfer time.
       TODO https://github.com/flatland-association/flatland-rl/issues/562 plan connections with the query view.
-    - A passenger may board a vehicle at its resource even where the vehicle doesn't stop, e.g. passing through.
-      TODO board only at a vehicle's stop.
-    - A passenger may hop off at any step. TODO hop off only where the vehicle stops.
+    - A vehicle enters the map moving, so it never stands still at its origin: there, it stops in the step it enters
+      the map. TODO https://github.com/flatland-association/flatland-rl/issues/563 enter the map with STOP_MOVING.
     - The vehicles' plans are per-vehicle predictions, optimistic (`UnilateralTimetablePredictor`); there is no query view
       of all vehicles' future stops yet.
     - Stops are entry points (station tracks), not stations.
@@ -177,15 +179,31 @@ class PassengerEnv(Environment):
 
     def can_hop_on(self, vehicle_handle: int, passenger_handle: int) -> bool:
         """
-        Whether the passenger can hop on the vehicle physically: it waits, and the vehicle is on the map at its
-        resource. A passenger who has arrived is done: its actions are ignored.
+        Whether the passenger can hop on the vehicle physically: it waits, and the vehicle stops at its resource
+        (`vehicle_stops()`). A passenger who has arrived is done: its actions are ignored.
         """
         passenger = self.passengers[passenger_handle]
         passenger_resource, riding_handle = passenger.mode
         if riding_handle is not None or passenger_resource is None or passenger.next_stop() is None:
             return False
-        vehicle_entry_point = self.rail_env.agents[vehicle_handle].current_entry_point
-        return vehicle_entry_point is not None and self._resource(vehicle_entry_point) == passenger_resource
+        return self.vehicle_stops(vehicle_handle) and self._resource(self.rail_env.agents[vehicle_handle].current_entry_point) == passenger_resource
+
+    def vehicle_stops(self, vehicle_handle: int) -> bool:
+        """
+        Whether the vehicle stops where it is, so passengers can hop on and off: it stands still (speed 0) at an entry
+        point of one of its waypoint groups - the exact entry point, as the predictor marks stops. A vehicle passing
+        through a stop, or standing between stops (e.g. in a malfunction), does not stop. At its origin, it stops in
+        the step it enters the map (distance 0), though moving, as it cannot enter the map standing still.
+        TODO https://github.com/flatland-association/flatland-rl/issues/563 enter the map with STOP_MOVING, then drop
+        the exception for the origin.
+        """
+        vehicle = self.rail_env.agents[vehicle_handle]
+        entry_point = vehicle.current_entry_point
+        if entry_point is None:
+            return False
+        if entry_point == vehicle.initial_entry_point and vehicle.speed_counter.distance == 0:
+            return True
+        return vehicle.speed_counter.speed == 0 and any(entry_point in group for group in vehicle.waypoints)
 
     def _move_passengers(self):
         """
@@ -218,7 +236,7 @@ class PassengerEnv(Environment):
                 continue
             action, vehicle_handle = action
             riding_handle = self.passengers[handle].mode[1]
-            if riding_handle is not None and action == PassengerAction.HOP_OFF:
+            if riding_handle is not None and action == PassengerAction.HOP_OFF and self.vehicle_stops(riding_handle):
                 self._alight(handle, self.rail_env.agents[riding_handle].current_entry_point, self.rail_env._elapsed_steps + 1)
             elif riding_handle is None and action == PassengerAction.HOP_ON and self.can_hop_on(vehicle_handle, handle):
                 self._set_passenger(handle, self.rail_env.agents[vehicle_handle].current_entry_point, vehicle_handle)

@@ -50,11 +50,11 @@ PASSENGER_JOURNEYS = {
 }
 
 
-def _make_scenario_env(rewards: PassengerRewards = None) -> PassengerEnv:
+def _make_scenario_env(rewards: PassengerRewards = None, serve_intermediate_stops: bool = True) -> PassengerEnv:
     g = GraphTransitionMap.grid_to_digraph(_make_three_station_rail())
     rail_env = GraphRailEnv.from_graph(g, GraphTransitionMap.grid_to_resource_map(g), VEHICLE_WAYPOINTS, observation_builder=VehicleObservationBuilder(),
                                        timetable_generator=lambda *args, **kwargs: VEHICLE_TIMETABLE)
-    vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=True)
+    vehicle_policy = ShortestPathPolicy(router=greedy_graph_route_through_waypoints, serve_intermediate_stops=serve_intermediate_stops)
     return PassengerEnv(rail_env, vehicle_policy=vehicle_policy, passenger_journeys=PASSENGER_JOURNEYS, obs_builder=PassengerObservationBuilder(),
                         rewards=rewards)
 
@@ -146,12 +146,12 @@ class _ScriptedPassengerPolicy(BoardForTargetPassengerPolicy):
         return {handle: self.script.get((handle, self._step), action) for handle, action in actions.items()}
 
 
-def test_passenger_env_scenario_ignores_invalid_actions_and_hops_off_anywhere():
+def test_passenger_env_scenario_ignores_invalid_actions():
     """
     The scenario with scripted actions on top of `BoardForTargetPassengerPolicy`:
 
-    - 0: hops off T0 at step 4, at (0, 2) between stations: it waits there, without arriving - no vehicle serving C
-      ever comes by.
+    - 0: hops off T0 at step 4, at (0, 2) between stations - ignored, as T0 does not stop there: it rides on and
+      arrives at C at 13, as without the script.
     - 5 (C -> A): hops on T1 at C at step 15, which doesn't stop at A - valid, as whether a vehicle serves the
       passenger is the policy's decision: it is forced off at T1's final stop B (17), without arriving.
     - 3 (A -> B, earliest departure 4): hops on T0 at A at step 3, having observed it there at step 2, one step before
@@ -169,14 +169,59 @@ def test_passenger_env_scenario_ignores_invalid_actions_and_hops_off_anywhere():
         (1, 8): (PassengerAction.HOP_ON, 0),
     }))
 
-    assert mode_changes[0] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 2), None)})
+    assert mode_changes[0] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
     assert mode_changes[2] == _modes({1: (B, None), 6: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
     assert mode_changes[3] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: (B, None)})
     assert mode_changes[5] == _modes({1: (C, None), 15: ((0, 6), 1), 16: ((0, 5), 1), 17: (B, None)})
-    assert {h: p.arrival_time for h, p in passenger_env.passengers.items()} == {0: None, 1: 6, 2: 13, 3: 6, 4: 17, 5: None}
-    assert rewards == {0: {18: -25}, 1: {6: -2}, 2: {13: 2}, 3: {3: -1, 6: 14}, 4: {17: 3}, 5: {18: -25}}
-    assert dones == {0: False, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
-    assert passenger_env.passengers[0].current_entry_point == GraphTransitionMap.grid_entry_point_to_graph_entry_point(0, 2, EAST)
+    assert {h: p.arrival_time for h, p in passenger_env.passengers.items()} == {0: 13, 1: 6, 2: 13, 3: 6, 4: 17, 5: None}
+    assert rewards == {0: {13: 2}, 1: {6: -2}, 2: {13: 2}, 3: {3: -1, 6: 14}, 4: {17: 3}, 5: {18: -25}}
+    assert dones == {0: True, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
+
+
+def test_passenger_env_scenario_passengers_neither_board_nor_alight_where_the_vehicle_passes_through():
+    """
+    The scenario with an auto-pilot not serving intermediate stops: T0 passes through B (`B_EAST`, an entry point of
+    its waypoint group `[B_EAST]`) at speed 1 at step 5, without stopping, and is at (0, 5) at step 6. Passengers act by
+    `BoardForTargetPassengerPolicy`, except passenger 2's scripted hop-on:
+
+    - 1 (A -> B) rides T0 from A, observes it at B at step 5 and hops off at step 6 - ignored: it rides on to T0's
+      final stop C, where it is forced off at 8, without arriving.
+    - 2 (B -> C) waits at B, observes no vehicle to board at step 5, and hops on T0 at step 6 - ignored: it never
+      boards.
+    - 0 (A -> C) rides T0 through B and arrives at C at 8, T0's final stop.
+    """
+    assert B_EAST in VEHICLE_WAYPOINTS[0][1]
+    passenger_env = _make_scenario_env(serve_intermediate_stops=False)
+    observations, mode_changes, _, _ = _run(passenger_env, _ScriptedPassengerPolicy({(2, 6): (PassengerAction.HOP_ON, 0)}))
+
+    # T0 is at B at step 5 only, moving on to (0, 5) at step 6: it does not stand still at B
+    assert mode_changes[1] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: ((0, 5), 0), 7: ((0, 6), 0), 8: (C, None)})
+    assert observations[5][2].vehicles_to_board == {}
+    assert mode_changes[2] == _modes({1: (B, None)})
+    assert {h: passenger_env.passengers[h].arrival_time for h in (0, 1, 2)} == {0: 8, 1: None, 2: None}
+
+
+@pytest.mark.parametrize("hop_on_step, boards", [(10, True), (11, False)], ids=["standing still", "moving on"])
+def test_passenger_env_scenario_passenger_boards_while_the_vehicle_stands_still_not_as_it_moves_on(hop_on_step, boards):
+    """
+    Passenger 2 (B -> C) waits at B, where T0 stands still (speed 0) at steps 5 to 9, and is at speed 1, still at B, at
+    step 10, the step it moves on. 2 waits until it hops on T0:
+
+    - at step 10, having observed T0 standing still at step 9: it boards, though T0 starts moving in the same step, as
+      the passengers' actions are applied before the vehicles move; it arrives at C at 13;
+    - at step 11, having observed T0 moving at step 10: ignored, it never boards.
+    """
+    script = {(2, step): (PassengerAction.WAIT, None) for step in range(1, hop_on_step)}
+    script[(2, hop_on_step)] = (PassengerAction.HOP_ON, 0)
+    passenger_env = _make_scenario_env()
+    _, mode_changes, _, _ = _run(passenger_env, _ScriptedPassengerPolicy(script))
+
+    if boards:
+        assert mode_changes[2] == _modes({1: (B, None), 10: (B, 0), 11: ((0, 5), 0), 12: ((0, 6), 0), 13: (C, None)})
+        assert passenger_env.passengers[2].arrival_time == 13
+    else:
+        assert mode_changes[2] == _modes({1: (B, None)})
+        assert passenger_env.passengers[2].arrival_time is None
 
 
 @pytest.mark.parametrize("action", [(PassengerAction.HOP_ON, -3), (PassengerAction.HOP_ON, 3), (PassengerAction.HOP_ON, "0"), PassengerAction.HOP_ON,
