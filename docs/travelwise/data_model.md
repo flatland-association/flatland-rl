@@ -9,14 +9,15 @@
 >   observations, the runner, a vehicle's route, the glossary;
 > - the diagram shows what is implemented, with flatland-rl's names (entry points, `EnvAgent`'s fields, `Line`,
 >   `Timetable`, `Policy`, `BoardForTargetPassengerPolicy`; no `AgentTimetable`), split into domain and RL building
->   blocks with flatland-rl's modules as namespaces, coloured by its change against flatland-book's diagram, and adds `ResourceMap`, `MalfunctionGenerator`, `ObservationBuilder`, `PredictionBuilder`,
->   `Rewards` and `Trajectory`;
+>   blocks with flatland-rl's modules as namespaces, and adds
+>   `ResourceMap`, `MalfunctionGenerator`, `ObservationBuilder`, `PredictionBuilder`, `Rewards` and `Trajectory`;
 > - the glossary names the TravelWise concepts not built yet (passenger state, group size, modes of transportation,
 >   conditional paths, capacities, milestones, the demand generator), and the diagram notes the roles of
 >   `InfrastructureEnv` and `TravelWiseEnv` and what a journey is;
 > - the passenger rewards class (`PassengerRewards`);
-> - the building block view and the runtime view (arc42), the step as a sequence diagram, the table of rail layer
->   and passenger layer, and the table of the building blocks' responsibilities.
+> - the building block view and the runtime view (arc42), the passenger modes as a state diagram, the step as a
+>   sequence diagram, the table of rail layer and passenger layer, and the table of the building blocks'
+>   responsibilities.
 
 This page gives technical details to the general approach of [Travel Wise](../travelwise.md).
 
@@ -97,15 +98,9 @@ with the members of the concern. Namespaces are flatland-rl's modules, with `_` 
 namespaces): `flatland_core` is `flatland.core`, likewise `flatland_envs`, `flatland_envs_travelwise`,
 `flatland_trajectories`.
 
-The diagrams show what is implemented on this branch, coloured by its change against flatland-book's data model;
-new members of a modified class have a leading `+`, and members not implemented yet say so. Colour legend:
+The diagrams show what is implemented on this branch; classes and members not implemented yet say so.
 
-- 🟩 green, added: new against flatland-book, implemented on this branch;
-- 🟨 yellow, modified: in flatland-book, changed on this branch;
-- 🟦 blue, not implemented yet: in the design, not in the code;
-- ⬜ grey, unchanged: in flatland-book and implemented as designed (none at the moment).
-
-flatland-book's classes that never existed in flatland-rl are left out: `Coordinate` (here `EntryPoint`),
+Classes of flatland-book's data model that do not exist in flatland-rl are left out: `Coordinate` (here `EntryPoint`),
 `AgentTimetable` and `AgentTimetableItem` (here `Timetable` and `EnvAgent`'s waypoints with their times),
 `FlatlandPolicy` and `PassengerPolicy` (here `Policy`).
 
@@ -120,7 +115,7 @@ classDiagram
     note for TransitionMap "Topology"
     note for Line "Services in Space. Waypoints are Waypoint objects on the grid, entry points on the graph. Passenger journeys have the same shape."
     note for Timetable "Services in Space and Time"
-    note for StoppingPoint "aka. Haltepunkt. The physical location where a vehicle takes up and sets down passengers when it stands still there. Today the entry points of a vehicle's waypoint groups serve as its stopping points."
+    note for StoppingPoint "aka. Haltepunkt. The physical location where a vehicle takes up and sets down passengers when it stands still there. Semantically, the stopping points are the entry points in the waypoint groups, which reflect the intermediate stops (and origin and target)."
     RailEnv --> TransitionMap : rail
     RailEnv --> ResourceMap : resource_map
     RailEnv "1" --> "1.." EnvAgent : agents
@@ -145,11 +140,11 @@ classDiagram
             "a graph node or a grid cell entry point (r,c,d)"
         }
         class TransitionMap {
-            +get_transitions(entry_point)
+            get_transitions(entry_point)
             apply_action_independent(action, entry_point)
-            +get_successor_entry_points(entry_point)
-            +get_predecessor_entry_points(entry_point)
-            +is_valid_entry_point(entry_point)
+            get_successor_entry_points(entry_point)
+            get_predecessor_entry_points(entry_point)
+            is_valid_entry_point(entry_point)
         }
         class ResourceMap {
             get_resource(from_entry_point, to_entry_point) "the occupancy unit for conflicts, e.g. a cell"
@@ -157,40 +152,42 @@ classDiagram
     }
     namespace flatland_envs {
         class RailEnv {
-            +rail: TransitionMap
-            +resource_map: ResourceMap
-            +agents: List[EnvAgent]
-            +malfunction_generator: MalfunctionGenerator
+            rail: TransitionMap
+            resource_map: ResourceMap
+            agents: List[EnvAgent]
+            malfunction_generator: MalfunctionGenerator
             effects_generator
             events_generator "not implemented yet"
             register() "register for event topics, not implemented yet"
             deregister() "de-register from event topics, not implemented yet"
         }
         class EnvAgent {
-            +current_entry_point: Optional[EntryPoint]
-            +next_entry_point: Optional[EntryPoint]
-            +speed_counter: SpeedCounter "speed, and distance on the edge"
-            +waypoints: List[List[Waypoint]]
-            +waypoints_earliest_departure: List[int]
-            +waypoints_latest_arrival: List[int]
+            current_entry_point: Optional[EntryPoint]
+            next_entry_point: Optional[EntryPoint]
+            speed_counter: SpeedCounter "speed, and distance on the edge"
+            waypoints: List[List[Waypoint]]
+            waypoints_earliest_departure: List[int]
+            waypoints_latest_arrival: List[int]
             next_stop() LineFlexibleStoppingPoint "not implemented yet"
         }
         class Line {
-            +agent_waypoints: Dict[int, List[List[Waypoint]]]
-            +agent_speeds: List[float]
+            agent_waypoints: Dict[int, List[List[Waypoint]]]
+            agent_speeds: List[float]
         }
         class LineFlexibleStoppingPoint {
             "a waypoint group: alternative entry points, one of them served"
         }
         class Timetable {
-            +earliest_departures: List[List[int]]
-            +latest_arrivals: List[List[int]]
-            +max_episode_steps: int
+            earliest_departures: List[List[int]]
+            latest_arrivals: List[List[int]]
+            max_episode_steps: int
         }
         class Station {
+            "not implemented yet"
             description: Any
         }
         class StoppingPoint {
+            "not implemented yet"
             description: Any
         }
         class MalfunctionGenerator {
@@ -199,9 +196,9 @@ classDiagram
     }
     namespace flatland_envs_travelwise {
         class PassengerEnv {
-            +rail_env: RailEnv
-            +passenger_journeys: Dict[int, PassengerJourney]
-            +passengers: Dict[int, Passenger]
+            rail_env: RailEnv
+            passenger_journeys: Dict[int, PassengerJourney]
+            passengers: Dict[int, Passenger]
         }
         class Passenger {
             handle
@@ -219,22 +216,20 @@ classDiagram
             waypoints_latest_arrival
         }
     }
-
-    style EntryPoint fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style ResourceMap fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style MalfunctionGenerator fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style Passenger fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PassengerJourney fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style RailEnv fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style TransitionMap fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style Line fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style LineFlexibleStoppingPoint fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style Timetable fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style EnvAgent fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style PassengerEnv fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style Station fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,stroke-dasharray:2 2,color:#000
-    style StoppingPoint fill:#e7f5ff,stroke:#1971c2,stroke-width:2px,stroke-dasharray:2 2,color:#000
 ```
+
+A passenger's journey has the same shape as a vehicle's waypoints with their times (`PassengerJourney.waypoints`,
+`waypoints_earliest_departure`, `waypoints_latest_arrival`): origin, intermediate groups, target. The intermediate
+groups mean different things:
+
+| | Vehicle (`EnvAgent`) | Passenger (`PassengerJourney`) |
+|---|---|---|
+| Intermediate group | A stop where the vehicle halts (with the auto-pilot's `serve_intermediate_stops`). | A change: the passenger gets off there and boards the next vehicle serving its following group. |
+| Earliest departure there | The auto-pilot waits until it. | The passenger policy does not board before it. |
+| Stops of the vehicle ridden | - | Not part of the journey: the passenger stays on board. |
+
+Stops a passenger makes for its own sake, with a minimum dwell time for an activity (shopping, sightseeing, work, ...),
+are not modelled yet (a follow-up in [the plan](../plans/travelwise-passenger-env.md)).
 
 #### RL building blocks
 
@@ -294,8 +289,8 @@ classDiagram
     }
     namespace flatland_envs {
         class RailEnv {
-            +obs_builder: ObservationBuilder
-            +rewards: Rewards
+            obs_builder: ObservationBuilder
+            rewards: Rewards
             step() "env step, called by controller"
             reset() "re-generate a new rail, line and timetable"
         }
@@ -304,6 +299,8 @@ classDiagram
             end_of_episode_reward()
         }
         class ShortestPathPolicy {
+            router: Router
+            serve_intermediate_stops: bool
         }
         class ShortestPathObservation {
             handle
@@ -324,10 +321,10 @@ classDiagram
     }
     namespace flatland_envs_travelwise {
         class PassengerEnv {
-            +vehicle_policy: Policy
-            +obs_builder: PassengerObservationBuilder
-            +rewards: PassengerRewards
-            +reset()
+            vehicle_policy: Policy
+            obs_builder: PassengerObservationBuilder
+            rewards: PassengerRewards
+            reset()
             step()
         }
         class PassengerAction {
@@ -362,33 +359,11 @@ classDiagram
         class DefaultPassengerRewards {
         }
         class TravelWisePolicyRunner {
-            +reset()
-            +step()
-            +run()
+            reset()
+            step()
+            run()
         }
     }
-
-    style Environment fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style Policy fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style ObservationBuilder fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PredictionBuilder fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style Rewards fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style ShortestPathPolicy fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style ShortestPathObservation fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PolicyRunner fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style Trajectory fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PassengerAction fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PassengerObservation fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style BoardForTargetPassengerPolicy fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style VehicleObservationBuilder fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style VehicleObservation fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PassengerObservationBuilder fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style TimetablePredictor fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style PassengerRewards fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style DefaultPassengerRewards fill:#d3f9d8,stroke:#2b8a3e,stroke-width:2px,color:#000
-    style RailEnv fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style PassengerEnv fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
-    style TravelWisePolicyRunner fill:#fff3bf,stroke:#e67700,stroke-width:2px,stroke-dasharray:4 2,color:#000
 ```
 
 ### Rail layer and passenger layer
@@ -409,43 +384,43 @@ and conventions where they overlap, but none is a subclass - `PassengerEnv` hold
 
 ### Building blocks
 
-Each building block's responsibility, by concern (domain, RL or both) and namespace (colours as in the legend above):
+Each building block's responsibility, by concern (domain, RL or both) and namespace:
 
-| Building block | Concern | Namespace | Responsibility | Change |
-|---|---|---|---|---|
-| `EntryPoint` | domain | `flatland.core` | Names a position on the infrastructure: a graph node, or a grid cell with the direction it is entered in. | 🟩 |
-| `TransitionMap` | domain | `flatland.core` | Holds the infrastructure's topology: which entry point follows which, under which action. | 🟨 |
-| `ResourceMap` | domain | `flatland.core` | Maps entry points to the resources they occupy, so that no two vehicles hold the same resource. | 🟩 |
-| `Station` | domain | `flatland.envs` | Groups the stopping points where passengers change between vehicles and walkways. | 🟦 |
-| `StoppingPoint` | domain | `flatland.envs` | The physical location where a vehicle takes up and sets down passengers when it stands still there; today the entry points of a vehicle's waypoint groups serve as its stopping points. | 🟦 |
-| `Line` | domain | `flatland.envs` | Describes the services in space: each vehicle's waypoint groups and its speed. | 🟨 |
-| `LineFlexibleStoppingPoint` | domain | `flatland.envs` | Lists the alternatives a vehicle (or passenger) may stop at for one waypoint group. | 🟨 |
-| `Timetable` | domain | `flatland.envs` | Adds the times to the line: earliest departure and latest arrival per waypoint group, and the episode's length. | 🟨 |
-| `EnvAgent` | domain | `flatland.envs` | Holds a vehicle's state in the rail env: where it is, its speed, and its waypoints with their times. | 🟨 |
-| `MalfunctionGenerator` | domain | `flatland.envs` | Breaks vehicles down at random, for a number of steps. | 🟩 |
-| `Passenger` | domain | `flatland.envs.travelwise` | Holds a passenger's state in the passenger env: where it is, the vehicle it rides, how far along its journey it is, and its arrival - the passenger's `EnvAgent`, not a subclass. | 🟩 |
-| `PassengerJourney` | domain | `flatland.envs.travelwise` | Describes what a passenger wants to travel: origin, transfers and destination as waypoint groups, with their times - the passenger's counterpart of `EnvAgent`'s waypoints with their times. | 🟩 |
-| `RailEnv` | both | `flatland.envs` | Moves the vehicles on the infrastructure according to their actions, and reports their observations, rewards and infos per step. | 🟨 |
-| `PassengerEnv` | both | `flatland.envs.travelwise` | Moves the passengers between waiting and riding according to their actions, steps the rail env with the auto-pilot, and reports the passengers' observations, rewards and infos per step. | 🟨 |
-| `Environment` | RL | `flatland.core` | The interface every env implements: `reset()`, `step()` with the agents' actions, and the agents' handles. | 🟩 |
-| `Policy` | RL | `flatland.core` | Decides the agents' actions from their observations. | 🟩 |
-| `ObservationBuilder` | RL | `flatland.core` | Builds each agent's observation from the env's state. | 🟩 |
-| `PredictionBuilder` | RL | `flatland.core` | Predicts the agents' future positions for the observation builders. | 🟩 |
-| `Rewards` | RL | `flatland.envs` | Computes the vehicles' rewards per step and at the end of the episode. | 🟩 |
-| `ShortestPathPolicy` | RL | `flatland.envs` | Drives each vehicle along the shortest route through its waypoints (the auto-pilot). | 🟩 |
-| `ShortestPathObservation` | RL | `flatland.envs` | Gives the auto-pilot the positions and plans of all vehicles. | 🟩 |
-| `PolicyRunner` | RL | `flatland.trajectories` | Runs a policy on the rail env for an episode and records the run as a trajectory. | 🟩 |
-| `Trajectory` | RL | `flatland.trajectories` | Stores a run (actions, positions, rewards per step, env snapshots) for replay and evaluation. | 🟩 |
-| `PassengerAction` | RL | `flatland.envs.travelwise` | Lists what a passenger can do in a step: wait, hop on a given vehicle, or hop off. | 🟩 |
-| `PassengerObservation` | RL | `flatland.envs.travelwise` | Tells a passenger its own situation and the vehicles it can board now, with their planned stops. | 🟩 |
-| `BoardForTargetPassengerPolicy` | RL | `flatland.envs.travelwise` | Boards a vehicle that stops at the passenger's next stop, and hops off there. | 🟩 |
-| `VehicleObservationBuilder` | RL | `flatland.envs.travelwise` | Builds the auto-pilot's observation of the vehicles inside the passenger env. | 🟩 |
-| `VehicleObservation` | RL | `flatland.envs.travelwise` | A vehicle's `ShortestPathObservation` plus all vehicles' positions and plans, so the passengers can read them. | 🟩 |
-| `PassengerObservationBuilder` | RL | `flatland.envs.travelwise` | Builds each passenger's observation. | 🟩 |
-| `TimetablePredictor` | RL | `flatland.envs.travelwise` | Predicts which stops each vehicle still serves, as if it ran alone and on time. | 🟩 |
-| `PassengerRewards` | RL | `flatland.envs.travelwise` | Computes the passengers' rewards per step and at the end of the episode. | 🟩 |
-| `DefaultPassengerRewards` | RL | `flatland.envs.travelwise` | Rewards an early arrival, and penalizes a late or missing arrival and boarding before the earliest departure. | 🟩 |
-| `TravelWisePolicyRunner` | RL | `flatland.envs.travelwise` | Runs the passenger policy on the passenger env for an episode; the vehicles are stepped by the passenger env, not by the runner. | 🟨 |
+| Building block | Concern | Namespace | Responsibility |
+|---|---|---|---|
+| `EntryPoint` | domain | `flatland.core` | Names a position on the infrastructure: a graph node, or a grid cell with the direction it is entered in. |
+| `TransitionMap` | domain | `flatland.core` | Holds the infrastructure's topology: which entry point follows which, under which action. |
+| `ResourceMap` | domain | `flatland.core` | Maps entry points to the resources they occupy, so that no two vehicles hold the same resource. |
+| `Station` | domain | `flatland.envs` | Groups the stopping points where passengers change between vehicles and walkways. Not implemented yet. |
+| `StoppingPoint` | domain | `flatland.envs` | The physical location where a vehicle takes up and sets down passengers when it stands still there; not implemented yet. Semantically, the stopping points are the entry points in the waypoint groups (`LineFlexibleStoppingPoint`), which reflect the intermediate stops (and origin and target) of a vehicle's line or a passenger's journey. |
+| `Line` | domain | `flatland.envs` | Describes the services in space: each vehicle's waypoint groups and its speed. |
+| `LineFlexibleStoppingPoint` | domain | `flatland.envs` | Lists the alternatives a vehicle (or passenger) may stop at for one waypoint group. |
+| `Timetable` | domain | `flatland.envs` | Adds the times to the line: earliest departure and latest arrival per waypoint group, and the episode's length. |
+| `EnvAgent` | domain | `flatland.envs` | Holds a vehicle's state in the rail env: where it is, its speed, and its waypoints with their times. |
+| `MalfunctionGenerator` | domain | `flatland.envs` | Breaks vehicles down at random, for a number of steps. |
+| `Passenger` | domain | `flatland.envs.travelwise` | Holds a passenger's state in the passenger env: where it is, the vehicle it rides, how far along its journey it is, and its arrival - the passenger's `EnvAgent`, not a subclass. |
+| `PassengerJourney` | domain | `flatland.envs.travelwise` | Describes what a passenger wants to travel: origin, transfers and destination as waypoint groups, with their times - the passenger's counterpart of `EnvAgent`'s waypoints with their times. |
+| `RailEnv` | both | `flatland.envs` | Moves the vehicles on the infrastructure according to their actions, and reports their observations, rewards and infos per step. |
+| `PassengerEnv` | both | `flatland.envs.travelwise` | Moves the passengers between waiting and riding according to their actions, steps the rail env with the auto-pilot, and reports the passengers' observations, rewards and infos per step. |
+| `Environment` | RL | `flatland.core` | The interface every env implements: `reset()`, `step()` with the agents' actions, and the agents' handles. |
+| `Policy` | RL | `flatland.core` | Decides the agents' actions from their observations. |
+| `ObservationBuilder` | RL | `flatland.core` | Builds each agent's observation from the env's state. |
+| `PredictionBuilder` | RL | `flatland.core` | Predicts the agents' future positions for the observation builders. |
+| `Rewards` | RL | `flatland.envs` | Computes the vehicles' rewards per step and at the end of the episode. |
+| `ShortestPathPolicy` | RL | `flatland.envs` | Drives each vehicle along the shortest route through its waypoints (the auto-pilot). |
+| `ShortestPathObservation` | RL | `flatland.envs` | Gives the auto-pilot the positions and plans of all vehicles. |
+| `PolicyRunner` | RL | `flatland.trajectories` | Runs a policy on the rail env for an episode and records the run as a trajectory. |
+| `Trajectory` | RL | `flatland.trajectories` | Stores a run (actions, positions, rewards per step, env snapshots) for replay and evaluation. |
+| `PassengerAction` | RL | `flatland.envs.travelwise` | Lists what a passenger can do in a step: wait, hop on a given vehicle, or hop off. |
+| `PassengerObservation` | RL | `flatland.envs.travelwise` | Tells a passenger its own situation and the vehicles it can board now, with their planned stops. |
+| `BoardForTargetPassengerPolicy` | RL | `flatland.envs.travelwise` | Boards a vehicle that stops at the passenger's next stop, and hops off there. |
+| `VehicleObservationBuilder` | RL | `flatland.envs.travelwise` | Builds the auto-pilot's observation of the vehicles inside the passenger env. |
+| `VehicleObservation` | RL | `flatland.envs.travelwise` | A vehicle's `ShortestPathObservation` plus all vehicles' positions and plans, so the passengers can read them. |
+| `PassengerObservationBuilder` | RL | `flatland.envs.travelwise` | Builds each passenger's observation. |
+| `TimetablePredictor` | RL | `flatland.envs.travelwise` | Predicts which stops each vehicle still serves, as if it ran alone and on time. |
+| `PassengerRewards` | RL | `flatland.envs.travelwise` | Computes the passengers' rewards per step and at the end of the episode. |
+| `DefaultPassengerRewards` | RL | `flatland.envs.travelwise` | Rewards an early arrival, and penalizes a late or missing arrival and boarding before the earliest departure. |
+| `TravelWisePolicyRunner` | RL | `flatland.envs.travelwise` | Runs the passenger policy on the passenger env for an episode; the vehicles are stepped by the passenger env, not by the runner. |
 
 ## Runtime View
 
@@ -460,6 +435,52 @@ cell entered, with its direction; on the graph each node), through one alternati
 `LineFlexibleStoppingPoint`) of its line. The waypoints are a few entries of the route.
 The Travel Wise policy runner holds the passenger policy and steps the passenger env only, with the passengers'
 actions based on their observations of the previous step.
+
+### Passenger modes
+
+Notation: [UML state diagram in Mermaid](https://mermaid.js.org/syntax/stateDiagram.html), transitions labelled
+`actions [guard] / effect`.
+
+A passenger's `mode` (`PassengerMode`, a `(resource, vehicle handle)` pair) per step, for each of its actions `WAIT`,
+`HOP_ON` a vehicle and `HOP_OFF`: in every mode, each action has exactly one transition, or one per guard. An action
+is applied on the state the passenger observed, before the vehicles move; an infeasible one is ignored, as `WAIT`.
+After the vehicles moved, a riding passenger moves with its vehicle, and is forced off where the vehicle reaches its
+final stop: the diamond (`moved`) is a decision node, not a state - each of its branches ends in a mode. A malformed action is ignored too, with a warning.
+
+```mermaid
+stateDiagram-v2
+    direction LR
+    state "off map (None, None)" as OffMap
+    state "waiting (resource, None)" as Waiting
+    state "riding (resource, vehicle handle)" as Riding
+    state "arrived (target resource, None)" as Arrived
+    state moved <<choice>>
+    [*] --> OffMap : reset()
+    OffMap --> Waiting : WAIT, HOP_ON, HOP_OFF (ignored) / shows up at its origin
+    Waiting --> Waiting : WAIT, HOP_OFF (ignored), HOP_ON [vehicle not stopping at its resource] (ignored)
+    Waiting --> moved : HOP_ON [vehicle stopping at its resource] / boards
+    Riding --> moved : WAIT, HOP_ON (ignored), HOP_OFF [vehicle not stopping] (ignored)
+    Riding --> Waiting : HOP_OFF [vehicle stopping, not at its target] / alights
+    Riding --> Arrived : HOP_OFF [vehicle stopping at its target] / alights
+    moved --> Riding : [vehicle not at its final stop] / moves with the vehicle
+    moved --> Waiting : [vehicle at its final stop, not the passenger's target] / forced off
+    moved --> Arrived : [vehicle at its final stop, the passenger's target] / forced off
+    Arrived --> Arrived : WAIT, HOP_ON, HOP_OFF (ignored)
+    note right of Waiting
+        at its origin, at a change,
+        or where it was set down
+    end note
+    note right of Arrived
+        the mode of waiting, with arrival_time set:
+        done, further actions ignored
+    end note
+```
+
+"Its target" is an entry point of the passenger's target, its last waypoint group, when that is its next stop.
+Alighting at an entry point of its next stop completes a ride (`Passenger.stop_index` counts on): at a change, the
+passenger waits there for the next vehicle. Alighting elsewhere leaves it waiting with the same next stop. A vehicle
+stops where it stands still at an entry point of one of its waypoint groups, and at its origin in the step it enters
+the map (`PassengerEnv.vehicle_stops()`). The episode ends, in any mode, once the rail env is done.
 
 ### Step
 
