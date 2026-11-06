@@ -19,6 +19,12 @@ class BoardForTargetPassengerPolicy(Policy[PassengerEnv, PassengerObservation, P
       (`vehicles_to_board`, planned to stop at an entry point of the next stop): `HOP_ON` the vehicle planned to stop
       there soonest;
     - otherwise `WAIT`.
+
+    Limitations: set down outside its next stop (e.g. forced off at a vehicle's final stop), a passenger catches up with
+    its next stop only directly, on a vehicle stopping where it waits and planned to stop at its next stop. It does not
+    re-route via another change, does not skip ahead to a later group of its journey (e.g. straight to its target), and
+    goes back only if such a vehicle comes by after it was carried past its next stop.
+    TODO https://github.com/flatland-association/flatland-rl/issues/562 plan connections with the query view.
     """
 
     def act_many(self, handles: List[int], observations: List[PassengerObservation], infos: Optional[Dict] = None, **kwargs) -> Dict[int, PassengerActionT]:
