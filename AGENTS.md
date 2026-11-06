@@ -246,7 +246,8 @@ test-local helpers.
 
 ### `flatland/envs/travelwise/`
 
-The TravelWise passenger overlay (a spike, see the
+The TravelWise passenger overlay (a spike, see the data model `docs/travelwise/data_model.md`, updated to what is
+implemented from flatland-book's
 [data model](https://github.com/flatland-association/flatland-book/blob/main/resources/travelwise/data_model.md)):
 `PassengerEnv` lets passengers ride the vehicles of a rail env (`GraphRailEnv`), and is the vehicles' runner: it
 keeps the vehicle observations and infos, and its vehicle policy acts on them in the next step. The rail env's
@@ -254,8 +255,9 @@ keeps the vehicle observations and infos, and its vehicle policy acts on them in
 route as if alone on the map, exact for a single vehicle, otherwise optimistic) and observes all vehicles' positions
 and plans in one shared, immutable object. Passengers observe them through `PassengerObservationBuilder` and decide
 via a passenger policy (`BoardForTargetPassengerPolicy`), run by the caller, with `PassengerAction`s. The env only
-checks whether an action is physically feasible; which vehicle serves a passenger and respecting its earliest
-departure are the policy's decisions. See
+checks whether an action is physically feasible - a passenger boards and alights only where the vehicle stops,
+standing still at an entry point of one of its waypoint groups (`PassengerEnv.vehicle_stops()`); which vehicle serves
+a passenger and respecting its earliest departure are the policy's decisions. See
 `docs/plans/travelwise-passenger-env.md`.
 
 ### Entry point values are sanitized against numpy-dtype taint
