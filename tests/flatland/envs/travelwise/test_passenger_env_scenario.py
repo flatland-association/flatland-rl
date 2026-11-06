@@ -178,6 +178,21 @@ def test_passenger_env_scenario_ignores_invalid_actions():
     assert dones == {0: True, 1: True, 2: True, 3: True, 4: True, 5: False, '__all__': True}
 
 
+def test_passenger_env_scenario_passenger_alights_at_a_stop_not_its_next_stop_and_boards_again():
+    """
+    Passenger 0 (A -> C) rides T0 from A and hops off at B at step 6, while T0 stands still there (steps 5 to 9): B is
+    a stop of T0, not of 0's journey. It waits at B with the same next stop C (stop index 0), boards T0 again at step
+    7, by its policy, and arrives at C at 13, as without the hop-off.
+    """
+    passenger_env = _make_scenario_env()
+    observations, mode_changes, _, _ = _run(passenger_env, _ScriptedPassengerPolicy({(0, 6): (PassengerAction.HOP_OFF, None)}))
+
+    assert mode_changes[0] == _modes({1: (A, None), 3: ((0, 2), 0), 4: ((0, 3), 0), 5: (B, 0), 6: (B, None), 7: (B, 0), 11: ((0, 5), 0),
+                                      12: ((0, 6), 0), 13: (C, None)})
+    assert observations[6][0].stop_index == 0
+    assert passenger_env.passengers[0].arrival_time == 13
+
+
 def test_passenger_env_scenario_passengers_neither_board_nor_alight_where_the_vehicle_passes_through():
     """
     The scenario with an auto-pilot not serving intermediate stops: T0 passes through B (`B_EAST`, an entry point of
