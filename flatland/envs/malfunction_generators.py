@@ -88,6 +88,18 @@ class ParamMalfunctionGen(object):
         self._cached_random_state = None
         self._rand_idx = 0
 
+    def restore(self, cached_random_state: Optional[tuple], rand_idx: int):
+        """
+        Restore the block of random numbers and the position in it, as persisted from `_cached_random_state` and
+        `_rand_idx` in a snapshot taken mid-episode. Without a `cached_random_state` (no draw yet), the block stays to
+        be drawn at the next `generate()`.
+        """
+        if cached_random_state is not None:
+            np_random = RandomState()
+            np_random.set_state(cached_random_state)
+            self.generate_rand_numbers(np_random)
+        self._rand_idx = rand_idx
+
     def generate_rand_numbers(self, np_random: RandomState):
         self._cached_random_state = np_random.get_state()
         self._cached_rand = np_random.rand(NBR_CHACHED_RAND)
@@ -130,10 +142,7 @@ class ParamMalfunctionGen(object):
             malfunction_generator._rand_idx = malfunction_rand_idx
         malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
         if malfunction_cached_random_state is not None:
-            malfunction_generator._cached_random_state = malfunction_cached_random_state
-            np_random = RandomState()
-            np_random.set_state(malfunction_cached_random_state)
-            malfunction_generator.generate_rand_numbers(np_random)
+            malfunction_generator.restore(malfunction_cached_random_state, malfunction_generator._rand_idx)
         return malfunction_generator
 
 

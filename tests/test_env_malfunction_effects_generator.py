@@ -27,6 +27,13 @@ def test_intermediate_stop_malfunction_effects_generator():
         earliest_malfunction=58
     )
     expected = {'cls': 'flatland.envs.malfunction_effects_generators.IntermediateStopMalfunctionEffectsGenerator',
-                'specs': {'kwargs': {'malfunction_rate': 55.0, 'min_duration': 56, 'max_duration': 57, 'earliest_malfunction': 58}}}
+                'specs': {'kwargs': {'malfunction_rate': 55.0, 'min_duration': 56, 'max_duration': 57, 'earliest_malfunction': 58,
+                                     'num_malfunctions': 0, 'malfunction_cached_random_state': None, 'malfunction_rand_idx': 0,
+                                     'previous_in_malfunction': []}}}
     assert eg.__getstate__() == expected
     assert MalfunctionEffectsGenerator.from_state(expected).__getstate__() == expected
+
+    # state saved before the episode state was persisted: loads with an empty episode state
+    legacy = {'cls': 'flatland.envs.malfunction_effects_generators.IntermediateStopMalfunctionEffectsGenerator',
+              'specs': {'kwargs': {'malfunction_rate': 55.0, 'min_duration': 56, 'max_duration': 57, 'earliest_malfunction': 58}}}
+    assert MalfunctionEffectsGenerator.from_state(legacy).__getstate__() == expected

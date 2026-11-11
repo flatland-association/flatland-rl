@@ -1,10 +1,11 @@
+import pickle
 from typing import List, Optional, Tuple
 
 import pytest
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator
+from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, on_map_state_condition
 from flatland.envs.malfunction_generators import malfunction_from_params, malfunction_from_file, \
     single_malfunction_generator, MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
@@ -276,3 +277,33 @@ def test_loaded_env_reset_starts_malfunctions_over(tmp_path):
 
     assert first == second == third
     assert all(n > 0 for n in first[1])
+
+
+def test_conditional_malfunctions_replay_from_mid_episode_snapshot(tmp_path):
+    """
+    Two agents given MOVE_FORWARD in every step, with malfunctions only from a conditional effects generator (rate 1/5,
+    durations 1 to 3, at most 3 malfunctions, only for agents on the map).
+
+    - Setup: a new env is reset with seed 42 and runs 10 steps, with malfunctions; it is saved (mid-episode) and runs
+      30 more steps.
+    - The saved env is loaded and runs 30 steps: the malfunction counters are the same in every step as in the 30 steps
+      after saving, so the count towards the maximum, the position in the block of random numbers and whether each agent
+      was in malfunction carry over.
+    - The saved state of the generator holds the random state the block was drawn from, not the block itself: it
+      pickles to less than 10 KB (the block is 8 MB), so the saved env doesn't grow considerably.
+    """
+    env = _env_with_malfunctions(malfunctions=False,
+                                 effects_generator=ConditionalMalfunctionEffectsGenerator(malfunction_rate=1 / 5, min_duration=1, max_duration=3,
+                                                                                          max_num_malfunctions=3, condition=on_map_state_condition))
+    env.reset(random_seed=42)
+    before = _run_malfunctions(env, steps=10)
+    snapshot = tmp_path / "mid.pkl"
+    RailEnvPersister.save(env, snapshot)
+    expected, _ = _run_malfunctions(env, steps=30)
+
+    loaded, _ = RailEnvPersister.load_new(snapshot)
+    actual, _ = _run_malfunctions(loaded, steps=30)
+
+    assert sum(before[1]) > 0
+    assert actual == expected
+    assert len(pickle.dumps(env.effects_generator.__getstate__())) < 10_000
