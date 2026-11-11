@@ -329,7 +329,12 @@ def test_env_path_and_obs_builder():
 
 
 class StateMachineRecordingCallbacks(FlatlandCallbacks):
-    """Records whether the env stepped by `PolicyRunner` is wrapped and has its state machine updated."""
+    """
+    Records whether the env stepped by `PolicyRunner` is wrapped and has its state machine updated.
+
+    The command line creates the callbacks from their class name, so the records are kept on the class: use the
+    `state_machine_recordings` fixture, which clears them before and after each test.
+    """
     recorded: List[Dict[str, Any]] = []
 
     def on_episode_end(self, *, env: Optional[RailEnv] = None, **kwargs) -> None:
@@ -339,11 +344,17 @@ class StateMachineRecordingCallbacks(FlatlandCallbacks):
         })
 
 
+@pytest.fixture
+def state_machine_recordings() -> List[Dict[str, Any]]:
+    StateMachineRecordingCallbacks.recorded = []
+    yield StateMachineRecordingCallbacks.recorded
+    StateMachineRecordingCallbacks.recorded = []
+
+
 @pytest.mark.parametrize("skip_state_machine_update", [True, False])
 @pytest.mark.parametrize("env_source", ["legacy_env_generator", "env_generator", "env_path"])
-def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: bool):
-    # wrapping is not persisted: the env reloaded by PolicyRunner.resume() must still honor the flag
-    StateMachineRecordingCallbacks.recorded = []
+def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: bool, state_machine_recordings: List[Dict[str, Any]]):
+    # the env reloaded by PolicyRunner.resume() honors the command line's flag, also for an --env-path saved without it
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_dir = Path(tmpdirname)
         data_dir = tmp_dir / "data_dir"
@@ -368,14 +379,13 @@ def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_updat
             generate_trajectory_from_policy(args)
         assert e_info.value.code == 0
 
-    assert StateMachineRecordingCallbacks.recorded == [{
+    assert state_machine_recordings == [{
         "skip_state_machine_update": skip_state_machine_update,
         "state_machine_live": not skip_state_machine_update,
     }]
 
 
-def test_create_from_policy_keeps_wrapping():
-    StateMachineRecordingCallbacks.recorded = []
+def test_create_from_policy_keeps_wrapping(state_machine_recordings: List[Dict[str, Any]]):
     with tempfile.TemporaryDirectory() as tmpdirname:
         env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
         PolicyRunner.create_from_policy(
@@ -385,7 +395,7 @@ def test_create_from_policy_keeps_wrapping():
             snapshot_interval=0,
             callbacks=StateMachineRecordingCallbacks(),
         )
-    assert StateMachineRecordingCallbacks.recorded == [{"skip_state_machine_update": False, "state_machine_live": True}]
+    assert state_machine_recordings == [{"skip_state_machine_update": False, "state_machine_live": True}]
 
 
 @pytest.mark.parametrize("skip_state_machine_update", [True, False])
