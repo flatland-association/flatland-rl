@@ -167,7 +167,7 @@ class RailEnvPersister(object):
                  obs_builder: Optional[ObservationBuilder[Any, "RailEnv"]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator["RailEnv"]] = None,
-                 skip_state_machine_update: bool = True,
+                 skip_state_machine_update: Optional[bool] = None,
                  ) -> Tuple["RailEnv", Dict]:
         """
         Load environment with distance map from a file into new env.
@@ -188,8 +188,9 @@ class RailEnvPersister(object):
             rewards for the restored env. Defaults to the env's own default rewards if not given.
         effects_generator : EffectsGenerator
             if given, replaces the effects generator restored from `env_dict` instead of being discarded.
-        skip_state_machine_update : bool
-            Defaults to `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
+        skip_state_machine_update : Optional[bool]
+            Defaults to the setting saved with the env (`get_full_state()`), else (files saved before it was
+            saved) `True`: the returned env's `agent.state`/`agent.state_machine` are never updated by
             `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
             flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
             derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
@@ -198,6 +199,9 @@ class RailEnvPersister(object):
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
+        if skip_state_machine_update is None:
+            # files saved before the setting was persisted: not updated, as before
+            skip_state_machine_update = env_dict.get("skip_state_machine_update", True)
 
         llGrid = env_dict["grid"]
         height = len(llGrid)
@@ -224,9 +228,9 @@ class RailEnvPersister(object):
             env = RailEnvStateMachineWrapper(env)
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
         if not skip_state_machine_update and env._elapsed_steps > 0:
-            # Whether the state machine is updated is not part of the persisted state: a file saved mid-episode
-            # without updates has every state machine still at its default (`WAITING`, not live). Start those from
-            # the state derived from position, speed and malfunction, so the next `step()` continues from there.
+            # A file saved mid-episode without updates (or before the setting was persisted), loaded with updates,
+            # has every state machine still at its default (`WAITING`, not live). Start those from the state
+            # derived from position, speed and malfunction, so the next `step()` continues from there.
             for agent in env.agents:
                 if not agent.state_machine.is_live:
                     agent.state_machine.set_state(agent.derived_state())
@@ -435,7 +439,9 @@ class RailEnvPersister(object):
             "dev_pred_dict": env.dev_pred_dict,
             "dev_obs_dict": env.dev_obs_dict,
             "dones": env.dones,
-            "effects_generator": effects_generator
+            "effects_generator": effects_generator,
+            # wrapping (`RailEnvStateMachineWrapper`) is a property of the env object: save it, so a reload restores it
+            "skip_state_machine_update": getattr(env, "skip_state_machine_update", True),
         }
         if hasattr(env, "stations_links"):
             msg_data_dict["stations_links"] = env.stations_links

@@ -409,7 +409,7 @@ class Trajectory:
                  obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
-                 skip_state_machine_update: bool = True, ) -> Optional[RailEnv]:
+                 skip_state_machine_update: Optional[bool] = None, ) -> Optional[RailEnv]:
         """
         Restore an episode's env.
 
@@ -429,9 +429,9 @@ class Trajectory:
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         effects_generator : EffectsGenerator
             if given, replaces the persisted effects generator instead of being discarded.
-        skip_state_machine_update : bool
-            forwarded to `RailEnvPersister.load_new` (and to the replay, if any). Wrapping is not part of the
-            persisted state, so pass `False` to restore an env that updates `agent.state`/`agent.state_machine`.
+        skip_state_machine_update : Optional[bool]
+            forwarded to `RailEnvPersister.load_new` (and to the replay, if any). Defaults to the setting saved with
+            the env; pass `False` or `True` to override it.
         Returns
         -------
         RailEnv

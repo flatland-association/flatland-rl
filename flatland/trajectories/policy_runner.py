@@ -31,7 +31,7 @@ class PolicyRunner:
                  obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
-                 skip_state_machine_update: bool = True,
+                 skip_state_machine_update: Optional[bool] = None,
                  ):
         self._policy = policy
         trajectory_env_time = trajectory.trains_rewards_dones_infos["env_time"].max()
@@ -127,8 +127,6 @@ class PolicyRunner:
             rewards=env.rewards,
             obs_builder=env.obs_builder,
             effects_generator=env.effects_generator,
-            # wrapping is not persisted - restore the reloaded env wrapped iff the passed env is
-            skip_state_machine_update=getattr(env, "skip_state_machine_update", True),
         )
 
     @staticmethod
@@ -143,7 +141,7 @@ class PolicyRunner:
         obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
         rewards: Optional[Rewards] = None,
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
-        skip_state_machine_update: bool = True,
+        skip_state_machine_update: Optional[bool] = None,
     ) -> Trajectory:
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -166,9 +164,9 @@ class PolicyRunner:
             additional kwargs for tqdm
         end_step : int
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
-        skip_state_machine_update : bool
-            forwarded to `Trajectory.load_env` unless `by_pass_env` is given. Wrapping is not part of the persisted
-            state, so pass `False` if the policy reads `agent.state` directly (see `RailEnvStateMachineWrapper`).
+        skip_state_machine_update : Optional[bool]
+            forwarded to `Trajectory.load_env` unless `by_pass_env` is given. Defaults to the setting saved with the
+            env; pass `False` to override it if the policy reads `agent.state` directly (see `RailEnvStateMachineWrapper`).
         Returns
         -------
         Trajectory

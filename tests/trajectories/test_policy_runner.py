@@ -1,3 +1,4 @@
+import pickle
 import re
 import tempfile
 from pathlib import Path
@@ -416,3 +417,43 @@ def test_load_env_skip_state_machine_update(start_step: Optional[int], skip_stat
             if not skip_state_machine_update:
                 assert [agent.state_machine.state.is_on_map_state() for agent in env.agents] == \
                        [agent.current_entry_point is not None for agent in env.agents]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+def test_load_env_restores_saved_skip_state_machine_update(skip_state_machine_update: bool):
+    """
+    A trajectory recorded with or without state machine updates is loaded, without passing the setting, at the start,
+    from the snapshot at step 50 and by replay to step 60, and evaluated again: each time the env keeps the setting it
+    was recorded with.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator(seed=42, skip_state_machine_update=skip_state_machine_update)[0],
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=50,
+            end_step=120,
+        )
+        for start_step in [None, 50, 60]:
+            env = trajectory.load_env(start_step=start_step)
+            assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+        env = TrajectoryEvaluator(trajectory).evaluate(end_step=60)
+        assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+
+
+def test_load_new_without_saved_skip_state_machine_update():
+    """
+    A file saved before the setting was persisted loads without state machine updates, as before; passing the setting
+    still overrides it.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        env_file = Path(tmpdirname) / "env.pkl"
+        RailEnvPersister.save(env_generator(seed=42, skip_state_machine_update=False)[0], str(env_file))
+        env_dict = pickle.loads(env_file.read_bytes())
+        assert env_dict.pop("skip_state_machine_update") is False
+        env_file.write_bytes(pickle.dumps(env_dict))
+
+        env, _ = RailEnvPersister.load_new(str(env_file))
+        assert getattr(env, "skip_state_machine_update", True) is True
+        env, _ = RailEnvPersister.load_new(str(env_file), skip_state_machine_update=False)
+        assert env.skip_state_machine_update is False
