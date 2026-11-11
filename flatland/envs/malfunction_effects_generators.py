@@ -22,6 +22,13 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                 # TODO https://github.com/flatland-association/flatland-rl/issues/242 not generic!
                 self.malfunction_generator = mal_gen.NoMalfunctionGen()
 
+    def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
+        # start the generator over, so that an episode draws its malfunctions as in a new env: after a seeded reset,
+        # the malfunctions repeat.
+        if isinstance(self.malfunction_generator, mfg.ParamMalfunctionGen):
+            self.malfunction_generator.reset()
+        return env
+
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         for agent in env.agents:
             agent.malfunction_handler.generate_malfunction(self.malfunction_generator, env.np_random)
@@ -106,6 +113,8 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 
     def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         self._previous_in_malfunction = {}
+        # start the generator over, so that a seeded reset repeats the malfunctions.
+        self._malfunction_generator.reset()
         return env
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
