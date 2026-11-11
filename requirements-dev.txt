@@ -46,7 +46,7 @@ build==1.6.1
     # via pip-tools
 cachetools==7.2.3
     # via tox
-certifi==2026.10.18
+certifi==2026.10.19
     # via
     #   httpcore
     #   httpx
