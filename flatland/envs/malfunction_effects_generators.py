@@ -89,7 +89,7 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         earliest_malfunction : int
             Defaults to `None`.
         max_num_malfunctions : int
-            Defaults to `None`.
+            Maximum number of malfunctions per episode, over all agents. Defaults to `None` (no maximum).
         condition : MalfunctionCondition | str
             Additional condition. Defaults to None.
         condition_pkg : str
@@ -113,8 +113,9 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
 
     def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         self._previous_in_malfunction = {}
-        # start the generator over, so that a seeded reset repeats the malfunctions.
+        # start the generator over and count malfunctions per episode, so that a seeded reset repeats them.
         self._malfunction_generator.reset()
+        self._num_malfunctions = 0
         return env
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":

@@ -220,6 +220,28 @@ def test_seeded_reset_reproduces_conditional_malfunctions():
     assert all(n > 0 for n in first[1])
 
 
+def test_max_num_malfunctions_per_episode():
+    """
+    Two agents given MOVE_FORWARD in every step, with malfunctions only from a conditional effects generator (rate
+    1/5, durations 1 to 3, at most 1 malfunction).
+
+    - Setup: a new env, reset with seed 42, runs 40 steps: exactly one malfunction over all agents.
+    - The same env is reset with seed 42 again and runs 40 steps: again exactly one malfunction, in the same step,
+      as the maximum counts per episode.
+    """
+    env = _env_with_malfunctions(malfunctions=False,
+                                 effects_generator=ConditionalMalfunctionEffectsGenerator(malfunction_rate=1 / 5, min_duration=1, max_duration=3,
+                                                                                          max_num_malfunctions=1))
+    env.reset(random_seed=42)
+    first = _run_malfunctions(env)
+
+    env.reset(random_seed=42)
+    second = _run_malfunctions(env)
+
+    assert sum(first[1]) == 1
+    assert first == second
+
+
 def test_loaded_env_reset_starts_malfunctions_over(tmp_path):
     """
     Two agents with malfunction rate 1/5 and durations 1 to 3, both given MOVE_FORWARD in every step; the env is saved
