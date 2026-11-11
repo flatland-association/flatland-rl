@@ -385,7 +385,8 @@ Compared with `main`. What is reused, and what is not new on purpose, is in §4.
 
 *What breaks for whom, and the migration path.*
 
-None for callers: no signature or format changes. Changed behaviour, from the second reset of an env on:
+None for callers: no signature changes beyond optional keyword arguments of the conditional generators, and the saved
+format only gains keys (S5, last bullet). Changed behaviour, from the second reset of an env on:
 
 - **Seeded resets** (any loop with `reset(random_seed=...)`; RLlib's evaluation by episodes, which reseeds each
   call; evaluation loops with `seed=i`): the malfunctions now repeat per seed; on `main` they depended on all
