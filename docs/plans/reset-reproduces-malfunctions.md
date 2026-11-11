@@ -73,7 +73,7 @@ Requirements:
 
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
-| Update the flatland-book Stochasticity page: the reset now reproduces the malfunctions (it marks it as a bug to be fixed in 5.0.0). Document the global rule "Randomness per episode" (who reseeds what, how to reproduce an episode), also for the perturbed observations. | Another repo, once 5.0.0 is released. | §4.1, §4.3, Q5 | - | - |
+| Update the flatland-book Stochasticity page: the reset now reproduces the malfunctions (it marks it as a bug to be fixed in 5.0.0). Document the global rule "Randomness per episode" (who reseeds what, how to reproduce an episode), also for the perturbed observations. | Another repo, once 5.0.0 is released. | §4.1, §4.3, Q5 | - | [flatland-book#42 comment](https://github.com/flatland-association/flatland-book/pull/42#discussion_r4539458405) |
 | Malfunction duration one step longer than documented. | Own issue; same file, but another behaviour change. | - | - | [#565](https://github.com/flatland-association/flatland-rl/issues/565) |
 
 ## 2. Constraints
