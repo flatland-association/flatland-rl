@@ -388,17 +388,31 @@ def test_create_from_policy_keeps_wrapping():
 
 
 @pytest.mark.parametrize("skip_state_machine_update", [True, False])
-@pytest.mark.parametrize("start_step", [None, 5, 7], ids=["initial", "snapshot", "replay"])
+@pytest.mark.parametrize("start_step", [None, 50, 60], ids=["initial", "snapshot", "replay"])
 def test_load_env_skip_state_machine_update(start_step: Optional[int], skip_state_machine_update: bool):
+    """
+    A trajectory recorded without state machine updates, loaded with or without them, at the start, from the snapshot at
+    step 50 and by replay from it to step 60 (after the first trains have entered the map); then 20 more steps.
+
+    With state machine updates, the next steps don't fail, and each agent's state machine is on the map exactly when
+    the agent is. (It may run a step ahead of the derived state before departure, so the states are not compared.)
+    """
     with tempfile.TemporaryDirectory() as tmpdirname:
         trajectory = PolicyRunner.create_from_policy(
             env=env_generator(seed=42)[0],
             policy=RandomPolicy(),
             data_dir=Path(tmpdirname),
-            snapshot_interval=5,
-            end_step=10,
+            snapshot_interval=50,
+            end_step=120,
         )
         env = trajectory.load_env(start_step=start_step, skip_state_machine_update=skip_state_machine_update)
         assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
         if start_step is not None:
             assert env._elapsed_steps == start_step
+            assert any(agent.current_entry_point is not None for agent in env.agents)
+
+        for _ in range(20):
+            env.step({handle: RailEnvActions.MOVE_FORWARD for handle in env.get_agent_handles()})
+            if not skip_state_machine_update:
+                assert [agent.state_machine.state.is_on_map_state() for agent in env.agents] == \
+                       [agent.current_entry_point is not None for agent in env.agents]
