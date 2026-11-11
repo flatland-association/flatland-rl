@@ -97,21 +97,21 @@ def test_speed_counter_is_cell_entry_long_to_short_and_back():
     sc.set(Fraction(3, 4), Fraction(3, 2), Fraction(2))
     assert not sc.is_cell_entry  # 3/4 + 3/4 < 2: still mid-edge
     # 3/2 + 3/4 >= 2: crossing into a unit-length edge
-    sc.set(Fraction(3, 4), SpeedCounter.distance_after_crossing(Fraction(3, 2), Fraction(3, 4), Fraction(2)), Fraction(1))
+    sc.set(Fraction(3, 4), SpeedCounter.distance_after_crossing(Fraction(3, 2), Fraction(3, 4), Fraction(2)), Fraction(1), crossed=True)
     assert sc.is_cell_entry
     assert sc.distance == Fraction(1, 4)
     # 1/4 + 3/4 >= 1: crossing into a long edge again
-    sc.set(Fraction(3, 4), SpeedCounter.distance_after_crossing(Fraction(1, 4), Fraction(3, 4), Fraction(1)), Fraction(2))
+    sc.set(Fraction(3, 4), SpeedCounter.distance_after_crossing(Fraction(1, 4), Fraction(3, 4), Fraction(1)), Fraction(2), crossed=True)
     assert sc.is_cell_entry
     assert sc.distance == Fraction(0)
 
 
-def test_speed_counter_is_cell_entry_false_when_banked_on_long_edge():
+def test_speed_counter_is_cell_entry_false_after_denied_crossing_on_long_edge():
     sc = SpeedCounter(max_speed=1)
     sc.set(Fraction(1), Fraction(3, 2), Fraction(2))
-    # denied crossing: banked at the long edge's boundary
-    sc.set(Fraction(0), SpeedCounter.distance_without_crossing(Fraction(3, 2), Fraction(1), Fraction(2)), Fraction(2))
-    assert sc.distance == Fraction(2)
+    # denied crossing (3/2 + 1 would reach the boundary): the agent doesn't move, its distance stays at 3/2
+    sc.set(Fraction(0), Fraction(3, 2), Fraction(2))
+    assert sc.distance == Fraction(3, 2)
     assert not sc.is_cell_entry
 
 

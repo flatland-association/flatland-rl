@@ -91,7 +91,7 @@ class ObservePredictions(ObservationBuilder):
             visited.add((x_coord, y_coord))
             if self.predicted_pos[_idx][handle] in np.delete(self.predicted_pos[_idx], handle, 0):
                 # We detect if another agent is predicting to pass through the same cell at the same predicted time
-                observation[handle] = 1
+                observation[_idx] = 1
 
         # This variable will be access by the renderer to visualize the observation
         self.env.dev_obs_dict[handle] = visited

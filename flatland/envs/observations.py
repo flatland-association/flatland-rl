@@ -40,6 +40,11 @@ class TreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
     network to simplify the representation of the state of the environment for each agent.
 
     For details about the features in the tree observation see the get() function.
+
+    The root of the tree is the agent's current cell (`virtual_entry_point()`: current entry point on the map, initial entry
+    point off the map, target entry point when done), and its branches are the transitions out of it. Actions are applied
+    at cell entry, i.e. to the agent's next entry point: if the current cell is a switch, the branches at the root describe a
+    choice already taken; the choice an action makes is at the agent's next cell, on the branch it is on.
     """
 
     tree_explored_actions_char = ['L', 'F', 'R', 'B']
