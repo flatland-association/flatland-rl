@@ -122,6 +122,9 @@ def gauss_perturbation_observation_builder_wrapper(
     Returns
     -------
     observation with Gaussian noise added
+
+    The noise is drawn from `np_random`, which `env.reset(random_seed=...)` doesn't reseed: to reproduce it, reseed
+    `np_random` before `env.reset()`.
     """
 
     class _GaussPerturbationObservationBuilder(ObservationBuilder[Environment, np.ndarray]):

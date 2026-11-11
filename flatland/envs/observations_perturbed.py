@@ -34,6 +34,11 @@ def perturbation_tree_observation_builder_wrapper(
     Returns
     -------
     Observations with some trains not seeing anything..
+
+    Each episode starts the perturbations over (`reset(env)`): the first observations of the episode take a new
+    block of random numbers from `np_random`. `env.reset(random_seed=...)` doesn't reseed `np_random`: to reproduce
+    the perturbations, reseed it before `env.reset()`. The perturbations also start over whenever the observation
+    builder is reset outside an episode start (e.g. when an env is loaded, or a policy runner changes the policy).
     """
 
     class _PerturbedTreeObsForRailEnv(ObservationBuilder["RailEnv", Node]):
@@ -56,6 +61,8 @@ def perturbation_tree_observation_builder_wrapper(
             self._malfunction_handlers = {
                 i: MalfunctionHandler() for i in self.env.get_agent_handles()
             }
+            # start the perturbations over, as the malfunction effects generators do at the start of an episode
+            self._malfunction_generator.reset()
 
         def get_many(self, handles: Optional[List[AgentHandle]] = None) -> Dict[AgentHandle, Node]:
             obs = self._builder.get_many(handles)
