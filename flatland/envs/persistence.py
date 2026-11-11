@@ -193,7 +193,8 @@ class RailEnvPersister(object):
             `step()` (see `RailEnvStateMachineWrapper`) - `step()`'s own position/speed/reward/done control
             flow, and `get_info_dict()`'s `state`/`action_required` fields, are unaffected either way (both
             derived via `EnvAgent.derived_state()`). Pass `False` only if a caller needs `agent.state`/
-            `agent.state_machine` themselves (real state-machine semantics).
+            `agent.state_machine` themselves (real state-machine semantics). A file saved mid-episode without
+            state machine updates then gets its state machines started from `EnvAgent.derived_state()`.
         """
 
         env_dict = cls.load_env_dict(filename, load_from_package=load_from_package)
@@ -222,6 +223,13 @@ class RailEnvPersister(object):
         if not skip_state_machine_update:
             env = RailEnvStateMachineWrapper(env)
         cls.set_full_state(env, env_dict, effects_generator=effects_generator)
+        if not skip_state_machine_update and env._elapsed_steps > 0:
+            # Whether the state machine is updated is not part of the persisted state: a file saved mid-episode
+            # without updates has every state machine still at its default (`WAITING`, not live). Start those from
+            # the state derived from position, speed and malfunction, so the next `step()` continues from there.
+            for agent in env.agents:
+                if not agent.state_machine.is_live:
+                    agent.state_machine.set_state(agent.derived_state())
 
         env.obs_builder.reset(env)
 
