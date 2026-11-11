@@ -70,6 +70,7 @@ Requirements:
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
 | Update the flatland-book Stochasticity page: the reset now reproduces the malfunctions (it marks it as a bug to be fixed in 5.0.0). Document the global rule "Randomness per episode" (who reseeds what, how to reproduce an episode), also for the perturbed observations. | Another repo, once 5.0.0 is released. | §4.1, §4.3, Q5 | - | - |
+| Persist the conditional malfunction generator's malfunction count and block state, so a mid-episode snapshot replays the same. | Not about resets; on `main` as well. | - | 6 | - |
 | Malfunction duration one step longer than documented. | Own issue; same file, but another behaviour change. | - | - | [#565](https://github.com/flatland-association/flatland-rl/issues/565) |
 
 ## 2. Constraints
@@ -87,8 +88,10 @@ Requirements:
 
 *What the built code gets wrong or ignores, each with the TODO or issue that tracks it.*
 
-- Malfunction generators other than `ParamMalfunctionGen` and its subclasses (custom callables) are not reset: they
-  have no reset hook. None is known in the repo or in flatland-baselines.
+- Malfunction generators other than `ParamMalfunctionGen` and its subclasses are not reset: they have no reset hook.
+  In the repo this is the deprecated `single_malfunction_generator` (`malfunction_generators.py`, a closure with its own
+  `reset=True` path, used via `malfunction_generator_and_process_data`); its behaviour is unchanged. None in
+  flatland-baselines.
 - The perturbed tree observation builder draws from the `RandomState` its caller passes in, which
   `env.reset(random_seed=...)` doesn't reseed: its perturbations repeat only if the caller reseeds that `RandomState`
   before the reset (Q5; documented in its docstring).
@@ -220,8 +223,8 @@ No screenshots: nothing visible changes.
 | # | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
 | 1 | Seeded reset reproduces | New test: reset one env twice with seed 42, 40 steps each, `info['malfunction']` equal; also equal to a new env with seed 42. | Prototype on d1417769: equal. | - |
-| 2 | First episode unchanged | New test pins the malfunction starts of a new env with seed 42 to the values of §3; regression episodes (`tests/test_flatland_regression_episodes.py` with the episodes fixture). | Prototype: `[11, 21, 30, 38]`, `[1, 17, 22, 34]` as on `main`. | - |
-| 3 | Snapshot restore unchanged | Existing `tests/test_flatland_envs_persistence.py`, `tests/trajectories/`; flatland-baselines' tests. | Prototype: persistence tests pass. | - |
+| 2 | First episode unchanged | New test pins the malfunction counters after each step, and the number of malfunctions per agent, of a new env with seed 42, as recorded on `main`. The regression episodes can't confirm it: all 12 are skipped on `main` (#178). | Pin computed on `main` d1417769, equal on the branch. | - |
+| 3 | Snapshot restore unchanged | Existing `tests/test_flatland_envs_persistence.py`, `tests/trajectories/`; flatland-baselines' tests. New test: a loaded env reset with a seed repeats its malfunctions, and a reset after loading a mid-episode snapshot starts them over (finding 1). | Persistence tests pass. | - |
 | 4 | Conditional generators | New tests: `ConditionalMalfunctionEffectsGenerator` with a seeded double reset (S1); `max_num_malfunctions` reached in episode 1 allows malfunctions again in episode 2 (S2). | - | - |
 | 5 | Test of the issue | Test of row 1. | - | - |
 | 6 | Perturbed tree observation | New test (S3): reseed its `RandomState`, `reset(random_seed=42)`, twice; the blind periods are equal. | - | - |
@@ -613,10 +616,23 @@ core docstrings (S4) and in flatland-book (§1.4).
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-None yet.
+Code review findings (1-11) were added on 2026-11-11, at 41c29123 plus the uncommitted implementation of S1-S4 (since committed as 4a31b5c4, 181ca22f, 4051b1ad, 4dc4ce67); their line numbers refer to that state. Sources: `/code-review` and a manual review of the `main..HEAD` diff and the working tree. ✅ in Fixed marks a finding fixed on the branch, ⏭️ one taken over by a follow-up, `⚠️` one resolved on GitHub without a code change and without a reason, and ❌ next to ✅ one fixed in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source marks threads resolved and checkboxes ticked on GitHub. No PR exists yet.
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
 |---|---|---|---|---|---|---|
+| ✅ | 1 | code review | test-coverage | medium | `flatland/envs/malfunction_effects_generators.py:25`: `on_episode_start()` drops a block restored by `RailEnvPersister.load_new()` when the loaded env is reset afterwards (evaluator `service.py`/`client.py`, `policy_runner --post-seed`): an env saved after step 3 has `_rand_idx` 6 after loading, and 0 after `reset(False, False, random_seed=42)`. This is the decided behaviour (§8.2 "Load then reset"; no saved env in `env_data/`, `episodes/` or flatland-scenarios carries a block), but no test pins it: a test should show that a loaded step-0 env reset with a seed has the malfunctions of a new env, and that a reset after loading a mid-episode snapshot starts over. Fixed in 4a31b5c4 (S1): `test_loaded_env_reset_starts_malfunctions_over`. | test(malfunctions): pin the malfunctions of a loaded env after a seeded reset. |
+| ✅ | 2 | code review | test-coverage | medium | `tests/test_malfunction_generators.py:181-197`: `test_seeded_reset_reproduces_conditional_malfunctions` mixes the env's own malfunctions with the conditional generator's and only asserts `first == second`. If the conditional generator never fires, or its reset is removed and the draws happen to match, the test still passes. Fix: an env without its own malfunction generator, assert the conditional generator fired, and compare with a new env too. Fixed in 4a31b5c4 (S1): the env has no malfunctions of its own, the test asserts that both agents break down, and it compares with a new env. | test(malfunctions): make the conditional seeded-reset test depend on the conditional generator alone. |
+| ✅ | 3 | code review | test-coverage | medium | `tests/test_malfunction_generators.py:130-138`: `_run_malfunctions()` detects a malfunction start as a counter > 0 after a 0, so a malfunction that starts in the step right after another ends (counter 1, then the new duration) is missed. The equality tests compare only the detected starts, and the pinned first episode could hide such a start. Fix: compare the full per-step counter lists, and pin them. Fixed in 4a31b5c4 (S1): `_run_malfunctions()` returns the counters after each step and the number of malfunctions per agent; the pin shows agent 1 has 7 malfunctions, of which the old helper detected 4. | test(malfunctions): compare the full malfunction counters per step in the reset tests. |
+| ✅ | 4 | code review | docs | low | `flatland/envs/malfunction_generators.py:80-86`: `reset()`'s docstring says every `generate(np_random)` gets the env's `np_random` (the perturbed tree observation builder passes its own `RandomState`), and that after a seeded reset `np_random` "has only been used by the rail, line and timetable generation" (another effects generator's `on_episode_start()`, or a conditional generator with `earliest_malfunction` drawing its block at step k after earlier duration draws, use it too). What holds: the random numbers are used in the same order as in a new env with that seed, so the block is the same. Fixed in 4a31b5c4 (S1). | docs(malfunctions): state precisely why reset() needs no seed. |
+| ✅ | 5 | code review | docs | low | `flatland/envs/malfunction_generators.py:58`: the class docstring gives "the meaning of a persisted `malfunction_rand_idx`" as a reason to keep the skipped entry 0, but `reset()` now drops a persisted `_rand_idx` at the next episode; it only matters for a snapshot replayed within its episode. Say so. Fixed in 4a31b5c4 (S1). | docs(malfunctions): say that a persisted malfunction_rand_idx matters within its episode. |
+| ✅ | 7 | code review | design | low | `flatland/envs/observations_perturbed.py:64`: `ObservationBuilder.reset()` also runs mid-episode (`PolicyRunner.change_policy()`, `RailEnvPersister.load()`/`load_new()`), so the perturbations start over there and differ from an uninterrupted run. Recorded as an assumption in §2.2; on `main` the `MalfunctionHandler`s were already recreated there. Fixed in 4051b1ad (S3): the wrapper's docstring says so. | docs(observations): say that the perturbations start over whenever the observation builder is reset. |
+| ✅ | 9 | code review | refactoring | low | `flatland/envs/malfunction_generators.py:70-73,87-91`: `reset()` repeats `__init__`'s four field initialisations; a field added to one of them only drifts. Fix: `__init__` calls `self.reset()`. Fixed in 4a31b5c4 (S1). | refactor(malfunctions): initialise the generator's cached state through reset(). |
+| ✅ | 11 | code review | type-hints | low | `tests/test_malfunction_generators.py:121`, `tests/test_flatland_envs_observations.py:459`: `_env_with_malfunctions(effects_generator=None)` has no type hint (`Optional[EffectsGenerator]`), and `run()` assigns the observations of `env.reset()` to `obs` without using them. Fixed in 4a31b5c4 (S1), 4051b1ad (S3). | style(tests): type the malfunction test helper and drop an unused variable. |
+|  | 8 | code review | docs | low | `flatland/envs/malfunction_effects_generators.py:28`, `docs/plans/reset-reproduces-malfunctions.md` §2.1: only `ParamMalfunctionGen`s are reset. The deprecated `single_malfunction_generator` (`malfunction_generators.py:201`, a closure with its own `reset=True` path) is in the repo, so §2.1's "None is known in the repo" is wrong; its behaviour is unchanged. Open: fixed in the plan (§2.1), not committed yet. | docs(plans): name the deprecated single_malfunction_generator as not reset. |
+|  | 10 | code review | docs | low | `docs/plans/reset-reproduces-malfunctions.md:223,648,675`: the plan doesn't match the code: `IntermediateStopMalfunctionEffectsGenerator` has no `max_num_malfunctions` (no docstring change there, S2); the conditional tests are in `tests/test_malfunction_generators.py`, not `tests/test_env_malfunction_effects_generator.py`; and the regression episodes can't confirm requirement 2, as all 12 are skipped on `main` (#178), so only the pinned test covers it. Open: fixed in the plan (§4.2, S2, §12), not committed yet. | docs(plans): align the plan with the implemented tests and docstrings. |
+| ⏭️ | 6 | code review | design | low | `flatland/envs/malfunction_effects_generators.py:136`: `ConditionalMalfunctionEffectsGenerator.__getstate__()` persists neither `_num_malfunctions` nor its generator's block state, so a snapshot restored mid-episode allows another malfunction under `max_num_malfunctions` and draws a new block: the replay differs from the recorded episode. On `main` as well (not persisted there either). Taken over by a follow-up (§1.4). | fix(malfunctions): persist the conditional malfunction generator's count and block state. |
+
+**Issue references:** no PR yet; the `main..HEAD` diff references #564 in the plan and in the body of 4a31b5c4 ("Fixes #564."); no code comment references it.
 
 ## 10. Glossary
 
@@ -643,11 +659,11 @@ None yet.
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| S0 | - | Add this plan. | docs | low | docs(plans): add the plan for reproducing malfunctions on reset. |  | - | - |
-| S1 | - | `ParamMalfunctionGen.reset()` with docstring and comment; class docstring on the block, its cyclic reuse and the skipped entry 0 (Q3 a)); call it in `MalfunctionEffectsGenerator.on_episode_start()` and `ConditionalMalfunctionEffectsGenerator.on_episode_start()`; tests for requirements 1, 2, 4. | bug | high | fix(malfunctions)!: start the malfunction generator over on reset, so a seeded reset reproduces the malfunctions. |  | - | - |
-| S2 | - | Count `max_num_malfunctions` per episode: reset `_num_malfunctions` in `ConditionalMalfunctionEffectsGenerator.on_episode_start()`; docstrings of `ConditionalMalfunctionEffectsGenerator` and `IntermediateStopMalfunctionEffectsGenerator` say "per episode"; with a test. | bug | medium | fix(malfunctions)!: count max_num_malfunctions per episode. |  | S1 | - |
-| S3 | - | Perturbed tree observation builder: `reset(env)` resets its malfunction generator; docstrings of `perturbation_tree_observation_builder_wrapper` and `gauss_perturbation_observation_builder_wrapper` on reproducing the perturbations (reseed the `RandomState` passed in); test: with its `RandomState` reseeded before each seeded reset, two episodes give the same blind periods. | bug | medium | fix(observations)!: start the perturbed tree observation's malfunction generator over on reset. |  | S1 | - |
-| S4 | - | Document the rule "Randomness per episode" (§4.1) in the docstrings of `EffectsGenerator.on_episode_start()` and `ObservationBuilder.reset()` (requirement 7). | docs | medium | docs(core): document who starts random state over and who reseeds it at the start of an episode. |  | S1, S3 | - |
+| S0 | - | Add this plan. | docs | low | docs(plans): add the plan for reproducing malfunctions on reset. | 41c29123 | - | - |
+| S1 | 1-5, 9, 11 | `ParamMalfunctionGen.reset()` with docstring and comment; class docstring on the block, its cyclic reuse and the skipped entry 0 (Q3 a)); call it in `MalfunctionEffectsGenerator.on_episode_start()` and `ConditionalMalfunctionEffectsGenerator.on_episode_start()`; tests for requirements 1, 2, 4. | bug | high | fix(malfunctions)!: start the malfunction generator over on reset, so a seeded reset reproduces the malfunctions. | 4a31b5c4 | - | - |
+| S2 | - | Count `max_num_malfunctions` per episode: reset `_num_malfunctions` in `ConditionalMalfunctionEffectsGenerator.on_episode_start()`; the docstring of `ConditionalMalfunctionEffectsGenerator` says "per episode" (`IntermediateStopMalfunctionEffectsGenerator` has no `max_num_malfunctions`); with a test. | bug | medium | fix(malfunctions)!: count max_num_malfunctions per episode. | 181ca22f | S1 | - |
+| S3 | 7 | Perturbed tree observation builder: `reset(env)` resets its malfunction generator; docstrings of `perturbation_tree_observation_builder_wrapper` and `gauss_perturbation_observation_builder_wrapper` on reproducing the perturbations (reseed the `RandomState` passed in); test: with its `RandomState` reseeded before each seeded reset, two episodes give the same blind periods. | bug | medium | fix(observations)!: start the perturbed tree observation's malfunction generator over on reset. | 4051b1ad | S1 | - |
+| S4 | - | Document the rule "Randomness per episode" (§4.1) in the docstrings of `EffectsGenerator.on_episode_start()` and `ObservationBuilder.reset()` (requirement 7). | docs | medium | docs(core): document who starts random state over and who reseeds it at the start of an episode. | 4dc4ce67 | S1, S3 | - |
 
 Before the PR: the core suite with the episodes fixture and flatland-baselines' tests (`AGENTS.md`).
 
@@ -669,10 +685,9 @@ Before the PR: the core suite with the episodes fixture and flatland-baselines' 
 
 | File | Changes |
 |---|---|
-| `flatland/envs/malfunction_generators.py` | `ParamMalfunctionGen.reset()`; docstring on the block, its cyclic reuse, the reset, and the skipped entry 0 as intended behaviour, not a bug (Q3) (S1). |
-| `flatland/envs/malfunction_effects_generators.py` | `MalfunctionEffectsGenerator.on_episode_start()` (new); `ConditionalMalfunctionEffectsGenerator.on_episode_start()` resets the generator (S1) and `_num_malfunctions` (S2); docstrings: `max_num_malfunctions` per episode (S2). |
-| `tests/test_malfunction_generators.py` | Seeded double reset vs a new env; pinned first-episode malfunctions (S1). |
-| `tests/test_env_malfunction_effects_generator.py` | Conditional generator: seeded double reset (S1); `max_num_malfunctions` per episode (S2). |
+| `flatland/envs/malfunction_generators.py` | `ParamMalfunctionGen.reset()`, also called by `__init__`; docstring on the block, its cyclic reuse, the reset, and the skipped entry 0 as intended behaviour, not a bug (Q3) (S1). |
+| `flatland/envs/malfunction_effects_generators.py` | `MalfunctionEffectsGenerator.on_episode_start()` (new); `ConditionalMalfunctionEffectsGenerator.on_episode_start()` resets the generator (S1) and `_num_malfunctions` (S2); docstring: `max_num_malfunctions` per episode (S2). |
+| `tests/test_malfunction_generators.py` | Seeded double reset vs a new env; pinned first-episode malfunction counters; loaded env reset with a seed; conditional generator: seeded double reset (S1); `max_num_malfunctions` per episode (S2). |
 | `flatland/envs/observations_perturbed.py` | `_PerturbedTreeObsForRailEnv.reset()` resets `_malfunction_generator`; docstring of `perturbation_tree_observation_builder_wrapper` on reproducing the perturbations (S3). |
 | `flatland/core/effects_generator.py`, `flatland/core/env_observation_builder.py` | Docstrings of `EffectsGenerator.on_episode_start()` and `ObservationBuilder.reset()`: the rule "Randomness per episode" (S4); the gauss wrapper's docstring (S3). |
 | `tests/test_flatland_envs_observations.py` | Perturbed tree observation: same blind periods after a reseeded double reset (S3). |
