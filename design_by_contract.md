@@ -236,7 +236,7 @@ Table 4c.
 | `RailEnvActions.STOP_MOVING`                                           | `\action_i = \text{S}`                   | Table 1, "Braking"                                                                                              |
 | `initial_entry_point` (param); `agent.initial_entry_point`             | `p_{i,1,1}`                              | Table 1, "Map entry" row                                                                                        |
 | `earliest_departure` (param); `agent.earliest_departure`               | `e_{i,1,1}`                              | Table 2b, `ready_to_depart`                                                                                     |
-| `self._elapsed_steps + 1` (the step about to be taken)                 | `t+1`                                    | Table 2b, `ready_to_depart` (`elapsed_steps`)                                                                   |
+| `self._elapsed_steps` (already incremented at the start of `step()`)   | `t+1`                                    | Table 2b, `ready_to_depart` (`elapsed_steps`)                                                                   |
 | `agent.targets`                                                        | `targets_i`                              | Table 2b, `target_reached`                                                                                      |
 | `candidate_entry_point_independent` (`self.rail.apply_action_independent(...)`) | `\tau(p', \action_i^t)` (transition function, general form) | Table 2a, `transition_invalid`                                                     |
 
