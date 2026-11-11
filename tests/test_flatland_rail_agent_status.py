@@ -366,20 +366,20 @@ def test_distance_without_crossing_reaches_segment_length_on_target_restart_afte
     exactly when the block clears.
 
     Step by step (both agents max_speed=1, so speed jumps 0->1 in one step of ramping):
-    - step 0: agent 0 (already MOVING, pre_speed=1) attempts A->B for real; agent 1 (STOPPED, sitting at
-      B, given DO_NOTHING) still holds B this step - denied. Agent 0 stays at distance=0, becomes
+    - step 0: agent 0 (already MOVING, pre_speed == 1) attempts A->B for real; agent 1 (STOPPED, sitting at
+      B, given DO_NOTHING) still holds B this step - denied. Agent 0 stays at distance == 0, becomes
       STOPPED. Agent 1 unchanged.
     - step 1: agent 0 given DO_NOTHING (stays STOPPED, distance still 0). Agent 1 given its first
       movement action - optimistically promoted STOPPED->MOVING (self-loop, distance stays 0, speed
       ramps to 1).
     - step 2: agent 0 still DO_NOTHING (unchanged). Agent 1's pre_speed is now 1 - its real
       crossing B->C succeeds uncontested (agent 0 isn't contesting B this step), reaching its own target
-      C with pre_distance=0, pre_speed=1, sum=1 exactly (zero excess) - agent 1 is now DONE, B is free.
+      C with pre_distance == 0, pre_speed == 1, sum == 1 exactly (zero excess) - agent 1 is now DONE, B is free.
     - step 3: agent 0 given MOVE_FORWARD - optimistically promoted STOPPED->MOVING (self-loop, distance
       stays 0, speed ramps to 1). Agent 1 stays DONE (DO_NOTHING).
     - step 4: agent 0's pre_speed is now 1 again, with pre_distance still 0 - its real
-      crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance=0,
-      pre_speed=1, sum=1 exactly (zero excess).
+      crossing A->B succeeds (B is now completely free), reaching its target B with pre_distance == 0,
+      pre_speed == 1, sum == 1 exactly (zero excess).
     """
     rail, optionals = _make_straight_rail(3)
     env = RailEnv(width=3, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -419,7 +419,7 @@ def test_distance_without_crossing_reaches_segment_length_on_target_restart_afte
 
     # design: distance == SEGMENT_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
     # or excess, and stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a
-    # now-frozen speed=0) - it does not by itself distinguish an exact fit from an excess. What shows that
+    # now-frozen speed == 0) - it does not by itself distinguish an exact fit from an excess. What shows that
     # the denied crossing left nothing to discard is the pre-step sum on the final (granted) crossing
     # attempt: pre_distance(0, not moved while denied) + pre_speed(1, ramped) == SEGMENT_LENGTH exactly -
     # captured here from the last iteration's pre-step values.

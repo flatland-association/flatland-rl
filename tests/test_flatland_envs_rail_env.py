@@ -1734,7 +1734,7 @@ def test_action_required_after_refused_crossing(with_malfunction):
     """
     Single agent departs at (2,3) heading WEST towards a symmetric switch at (2,1) whose only valid
     exits are north/south - continuing MOVE_FORWARD (straight through) is invalid there, so the agent
-    is force-stopped one cell short, where it was on (2,2): distance 0, speed == 0. Design: for an
+    is force-stopped one cell short, where it was on (2,2): distance == 0, speed == 0. Design: for an
     on-map state, info['action_required'] depends purely on SpeedCounter.is_cell_exit() (speed > 0 and
     distance + speed >= SEGMENT_LENGTH - see design_by_contract.md), not on which on-map state
     (MOVING/STOPPED/MALFUNCTION) the agent is actually in - is_cell_exit() (and so action_required)
