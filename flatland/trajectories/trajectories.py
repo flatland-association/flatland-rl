@@ -218,16 +218,21 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def _find_closest_snapshot(self, start_step):
+    def _find_closest_snapshot(self, start_step: Optional[int]) -> Path:
+        """
+        The file to restore the env at `start_step` from: the latest snapshot at or before `start_step`, else (also
+        without `start_step`) the env saved at the start of the episode.
+        """
+        serialised_state_dir = Path(self.data_dir) / SERIALISED_STATE_SUBDIR
         closest = None
-        for p in (Path(self.data_dir) / SERIALISED_STATE_SUBDIR).iterdir():
-            p: Path = p
-            if not (p.name.startswith(f"{self.ep_id}_step") and p.name.endswith(".pkl")):
-                continue
-            step = int(p.name.replace(f"{self.ep_id}_step", "").replace(".pkl", ""))
-            if step <= start_step and (closest is None or (step > closest)):
-                closest = step
-        return closest
+        if start_step is not None:
+            for p in serialised_state_dir.iterdir():
+                if not (p.name.startswith(f"{self.ep_id}_step") and p.name.endswith(".pkl")):
+                    continue
+                step = int(p.name.replace(f"{self.ep_id}_step", "").replace(".pkl", ""))
+                if step <= start_step and (closest is None or (step > closest)):
+                    closest = step
+        return serialised_state_dir / (f"{self.ep_id}.pkl" if closest is None else f"{self.ep_id}_step{closest:04d}.pkl")
 
     def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         self._trains_positions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position})
@@ -439,25 +444,8 @@ class Trajectory:
         """
         self.outputs_dir.mkdir(exist_ok=True)
 
-        def inner_load():
-            if start_step is None:
-                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
-                                                  skip_state_machine_update=skip_state_machine_update)
-                return env
-            else:
-                closest = self._find_closest_snapshot(start_step)
-                if closest is None:
-                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
-                                                      skip_state_machine_update=skip_state_machine_update)
-                    return env
-                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
-                                                  skip_state_machine_update=skip_state_machine_update)
-                return env
-
-        env = inner_load()
+        env, _ = RailEnvPersister.load_new(self._find_closest_snapshot(start_step), obs_builder=obs_builder, rewards=rewards,
+                                           effects_generator=effects_generator, skip_state_machine_update=skip_state_machine_update)
         if start_step is not None:
             assert env._elapsed_steps <= start_step
 

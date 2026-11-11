@@ -51,8 +51,10 @@ def test_restore_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
-        assert trajectory._find_closest_snapshot(5) == 5
-        assert trajectory._find_closest_snapshot(7) == 5
+        assert trajectory._find_closest_snapshot(None).name == f"{trajectory.ep_id}.pkl"
+        assert trajectory._find_closest_snapshot(4).name == f"{trajectory.ep_id}_step0000.pkl"
+        assert trajectory._find_closest_snapshot(5).name == f"{trajectory.ep_id}_step0005.pkl"
+        assert trajectory._find_closest_snapshot(7).name == f"{trajectory.ep_id}_step0005.pkl"
 
         env = trajectory.load_env(7)
 
@@ -75,7 +77,7 @@ def test_load_env_replay_overrides():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # step 7 has no exact snapshot (nearest is 5) -> forces the replay-to-step fallback in load_env
-        assert trajectory._find_closest_snapshot(7) == 5
+        assert trajectory._find_closest_snapshot(7).name == f"{trajectory.ep_id}_step0005.pkl"
 
         custom_obs_builder = DummyObservationBuilder()
         custom_rewards = DefaultRewards()
