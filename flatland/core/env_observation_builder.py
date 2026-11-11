@@ -39,6 +39,11 @@ class ObservationBuilder(Generic[EnvT, ObservationT]):
         Subclasses that need to pre-compute env-dependent data should override this method and call
         `super().reset(env)` first to keep `self.env` up to date.
 
+        Randomness per episode: an observation builder that keeps random state across steps (e.g. a perturbation
+        with its own malfunction generator) starts it over here. `env.reset(random_seed=s)` reseeds only
+        `env.np_random`; an observation builder doesn't seed itself, and one that draws from a `RandomState` its caller
+        passes in is reproducible only if the caller reseeds that `RandomState` before `env.reset()`.
+
         Parameters
         ----------
         env : EnvT
