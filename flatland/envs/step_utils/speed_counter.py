@@ -137,7 +137,7 @@ class SpeedCounter:
         """
         # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
         # bootstrapped onto the map (previous distance None, new distance concrete), or the caller says it
-        # crossed. It can't be derived from the distances alone: at speed == SEGMENT_LENGTH (e.g.
+        # crossed. It can't be derived from the distances alone: at speed == SEGMENT_LENGTH (e.g.,
         # max_speed=1), distance_after_crossing wraps exactly back to the pre-step value (0 -> 0), and a
         # denied crossing keeps the pre-step distance (with speed 0), just like an agent at rest.
         self._is_cell_entry = distance is not None and (self._distance is None or crossed)
