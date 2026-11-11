@@ -4,6 +4,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
+import pandas as pd
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
@@ -14,6 +15,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
+from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
 from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, Trajectory
 from flatland.utils.seeding import random_state_to_hashablestate, np_random
@@ -383,6 +385,40 @@ def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_updat
         "skip_state_machine_update": skip_state_machine_update,
         "state_machine_live": not skip_state_machine_update,
     }]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+def test_grid_runner_skip_state_machine_update(skip_state_machine_update: bool, state_machine_recordings: List[Dict[str, Any]]):
+    """
+    The grid runner passes `--skip-state-machine-update` on to every row; the saved trajectory keeps the setting.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        metadata_csv = data_dir / "metadata.csv"
+        pd.DataFrame([{
+            "test_id": "Test_00", "env_id": "Level_0", "n_agents": 2, "x_dim": 30, "y_dim": 30, "n_cities": 2,
+            "max_rail_pairs_in_city": 2, "grid_mode": False, "max_rails_between_cities": 2,
+            "malfunction_duration_min": 20, "malfunction_duration_max": 50, "malfunction_interval": 540, "seed": 42,
+        }]).to_csv(metadata_csv, index=False)
+
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectories_from_metadata([
+                "--metadata-csv", str(metadata_csv),
+                "--data-dir", str(data_dir),
+                "--policy-pkg", "tests.trajectories.test_policy_runner",
+                "--policy-cls", "RandomPolicy",
+                "--callbacks-pkg", "tests.trajectories.test_policy_runner",
+                "--callbacks-cls", "StateMachineRecordingCallbacks",
+                "--skip-state-machine-update", skip_state_machine_update,
+            ])
+        assert e_info.value.code == 0
+
+        assert state_machine_recordings == [{
+            "skip_state_machine_update": skip_state_machine_update,
+            "state_machine_live": not skip_state_machine_update,
+        }]
+        trajectory = Trajectory.load_existing(data_dir=data_dir / "Test_00" / "Level_0", ep_id="Test_00_Level_0")
+        assert getattr(trajectory.load_env(), "skip_state_machine_update", True) == skip_state_machine_update
 
 
 def test_create_from_policy_keeps_wrapping(state_machine_recordings: List[Dict[str, Any]]):
