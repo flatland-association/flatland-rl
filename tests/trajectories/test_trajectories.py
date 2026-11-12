@@ -237,3 +237,15 @@ def test_read_trains_positions_non_tuple_node_ids():
         trajectory._write_trains_positions(pd.DataFrame({
             "episode_id": "ep", "env_time": range(len(positions)), "agent_id": 0, "position": positions}))
         assert list(trajectory._read_trains_positions()["position"]) == ["a", "1", "(1, 2, 3)", ((1, 2), 3), None]
+
+
+@pytest.mark.parametrize("rewards", [
+    [(0, 1), (1, 1)],
+    [-1.0, 0.0],
+])
+def test_read_trains_rewards_dones_infos_rewards(rewards):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = Trajectory(data_dir=Path(tmpdirname), ep_id="ep")
+        trajectory._write_trains_rewards_dones_infos(pd.DataFrame({
+            "episode_id": "ep", "env_time": [1, 2], "agent_id": 0, "reward": rewards, "info": ["{}", "{}"], "done": [False, True]}))
+        assert list(trajectory._read_trains_rewards_dones_infos()["reward"]) == rewards

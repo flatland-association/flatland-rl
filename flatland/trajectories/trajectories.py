@@ -189,7 +189,8 @@ class Trajectory:
             *ast.literal_eval(re.sub(r"Fraction\(([0-9]+), ([0-9]+)\)", r"(\1,\2)", v)))) for k, v in d.items()})
         # backwards compatibility for old stored floats:
         df["info"] = df["info"].map(lambda d: {k: (v if k != "speed" else _pseudo_fractional(v)) for k, v in d.items()})
-        if df.dtypes["reward"] == object:
+        # tuple rewards (e.g. `PunctualityRewards`) are stored as text, read as `object` by pandas 2 and as `str` by pandas 3.
+        if not pd.api.types.is_numeric_dtype(df["reward"]):
             df["reward"] = df["reward"].map(ast.literal_eval)
         return df
 
