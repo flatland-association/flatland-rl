@@ -4,8 +4,8 @@
 > 3e30f9ef (#566) since. Issue [#526](https://github.com/flatland-association/flatland-rl/issues/526) ("Introduce edge
 > lengths."). Branch `526-edge-lengths`, PR [#542](https://github.com/flatland-association/flatland-rl/pull/542).
 > Written after the implementation, from the branch, the PR description and its review threads. No open questions
-> (§9.1). Findings: F-1–F-14, F-16–F-20 and F-25 fixed, F-15, F-21 (#544) and F-22 (#570) taken over by follow-ups,
-> F-23, F-24 and F-26–F-28 open (code review of 2026-11-13): planned in phase 2 (S-35–S-39).
+> (§9.1). Findings: F-1–F-14, F-16–F-20, F-23 and F-25 fixed, F-15, F-21 (#544) and F-22 (#570) taken over by follow-ups,
+> F-24 and F-26–F-28 open (code review of 2026-11-13): planned in phase 2 (S-36–S-39).
 >
 > **Why:** every edge between two consecutive entry points is one step long at full speed. Real track sections differ
 > in length, so the time to pass them can't be modelled. With edge lengths, a long section takes longer to pass,
@@ -93,6 +93,8 @@ Requirements:
 - Edge lengths are set once per `reset()`. Changing them afterwards does not update the distance map, the timetable or
   the on-map agents' `speed_counter.edge_length` (documented on `GridTransitionMap.edge_lengths`; no issue: by
   design, Q-1).
+- The read-only `edge_lengths` view guards against accidental writes, not against writes to `_edge_lengths` or
+  reflection (§4.3; no issue: by design, Python has no private state).
 - Timetables are a heuristic: +1 per segment, the total divided by the speed, segment lengths rounded up to whole
   steps (documented in `timetable_generator`; Q-4).
 - Rendering draws agents at whole cells; only the opt-in progress bar shows the position along a long edge (no
@@ -208,7 +210,16 @@ All tests named here are in `tests/test_flatland_edge_lengths.py` unless a path 
   `MIN_EDGE_LENGTH = MAX_SPEED`, `validated_edge_length()`, and `TransitionMap.edge_length(u, v)` /
   `has_edge_lengths()` (default 1 and `False`).
 - Grid: `GridTransitionMap.edge_lengths` (`{(u, v): length}`, keys `GridEdge`); the setter checks `has_edge(u, v)` and
-  validates each length. `RailEnv.reset()` sets it from the rail generator's `optionals["edge_lengths"]`.
+  validates each length. `RailEnv.reset()` sets it from the rail generator's `optionals["edge_lengths"]`. The getter
+  returns a read-only view (`types.MappingProxyType`, F-23), so `rail.edge_lengths[e] = 0.5` raises `TypeError`
+  instead of bypassing the setter's validation:
+  - Safeguard against accidental writes only: the private `_edge_lengths`, reflection (`gc.get_referents`, `ctypes`)
+    and the setter after `reset()` still change the lengths. A shallow view is enough, as keys (tuples) and lengths
+    (`int`, `Fraction`) are immutable. A copy per read or a frozen mapping would cost more and not stop reflection
+    either.
+  - Performance: the view wraps the dict without copying it (about 40 ns per read, independent of its size, measured
+    on 2026-11-13). Only persistence (saving) and `grid_to_digraph` read the getter, once each; the step path
+    (`edge_length()`, `has_edge_lengths()`) reads `_edge_lengths` directly.
 - Graph: `GraphTransitionMap` reads and validates the `length` edge attributes once on construction; the attribute is
   optional (Q-3). Its aliases are renamed to `GraphNode` / `GraphEdge`. `GraphTransitionMap.grid_to_digraph` copies
   the grid lengths, so `GraphTransitionMap.from_rail_env` and `GraphRailEnv.from_rail_env` both keep them.
@@ -515,8 +526,8 @@ in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source
 | ✅ | F-18 | code review | bug | medium | `flatland/envs/rail_env.py:1425`, `flatland/envs/step_utils/speed_counter.py:265`: an agent whose target is reached and not removed (`remove_agents_at_target=False`) keeps the distance capped at the length of the edge it arrived on, but `SpeedCounter.set()` stores it with the length of the edge leaving the target. So the distance exceeds `edge_length`, against the class docstring. Reproduced: last edge of length 3, target `((0, 4), 1)` shows distance 3 with edge length 1. The progress bar and anything relying on `distance <= edge_length` then see an impossible state. On `main` both were 1, which hid the same mix-up of the two edges. Fix (Q-10): reaching the target is a crossing like any other, the distance is the leftover of that step (`distance_after_crossing`), and a DONE agent keeps its distance. Fixed in e4ee29e2 (S-30). | fix(env)!: cross into the target edge like any other edge when the agent is not removed. |
 | ✅ | F-19 | code review | bug | medium | `flatland/envs/persistence.py:456`, `tests/test_flatland_edge_lengths.py:302`: edge lengths are written to msgpack as raw `Fraction`s, which msgpack can't serialize. The test skips on `TypeError`, so the `.mpk` path is never tested. Saving `.mpk` fails earlier anyway, also without edge lengths ("can not serialize 'set' object", likely the agents' target sets, so probably on `main` too; not checked there). Fix: write each length as `(numerator, denominator)` and read it back as a `Fraction`; make the test fail instead of skipping, once `.mpk` saving works. Fixed in 27516b6e (S-32): lengths persisted as numerator and denominator; the encoding is tested with msgpack directly, the `.mpk` round trip stays skipped (Q-9). | fix(persistence): persist fractional edge lengths in msgpack files. |
 | ✅ | F-20 | code review | bug | medium | `flatland/envs/graph/rail_graph_transition_map.py:153`: `GraphTransitionMap.from_rail_env()` builds the graph with `grid_to_digraph(env.rail)` but doesn't copy the edge lengths; only `GraphRailEnv.from_rail_env` does (`_grid_edge_lengths`). Reproduced: an env with a length 3/2 gives a map with `has_edge_lengths()` False, so the decision point graph built from it has unit lengths. Fix: copy the lengths in `grid_to_digraph` (or in `from_rail_env`) and have `GraphRailEnv.from_rail_env` reuse it. Fixed in 38895290 (S-31): `grid_to_digraph` copies the lengths, so both conversions keep them. | fix(graph): copy edge lengths in GraphTransitionMap.from_rail_env. |
+| ✅ | F-23 | code review | robustness | low | `flatland/core/transition_map.py:275`: the `edge_lengths` getter returns the internal dict, so `env.rail.edge_lengths[e] = 0.5` bypasses `validated_edge_length()`, `has_edge()` and the distance map reset. Fix: return a read-only view (`types.MappingProxyType`). Fixed in 610a28e9 (S-35): the getter returns a read-only view; safeguard against accidental writes only, no copy (§4.3). | fix(transition map): return a read-only view of the edge lengths. |
 | ✅ | F-25 | code review | performance | low | `flatland/core/distance_map.py:159`: `shortest_path_length()` rebuilds the whole shortest path only to check that one exists and whether it has one waypoint. `geometric_distance(source)` answers both (inf: no path, 0: at the target), the case the comment names ("none may be computable") is an agent already at its target, checked first. It is called per agent in the timetable generator and for rewards. Fix: look up the distance only. Fixed in 4221063c (S-33): one distance map lookup, same values; the docstring explains the +1 with an example. | perf(distance map): compute the shortest path length without rebuilding the path. |
-|  | F-23 | code review | robustness | low | `flatland/core/transition_map.py:275`: the `edge_lengths` getter returns the internal dict, so `env.rail.edge_lengths[e] = 0.5` bypasses `validated_edge_length()`, `has_edge()` and the distance map reset. Fix: return a read-only view (`types.MappingProxyType`). Open: planned in S-35. | fix(transition map): return a read-only view of the edge lengths. |
 |  | F-24 | code review | performance | low | `flatland/envs/grid/distance_map.py:34`: any edge length switches the grid distance map to `dtype=object`, also when all lengths are ints, which a float array holds exactly. Object arrays cost memory and per-element Python calls, and `np.isinf()` on them raises `TypeError`. Fix: use `object` only when a length is a non-integer `Fraction`. Open: planned in S-36. | perf(distance map): keep a float grid distance map for whole-number edge lengths. |
 |  | F-26 | code review | type-hints | low | `flatland/core/distance_map.py:152`, `flatland/envs/graph/graph_simplification.py:21,27`: `shortest_path_length()` is typed `Optional[Fraction]` but returns `int` without edge lengths; `DecisionPointGraphEdgeData.length` is a sum of edge lengths but typed `EdgeLength`. Fix: `Optional[Distance]` and `Distance`. Open: planned in S-37. | style(edge lengths): type sums of edge lengths as Distance. |
 |  | F-27 | code review | docs | low | `flatland/envs/step_utils/speed_counter.py:110,233-241`: `distance_after_crossing`'s docstring has two paragraphs on the range of the leftover that say the same; since #545 the `% MAX_SPEED` changes no value an agent on its way reaches. The class table names its situation "cell boundary crossed", but `step()` also uses it to keep moving within an edge. Fix: one paragraph, and "keep moving or cross" in the table. Open: planned in S-38. | docs(speed counter): describe distance_after_crossing's leftover once. |
@@ -594,7 +605,7 @@ Goal and design in §4.7.
 | ✅ S-31 | F-20 | Copy the grid's edge lengths in `GraphTransitionMap.grid_to_digraph`, so `GraphTransitionMap.from_rail_env` and `GraphRailEnv.from_rail_env` both get them; test the decision point graph built from `GraphTransitionMap.from_rail_env`. | bug | medium | fix(graph): copy edge lengths in GraphTransitionMap.from_rail_env. | 38895290 | - | - |
 | ✅ S-32 | F-19 | Persist each length as numerator and denominator and read it back as a `Fraction`; test the encoding of the persisted dict directly, the `.mpk` round trip stays skipped until saving sets works (Q-9). | bug | medium | fix(persistence): persist fractional edge lengths in msgpack files. | 27516b6e | - | - |
 | ✅ S-33 | F-25 | `shortest_path_length()` from the distance map lookup alone (inf: no path), without rebuilding the path; same values. Test: equal to the path-based length, with and without edge lengths, off and on the map. | performance | low | perf(distance map): compute the shortest path length without rebuilding the path. | 4221063c | - | - |
-| 💡 S-35 | F-23 | The `edge_lengths` getter returns a read-only view; test that writing into it raises. | robustness | low | fix(transition map): return a read-only view of the edge lengths. |  | - | - |
+| ✅ S-35 | F-23 | The `edge_lengths` getter returns a read-only view; test that writing into it raises. | robustness | low | fix(transition map): return a read-only view of the edge lengths. | 610a28e9 | - | - |
 | 💡 S-36 | F-24 | A float grid distance map when all lengths are whole numbers, an object array only for fractional lengths. | performance | low | perf(distance map): keep a float grid distance map for whole-number edge lengths. |  | - | - |
 | 💡 S-37 | F-26 | Type sums of edge lengths as `Distance`. | type-hints | low | style(edge lengths): type sums of edge lengths as Distance. |  | S-33 | - |
 | 💡 S-38 | F-27 | One paragraph on the leftover in `distance_after_crossing`; "keep moving or cross" in the class table. | docs | low | docs(speed counter): describe distance_after_crossing's leftover once. |  | - | - |
