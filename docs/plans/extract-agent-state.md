@@ -3,7 +3,8 @@
 > **Status:** plan of 2026-11-12, revised 2026-11-13, draft. Based on `main` 8a4261a5. Issues
 > [#549](https://github.com/flatland-association/flatland-rl/issues/549) ("Extract agent state.", chenkins, scope
 > extended 2026-11-04) and [#527](https://github.com/flatland-association/flatland-rl/issues/527) ("Make `EnvAgent`
-> generic.", chenkins). Branch `549-extract-agent-state`, no PR yet. Open questions: none (§9.1).
+> generic.", chenkins). Branch `549-extract-agent-state`, PR
+> [#571](https://github.com/flatland-association/flatland-rl/pull/571). Open questions: none (§9.1).
 >
 > **Why:** the flatland-book models an agent as static data (route, timetable, max speed) plus an *agent state*
 > (entry points, distance, speed, malfunction, done), but the code has no such concept: the state is spread over
@@ -504,7 +505,8 @@ constraint (C-6), compiling follows with the whole `step()` (§1.4). Reason: the
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-No PR yet. TODOs referring to the issues on `main` 8a4261a5: `agent_utils.py:236` (#527, S-6), `rewards.py:85`
+PR #571, no review or conversation comments yet (checked 2026-11-13). TODOs referring to the issues on `main`
+8a4261a5: `agent_utils.py:236` (#527, S-6), `rewards.py:85`
 (#527, S-6).
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
