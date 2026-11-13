@@ -1,81 +1,217 @@
-from typing import List
+from dataclasses import dataclass
+from functools import partial
+from typing import Callable, Dict, List, NamedTuple, Optional, Tuple, Union
 
-from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.rail_env import RailEnv
+from flatland.core.env_observation_builder import AgentHandle, ObservationBuilder
+from flatland.core.policy import Policy
+from flatland.core.transition_map import TransitionMap
+from flatland.envs.agent_utils import EntryPointT
+from flatland.envs.grid.grid_routing import greedy_grid_route_through_waypoints
+from flatland.envs.rail_env import AbstractRailEnv
 from flatland.envs.rail_env_action import RailEnvActions
-from flatland.envs.rail_env_policy import RailEnvPolicy
-from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.step_utils.states import TrainState
 
+# (rail, source, waypoint groups) -> (route starting at source, per group routed the index in the route of the alternative picked),
+# e.g. `greedy_grid_route_through_waypoints()` or `greedy_graph_route_through_waypoints()`.
+Router = Callable[[TransitionMap, EntryPointT, List[List[EntryPointT]]], Tuple[List[EntryPointT], List[int]]]
 
-class ShortestPathPolicy(RailEnvPolicy[RailEnv, RailEnv, RailEnvActions]):
-    def __init__(self):
+
+class AgentStaticData(NamedTuple):
+    """ An agent's static data for an episode, as in `EnvAgent`: its initial entry point and its waypoint groups with their timetable. """
+    initial_entry_point: EntryPointT
+    waypoints: Tuple[Tuple[EntryPointT, ...], ...]
+    waypoints_earliest_departure: Tuple[Optional[int], ...]
+    waypoints_latest_arrival: Tuple[Optional[int], ...]
+
+
+class RailEnvStaticData(NamedTuple):
+    """
+    A rail env's static data for an episode, immutable: the transition map (read-only by convention) and per agent
+    handle its `AgentStaticData`. Not part of the observations: handed to the policies in the infos (key `"static"`),
+    as one object shared by all agents.
+    """
+    rail: TransitionMap
+    agents: Tuple[AgentStaticData, ...]
+
+    @staticmethod
+    def from_env(env: AbstractRailEnv) -> "RailEnvStaticData":
+        return RailEnvStaticData(rail=env.rail, agents=tuple(
+            AgentStaticData(initial_entry_point=agent.initial_entry_point,
+                            waypoints=tuple(tuple(group) for group in agent.waypoints),
+                            waypoints_earliest_departure=tuple(agent.waypoints_earliest_departure),
+                            waypoints_latest_arrival=tuple(agent.waypoints_latest_arrival))
+            for agent in env.agents))
+
+
+@dataclass(frozen=True)
+class ShortestPathObservation:
+    """
+    What `ShortestPathPolicy` observes of an agent: its dynamic state. Its static data (route, timetable) and the map
+    come with the infos (`RailEnvStaticData`). After `reset()`, it has no position (`current_entry_point` is `None`).
+    TODO https://github.com/flatland-association/flatland-rl/issues/561 move `elapsed_steps` to the infos, once the rail env hands them out.
+    """
+    handle: int
+    elapsed_steps: int
+    done: bool
+    current_entry_point: Optional[EntryPointT]
+    next_entry_point: Optional[EntryPointT]
+    is_cell_exit: bool
+
+    @staticmethod
+    def from_env(env: AbstractRailEnv, handle: int) -> "ShortestPathObservation":
+        agent = env.agents[handle]
+        return ShortestPathObservation(handle=handle, elapsed_steps=env._elapsed_steps, done=agent.state == TrainState.DONE,
+                                       current_entry_point=agent.current_entry_point, next_entry_point=agent.next_entry_point,
+                                       is_cell_exit=agent.speed_counter.is_cell_exit())
+
+
+class ShortestPathObservationBuilder(ObservationBuilder[AbstractRailEnv, ShortestPathObservation]):
+    """ Builds the `ShortestPathObservation`s `ShortestPathPolicy` acts on. """
+
+    def get(self, handle: AgentHandle = 0) -> ShortestPathObservation:
+        return ShortestPathObservation.from_env(self.env, handle)
+
+
+class ShortestPathPolicy(Policy[AbstractRailEnv, Union[ShortestPathObservation, AbstractRailEnv], RailEnvActions]):
+    """
+    Acts on `ShortestPathObservation`s (`ShortestPathObservationBuilder`), with the rail env's static data
+    (`RailEnvStaticData`) in the infos passed to `act_many()` (`infos["static"]`). Backwards compatible: with
+    `FullEnvObservation` (the env itself as observation), it derives both from the env.
+
+    Each agent follows its route from its initial entry point, as computed once per episode by the injected `router`, e.g.
+    `greedy_grid_route_through_waypoints()` for `RailEnv` or `greedy_graph_route_through_waypoints()` for
+    `GraphRailEnv`. Both are greedy, see there. With `router=None` (default), the grid router picks per waypoint group
+    the first reachable alternative without `serve_intermediate_stops` (the previous behaviour), and the nearest one
+    with it (a new mode, so nothing to stay compatible with). If the router cannot reach a waypoint group, the policy
+    fails at the agent's first observation.
+
+    Without `serve_intermediate_stops` (default, the previous behaviour), the route goes straight to the target,
+    ignoring intermediate stops and their earliest departures.
+
+    With `serve_intermediate_stops`, the route goes through the intermediate stops, and each agent stops at each of
+    them and respects its earliest departure there:
+
+    - Stopping: `STOP_MOVING` in the step the agent crosses into the stop's entry point, so it halts there -
+      Flatland's rewards count an intermediate stop as served only if the agent stopped there.
+    - Departing: `STOP_MOVING` while `elapsed_steps + 1 < waypoints_earliest_departure[i]`, so the agent moves
+      again in the step of its earliest departure; with no earliest departure, it stops for one step.
+    - Moving on: as soon as `elapsed_steps + 1 >= waypoints_earliest_departure[i]` (with no earliest departure: in
+      the step after halting), the policy returns the `MOVE_FORWARD`/`MOVE_LEFT`/`MOVE_RIGHT` towards the next entry
+      point on its route again, as anywhere else on the route.
+
+    Limitations:
+
+    - No braking in advance: the agent only brakes in the step it crosses into the stop. It halts at the stop only
+      if `braking_delta` stops it within the stop's cell (e.g. the default `braking_delta=-1`); with weaker braking it
+      overshoots the stop, which then counts as not served.
+    - Conflicts with other agents and malfunctions are not considered. An agent blocked by another one keeps its route
+      and waits until the way is free: e.g. two agents heading towards each other on a single track deadlock, as
+      neither gives way nor reroutes. A malfunction only delays the agent on its fixed route: e.g. it neither picks an
+      alternative route nor skips a stop to catch up, so after a long malfunction it arrives late.
+    """
+
+    def __init__(self, router: Optional[Router] = None, serve_intermediate_stops: bool = False):
         super().__init__()
-        self._shortest_paths = {}
+        if router is None:
+            router = partial(greedy_grid_route_through_waypoints, nearest_alternative=serve_intermediate_stops)
+        self.router = router
+        self.serve_intermediate_stops = serve_intermediate_stops
+        self._routes: Dict[int, List[EntryPointT]] = {}
+        # per agent, route index of each routed waypoint group's alternative picked, starting with the initial entry point:
+        # e.g. for the timetable's waypoints [[p0], [q2, p2], [p4]] (incl. the initial group, of size one, and the target
+        # group), the route [p0, p1, p2, p3, p4] through the waypoint groups after the initial one, [[q2, p2], [p4]], gives
+        # [0, 2, 4] (p2 picked), and without `serve_intermediate_stops` the route [p0, p1, p4] through the target group
+        # [[p4]] alone gives [0, 2]
+        self._stop_indices: Dict[int, List[int]] = {}
+        # per agent, route index of its current entry point - only moves forward, so a route visiting an
+        # entry point twice is followed in order
+        self._route_index: Dict[int, int] = {}
 
-    def _act(self, env: RailEnv, agent: EnvAgent):
-        if agent.current_entry_point is None:
+    def act_many(self, handles: List[int], observations: List[Union[ShortestPathObservation, AbstractRailEnv]],
+                 infos: Optional[Dict] = None, **kwargs):
+        actions = {}
+        static = None
+        for handle, observation in zip(handles, observations):
+            if isinstance(observation, AbstractRailEnv):
+                # `FullEnvObservation`: derive the observation and the static data from the env
+                if static is None:
+                    static = RailEnvStaticData.from_env(observation)
+                observation = ShortestPathObservation.from_env(observation, handle)
+            elif static is None:
+                static = infos["static"]
+            self._update_agent(observation, static)
+            actions[handle] = self._act(observation, static)
+        return actions
+
+    def _update_agent(self, observation: ShortestPathObservation, static: RailEnvStaticData):
+        """
+        Update `_routes`, `_stop_indices` and `_route_index`. An agent is routed at its first observation of an
+        episode (elapsed steps 0, after the env's `reset()`), so the policy can be reused for several episodes.
+        """
+        handle = observation.handle
+        if handle not in self._routes or observation.elapsed_steps == 0:
+            agent = static.agents[handle]
+            # TODO https://github.com/flatland-association/flatland-rl/issues/527 drop the conversion once EnvAgent.waypoints is also of EntryPointT
+            #  instead of Waypoint.
+            waypoint_groups = [[wp._to_tuple() if isinstance(wp, Waypoint) else wp for wp in group] for group in agent.waypoints[1:]]
+            if not self.serve_intermediate_stops:
+                waypoint_groups = waypoint_groups[-1:]
+            route, stop_indices = self.router(static.rail, agent.initial_entry_point, waypoint_groups)
+            assert len(stop_indices) == len(waypoint_groups), \
+                f"Agent {handle} cannot be routed from {route[-1]} through {waypoint_groups[len(stop_indices)]}, waypoint groups {waypoint_groups}."
+            self._routes[handle] = route
+            self._stop_indices[handle] = [0] + stop_indices
+            self._route_index[handle] = 0
+        if observation.current_entry_point is None:
+            return
+        route = self._routes[handle]
+        index = self._route_index[handle]
+        while route[index] != observation.current_entry_point:
+            index += 1
+            assert index < len(route), f"Agent {handle} at {observation.current_entry_point} is off its route {route}."
+        self._route_index[handle] = index
+
+    def _halts_at_intermediate_stop(self, observation: ShortestPathObservation, static: RailEnvStaticData, route: List[EntryPointT], index: int) -> bool:
+        """
+        Whether the agent at `route[index]` halts for an intermediate stop (neither the initial entry point nor the
+        target): it stands on one before its earliest departure, or enters the next one at this cell exit.
+        """
+        handle = observation.handle
+        intermediate_stops = {stop_index: group for group, stop_index in enumerate(self._stop_indices[handle][1:-1], start=1)}
+        if index in intermediate_stops:
+            earliest_departure = static.agents[handle].waypoints_earliest_departure[intermediate_stops[index]]
+            # the action is applied in step `_elapsed_steps + 1` (`step()` increments `_elapsed_steps` first), so the
+            # agent starts moving in the step of its earliest departure - as it enters the map at the initial stop
+            if earliest_departure is not None and observation.elapsed_steps + 1 < earliest_departure:
+                return True
+        return index + 1 in intermediate_stops and observation.next_entry_point == route[index + 1] and observation.is_cell_exit
+
+    def _act(self, observation: ShortestPathObservation, static: RailEnvStaticData) -> RailEnvActions:
+        if observation.done:
+            return RailEnvActions.DO_NOTHING
+        if observation.current_entry_point is None:
             return RailEnvActions.MOVE_FORWARD
 
-        if len(self._shortest_paths[agent.handle]) == 0:
-            return RailEnvActions.DO_NOTHING
+        handle = observation.handle
+        route = self._routes[handle]
+        index = self._route_index[handle]
+
+        if self.serve_intermediate_stops and self._halts_at_intermediate_stop(observation=observation, static=static, route=route, index=index):
+            return RailEnvActions.STOP_MOVING
 
         # design: actions applied at cell entry -- once agent.next_entry_point holds a
         # pending target (decided one cell ago), this step's action no longer decides *that*
         # transition (already settled) but the look-ahead beyond it, so it must be evaluated from
-        # next_entry_point against the waypoint *after* it, not from current_entry_point against
-        # the immediate next waypoint.
-        has_pending_target = agent.next_entry_point is not None and agent.next_entry_point != agent.current_entry_point
-        lookahead_from = agent.next_entry_point if has_pending_target else agent.current_entry_point
-        target_index = 2 if has_pending_target else 1
-        if target_index >= len(self._shortest_paths[agent.handle]):
+        # next_entry_point against the route entry *after* it, not from current_entry_point against
+        # the immediate next route entry.
+        has_pending_target = observation.next_entry_point is not None and observation.next_entry_point != observation.current_entry_point
+        lookahead_from = observation.next_entry_point if has_pending_target else observation.current_entry_point
+        target_index = index + (2 if has_pending_target else 1)
+        if target_index >= len(route):
             return RailEnvActions.MOVE_FORWARD
 
-        for a in {RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT}:
-            result = env.rail.apply_action_independent(RailEnvActions.from_value(a), lookahead_from)
-            if result is not None:
-                new_position, new_direction = result
-                next_waypoint = self._shortest_paths[agent.handle][target_index]
-                if new_position == next_waypoint.position and new_direction == next_waypoint.direction:
-                    return a
+        for a in [RailEnvActions.MOVE_FORWARD, RailEnvActions.MOVE_LEFT, RailEnvActions.MOVE_RIGHT]:
+            if static.rail.apply_action_independent(a, lookahead_from) == route[target_index]:
+                return a
         raise Exception("Invalid state")
-
-    def act_many(self, handles: List[int], observations: List[RailEnv], **kwargs):
-        actions = {}
-        for handle, env in zip(handles, observations):
-            agent = env.agents[handle]
-            self._update_agent(agent, env)
-            actions[handle] = self._act(env, agent)
-        return actions
-
-    def _update_agent(self, agent: EnvAgent, env: RailEnv):
-        """
-        Update `_shortest_paths`.
-        """
-        if agent.state == TrainState.DONE:
-            self._shortest_paths.pop(agent.handle, None)
-            return
-
-        if agent.handle not in self._shortest_paths:
-            p = [agent.waypoints[0][0]]
-            p_next = None
-            for pp2 in agent.waypoints[1:]:
-                p1: Waypoint = p[-1]
-                for p2 in pp2:
-                    pp_next = get_k_shortest_paths(None, p1.position, p1.direction, p2.position, target_direction=p2.direction,rail=env.rail)
-                    if len(pp_next) > 0:
-                        assert pp_next[0][-1] == p2, (p2, pp_next)
-                        p_next = pp_next[0][1:]
-                        break
-            assert p_next is not None, f"Not found next path from {p1} to {pp_next}, agent.waypoints={agent.waypoints}"
-            p += p_next
-            self._shortest_paths[agent.handle] = p
-
-        if agent.current_entry_point is None:
-            return
-
-        position = agent.current_entry_point[0]
-        while self._shortest_paths[agent.handle][0].position != position:
-            self._shortest_paths[agent.handle] = self._shortest_paths[agent.handle][1:]
-        assert self._shortest_paths[agent.handle][0].position == position

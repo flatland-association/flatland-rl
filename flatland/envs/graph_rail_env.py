@@ -1,4 +1,3 @@
-import ast
 import warnings
 from typing import Callable, Dict, List, Optional, Tuple
 
@@ -41,7 +40,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `GraphRailEnv`'s own default).
         """
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
-        resource_map = GraphRailEnv._grid_resource_map(rail_env, g)
+        resource_map = GraphTransitionMap.grid_to_resource_map(g, rail_env.resource_map.level_free_positions)
         agent_waypoints, agent_speeds = GraphRailEnv._grid_agent_waypoints_and_speeds(rail_env)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
 
@@ -63,22 +62,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         s = random_state_to_hashablestate(rail_env.np_random)
         graph_env.np_random = random_state_from_hashablestate(s)
         return graph_env
-
-    @staticmethod
-    def _grid_resource_map(rail_env: RailEnv, g: nx.DiGraph) -> Dict[str, str]:
-        """
-        Maps each grid-derived graph node to its resource: the underlying `(row, col)` cell, or
-        `(row, col, direction % 2)` for a level-free (diamond) crossing so the two crossing axes count
-        as distinct resources - mirrors `GridResourceMap.get_resource()`.
-        """
-        resource_map = {}
-        for n in g.nodes:
-            r, c, d = ast.literal_eval(n)
-            if (r, c) in rail_env.resource_map.level_free_positions:
-                resource_map[n] = str((r, c, d % 2))
-            else:
-                resource_map[n] = str((r, c))
-        return resource_map
 
     @staticmethod
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:
