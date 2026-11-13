@@ -7,7 +7,8 @@ import uuid
 import warnings
 from fractions import Fraction
 from functools import lru_cache
-from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional, Union
+from types import MappingProxyType
+from typing import Dict, Tuple, Generic, TypeVar, Any, Set, Optional, Union, Mapping
 
 import numpy as np
 from importlib_resources import path
@@ -239,7 +240,7 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
 
     Attributes
     ----------
-    edge_lengths : Optional[Dict[GridEdge, EdgeLength]]
+    edge_lengths : Optional[Mapping[GridEdge, EdgeLength]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
         when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`), an `int` or a `Fraction` (floats are rejected) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
@@ -272,8 +273,10 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
         self._reset_cache()
 
     @property
-    def edge_lengths(self) -> Optional[Dict[GridEdge, EdgeLength]]:
-        return self._edge_lengths
+    def edge_lengths(self) -> Optional[Mapping[GridEdge, EdgeLength]]:
+        # read-only view against accidental writes bypassing the setter's validation (not against reflection, nor
+        # writes to _edge_lengths); no copy, cheap - the hot path reads _edge_lengths directly via edge_length()
+        return MappingProxyType(self._edge_lengths) if self._edge_lengths is not None else None
 
     @edge_lengths.setter
     def edge_lengths(self, edge_lengths: Optional[Dict[GridEdge, EdgeLength]]):

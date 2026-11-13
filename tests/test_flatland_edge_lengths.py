@@ -245,6 +245,10 @@ def test_edge_lengths_default_and_validation():
         env.rail.edge_lengths = {_edge(1): Fraction(1, 2)}
     with pytest.raises(ValueError, match="must be an int or a Fraction"):
         env.rail.edge_lengths = {_edge(1): 2.0}
+    # read-only: writes into the getter's result would bypass the validation
+    with pytest.raises(TypeError):
+        env.rail.edge_lengths[_edge(1)] = 3
+    assert env.rail.edge_length(*_edge(1)) == Fraction(2)
 
 
 @pytest.mark.parametrize("non_edge", [
