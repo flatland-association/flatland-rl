@@ -4,7 +4,8 @@
 > 3e30f9ef (#566) since. Issue [#526](https://github.com/flatland-association/flatland-rl/issues/526) ("Introduce edge
 > lengths."). Branch `526-edge-lengths`, PR [#542](https://github.com/flatland-association/flatland-rl/pull/542).
 > Written after the implementation, from the branch, the PR description and its review threads. No open questions
-> (§9.1). Findings: F-1–F-14, F-16 and F-17 fixed, F-15 taken over by a follow-up.
+> (§9.1). Findings: F-1–F-14 and F-16–F-18 fixed, F-15 taken over by a follow-up, F-19–F-28
+> open (code review of 2026-11-13): planned in phase 2 (S-31–S-39).
 >
 > **Why:** every edge between two consecutive entry points is one step long at full speed. Real track sections differ
 > in length, so the time to pass them can't be modelled. With edge lengths, a long section takes longer to pass,
@@ -64,6 +65,7 @@ Requirements:
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
 | Illustrate edge lengths for users. | The flatland-book illustrates them, not a notebook here (Q-7). | Q-7 | F-15 | [flatland-book#42](https://github.com/flatland-association/flatland-book/pull/42) |
+| Saving an env as `.mpk` fails with "can not serialize 'set' object", also without edge lengths. | Not related to edge lengths (Q-9); to check whether `main` fails as well. | Q-9 | F-19 | - |
 | Option for `sparse_rail_generator` to generate edge lengths (e.g. longer edges on straight track between cities) into `optionals["edge_lengths"]`. | This PR adds edge lengths to the models and their consumers; generating them is a feature on top. Custom rail generators can already return them. | §4.3 | - | untracked |
 | `EnvAgent.get_travel_time_on_shortest_path` divides the step onto the map by the agent's speed, so slow agents' cancellation and target-not-reached penalties are too high; opt-in flag, default unchanged. | Not related to edge lengths: the travel time is wrong without them too (Q-4). | Q-4 | - | [#544](https://github.com/flatland-association/flatland-rl/issues/544) |
 | The flatland-book page "Design by Contract" takes over the changes of `design_by_contract.md` and `snippet.tex` from #545 and this PR. | Another repo (Q-6). | Q-6 | F-16 | [flatland-book#42 (comment)](https://github.com/flatland-association/flatland-book/pull/42#discussion_r4541978571) |
@@ -189,10 +191,10 @@ Screenshots: none; the only visible change is the opt-in progress bar, checked b
 | REQ-2 | `edge_length / speed` steps, one boundary per step | `test_long_edge_takes_longer`, `test_long_edge_overshoot_carried_into_next_edge`, `test_distance_after_crossing`, `test_speed_counter_is_cell_entry_*` | ✅ | - |
 | REQ-3 | Consumers use the lengths | `test_grid_distance_map_sums_edge_lengths`, `test_weighted_walk_*`, `test_decision_point_graph_edge_length`, `test_tree_obs_distances_sum_edge_lengths`, `test_shortest_path_predictor_*`, `test_travel_time_on_shortest_path_with_edge_lengths`, `test_timetable_*` | ✅ | - |
 | REQ-4 | Persisted, loaded, copied to the graph | `test_edge_lengths_persisted`, `test_speed_counter_pickle_round_trip`, `test_speed_counter_old_pickle_defaults_to_unit_edge_length`, `test_grid_graph_parity_with_edge_lengths` | ✅ | - |
-| REQ-5 | Unchanged without lengths | regression episodes (`tests/test_flatland_regression_episodes.py`), `test_weighted_walk_with_unit_lengths_matches_bfs`, the existing test suite | ✅ | - |
+| REQ-5 | Unchanged without lengths | `test_weighted_walk_with_unit_lengths_matches_bfs`, the existing test suite. The episode replays of `tests/test_flatland_regression_episodes.py` are skipped on `main` and here, pending their regeneration (#178), so they don't check this. | ✅ | - |
 | REQ-6 | Agent progress rendering | `test_render_agent_progress` | ✅ | - |
 | NFR-1 | Reproducible | `test_grid_distance_map_sums_edge_lengths` (3 × 11/10), `test_validated_edge_length_rejects_non_int_or_fraction` | ✅ | - |
-| NFR-2 | Compatible | regression episodes, old pickle test | ✅ | - |
+| NFR-2 | Compatible | old pickle test, the existing test suite (episode replays skipped, see REQ-5) | ✅ | - |
 | NFR-3 | Grid and graph agree | `test_grid_graph_parity_with_edge_lengths`, `test_grid_has_edge_matches_graph_edges`, `tests/flatland/envs/graph/test_graph_rail_env.py` | ✅ | - |
 | NFR-4 | No slowdown | CI profiling comments on the PR | ✅ | - |
 
@@ -234,6 +236,18 @@ All tests named here are in `tests/test_flatland_edge_lengths.py` unless a path 
 
 - `RenderTool(show_agent_progress=True)` (PILSVG and PGL renderers) draws a bar at the bottom of each on-map agent's
   cell: `speed_counter.distance / speed_counter.edge_length`.
+
+### 4.7 Phase 2: code review fixes (F-18–F-28; Q-9)
+
+The code review of 2026-11-13 found places where long edges are not handled yet. Phase 1 (S-1–S-29) built the
+change; phase 2 fixes these findings, one step each (§11.1):
+
+- Agents on long edges: an agent whose target is reached and not removed crosses into its target edge like into any other edge, so its distance stays within its edge length (F-18, Q-10); the shortest
+  path length and the predictor start from the agent's progress along its current edge (F-21, F-22).
+- Lengths everywhere they are copied or stored: `GraphTransitionMap.from_rail_env` (F-20), msgpack files (F-19, Q-9),
+  no writes to the dict behind `edge_lengths` (F-23).
+- Cleanups: a float grid distance map for whole-number lengths (F-24), shortest path length without rebuilding the
+  path (F-25), type hints (F-26), docstring (F-27), lint (F-28).
 
 ## 5. Building block view
 
@@ -362,8 +376,8 @@ Compared with `main` 40ee6582. What is reused, and what is not new on purpose, i
 
 *What breaks for whom, and the migration path.*
 
-None for envs without edge lengths: `RailEnv(...)` keeps its signature and defaults, and behaviour, timetables and
-rewards stay as on `main` (NFR-2). Breaking for code using the speed and distance internals (`flatland-baselines`
+None for envs without edge lengths, except one value: `RailEnv(...)` keeps its signature and defaults, and
+behaviour, timetables and rewards stay as on `main` (NFR-2). The exception is below (target reached, not removed). Breaking for code using the speed and distance internals (`flatland-baselines`
 mentions `SEGMENT_LENGTH` only in test comments):
 
 - **`SEGMENT_LENGTH` removed** from `speed_counter.py`. Migration: `DEFAULT_EDGE_LENGTH` or `MAX_SPEED` from
@@ -374,6 +388,10 @@ mentions `SEGMENT_LENGTH` only in test comments):
 - **Distances can be `Fraction`s:** distance map values, `shortest_path_length()` and the decision point graph's
   lengths. With edge lengths, the grid distance map is an object array; code doing numeric array operations converts it
   first. Timetable entries stay whole steps.
+- **Target reached, not removed (`remove_agents_at_target=False`):** the agent's distance after reaching its target
+  is the leftover of the crossing into the target edge (often 0), not 1 as on `main`, also with unit lengths (Q-10,
+  S-30). Visible in saved trajectories, observations of DONE agents and the agent progress bar. Positions, states,
+  timing and rewards don't change. No compatibility path: the old value mixed up two edges.
 - **Graph aliases renamed:** `rail_graph_transition_map.GridNode` / `GridEdge` are now `GraphNode` / `GraphEdge`;
   `GridNode` / `GridEdge` in `flatland.core.transition_map` now mean grid entry points and edges. Migration: rename
   the imports.
@@ -412,6 +430,21 @@ illustrates them (F-15).
 ✅ ~~**(Q-8) How short may an edge be?**~~ **Decided 2026-10-21:** at least `MAX_SPEED` (1), so an agent crosses at
 most one boundary per step and the leftover wraps by `% MAX_SPEED` (F-5, F-6).
 
+✅ ~~**(Q-9) Saving an env as `.mpk` fails also without edge lengths ("can not serialize 'set' object"). Fix that in
+this PR, so F-19's test can save and load an `.mpk` file?**~~ **Decided 2026-11-13:** b).
+- a) Fix it here. The test can then cover the `.mpk` path. But the cause (likely the agents' target sets) is not
+  related to edge lengths, and it makes the PR bigger.
+- b) Check whether it fails on `main` as well. If so, open an issue for it. In this PR, encode the fractions and test
+  the encoding of the persisted dict directly; the `.mpk` round trip stays skipped until the issue is fixed.
+
+*Proposal:* b), if `main` fails as well: the bug is not about edge lengths.
+
+✅ ~~**(Q-10) Which distance does an agent get when its target is reached and it is not removed (F-18)?**~~
+**Decided 2026-11-13:** the leftover of the crossing into the target edge (`distance_after_crossing`), as for any
+other crossing; a DONE agent keeps it. Not taken: the target edge's length (keeps `main`'s 1 with unit lengths, but
+is no position along the edge, and needs a second edge length in `_candidate_distance`); 0 (the start of the target
+edge, drops the leftover).
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -426,15 +459,18 @@ most one boundary per step and the leftover wraps by `% MAX_SPEED` (F-5, F-6).
 | 2026-11-11 | ✅ Q-5: #545 extended to edge lengths. | #545 fixed the lost step of a refused crossing that the reviewer found here. | Merge 52ffcc2e; `set()` takes `crossed`. |
 | 2026-11-11 | ✅ Q-6: the book holds the contract. | Two copies drift (#545 already had to correct Table 4a). | S-28 here; book take-over and removal are follow-ups. |
 | 2026-11-11 | ✅ Q-7: illustration in the book. | The book is the user documentation. | Follow-up with flatland-book#42. |
+| 2026-11-13 | ✅ Q-9: b), the `.mpk` failure on sets is not fixed here. | It is not about edge lengths and keeps the PR small. | Check whether `main` fails as well, then an issue (follow-up); S-32 tests the encoding of the persisted dict directly. |
+| 2026-11-13 | ✅ Q-10: reaching the target is a crossing like any other, also when not removed. | A distance must be a position along the current edge; `main`'s 1 mixed up the arrival and the target edge, which unit lengths hid (F-18). | `distance_without_crossing` unused in `step()`; breaking: the distance of such agents changes from 1 to the leftover (§8.2, S-30). |
 
 ### 9.3 Code Review Findings
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
 PR [#542](https://github.com/flatland-association/flatland-rl/pull/542), branch based on `main` 40ee6582. All findings
-come from PR review threads (F-1–F-17), added between 2026-10-19 and 2026-11-13. Their line numbers refer to the commit
+come from PR review threads (F-1–F-17), added between 2026-10-19 and 2026-11-13. Code review findings (F-18–F-28) were added on 2026-11-13, at 716a0199; their line numbers refer
+to it (`/code-review` and the checks of `/flatland-association:custom-code-review`). Their line numbers refer to the commit
 each comment was made on, named in the finding (66615a0 is a commit from before a rebase). The PR adds no TODOs, and
-no code review findings were recorded. ✅ in Fixed marks a finding fixed on the branch, ⏭️ one taken over by a
+no code review findings were recorded before 2026-11-13. ✅ in Fixed marks a finding fixed on the branch, ⏭️ one taken over by a
 follow-up (§1.4), `⚠️` one resolved on GitHub without a code change and without a reason, and ❌ next to ✅ one fixed
 in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source marks threads resolved on GitHub.
 
@@ -456,6 +492,17 @@ in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source
 | ✅ | F-14 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364127389), resolved | bug | high | `flatland/envs/step_utils/speed_counter.py:249` (be8cd305): with `distance == edge_length` (crossing prevented) and `pre_speed == MAX_SPEED`, the next distance is 0, not `MAX_SPEED`. Same cause as F-13. Fixed in 52ffcc2e: a refused crossing keeps the pre-step distance. | Merge main into 526-edge-lengths: denied crossings keep the distance (#545). |
 | ✅ | F-16 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4470281894), resolved | docs | medium | `design_by_contract.md:1` (be8cd305): the step contract is kept twice, here and in the flatland-book page. Decided a) (Q-6). Fixed in 7549edf7 for this PR's part: the file shows the edge lengths. The book's take-over and the removal of the file are follow-ups (§1.4). | docs(design-by-contract): pass the edge length in the signatures of the distance formulas and cell_exit. |
 | ✅ ❌ | F-17 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4561357863) | docs | low | `flatland/envs/step_utils/speed_counter.py:148` (52ffcc2e): explains why `set()` needs `crossed` since #545. No change asked for. `set()`'s design comment says the same, but `AGENTS.md`, "Edge lengths", named `SpeedCounter.set(speed, distance, edge_length)` without `crossed`. Fixed in 8f1247b6 (S-29): `AGENTS.md` names `crossed` and why the caller passes it. | docs(agents): name the crossed flag of SpeedCounter.set(). |
+| ✅ | F-18 | code review | bug | medium | `flatland/envs/rail_env.py:1425`, `flatland/envs/step_utils/speed_counter.py:265`: an agent whose target is reached and not removed (`remove_agents_at_target=False`) keeps the distance capped at the length of the edge it arrived on, but `SpeedCounter.set()` stores it with the length of the edge leaving the target. So the distance exceeds `edge_length`, against the class docstring. Reproduced: last edge of length 3, target `((0, 4), 1)` shows distance 3 with edge length 1. The progress bar and anything relying on `distance <= edge_length` then see an impossible state. On `main` both were 1, which hid the same mix-up of the two edges. Fix (Q-10): reaching the target is a crossing like any other, the distance is the leftover of that step (`distance_after_crossing`), and a DONE agent keeps its distance. Fixed in e4ee29e2 (S-30). | fix(env)!: cross into the target edge like any other edge when the agent is not removed. |
+|  | F-19 | code review | bug | medium | `flatland/envs/persistence.py:456`, `tests/test_flatland_edge_lengths.py:302`: edge lengths are written to msgpack as raw `Fraction`s, which msgpack can't serialize. The test skips on `TypeError`, so the `.mpk` path is never tested. Saving `.mpk` fails earlier anyway, also without edge lengths ("can not serialize 'set' object", likely the agents' target sets, so probably on `main` too; not checked there). Fix: write each length as `(numerator, denominator)` and read it back as a `Fraction`; make the test fail instead of skipping, once `.mpk` saving works. Open: planned in S-32. | fix(persistence): persist fractional edge lengths in msgpack files. |
+|  | F-20 | code review | bug | medium | `flatland/envs/graph/rail_graph_transition_map.py:153`: `GraphTransitionMap.from_rail_env()` builds the graph with `grid_to_digraph(env.rail)` but doesn't copy the edge lengths; only `GraphRailEnv.from_rail_env` does (`_grid_edge_lengths`). Reproduced: an env with a length 3/2 gives a map with `has_edge_lengths()` False, so the decision point graph built from it has unit lengths. Fix: copy the lengths in `grid_to_digraph` (or in `from_rail_env`) and have `GraphRailEnv.from_rail_env` reuse it. Open: planned in S-31. | fix(graph): copy edge lengths in GraphTransitionMap.from_rail_env. |
+|  | F-21 | code review | correctness | medium | `flatland/core/distance_map.py:152`, `flatland/envs/agent_utils.py:337`: `shortest_path_length()` measures from the current entry point and ignores how far the agent is along its current edge. On `main` the error was below one cell; with long edges it grows to the edge length. Example: at distance 9.5 on an edge of length 10, the travel time used for the delay and the target-not-reached penalty counts the full 10. Fix: subtract `speed_counter.distance` for an agent on the map, or use `eta()`, which takes the distance. Not reproduced. Open: planned in S-33. | fix(distance map): subtract the agent's progress along its edge from the shortest path length. |
+|  | F-22 | code review | correctness | medium | `flatland/envs/predictions.py:145`: `ShortestPathPredictorForRailEnv` starts `steps_on_edge` at 0, so an agent partway along a long edge is predicted to stay on it for the whole edge again. Example: speed 1, distance 4 on an edge of length 5: the env crosses after 1 step, the prediction after 5, and every later predicted cell is 4 steps late. On `main` the error was below one cell. Fix: start at `distance / speed`. Not reproduced. Open: planned in S-34. | fix(predictions): start the shortest path prediction from the agent's progress along its edge. |
+|  | F-23 | code review | robustness | low | `flatland/core/transition_map.py:275`: the `edge_lengths` getter returns the internal dict, so `env.rail.edge_lengths[e] = 0.5` bypasses `validated_edge_length()`, `has_edge()` and the distance map reset. Fix: return a read-only view (`types.MappingProxyType`). Open: planned in S-35. | fix(transition map): return a read-only view of the edge lengths. |
+|  | F-24 | code review | performance | low | `flatland/envs/grid/distance_map.py:34`: any edge length switches the grid distance map to `dtype=object`, also when all lengths are ints, which a float array holds exactly. Object arrays cost memory and per-element Python calls, and `np.isinf()` on them raises `TypeError`. Fix: use `object` only when a length is a non-integer `Fraction`. Open: planned in S-36. | perf(distance map): keep a float grid distance map for whole-number edge lengths. |
+|  | F-25 | code review | performance | low | `flatland/core/distance_map.py:159`: `shortest_path_length()` rebuilds the whole shortest path only to check that one exists and whether it has one waypoint. `geometric_distance(source)` answers both (inf: no path, 0: at the target), unless the case the comment names ("none may be computable") needs the path. It is called per agent in the timetable generator and for rewards. Fix: look up the distance only. Open: planned in S-33. | perf(distance map): compute the shortest path length without rebuilding the path. |
+|  | F-26 | code review | type-hints | low | `flatland/core/distance_map.py:152`, `flatland/envs/graph/graph_simplification.py:21,27`: `shortest_path_length()` is typed `Optional[Fraction]` but returns `int` without edge lengths; `DecisionPointGraphEdgeData.length` is a sum of edge lengths but typed `EdgeLength`. Fix: `Optional[Distance]` and `Distance`. Open: planned in S-37. | style(edge lengths): type sums of edge lengths as Distance. |
+|  | F-27 | code review | docs | low | `flatland/envs/step_utils/speed_counter.py:110,233-241`: `distance_after_crossing`'s docstring has two paragraphs on the range of the leftover that say the same; since #545 the `% MAX_SPEED` changes no value an agent on its way reaches. The class table names its situation "cell boundary crossed", but `step()` also uses it to keep moving within an edge. Fix: one paragraph, and "keep moving or cross" in the table. Open: planned in S-38. | docs(speed counter): describe distance_after_crossing's leftover once. |
+|  | F-28 | code review | style | low | `flatland/core/distance_map.py:15`, `flatland/core/transition_map.py:245`, `flatland/envs/step_utils/speed_counter.py:110`: the PR leaves `TrainState` imported but unused (F401) and adds two lines over 160 characters (E501), against `tox -e lint`. Open: planned in S-39. | style(edge lengths): fix the flake8 errors added for edge lengths. |
 | ⏭️ | F-15 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4410693260), resolved | docs | low | `flatland/envs/step_utils/speed_counter.py:8` (be8cd305): illustrate edge lengths in the graph notebook. Taken over by the flatland-book (Q-7, chenkins, 2026-11-11), see §1.4. | docs: illustrate edge lengths. |
 
 Issue references: the PR closes [#526](https://github.com/flatland-association/flatland-rl/issues/526). No TODO or
@@ -482,6 +529,8 @@ comment in the `main..HEAD` diff references it (the `(#526)` in commit subjects 
 ### 11.1 Steps
 
 *One row per commit: what it does, the findings it fixes, its message, and its SHAs once committed.*
+
+#### Phase 1: Edge lengths in the models and their consumers ✅
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
@@ -514,6 +563,23 @@ comment in the `main..HEAD` diff references it (the `(#526)` in commit subjects 
 | ✅ S-27 | F-13, F-14 | Merge `main` with #545; refused crossings keep the distance on edges of any length. | merge | high | Merge main into 526-edge-lengths: denied crossings keep the distance (#545). | 52ffcc2e | S-26 | - |
 | ✅ S-28 | F-16 | `design_by_contract.md` shows the edge length in the formulas and `cell_exit`. | docs | low | docs(design-by-contract): pass the edge length in the signatures of the distance formulas and cell_exit. | 7549edf7 | S-27 | - |
 | ✅ S-29 | F-17 | `AGENTS.md`, "Edge lengths": name `SpeedCounter.set(speed, distance, edge_length, crossed)` and say that the caller passes the crossing. | docs | low | docs(agents): name the crossed flag of SpeedCounter.set(). | 8f1247b6 | S-27 | - |
+
+#### Phase 2: Code review fixes 💡
+
+Goal and design in §4.7.
+
+| ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
+|---|---|---|---|---|---|---|---|---|
+| ✅ S-30 | F-18 | Target reached, not removed: the agent crosses into its target edge like any other crossing, its distance is the leftover of that step (`distance_after_crossing`); a DONE agent keeps its distance. `distance_without_crossing` is no longer used by `step()`. `design_by_contract.md` (Target reached and Done rows), `snippet.tex` (done) and `AGENTS.md` follow. Breaking: the distance of such agents changes from 1 to the leftover (§8.2). Tests: arrival and target edges of different lengths; the existing target tests expect the leftover. | bug | medium | fix(env)!: cross into the target edge like any other edge when the agent is not removed. | e4ee29e2 | - | - |
+| 💡 S-31 | F-20 | Copy the grid's edge lengths in `GraphTransitionMap.grid_to_digraph`, so `GraphTransitionMap.from_rail_env` and `GraphRailEnv.from_rail_env` both get them; test the decision point graph built from `GraphTransitionMap.from_rail_env`. | bug | medium | fix(graph): copy edge lengths in GraphTransitionMap.from_rail_env. |  | - | - |
+| 💡 S-32 | F-19 | Persist each length as numerator and denominator and read it back as a `Fraction`; test the encoding of the persisted dict directly, the `.mpk` round trip stays skipped until saving sets works (Q-9). | bug | medium | fix(persistence): persist fractional edge lengths in msgpack files. |  | - | - |
+| 💡 S-33 | F-21, F-25 | `shortest_path_length()` from the distance map lookup alone (inf: no path), minus the agent's progress along its current edge; tests for an agent partway along a long edge and for unit lengths unchanged. | correctness | medium | fix(distance map): subtract the agent's progress along its edge from the shortest path length. |  | - | - |
+| 💡 S-34 | F-22 | The shortest path predictor starts `steps_on_edge` at the agent's progress along its edge (`distance / speed`); test against the env for an agent partway along a long edge. | correctness | medium | fix(predictions): start the shortest path prediction from the agent's progress along its edge. |  | - | - |
+| 💡 S-35 | F-23 | The `edge_lengths` getter returns a read-only view; test that writing into it raises. | robustness | low | fix(transition map): return a read-only view of the edge lengths. |  | - | - |
+| 💡 S-36 | F-24 | A float grid distance map when all lengths are whole numbers, an object array only for fractional lengths. | performance | low | perf(distance map): keep a float grid distance map for whole-number edge lengths. |  | - | - |
+| 💡 S-37 | F-26 | Type sums of edge lengths as `Distance`. | type-hints | low | style(edge lengths): type sums of edge lengths as Distance. |  | S-33 | - |
+| 💡 S-38 | F-27 | One paragraph on the leftover in `distance_after_crossing`; "keep moving or cross" in the class table. | docs | low | docs(speed counter): describe distance_after_crossing's leftover once. |  | - | - |
+| 💡 S-39 | F-28 | Remove the unused `TrainState` import and wrap the two long lines. | style | low | style(edge lengths): fix the flake8 errors added for edge lengths. |  | S-36 | - |
 
 ### 11.2 Rebase and merge
 
