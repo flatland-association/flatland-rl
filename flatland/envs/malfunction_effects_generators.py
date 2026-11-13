@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Union
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import flatland.envs.malfunction_generators as mfg
 from flatland.core.effects_generator import EffectsGenerator
@@ -21,6 +21,13 @@ class MalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
             else:
                 # TODO https://github.com/flatland-association/flatland-rl/issues/242 not generic!
                 self.malfunction_generator = mal_gen.NoMalfunctionGen()
+
+    def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
+        # start the generator over, so that an episode draws its malfunctions as in a new env: after a seeded reset,
+        # the malfunctions repeat.
+        if isinstance(self.malfunction_generator, mfg.ParamMalfunctionGen):
+            self.malfunction_generator.reset()
+        return env
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         for agent in env.agents:
@@ -67,6 +74,10 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                  condition: Union[MalfunctionCondition, str] = None,
                  condition_pkg: str = None,
                  condition_cls: str = None,
+                 num_malfunctions: int = 0,
+                 malfunction_cached_random_state: Optional[tuple] = None,
+                 malfunction_rand_idx: int = 0,
+                 previous_in_malfunction: Optional[Iterable[Tuple[int, bool]]] = None,
                  ):
         """
         Generate agent malfunctions conditionally with conditional rate and duration.
@@ -82,13 +93,27 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         earliest_malfunction : int
             Defaults to `None`.
         max_num_malfunctions : int
-            Defaults to `None`.
+            Maximum number of malfunctions per episode, over all agents. Defaults to `None` (no maximum).
         condition : MalfunctionCondition | str
             Additional condition. Defaults to None.
         condition_pkg : str
             Additional condition to be created instead of instance via `condition`. Defaults to None.
         condition_cls : str
             Additional condition to be created instead of instance via `condition`. Defaults to None.
+        num_malfunctions : int
+            State of a snapshot taken mid-episode, restored by `EffectsGenerator.from_state()`, not a setting: the number
+            of malfunctions so far in the episode. Defaults to 0.
+        malfunction_cached_random_state : tuple
+            State of a snapshot: the random state the generator's block of random numbers was drawn from. Defaults to
+            `None` (no draw yet).
+        malfunction_rand_idx : int
+            State of a snapshot: the position of the last draw in the block. Defaults to 0.
+        previous_in_malfunction : Iterable[Tuple[int, bool]]
+            State of a snapshot: per agent handle, whether the agent was in malfunction at the end of the previous step.
+            Defaults to none.
+
+        A state saved before 5.0.0 has no episode state: a snapshot restored mid-episode then continues with a new count
+        and block, so its malfunctions differ from the recorded ones.
         """
         super().__init__()
         self._malfunction_rate = float(malfunction_rate)
@@ -100,12 +125,17 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         )
         self._earliest_condition = int(earliest_malfunction) if earliest_malfunction is not None else None
         self._max_num_malfunctions = int(max_num_malfunctions) if max_num_malfunctions is not None else None
-        self._num_malfunctions = 0
         self._condition = resolve_type(condition, condition_pkg, condition_cls)
-        self._previous_in_malfunction: Dict[int, bool] = {}
+        # episode state, restored from a snapshot taken mid-episode, so that the episode continues as recorded
+        self._num_malfunctions = int(num_malfunctions)
+        self._malfunction_generator.restore(malfunction_cached_random_state, int(malfunction_rand_idx))
+        self._previous_in_malfunction: Dict[int, bool] = {int(h): bool(m) for h, m in (previous_in_malfunction or [])}
 
     def on_episode_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
         self._previous_in_malfunction = {}
+        # start the generator over and count malfunctions per episode, so that a seeded reset repeats them.
+        self._malfunction_generator.reset()
+        self._num_malfunctions = 0
         return env
 
     def on_episode_step_start(self, env: "RailEnv", *args, **kwargs) -> "RailEnv":
@@ -135,8 +165,19 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
                     "max_num_malfunctions": self._max_num_malfunctions,
                     "condition_pkg": None if self._condition is None else self._condition.__module__,
                     "condition_cls": None if self._condition is None else self._condition.__qualname__,
+                    **self._episode_state(),
                 }
             }
+        }
+
+    def _episode_state(self) -> Dict[str, Any]:
+        """The episode state persisted in a snapshot, as keyword arguments of `__init__`."""
+        return {
+            "num_malfunctions": self._num_malfunctions,
+            "malfunction_cached_random_state": self._malfunction_generator._cached_random_state,
+            "malfunction_rand_idx": self._malfunction_generator._rand_idx,
+            # pairs instead of a dict: msgpack doesn't load integer map keys by default
+            "previous_in_malfunction": sorted(self._previous_in_malfunction.items()),
         }
 
 
@@ -235,13 +276,21 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
                  min_duration: float = 0,
                  max_duration: float = 0,
                  earliest_malfunction: int = 0,
+                 num_malfunctions: int = 0,
+                 malfunction_cached_random_state: Optional[tuple] = None,
+                 malfunction_rand_idx: int = 0,
+                 previous_in_malfunction: Optional[Iterable[Tuple[int, bool]]] = None,
                  ):
         super().__init__(
             malfunction_rate=malfunction_rate,
             min_duration=min_duration,
             max_duration=max_duration,
             earliest_malfunction=earliest_malfunction,
-            condition=IntermediateStopMalfunctionEffectsGenerator._condition
+            condition=IntermediateStopMalfunctionEffectsGenerator._condition,
+            num_malfunctions=num_malfunctions,
+            malfunction_cached_random_state=malfunction_cached_random_state,
+            malfunction_rand_idx=malfunction_rand_idx,
+            previous_in_malfunction=previous_in_malfunction,
         )
 
     def __getstate__(self):
@@ -253,6 +302,7 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
                     min_duration=self._min_duration,
                     max_duration=self._max_duration,
                     earliest_malfunction=self._earliest_condition,
+                    **self._episode_state(),
                 )
             }
         }

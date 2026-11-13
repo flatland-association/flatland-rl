@@ -437,3 +437,37 @@ def test_full_perturbation_tree_observation_builder_wrapper():
     for h in range(7):
         assert perturbed_obs_builder._malfunction_handlers[h].in_malfunction
         assert actual[h].dist_min_to_target == -np.inf
+
+
+def test_perturbation_tree_observation_builder_wrapper_reproducible_after_reset():
+    """
+    Seven agents given MOVE_FORWARD in every step, observed through the perturbed tree observation (perturbation rate
+    1/5, durations 1 to 3) that draws from its own `RandomState`.
+
+    - Setup: the `RandomState` is seeded with 7, the env is reset with seed 42 and runs 25 steps; after each step, the
+      blind agents (whose observation is blanked) are recorded. Some agents are blind in some steps.
+    - The `RandomState` is seeded with 7 again, the env is reset with seed 42 again and runs 25 steps: the same agents
+      are blind in the same steps.
+    """
+    np_random = RandomState()
+    raw_obs_builder = TreeObsForRailEnv(max_depth=2, predictor=ShortestPathPredictorForRailEnv(max_depth=20))
+    perturbed_obs_builder = perturbation_tree_observation_builder_wrapper(raw_obs_builder, np_random, perturbation_rate=1 / 5, min_duration=1,
+                                                                          max_duration=3)
+    env, _, _ = env_generator(seed=42, obs_builder_object=perturbed_obs_builder)
+
+    def run():
+        np_random.seed(7)
+        env.reset(random_seed=42)
+        blind = []
+        for _ in range(25):
+            obs, _, dones, _ = env.step({h: RailEnvActions.MOVE_FORWARD for h in env.get_agent_handles()})
+            blind.append([h for h in env.get_agent_handles() if obs[h].dist_min_to_target == -np.inf])
+            if dones['__all__']:
+                break
+        return blind
+
+    first = run()
+    second = run()
+
+    assert first == second
+    assert any(len(b) > 0 for b in first)

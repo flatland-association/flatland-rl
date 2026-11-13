@@ -32,6 +32,12 @@ class EffectsGenerator(Generic[EnvironmentT]):
 
         In the future, will receive immutable state instead of full env.
 
+        Randomness per episode: an effects generator that keeps random state across steps (e.g. a block of cached
+        random numbers) starts it over here, so that an episode draws as in a new env. `env.reset(random_seed=s)`
+        reseeds only `env.np_random`: what draws from it is reproducible from the seed alone. An effects generator
+        doesn't seed itself; one that draws from a `RandomState` its caller passes in is reproducible only if the
+        caller reseeds that `RandomState` before `env.reset()`.
+
         Naming similar to https://docs.ray.io/en/latest/rllib/package_ref/doc/ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_start.html#ray.rllib.callbacks.callbacks.RLlibCallback.on_episode_start, but modifying.
 
         Parameters
