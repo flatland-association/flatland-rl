@@ -46,6 +46,19 @@ class ParamMalfunctionGen(object):
     """ Preserving old behaviour of using MalfunctionParameters for constructor,
         but returning MalfunctionProcessData in get_process_data.
         Data structure and content is the same.
+
+        Whether a malfunction starts is decided per agent and step by a block of `NBR_CHACHED_RAND` random
+        numbers. The block is taken from the `np_random` passed to the first `generate()` (for the malfunction
+        effects generators, the env's `np_random`), and then read in order, one entry per draw, cyclically: after
+        `NBR_CHACHED_RAND` draws the entries repeat. The duration of a malfunction is drawn from `np_random` directly.
+
+        `generate()` advances `_rand_idx` before it reads, so a new generator's first draw reads entry 1, and entry 0
+        is only read after the block wraps around. This is intended behaviour, not a bug: it doesn't change the
+        probability of a malfunction, and reading entry 0 first would shift every draw: it would change the
+        malfunctions of every recorded episode, and what a snapshot's persisted `malfunction_rand_idx` means when the
+        snapshot is replayed within its episode (the next `reset()` starts the generator over anyway).
+
+        `reset()` starts the generator over at the start of an episode, so an episode draws as in a new env.
     """
 
     def __init__(self, parameters: MalfunctionParameters):
@@ -54,11 +67,38 @@ class ParamMalfunctionGen(object):
         # self.max_number_of_steps_broken = parameters.max_duration
         self.MFP = parameters
         self._malfunction_prob = _malfunction_prob(self.MFP.malfunction_rate)
+        self.reset()
 
+    def reset(self):
+        """
+        Start over as a new generator: the next `generate()` takes a new block of random numbers from the
+        `np_random` it is given. Called by the malfunction effects generators at the start of an episode.
+
+        Takes no seed: the generator owns no random state of its own. Every `generate(np_random)` gets the random
+        state of its caller (the env's `np_random` for the malfunction effects generators), and the first one after
+        `reset()` draws the block from it (`generate_rand_numbers()`). After `env.reset(random_seed=s)`, the env's
+        `np_random` is reseeded and is used in the same order as in a new env with seed `s`, so the block, and the
+        durations drawn after it, are those of that new env. A seed here would be a second source of randomness next
+        to `np_random`.
+        """
+        # No seed parameter on purpose: don't draw the block here. The next generate(np_random) draws it lazily
+        # from the np_random it is given (for the effects generators the env's, reseeded by env.reset(random_seed=...)).
         self._cached_rand = None
         self._cached_broken = None
         self._cached_random_state = None
         self._rand_idx = 0
+
+    def restore(self, cached_random_state: Optional[tuple], rand_idx: int):
+        """
+        Restore the block of random numbers and the position in it, as persisted from `_cached_random_state` and
+        `_rand_idx` in a snapshot taken mid-episode. Without a `cached_random_state` (no draw yet), the block stays to
+        be drawn at the next `generate()`.
+        """
+        if cached_random_state is not None:
+            np_random = RandomState()
+            np_random.set_state(cached_random_state)
+            self.generate_rand_numbers(np_random)
+        self._rand_idx = rand_idx
 
     def generate_rand_numbers(self, np_random: RandomState):
         self._cached_random_state = np_random.get_state()
@@ -102,10 +142,7 @@ class ParamMalfunctionGen(object):
             malfunction_generator._rand_idx = malfunction_rand_idx
         malfunction_cached_random_state = env_dict.get("malfunction_cached_random_state", None)
         if malfunction_cached_random_state is not None:
-            malfunction_generator._cached_random_state = malfunction_cached_random_state
-            np_random = RandomState()
-            np_random.set_state(malfunction_cached_random_state)
-            malfunction_generator.generate_rand_numbers(np_random)
+            malfunction_generator.restore(malfunction_cached_random_state, malfunction_generator._rand_idx)
         return malfunction_generator
 
 

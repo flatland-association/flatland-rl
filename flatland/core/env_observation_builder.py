@@ -39,6 +39,11 @@ class ObservationBuilder(Generic[EnvT, ObservationT]):
         Subclasses that need to pre-compute env-dependent data should override this method and call
         `super().reset(env)` first to keep `self.env` up to date.
 
+        Randomness per episode: an observation builder that keeps random state across steps (e.g. a perturbation
+        with its own malfunction generator) starts it over here. `env.reset(random_seed=s)` reseeds only
+        `env.np_random`; an observation builder doesn't seed itself, and one that draws from a `RandomState` its caller
+        passes in is reproducible only if the caller reseeds that `RandomState` before `env.reset()`.
+
         Parameters
         ----------
         env : EnvT
@@ -122,6 +127,9 @@ def gauss_perturbation_observation_builder_wrapper(
     Returns
     -------
     observation with Gaussian noise added
+
+    The noise is drawn from `np_random`, which `env.reset(random_seed=...)` doesn't reseed: to reproduce it, reseed
+    `np_random` before `env.reset()`.
     """
 
     class _GaussPerturbationObservationBuilder(ObservationBuilder[Environment, np.ndarray]):
