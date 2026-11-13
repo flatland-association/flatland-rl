@@ -250,8 +250,9 @@ at least `MIN_EDGE_LENGTH` = 1, so an agent crosses at most one edge boundary pe
 `DEFAULT_EDGE_LENGTH` = 1. `validated_edge_length()` rejects floats, as most fractions have no exact float
 representation. Distances (sums of edge lengths) have type `Distance`. All of these live in
 `core/transition_map.py`. The `SpeedCounter` formulas take the current edge's length as an explicit argument, and
-`SpeedCounter.set(speed, distance, edge_length)` requires it (`None` off map) - there is no silent unit-edge
-default.
+`SpeedCounter.set(speed, distance, edge_length, crossed=False)` requires it (`None` off map) - there is no silent
+unit-edge default. `crossed` is the caller's decision that the agent crossed into a new edge in this step:
+`set()` can't derive it from the distances, as a refused crossing keeps the pre-step distance on the same edge.
 
 - Grid: the rail generator returns lengths as `optionals["edge_lengths"]` (`{(u, v): length}`, keyed by the
   `GridNode = ((row, col), direction)` / `GridEdge` aliases), and `RailEnv` sets them on
