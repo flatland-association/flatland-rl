@@ -491,7 +491,7 @@ snakeviz==2.2.2
     # via flatland-rl (pyproject.toml)
 solus==1.2.2
     # via versions
-soupsieve==3.0.3
+soupsieve==4.0
     # via beautifulsoup4
 stack-data==0.6.3
     # via ipython
