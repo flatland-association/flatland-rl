@@ -30,8 +30,11 @@ class DistanceMap(
         self.env_width = rail.width
 
     def _new_distance_map(self, num_agents: int) -> np.ndarray:
-        # with edge lengths, an object array keeps distances exact (Fractions); a float array would round them
-        dtype = object if self.rail is not None and self.rail.has_edge_lengths() else float
+        # fractional edge lengths: an object array keeps distances exact (Fractions), a float array would round them;
+        # whole-number lengths (int or Fraction with denominator 1): a float array holds their sums exactly (up to 2**53)
+        fractional = self.rail is not None and self.rail.has_edge_lengths() and any(
+            length.denominator != 1 for length in self.rail.edge_lengths.values())
+        dtype = object if fractional else float
         return np.full(shape=(num_agents, self.env_height, self.env_width, 4), fill_value=np.inf, dtype=dtype)
 
     def _valid_targets(self, agent: EnvAgent, rail: RailGridTransitionMap) -> List[Tuple[Tuple[int, int], int]]:
@@ -48,5 +51,5 @@ class DistanceMap(
     def _geometric_distance(self, source_entry_point: Tuple[Tuple[int, int], int], target_nr: int) -> Distance:
         (r, c), direction = source_entry_point
         distance = self.distance_map[target_nr, r, c, direction]
-        # without edge lengths, the float array holds whole numbers: return them as int
+        # the float array holds whole numbers only: return them as int
         return int(distance) if isinstance(distance, float) and distance != np.inf else distance

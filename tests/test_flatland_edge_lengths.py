@@ -449,6 +449,26 @@ def test_grid_distance_map_sums_edge_lengths():
     assert env.distance_map.geometric_distance(((0, 3), EAST), 0) == 1
     assert env.distance_map.geometric_distance(((0, 2), EAST), 0) == 1 + Fraction(5, 2)
     assert env.distance_map.geometric_distance(((0, 1), EAST), 0) == 1 + Fraction(5, 2) + 3
+    # a fractional length needs an object array to keep the distances exact
+    assert env.distance_map.get().dtype == object
+
+
+@pytest.mark.parametrize("edge_lengths", [{_edge(1): 3, _edge(2): Fraction(4)}, None])
+def test_grid_distance_map_float_for_whole_number_edge_lengths(edge_lengths):
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1,
+                  rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset()
+    agent = env.agents[0]
+    agent.targets = {((0, 4), EAST)}
+    env.distance_map.reset(env.agents, env.rail)
+    distance_map = env.distance_map.get()
+    assert distance_map.dtype == float
+    assert np.isinf(distance_map).any()
+    distance = env.distance_map.geometric_distance(((0, 1), EAST), 0)
+    assert type(distance) is int
+    assert distance == (1 + 4 + 3 if edge_lengths else 3)
 
 
 @pytest.mark.parametrize("max_speed", [Fraction(1), Fraction(1, 2), Fraction(1, 3)])
@@ -564,8 +584,9 @@ def test_weighted_distance_map_recompute():
     # re-computing without reset (distances of the previous walk still present) gives the same distances
     grid_env.distance_map._compute(grid_env.agents, grid_env.rail)
     assert np.array_equal(grid_env.distance_map.get(), expected)
-    # with edge lengths, the grid distance map is an object array of exact distances
-    assert np.isfinite(expected.astype(float)).any()
+    # whole-number edge lengths keep a float grid distance map
+    assert expected.dtype == float
+    assert np.isfinite(expected).any()
 
 
 def _straight_env_with_agent(edge_lengths, max_speed=Fraction(1), obs_builder=None, n_cells=5):
