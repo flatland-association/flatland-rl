@@ -149,7 +149,7 @@ class AgentSourceTargetDistanceMap(
 
         return self._reconstruct_shortest_path(entry_point, handle, max_depth, targets)
 
-    def shortest_path_length(self, agent: EnvAgent) -> Optional[Fraction]:
+    def shortest_path_length(self, agent: EnvAgent) -> Optional[Distance]:
         """
         Length of the agent's shortest path (see `get_shortest_paths`): the sum of the lengths of its edges plus 1, as
         `len(shortest_path)` (counting waypoints, not edges) used for travel times and timetables before edge lengths -
