@@ -51,8 +51,10 @@ def test_restore_episode():
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
-        assert trajectory._find_closest_snapshot(5) == 5
-        assert trajectory._find_closest_snapshot(7) == 5
+        assert trajectory._find_closest_snapshot(None).name == f"{trajectory.ep_id}.pkl"
+        assert trajectory._find_closest_snapshot(4).name == f"{trajectory.ep_id}_step0000.pkl"
+        assert trajectory._find_closest_snapshot(5).name == f"{trajectory.ep_id}_step0005.pkl"
+        assert trajectory._find_closest_snapshot(7).name == f"{trajectory.ep_id}_step0005.pkl"
 
         env = trajectory.load_env(7)
 
@@ -75,7 +77,7 @@ def test_load_env_replay_overrides():
         data_dir = Path(tmpdirname)
         trajectory = PolicyRunner.create_from_policy(env=env_generator_legacy(seed=42)[0], policy=RandomPolicy(), data_dir=data_dir, snapshot_interval=5)
         # step 7 has no exact snapshot (nearest is 5) -> forces the replay-to-step fallback in load_env
-        assert trajectory._find_closest_snapshot(7) == 5
+        assert trajectory._find_closest_snapshot(7).name == f"{trajectory.ep_id}_step0005.pkl"
 
         custom_obs_builder = DummyObservationBuilder()
         custom_rewards = DefaultRewards()
@@ -235,3 +237,15 @@ def test_read_trains_positions_non_tuple_node_ids():
         trajectory._write_trains_positions(pd.DataFrame({
             "episode_id": "ep", "env_time": range(len(positions)), "agent_id": 0, "position": positions}))
         assert list(trajectory._read_trains_positions()["position"]) == ["a", "1", "(1, 2, 3)", ((1, 2), 3), None]
+
+
+@pytest.mark.parametrize("rewards", [
+    [(0, 1), (1, 1)],
+    [-1.0, 0.0],
+])
+def test_read_trains_rewards_dones_infos_rewards(rewards):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = Trajectory(data_dir=Path(tmpdirname), ep_id="ep")
+        trajectory._write_trains_rewards_dones_infos(pd.DataFrame({
+            "episode_id": "ep", "env_time": [1, 2], "agent_id": 0, "reward": rewards, "info": ["{}", "{}"], "done": [False, True]}))
+        assert list(trajectory._read_trains_rewards_dones_infos()["reward"]) == rewards

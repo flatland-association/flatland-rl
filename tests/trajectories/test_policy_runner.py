@@ -1,8 +1,10 @@
+import pickle
 import re
 import tempfile
 from pathlib import Path
 from typing import Optional, Any, List, Dict
 
+import pandas as pd
 import pytest
 
 from flatland.callbacks.callbacks import FlatlandCallbacks, make_multi_callbacks
@@ -13,6 +15,7 @@ from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator, evaluate_trajectory
+from flatland.trajectories.policy_grid_runner import generate_trajectories_from_metadata
 from flatland.trajectories.policy_runner import PolicyRunner, generate_trajectory_from_policy
 from flatland.trajectories.trajectories import DISCRETE_ACTION_FNAME, TRAINS_ARRIVED_FNAME, TRAINS_POSITIONS_FNAME, SERIALISED_STATE_SUBDIR, Trajectory
 from flatland.utils.seeding import random_state_to_hashablestate, np_random
@@ -325,3 +328,190 @@ def test_env_path_and_obs_builder():
         env, _ = RailEnvPersister.load_new(str(data_dir / SERIALISED_STATE_SUBDIR / f"dummy.pkl"))
         actual = random_state_to_hashablestate(env.np_random)
         assert actual == expected
+
+
+class StateMachineRecordingCallbacks(FlatlandCallbacks):
+    """
+    Records whether the env stepped by `PolicyRunner` is wrapped and has its state machine updated.
+
+    The command line creates the callbacks from their class name, so the records are kept on the class: use the
+    `state_machine_recordings` fixture, which clears them before and after each test.
+    """
+    recorded: List[Dict[str, Any]] = []
+
+    def on_episode_end(self, *, env: Optional[RailEnv] = None, **kwargs) -> None:
+        StateMachineRecordingCallbacks.recorded.append({
+            "skip_state_machine_update": getattr(env, "skip_state_machine_update", True),
+            "state_machine_live": any(agent.state_machine.is_live for agent in env.agents),
+        })
+
+
+@pytest.fixture
+def state_machine_recordings() -> List[Dict[str, Any]]:
+    StateMachineRecordingCallbacks.recorded = []
+    yield StateMachineRecordingCallbacks.recorded
+    StateMachineRecordingCallbacks.recorded = []
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False, None], ids=["skip", "update", "not_given"])
+@pytest.mark.parametrize("env_source", ["legacy_env_generator", "env_generator", "env_path"])
+def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: Optional[bool],
+                                       state_machine_recordings: List[Dict[str, Any]]):
+    """
+    The command line's flag wins if given. If not given, a generated env skips the state machine update, and an
+    --env-path keeps the setting it was saved with: the file here is saved with updates, unlike the default.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        tmp_dir = Path(tmpdirname)
+        data_dir = tmp_dir / "data_dir"
+        data_dir.mkdir()
+        args = ["--data-dir", str(data_dir),
+                "--policy-pkg", "tests.trajectories.test_policy_runner",
+                "--policy-cls", "RandomPolicy",
+                "--callbacks-pkg", "tests.trajectories.test_policy_runner",
+                "--callbacks-cls", "StateMachineRecordingCallbacks",
+                "--snapshot-interval", 0]
+        if skip_state_machine_update is not None:
+            args += ["--skip-state-machine-update", skip_state_machine_update]
+        if env_source == "legacy_env_generator":
+            args += ["--seed", 42, "--legacy-env-generator", "True"]
+            expected = True if skip_state_machine_update is None else skip_state_machine_update
+        elif env_source == "env_generator":
+            args += ["--seed", 42]
+            expected = True if skip_state_machine_update is None else skip_state_machine_update
+        else:
+            env_file = str(tmp_dir / "env.pkl")
+            RailEnvPersister.save(env_generator(seed=42, skip_state_machine_update=False)[0], env_file)
+            args += ["--env-path", env_file]
+            expected = False if skip_state_machine_update is None else skip_state_machine_update
+
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectory_from_policy(args)
+        assert e_info.value.code == 0
+
+    assert state_machine_recordings == [{
+        "skip_state_machine_update": expected,
+        "state_machine_live": not expected,
+    }]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False, None], ids=["skip", "update", "not_given"])
+def test_grid_runner_skip_state_machine_update(skip_state_machine_update: Optional[bool], state_machine_recordings: List[Dict[str, Any]]):
+    """
+    The grid runner passes `--skip-state-machine-update` on to every row, if given; the saved trajectory keeps the
+    setting. Not given, the generated envs skip the state machine update.
+    """
+    expected = True if skip_state_machine_update is None else skip_state_machine_update
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        data_dir = Path(tmpdirname)
+        metadata_csv = data_dir / "metadata.csv"
+        pd.DataFrame([{
+            "test_id": "Test_00", "env_id": "Level_0", "n_agents": 2, "x_dim": 30, "y_dim": 30, "n_cities": 2,
+            "max_rail_pairs_in_city": 2, "grid_mode": False, "max_rails_between_cities": 2,
+            "malfunction_duration_min": 20, "malfunction_duration_max": 50, "malfunction_interval": 540, "seed": 42,
+        }]).to_csv(metadata_csv, index=False)
+
+        args = [
+            "--metadata-csv", str(metadata_csv),
+            "--data-dir", str(data_dir),
+            "--policy-pkg", "tests.trajectories.test_policy_runner",
+            "--policy-cls", "RandomPolicy",
+            "--callbacks-pkg", "tests.trajectories.test_policy_runner",
+            "--callbacks-cls", "StateMachineRecordingCallbacks",
+        ]
+        if skip_state_machine_update is not None:
+            args += ["--skip-state-machine-update", skip_state_machine_update]
+        with pytest.raises(SystemExit) as e_info:
+            generate_trajectories_from_metadata(args)
+        assert e_info.value.code == 0
+
+        assert state_machine_recordings == [{
+            "skip_state_machine_update": expected,
+            "state_machine_live": not expected,
+        }]
+        trajectory = Trajectory.load_existing(data_dir=data_dir / "Test_00" / "Level_0", ep_id="Test_00_Level_0")
+        assert getattr(trajectory.load_env(), "skip_state_machine_update", True) == expected
+
+
+def test_create_from_policy_keeps_wrapping(state_machine_recordings: List[Dict[str, Any]]):
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        env, _, _ = env_generator(seed=42, skip_state_machine_update=False)
+        PolicyRunner.create_from_policy(
+            env=env,
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=0,
+            callbacks=StateMachineRecordingCallbacks(),
+        )
+    assert state_machine_recordings == [{"skip_state_machine_update": False, "state_machine_live": True}]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+@pytest.mark.parametrize("start_step", [None, 50, 60], ids=["initial", "snapshot", "replay"])
+def test_load_env_skip_state_machine_update(start_step: Optional[int], skip_state_machine_update: bool):
+    """
+    A trajectory recorded without state machine updates, loaded with or without them, at the start, from the snapshot at
+    step 50 and by replay from it to step 60 (after the first trains have entered the map); then 20 more steps.
+
+    With state machine updates, the next steps don't fail, and each agent's state machine is on the map exactly when
+    the agent is. (It may run a step ahead of the derived state before departure, so the states are not compared.)
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator(seed=42)[0],
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=50,
+            end_step=120,
+        )
+        env = trajectory.load_env(start_step=start_step, skip_state_machine_update=skip_state_machine_update)
+        assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+        if start_step is not None:
+            assert env._elapsed_steps == start_step
+            assert any(agent.current_entry_point is not None for agent in env.agents)
+
+        for _ in range(20):
+            env.step({handle: RailEnvActions.MOVE_FORWARD for handle in env.get_agent_handles()})
+            if not skip_state_machine_update:
+                assert [agent.state_machine.state.is_on_map_state() for agent in env.agents] == \
+                       [agent.current_entry_point is not None for agent in env.agents]
+
+
+@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+def test_load_env_restores_saved_skip_state_machine_update(skip_state_machine_update: bool):
+    """
+    A trajectory recorded with or without state machine updates is loaded, without passing the setting, at the start,
+    from the snapshot at step 50 and by replay to step 60, and evaluated again: each time the env keeps the setting it
+    was recorded with.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        trajectory = PolicyRunner.create_from_policy(
+            env=env_generator(seed=42, skip_state_machine_update=skip_state_machine_update)[0],
+            policy=RandomPolicy(),
+            data_dir=Path(tmpdirname),
+            snapshot_interval=50,
+            end_step=120,
+        )
+        for start_step in [None, 50, 60]:
+            env = trajectory.load_env(start_step=start_step)
+            assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+        env = TrajectoryEvaluator(trajectory).evaluate(end_step=60)
+        assert getattr(env, "skip_state_machine_update", True) == skip_state_machine_update
+
+
+def test_load_new_without_saved_skip_state_machine_update():
+    """
+    A file saved before the setting was persisted loads without state machine updates, as before; passing the setting
+    still overrides it.
+    """
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        env_file = Path(tmpdirname) / "env.pkl"
+        RailEnvPersister.save(env_generator(seed=42, skip_state_machine_update=False)[0], str(env_file))
+        env_dict = pickle.loads(env_file.read_bytes())
+        assert env_dict.pop("skip_state_machine_update") is False
+        env_file.write_bytes(pickle.dumps(env_dict))
+
+        env, _ = RailEnvPersister.load_new(str(env_file))
+        assert getattr(env, "skip_state_machine_update", True) is True
+        env, _ = RailEnvPersister.load_new(str(env_file), skip_state_machine_update=False)
+        assert env.skip_state_machine_update is False

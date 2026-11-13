@@ -189,7 +189,8 @@ class Trajectory:
             *ast.literal_eval(re.sub(r"Fraction\(([0-9]+), ([0-9]+)\)", r"(\1,\2)", v)))) for k, v in d.items()})
         # backwards compatibility for old stored floats:
         df["info"] = df["info"].map(lambda d: {k: (v if k != "speed" else _pseudo_fractional(v)) for k, v in d.items()})
-        if df.dtypes["reward"] == object:
+        # tuple rewards (e.g. `PunctualityRewards`) are stored as text, read as `object` by pandas 2 and as `str` by pandas 3.
+        if not pd.api.types.is_numeric_dtype(df["reward"]):
             df["reward"] = df["reward"].map(ast.literal_eval)
         return df
 
@@ -218,16 +219,21 @@ class Trajectory:
         Path(f).parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(f, sep='\t', index=False)
 
-    def _find_closest_snapshot(self, start_step):
+    def _find_closest_snapshot(self, start_step: Optional[int]) -> Path:
+        """
+        The file to restore the env at `start_step` from: the latest snapshot at or before `start_step`, else (also
+        without `start_step`) the env saved at the start of the episode.
+        """
+        serialised_state_dir = Path(self.data_dir) / SERIALISED_STATE_SUBDIR
         closest = None
-        for p in (Path(self.data_dir) / SERIALISED_STATE_SUBDIR).iterdir():
-            p: Path = p
-            if not (p.name.startswith(f"{self.ep_id}_step") and p.name.endswith(".pkl")):
-                continue
-            step = int(p.name.replace(f"{self.ep_id}_step", "").replace(".pkl", ""))
-            if step <= start_step and (closest is None or (step > closest)):
-                closest = step
-        return closest
+        if start_step is not None:
+            for p in serialised_state_dir.iterdir():
+                if not (p.name.startswith(f"{self.ep_id}_step") and p.name.endswith(".pkl")):
+                    continue
+                step = int(p.name.replace(f"{self.ep_id}_step", "").replace(".pkl", ""))
+                if step <= start_step and (closest is None or (step > closest)):
+                    closest = step
+        return serialised_state_dir / (f"{self.ep_id}.pkl" if closest is None else f"{self.ep_id}_step{closest:04d}.pkl")
 
     def position_collect(self, env_time: int, agent_id: int, position: Tuple[Tuple[int, int], int]):
         self._trains_positions_collect.append({'episode_id': self.ep_id, 'env_time': env_time, 'agent_id': agent_id, 'position': position})
@@ -408,7 +414,8 @@ class Trajectory:
     def load_env(self, start_step: Optional[int] = None,
                  obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
                  rewards: Optional["Rewards"] = None,
-                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None, ) -> Optional[RailEnv]:
+                 effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                 skip_state_machine_update: Optional[bool] = None, ) -> Optional[RailEnv]:
         """
         Restore an episode's env.
 
@@ -428,6 +435,9 @@ class Trajectory:
             rewards for the loaded env. If not provided, defaults to the loaded env's rewards.
         effects_generator : EffectsGenerator
             if given, replaces the persisted effects generator instead of being discarded.
+        skip_state_machine_update : Optional[bool]
+            forwarded to `RailEnvPersister.load_new` (and to the replay, if any). Defaults to the setting saved with
+            the env; pass `False` or `True` to override it.
         Returns
         -------
         RailEnv
@@ -435,29 +445,16 @@ class Trajectory:
         """
         self.outputs_dir.mkdir(exist_ok=True)
 
-        def inner_load():
-            if start_step is None:
-                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
-                return env
-            else:
-                closest = self._find_closest_snapshot(start_step)
-                if closest is None:
-                    f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f'{self.ep_id}.pkl')
-                    env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
-                    return env
-                f = os.path.join(self.data_dir, SERIALISED_STATE_SUBDIR, f"{self.ep_id}_step{closest:04d}.pkl")
-                env, _ = RailEnvPersister.load_new(f, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
-                return env
-
-        env = inner_load()
+        env, _ = RailEnvPersister.load_new(self._find_closest_snapshot(start_step), obs_builder=obs_builder, rewards=rewards,
+                                           effects_generator=effects_generator, skip_state_machine_update=skip_state_machine_update)
         if start_step is not None:
             assert env._elapsed_steps <= start_step
 
         if start_step is not None and env._elapsed_steps < start_step:
             from flatland.evaluators.trajectory_evaluator import TrajectoryEvaluator
             env = TrajectoryEvaluator(trajectory=self).evaluate(start_step=env._elapsed_steps, end_step=start_step,
-                                                                obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+                                                                obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                                                skip_state_machine_update=skip_state_machine_update)
         return env
 
     @staticmethod

@@ -31,6 +31,7 @@ class PolicyRunner:
                  obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
                  rewards: Optional["Rewards"] = None,
                  effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+                 skip_state_machine_update: Optional[bool] = None,
                  ):
         self._policy = policy
         trajectory_env_time = trajectory.trains_rewards_dones_infos["env_time"].max()
@@ -40,7 +41,8 @@ class PolicyRunner:
             assert by_pass_env._elapsed_steps == trajectory_env_time, \
                 f"Expected env at {trajectory_env_time}, found {by_pass_env._elapsed_steps}."
         else:
-            self.env = trajectory.load_env(trajectory_env_time, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+            self.env = trajectory.load_env(trajectory_env_time, obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                           skip_state_machine_update=skip_state_machine_update)
 
         self.trajectory = trajectory
         # TODO extract to public interface?
@@ -139,6 +141,7 @@ class PolicyRunner:
         obs_builder: Optional[ObservationBuilder[Any, RailEnv]] = None,
         rewards: Optional[Rewards] = None,
         effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
+        skip_state_machine_update: Optional[bool] = None,
     ) -> Trajectory:
         """
         Creates trajectory by running submission (policy and obs builder).
@@ -161,6 +164,9 @@ class PolicyRunner:
             additional kwargs for tqdm
         end_step : int
             stop evaluation at intermediate step excl. Capped by env's max_episode_steps
+        skip_state_machine_update : Optional[bool]
+            forwarded to `Trajectory.load_env` unless `by_pass_env` is given. Defaults to the setting saved with the
+            env; pass `False` to override it if the policy reads `agent.state` directly (see `RailEnvStateMachineWrapper`).
         Returns
         -------
         Trajectory
@@ -186,7 +192,8 @@ class PolicyRunner:
             end_step=end_step,
             effects_generator=effects_generator,
             rewards=rewards,
-            obs_builder=obs_builder
+            obs_builder=obs_builder,
+            skip_state_machine_update=skip_state_machine_update,
         )
         for _ in tqdm.tqdm(range(runner.env_time, runner.end_step), **tqdm_kwargs):
             if callbacks is not None and runner.env_time == 0:
@@ -408,9 +415,10 @@ class PolicyRunner:
               required=False, default=None)
 @click.option('--skip-state-machine-update',
               type=bool,
-              default=True,
-              help="Whether the generated env skips agent.state/agent.state_machine bookkeeping (the default, "
-                   "matching env_generator()'s own default). Pass False if --policy reads agent.state directly "
+              default=None,
+              help="Whether the env skips agent.state/agent.state_machine bookkeeping. If not given, a generated env "
+                   "skips it (env_generator()'s own default), and an env loaded with --env-path or a forked "
+                   "trajectory keeps the setting it was saved with. Pass False if --policy reads agent.state directly "
                    "(e.g. this repo's own bundled ShortestPathPolicy) - an arbitrary caller-supplied policy can't "
                    "be assumed to use derived_state() the way this repo's own internals do.",
               required=False
@@ -454,7 +462,7 @@ def generate_trajectory_from_policy(
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
     post_seed: int = None,
-    skip_state_machine_update: bool = True,
+    skip_state_machine_update: Optional[bool] = None,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -508,7 +516,8 @@ def generate_trajectory_from_policy(
         callbacks = callbacks()
 
     if env_path is not None:
-        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator)
+        env, _ = RailEnvPersister.load_new(str(env_path), obs_builder=obs_builder, rewards=rewards, effects_generator=effects_generator,
+                                           skip_state_machine_update=skip_state_machine_update)
         assert seed is None, "When using --env-path, use --post-seed to do a reset on the loaded env instead. Currently, loaded will always load the same rail/line/timetable from file."
         if post_seed is not None:
             env.reset(random_seed=post_seed)
@@ -533,7 +542,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=skip_state_machine_update,
+            skip_state_machine_update=True if skip_state_machine_update is None else skip_state_machine_update,
         )
     else:
         env, _, _ = env_generator(
@@ -553,7 +562,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=skip_state_machine_update,
+            skip_state_machine_update=True if skip_state_machine_update is None else skip_state_machine_update,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:
@@ -570,6 +579,7 @@ def generate_trajectory_from_policy(
         effects_generator=effects_generator,
         rewards=rewards,
         obs_builder=obs_builder,
+        skip_state_machine_update=skip_state_machine_update,
     )
 
 
