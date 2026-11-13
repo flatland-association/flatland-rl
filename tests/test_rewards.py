@@ -382,7 +382,7 @@ def test_rewards_intermediate_intermediate_late_arrival_penalty():
 def test_rewards_departed_but_never_arrived():
     intermediate_late_arrival_penalty_factor = 33
     rewards = DefaultRewards(intermediate_late_arrival_penalty_factor=intermediate_late_arrival_penalty_factor)
-    agent = EnvAgent(initial_entry_point=((0, 0), 0),
+    agent = EnvAgent(handle=0, initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_entry_point=None,
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
@@ -406,7 +406,7 @@ def test_rewards_departed_but_never_arrived():
 def test_rewards_departed_but_never_arrived_minimum_penalty():
     target_not_reached_minimum_penalty = 50  # has to be > 15 to be effective in this test
     rewards = DefaultRewards(target_not_reached_minimum_penalty=target_not_reached_minimum_penalty)
-    agent = EnvAgent(initial_entry_point=((0, 0), 0),
+    agent = EnvAgent(handle=0, initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_entry_point=None,
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),

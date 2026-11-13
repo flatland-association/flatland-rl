@@ -762,3 +762,42 @@ def test_target_reached_not_removed_distance_is_leftover(arrival_edge_length, ta
     assert agent.speed_counter.edge_length == target_edge_length
     assert agent.speed_counter.distance == expected_distance
     assert agent.speed_counter.distance < agent.speed_counter.edge_length
+
+
+@pytest.mark.parametrize("with_edge_lengths", [False, True])
+@pytest.mark.parametrize("seed", [42, 43])
+def test_shortest_path_length_matches_shortest_path(seed, with_edge_lengths):
+    """
+    Generated env, without or with random edge lengths, agents off the map, then after MOVE_FORWARD steps until an
+    agent is on the map.
+    - The shortest path length is the number of waypoints of the agent's shortest path without edge lengths, and 1 plus
+      the sum of its edge lengths with them. None if the agent has no shortest path.
+    """
+    grid_env, _, _ = env_generator(seed=seed)
+    if with_edge_lengths:
+        np_random = np.random.RandomState(seed)
+        lengths = [Fraction(1), Fraction(3, 2), Fraction(2), Fraction(3)]
+        gtgg = GraphTransitionMap.graph_entry_point_to_grid_entry_point
+        grid_env.rail.edge_lengths = {(gtgg(u), gtgg(v)): lengths[np_random.randint(len(lengths))]
+                                      for u, v in GraphTransitionMap.grid_to_digraph(grid_env.rail).edges}
+        grid_env.distance_map.reset(grid_env.agents, grid_env.rail)
+
+    def check():
+        shortest_paths = grid_env.distance_map.get_shortest_paths()
+        for agent in grid_env.agents:
+            path = shortest_paths[agent.handle]
+            if path is None:
+                expected = None
+            else:
+                expected = 1 + sum(grid_env.rail.edge_length((u.position, u.direction), (v.position, v.direction))
+                                   for u, v in zip(path, path[1:]))
+                assert with_edge_lengths or expected == len(path)
+            assert grid_env.distance_map.shortest_path_length(agent) == expected
+
+    check()
+    for _ in range(100):
+        grid_env.step({agent.handle: RailEnvActions.MOVE_FORWARD for agent in grid_env.agents})
+        if any(agent.current_entry_point is not None for agent in grid_env.agents):
+            break
+    assert any(agent.current_entry_point is not None for agent in grid_env.agents)
+    check()

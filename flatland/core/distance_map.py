@@ -155,14 +155,33 @@ class AgentSourceTargetDistanceMap(
         `len(shortest_path)` (counting waypoints, not edges) used for travel times and timetables before edge lengths -
         for an agent off the map, the 1 matches its step onto the map. Independent of which of several equally long
         shortest paths is taken. None if there is no path.
+
+        Not the length of the path (the sum of its edge lengths, see `geometric_distance()`), but - with unit edge
+        lengths - the number of its waypoints, one more than its edges:
+
+            A --1--> B --3/2--> C (target)
+
+            waypoints A, B, C                      len(shortest_path)       = 3
+            sum of the edge lengths 1 + 3/2        geometric_distance(A)    = 5/2
+            sum of the edge lengths + 1            shortest_path_length()   = 7/2
+            with unit lengths: 1 + 1 + 1           shortest_path_length()   = 3 = len(shortest_path)
         """
-        shortest_path = self._shortest_path_for_agent(agent)
-        if shortest_path is None:
+        source = self._shortest_path_source(agent)
+        if source is None:
             return None
-        if len(shortest_path) == 1:
+        if source in agent.targets:
             # already at a target - no distance map lookup needed (none may be computable, e.g. without predecessors)
             return 1
-        return self.geometric_distance(self._shortest_path_source(agent), agent.handle) + 1
+        # one lookup instead of rebuilding the path:
+        # - distance map = shortest distance from each entry point to the agent's targets, computed once per reset
+        #   (get() inside geometric_distance(), cached until the next reset)
+        # - same value as the sum of the edge lengths along the path, independent of tie-breaking
+        # - type: int without edge lengths, int or Fraction with them (grid: float resp. object array, see
+        #   DistanceMap._geometric_distance), math.inf if no target is reachable
+        distance = self.geometric_distance(source, agent.handle)
+        if distance == math.inf:
+            return None
+        return distance + 1
 
     def _reconstruct_shortest_path(
         self,
