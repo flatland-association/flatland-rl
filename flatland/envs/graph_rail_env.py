@@ -41,7 +41,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             `GraphRailEnv`'s own default).
         """
         g = GraphTransitionMap.grid_to_digraph(rail_env.rail)
-        GraphRailEnv._grid_edge_lengths(rail_env, g)
         resource_map = GraphRailEnv._grid_resource_map(rail_env, g)
         agent_waypoints, agent_speeds = GraphRailEnv._grid_agent_waypoints_and_speeds(rail_env)
         timetable = TimetableUtils.from_agents(rail_env.agents, rail_env._max_episode_steps)
@@ -80,23 +79,6 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
             else:
                 resource_map[n] = str((r, c))
         return resource_map
-
-    @staticmethod
-    def _grid_edge_lengths(rail_env: RailEnv, g: nx.DiGraph) -> None:
-        """
-        Copies `rail_env.rail.edge_lengths` onto the `length` attribute of the corresponding edges of the
-        grid-derived graph `g` (edges not in `rail_env.rail.edge_lengths` get no `length` attribute, i.e. default length,
-        by design - see `GraphTransitionMap.grid_to_digraph`).
-        Every key is an edge of `g`, as `GridTransitionMap.edge_lengths` only accepts edges of the grid.
-        """
-        if not rail_env.rail.edge_lengths:
-            return
-        gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
-        for (((r, c), d), ((r2, c2), d2)), length in rail_env.rail.edge_lengths.items():
-            u = gctgc(r, c, d)
-            v = gctgc(r2, c2, d2)
-            assert g.has_edge(u, v), (u, v)
-            g.edges[u, v]["length"] = length
 
     @staticmethod
     def _grid_agent_waypoints_and_speeds(rail_env: RailEnv) -> Tuple[Dict[int, List[List[str]]], Dict[int, float]]:

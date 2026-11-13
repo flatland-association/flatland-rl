@@ -93,8 +93,8 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
             length of this edge (`int` or `Fraction`, at least `MIN_EDGE_LENGTH`), see `edge_length()`. Design decision:
             the attribute is not enforced on every edge. An edge without it has `DEFAULT_EDGE_LENGTH` (1), as an edge
             missing from `GridTransitionMap.edge_lengths`. So graphs without lengths stay valid unchanged, and only edges
-            that differ from the default need the attribute. `grid_to_digraph` itself sets none
-            (see `GraphRailEnv.from_rail_env`).
+            that differ from the default need the attribute. `grid_to_digraph` copies `GridTransitionMap.edge_lengths`
+            onto it; edges without a length there get none.
 
         Node data
         ---------
@@ -134,6 +134,18 @@ class GraphTransitionMap(TransitionMap[GraphNode, GraphEdge, bool, RailEnvAction
                             (r2, c2), d2 = t
                             v = GraphTransitionMap.grid_entry_point_to_graph_entry_point(r2, c2, d2)
                             g[u][v].setdefault("actions", set()).add(a)
+        # Copy the grid's edge lengths here, so every conversion from the grid keeps them (GraphTransitionMap.from_rail_env
+        # and GraphRailEnv.from_rail_env). Only edges with a given length get the attribute. All other edges read as
+        # DEFAULT_EDGE_LENGTH (1) in edge_length(), as on the grid. A grid without edge lengths gives a graph without the
+        # attribute. Writing length 1 on every edge would make has_edge_lengths() True and switch the distance map from
+        # plain ints to the slower weighted path.
+        # Every key is an edge of g, as GridTransitionMap.edge_lengths only accepts edges of the grid.
+        gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
+        for (((r, c), d), ((r2, c2), d2)), length in (transition_map.edge_lengths or {}).items():
+            u = gctgc(r, c, d)
+            v = gctgc(r2, c2, d2)
+            assert g.has_edge(u, v), (u, v)
+            g.edges[u, v]["length"] = length
         return g
 
     @staticmethod

@@ -262,7 +262,8 @@ unit-edge default. `crossed` is the caller's decision that the agent crossed int
   as `GraphTransitionMap.grid_to_digraph`). There is no `RailEnv` constructor or distance map `reset()` parameter
   for them. Persisted with the rail as `(u, v, length)` triples; `rail_from_file` returns them as optionals.
 - Graph: the `length` edge attribute, read and validated once in `GraphTransitionMap.__init__` (an invalid
-  length raises `ValueError` on construction). `GraphRailEnv.from_rail_env` copies grid lengths over. The graph
+  length raises `ValueError` on construction). `GraphTransitionMap.grid_to_digraph` copies grid lengths over, so
+  `GraphTransitionMap.from_rail_env` and `GraphRailEnv.from_rail_env` both get them. The graph
   model's node/edge aliases are `GraphNode` / `GraphEdge` - don't mix them up with the grid's `GridNode` /
   `GridEdge`.
 - Consumers (step, distance map, decision point graph, tree observation, shortest path predictor) only go through

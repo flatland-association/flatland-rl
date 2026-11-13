@@ -496,6 +496,32 @@ def test_decision_point_graph_edge_length():
         assert d.length == Fraction(5, 2) * (d.len - 1)
 
 
+def test_graph_transition_map_from_rail_env_copies_edge_lengths():
+    """
+    Straight corridor of 5 cells with one edge of length 3/2 (through cell (0, 2) heading east).
+    - `GraphTransitionMap.from_rail_env` has the length on the same edge, like `GraphRailEnv.from_rail_env`.
+    - The decision point graph built from it sums it: one of its edges is 1/2 longer than with unit lengths.
+    """
+    from flatland.envs.graph.graph_simplification import DecisionPointGraph
+
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(2): Fraction(3, 2)})),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset()
+    gctgc = GraphTransitionMap.grid_entry_point_to_graph_entry_point
+    ((r, c), d), ((r2, c2), d2) = _edge(2)
+
+    gtm = GraphTransitionMap.from_rail_env(env)
+    assert gtm.has_edge_lengths()
+    assert gtm.edge_length(gctgc(r, c, d), gctgc(r2, c2, d2)) == Fraction(3, 2)
+    assert GraphRailEnv.from_rail_env(env, DummyObservationBuilder()).rail.edge_length(gctgc(r, c, d), gctgc(r2, c2, d2)) == Fraction(3, 2)
+
+    dpg = DecisionPointGraph.fromGraphTransitionMap(gtm)
+    lengths_over_unit = [d.length - (d.len - 1) for _, _, d in dpg.g.edges(data="d")]
+    assert sorted(lengths_over_unit)[-1] == Fraction(1, 2)
+    assert sum(lengths_over_unit) == Fraction(1, 2)
+
+
 def test_weighted_distance_map_recompute():
     grid_env, _, _ = env_generator(seed=42)
     g = GraphTransitionMap.grid_to_digraph(grid_env.rail)
@@ -685,7 +711,6 @@ def test_timetable_with_intermediate_waypoints_is_whole_steps(length):
     for agent in env.agents:
         times = [t for t in agent.waypoints_earliest_departure + agent.waypoints_latest_arrival if t is not None]
         assert all(type(t) is int for t in times), times
-
 
 
 @pytest.mark.parametrize("arrival_edge_length,target_edge_length,expected_distance", [
