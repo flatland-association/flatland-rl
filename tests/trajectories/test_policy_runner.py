@@ -353,10 +353,14 @@ def state_machine_recordings() -> List[Dict[str, Any]]:
     StateMachineRecordingCallbacks.recorded = []
 
 
-@pytest.mark.parametrize("skip_state_machine_update", [True, False])
+@pytest.mark.parametrize("skip_state_machine_update", [True, False, None], ids=["skip", "update", "not_given"])
 @pytest.mark.parametrize("env_source", ["legacy_env_generator", "env_generator", "env_path"])
-def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: bool, state_machine_recordings: List[Dict[str, Any]]):
-    # the env reloaded by PolicyRunner.resume() honors the command line's flag, also for an --env-path saved without it
+def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_update: Optional[bool],
+                                       state_machine_recordings: List[Dict[str, Any]]):
+    """
+    The command line's flag wins if given. If not given, a generated env skips the state machine update, and an
+    --env-path keeps the setting it was saved with: the file here is saved with updates, unlike the default.
+    """
     with tempfile.TemporaryDirectory() as tmpdirname:
         tmp_dir = Path(tmpdirname)
         data_dir = tmp_dir / "data_dir"
@@ -366,32 +370,38 @@ def test_cli_skip_state_machine_update(env_source: str, skip_state_machine_updat
                 "--policy-cls", "RandomPolicy",
                 "--callbacks-pkg", "tests.trajectories.test_policy_runner",
                 "--callbacks-cls", "StateMachineRecordingCallbacks",
-                "--snapshot-interval", 0,
-                "--skip-state-machine-update", skip_state_machine_update]
+                "--snapshot-interval", 0]
+        if skip_state_machine_update is not None:
+            args += ["--skip-state-machine-update", skip_state_machine_update]
         if env_source == "legacy_env_generator":
             args += ["--seed", 42, "--legacy-env-generator", "True"]
+            expected = True if skip_state_machine_update is None else skip_state_machine_update
         elif env_source == "env_generator":
             args += ["--seed", 42]
+            expected = True if skip_state_machine_update is None else skip_state_machine_update
         else:
             env_file = str(tmp_dir / "env.pkl")
-            RailEnvPersister.save(env_generator(seed=42)[0], env_file)
+            RailEnvPersister.save(env_generator(seed=42, skip_state_machine_update=False)[0], env_file)
             args += ["--env-path", env_file]
+            expected = False if skip_state_machine_update is None else skip_state_machine_update
 
         with pytest.raises(SystemExit) as e_info:
             generate_trajectory_from_policy(args)
         assert e_info.value.code == 0
 
     assert state_machine_recordings == [{
-        "skip_state_machine_update": skip_state_machine_update,
-        "state_machine_live": not skip_state_machine_update,
+        "skip_state_machine_update": expected,
+        "state_machine_live": not expected,
     }]
 
 
-@pytest.mark.parametrize("skip_state_machine_update", [True, False])
-def test_grid_runner_skip_state_machine_update(skip_state_machine_update: bool, state_machine_recordings: List[Dict[str, Any]]):
+@pytest.mark.parametrize("skip_state_machine_update", [True, False, None], ids=["skip", "update", "not_given"])
+def test_grid_runner_skip_state_machine_update(skip_state_machine_update: Optional[bool], state_machine_recordings: List[Dict[str, Any]]):
     """
-    The grid runner passes `--skip-state-machine-update` on to every row; the saved trajectory keeps the setting.
+    The grid runner passes `--skip-state-machine-update` on to every row, if given; the saved trajectory keeps the
+    setting. Not given, the generated envs skip the state machine update.
     """
+    expected = True if skip_state_machine_update is None else skip_state_machine_update
     with tempfile.TemporaryDirectory() as tmpdirname:
         data_dir = Path(tmpdirname)
         metadata_csv = data_dir / "metadata.csv"
@@ -401,24 +411,26 @@ def test_grid_runner_skip_state_machine_update(skip_state_machine_update: bool, 
             "malfunction_duration_min": 20, "malfunction_duration_max": 50, "malfunction_interval": 540, "seed": 42,
         }]).to_csv(metadata_csv, index=False)
 
+        args = [
+            "--metadata-csv", str(metadata_csv),
+            "--data-dir", str(data_dir),
+            "--policy-pkg", "tests.trajectories.test_policy_runner",
+            "--policy-cls", "RandomPolicy",
+            "--callbacks-pkg", "tests.trajectories.test_policy_runner",
+            "--callbacks-cls", "StateMachineRecordingCallbacks",
+        ]
+        if skip_state_machine_update is not None:
+            args += ["--skip-state-machine-update", skip_state_machine_update]
         with pytest.raises(SystemExit) as e_info:
-            generate_trajectories_from_metadata([
-                "--metadata-csv", str(metadata_csv),
-                "--data-dir", str(data_dir),
-                "--policy-pkg", "tests.trajectories.test_policy_runner",
-                "--policy-cls", "RandomPolicy",
-                "--callbacks-pkg", "tests.trajectories.test_policy_runner",
-                "--callbacks-cls", "StateMachineRecordingCallbacks",
-                "--skip-state-machine-update", skip_state_machine_update,
-            ])
+            generate_trajectories_from_metadata(args)
         assert e_info.value.code == 0
 
         assert state_machine_recordings == [{
-            "skip_state_machine_update": skip_state_machine_update,
-            "state_machine_live": not skip_state_machine_update,
+            "skip_state_machine_update": expected,
+            "state_machine_live": not expected,
         }]
         trajectory = Trajectory.load_existing(data_dir=data_dir / "Test_00" / "Level_0", ep_id="Test_00_Level_0")
-        assert getattr(trajectory.load_env(), "skip_state_machine_update", True) == skip_state_machine_update
+        assert getattr(trajectory.load_env(), "skip_state_machine_update", True) == expected
 
 
 def test_create_from_policy_keeps_wrapping(state_machine_recordings: List[Dict[str, Any]]):

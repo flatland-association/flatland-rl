@@ -415,9 +415,10 @@ class PolicyRunner:
               required=False, default=None)
 @click.option('--skip-state-machine-update',
               type=bool,
-              default=True,
-              help="Whether the generated env skips agent.state/agent.state_machine bookkeeping (the default, "
-                   "matching env_generator()'s own default). Pass False if --policy reads agent.state directly "
+              default=None,
+              help="Whether the env skips agent.state/agent.state_machine bookkeeping. If not given, a generated env "
+                   "skips it (env_generator()'s own default), and an env loaded with --env-path or a forked "
+                   "trajectory keeps the setting it was saved with. Pass False if --policy reads agent.state directly "
                    "(e.g. this repo's own bundled ShortestPathPolicy) - an arbitrary caller-supplied policy can't "
                    "be assumed to use derived_state() the way this repo's own internals do.",
               required=False
@@ -461,7 +462,7 @@ def generate_trajectory_from_policy(
     callbacks_cls: str = None,
     legacy_env_generator: bool = False,
     post_seed: int = None,
-    skip_state_machine_update: bool = True,
+    skip_state_machine_update: Optional[bool] = None,
 ):
     if policy is None:
         policy = os.environ.get("POLICY", None)
@@ -541,7 +542,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=skip_state_machine_update,
+            skip_state_machine_update=True if skip_state_machine_update is None else skip_state_machine_update,
         )
     else:
         env, _, _ = env_generator(
@@ -561,7 +562,7 @@ def generate_trajectory_from_policy(
             obs_builder_object=obs_builder,
             rewards=rewards,
             post_seed=post_seed,
-            skip_state_machine_update=skip_state_machine_update,
+            skip_state_machine_update=True if skip_state_machine_update is None else skip_state_machine_update,
         )
 
     if fork_data_dir is not None and fork_ep_id is not None:
