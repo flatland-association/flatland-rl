@@ -260,7 +260,8 @@ unit-edge default. `crossed` is the caller's decision that the agent crossed int
   `GridNode = ((row, col), direction)` / `GridEdge` aliases), and `RailEnv` sets them on
   `GridTransitionMap.edge_lengths`, whose setter rejects keys that are not edges (`has_edge(u, v)`, the same edges
   as `GraphTransitionMap.grid_to_digraph`). There is no `RailEnv` constructor or distance map `reset()` parameter
-  for them. Persisted with the rail as `(u, v, length)` triples; `rail_from_file` returns them as optionals.
+  for them. Persisted with the rail as `(u, v, numerator, denominator)` tuples, as msgpack can persist neither tuple
+  keys nor `Fraction`s; `rail_from_file` returns them as optionals.
 - Graph: the `length` edge attribute, read and validated once in `GraphTransitionMap.__init__` (an invalid
   length raises `ValueError` on construction). `GraphTransitionMap.grid_to_digraph` copies grid lengths over, so
   `GraphTransitionMap.from_rail_env` and `GraphRailEnv.from_rail_env` both get them. The graph

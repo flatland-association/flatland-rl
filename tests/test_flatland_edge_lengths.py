@@ -291,8 +291,9 @@ def test_edge_lengths_from_rail_generator_optionals_survive_reset(regenerate_rai
 def test_edge_lengths_persisted(suffix):
     from flatland.envs.rail_generators import rail_from_file
 
+    edge_lengths = {_edge(1): Fraction(3, 2), _edge(2): 2}
     rail, optionals = _straight_rail(5)
-    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, {_edge(1): Fraction(3)})),
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
                   line_generator=sparse_line_generator(), number_of_agents=1)
     env.reset()
     with tempfile.TemporaryDirectory() as tmpdirname:
@@ -300,13 +301,40 @@ def test_edge_lengths_persisted(suffix):
         try:
             RailEnvPersister.save(env, str(f))
         except TypeError:
-            pytest.skip("msgpack cannot persist Fractions")
+            if suffix != "mpk":
+                raise
+            # saving as .mpk fails on sets, also without edge lengths - the encoding of the edge lengths is tested in
+            # test_edge_lengths_persisted_msgpack_encoding
+            pytest.skip("msgpack cannot persist sets")
         loaded, _ = RailEnvPersister.load_new(str(f))
         # rail generator from file passes the edge lengths on in its optionals
         _, from_file_optionals = rail_from_file(str(f))(5, 1, 1)
-    assert loaded.rail.edge_lengths == {_edge(1): Fraction(3)}
-    assert loaded.rail.edge_length(*_edge(1)) == Fraction(3)
-    assert from_file_optionals["edge_lengths"] == {_edge(1): Fraction(3)}
+    assert loaded.rail.edge_lengths == edge_lengths
+    assert loaded.rail.edge_length(*_edge(1)) == Fraction(3, 2)
+    assert from_file_optionals["edge_lengths"] == edge_lengths
+
+
+def test_edge_lengths_persisted_msgpack_encoding():
+    """
+    Straight corridor with a fractional (3/2) and an int (2) edge length.
+    - The persisted edge lengths pack with msgpack, which can persist neither tuple keys nor `Fraction`s.
+    - Unpacked, they come back as the same dict: 3/2 as `Fraction`, 2 as `int`.
+    """
+    import msgpack
+    from flatland.envs.persistence import edge_lengths_from_env_dict
+
+    edge_lengths = {_edge(1): Fraction(3, 2), _edge(2): 2}
+    rail, optionals = _straight_rail(5)
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail, _with_edge_lengths(optionals, edge_lengths)),
+                  line_generator=sparse_line_generator(), number_of_agents=1)
+    env.reset()
+
+    packed = msgpack.packb(RailEnvPersister.get_full_state(env)["edge_lengths"])
+    restored = edge_lengths_from_env_dict({"edge_lengths": msgpack.unpackb(packed, use_list=False, raw=False)})
+
+    assert restored == edge_lengths
+    assert type(restored[_edge(1)]) is Fraction
+    assert type(restored[_edge(2)]) is int
 
 
 def test_graph_edge_length_attribute():

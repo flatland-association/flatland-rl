@@ -1,7 +1,8 @@
 import io
 import pickle
+from fractions import Fraction
 from pathlib import Path
-from typing import Tuple, Dict, Optional, Union, Any
+from typing import Tuple, Dict, List, Optional, Union, Any
 
 import msgpack
 import msgpack_numpy
@@ -57,16 +58,26 @@ def _to_tuple(x: Any) -> Any:
     return x
 
 
+def edge_lengths_to_env_dict(edge_lengths: Dict) -> List[Tuple]:
+    """
+    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state`: a list of `(u, v, numerator,
+    denominator)` tuples. msgpack cannot persist tuple keys, nor `Fraction`s, so each length is split into two ints
+    (an `int` length has denominator 1). See `edge_lengths_from_env_dict()` for the way back.
+    """
+    return [(u, v, length.numerator, length.denominator) for (u, v), length in edge_lengths.items()]
+
+
 def edge_lengths_from_env_dict(env_dict: Dict) -> Optional[Dict]:
     """
-    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state` - a list of `(u, v, length)` triples, as
-    msgpack cannot persist tuple keys and round-trips tuples as lists - back to a dict keyed by `(u, v)` with the
-    `((r, c), d)` entry point tuples restored. None if not persisted.
+    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state` (see `edge_lengths_to_env_dict()`) back
+    to a dict keyed by `(u, v)`. msgpack round-trips tuples as lists, so the `((r, c), d)` entry point tuples are
+    restored. A length with denominator 1 comes back as `int`, any other as `Fraction`. None if not persisted.
     """
-    triples = env_dict.get("edge_lengths", None)
-    if not triples:
+    entries = env_dict.get("edge_lengths", None)
+    if not entries:
         return None
-    return {(_to_tuple(u), _to_tuple(v)): length for u, v, length in triples}
+    return {(_to_tuple(u), _to_tuple(v)): numerator if denominator == 1 else Fraction(numerator, denominator)
+            for u, v, numerator, denominator in entries}
 
 
 def _serialize_agent(agent: EnvAgent) -> Agent:
@@ -452,8 +463,7 @@ class RailEnvPersister(object):
         if hasattr(env, "stations_links"):
             msg_data_dict["stations_links"] = env.stations_links
         if env.rail.edge_lengths:
-            # list of (u, v, length) triples, as msgpack cannot persist tuple keys - see edge_lengths_from_env_dict()
-            msg_data_dict["edge_lengths"] = [(u, v, length) for (u, v), length in env.rail.edge_lengths.items()]
+            msg_data_dict["edge_lengths"] = edge_lengths_to_env_dict(env.rail.edge_lengths)
         return msg_data_dict
 
     ################################################################################################
