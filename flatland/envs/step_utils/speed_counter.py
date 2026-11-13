@@ -216,9 +216,10 @@ class SpeedCounter:
     def distance_after_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction],
                                 edge_length: Optional[EdgeLength]) -> Optional[Fraction]:
         """
-        Expected distance when this step's cell-boundary crossing completed: pre-step distance plus
-        pre-step speed, wrapped into the newly-entered cell (just `distance + pre_speed` if it stays below
-        `edge_length`). Off map (`distance` is None, and then so are `pre_speed` and `edge_length`), returns None.
+        Expected post-step distance of an agent that keeps moving: pre-step distance plus pre-step speed - just
+        `distance + pre_speed` while it stays below `edge_length`, otherwise the agent crosses into the next edge and
+        keeps the leftover `distance + pre_speed - edge_length`. Off map (`distance` is None, and then so are
+        `pre_speed` and `edge_length`), returns None.
 
         Physical motivation: the train's momentum this step carries it across the boundary and some
         distance into the next cell - the wrap (`(distance + pre_speed - edge_length) % MAX_SPEED`) is exactly that leftover distance,
@@ -229,14 +230,11 @@ class SpeedCounter:
         crossing was already in flight before the brake takes effect (see speed_after_braking above) -
         the action itself never matters once resource_check has granted the crossing.
 
-        The leftover `distance + pre_speed - edge_length` is in [0, `MAX_SPEED`): on map, `distance` is below
-        `edge_length` (see the class docstring) and `pre_speed` is at most `MAX_SPEED`. The modulo only guards
-        against a leftover of exactly `MAX_SPEED`, which no agent on its way reaches.
-
-        Never returns exactly the new edge's length: a modulo result is always in [0, `MAX_SPEED`) by construction
-        (every edge is at least `MIN_EDGE_LENGTH` = `MAX_SPEED` long) - physically, having actually crossed into the new cell, the train is now somewhere
-        inside it, never still sitting exactly on the boundary it just crossed. This also holds for a crossing
-        into a target edge (target reached, not removed).
+        The leftover is in [0, `MAX_SPEED`), so below the new edge's length (every edge is at least `MIN_EDGE_LENGTH`
+        = `MAX_SPEED` long): on map, `distance` is below `edge_length` (see the class docstring) and `pre_speed` is
+        at most `MAX_SPEED`, so the modulo changes no value an agent on its way reaches. Physically, having crossed,
+        the train is inside the new edge, never on the boundary it just crossed - also when crossing into a target
+        edge (target reached, not removed).
         """
         if distance is None:
             return None
