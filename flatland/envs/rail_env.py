@@ -1398,9 +1398,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # malfunction/map-entry/target-reached/invalid-action, all comparatively rare in every
         # profiled scenario except a deliberately extreme malfunction-rate stress test - safe because
         # every condition below is already fully self-contained (see above).
-        # done
+        # done: the agent stays where it reached its target (speed 0 since then)
         if done:
-            return SpeedCounter.distance_without_crossing(distance, speed, edge_length)
+            return distance
         # stay off map
         if off_map and stay_off_map and not done and not target_reached and not in_malfunction:
             return None
@@ -1422,7 +1422,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         if target_reached and not done:
             if remove_agents_at_target:
                 return None
-            return SpeedCounter.distance_without_crossing(distance, speed, edge_length)
+            # target reached, not removed: crossed into the target edge like any other crossing - the leftover of
+            # this step, a distance along the target edge
+            return SpeedCounter.distance_after_crossing(distance, speed, edge_length)
         # invalid action at cell exit
         if (invalid_action_at_cell_exit and not done and not target_reached and not in_malfunction
             and not off_map):

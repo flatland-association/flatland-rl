@@ -160,10 +160,10 @@ def _with_edge_lengths(optionals, edge_lengths):
     return {**optionals, "edge_lengths": edge_lengths} if edge_lengths else optionals
 
 
-def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=True):
+def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=True, target_col=None):
     """
     Single agent bootstrapped moving at full `max_speed` at the start of dead-end cell (0, 0) (entered heading west,
-    hence leaving east), target (0, n_cells - 1),
+    hence leaving east), target (0, n_cells - 1) or (0, `target_col`),
     always MOVE_FORWARD. Returns the per-step list of (current_entry_point, distance) after each step,
     until the agent is done.
     """
@@ -177,7 +177,7 @@ def _run_straight(edge_lengths, max_speed, n_cells=5, remove_agents_at_target=Tr
     agent.initial_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
     agent.current_entry_point = ((0, 0), Grid4TransitionsEnum.WEST)
     agent.next_entry_point = _sanitize_entry_point(env.rail.apply_action_independent(RailEnvActions.MOVE_FORWARD, agent.current_entry_point))
-    agent.targets = {((0, n_cells - 1), d) for d in Grid4TransitionsEnum}
+    agent.targets = {((0, n_cells - 1 if target_col is None else target_col), d) for d in Grid4TransitionsEnum}
     agent._set_state(TrainState.MOVING)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=max_speed)
     agent.speed_counter.set(max_speed, Fraction(0), env.rail.edge_length(agent.current_entry_point, agent.next_entry_point))
@@ -221,10 +221,11 @@ def test_long_edge_overshoot_carried_into_next_edge():
     assert first_in_next == Fraction(1, 2)
 
 
-def test_long_target_edge_parks_at_edge_length():
-    # target cell (0, 4) entered via edge (0, 3) of length 3, not removed at target
+def test_long_edge_into_target_takes_longer():
+    # target cell (0, 4) entered via edge (0, 3) of length 3, not removed at target: 3 steps on that edge, then the
+    # crossing into the target edge leaves no leftover at speed 1
     env, trajectory = _run_straight({_edge(3): Fraction(3)}, Fraction(1), remove_agents_at_target=False)
-    assert env.agents[0].speed_counter.distance <= Fraction(3)
+    assert env.agents[0].speed_counter.distance == 0
     assert _steps_in(trajectory, 3) == 3
 
 
@@ -684,3 +685,27 @@ def test_timetable_with_intermediate_waypoints_is_whole_steps(length):
     for agent in env.agents:
         times = [t for t in agent.waypoints_earliest_departure + agent.waypoints_latest_arrival if t is not None]
         assert all(type(t) is int for t in times), times
+
+
+
+@pytest.mark.parametrize("arrival_edge_length,target_edge_length,expected_distance", [
+    (Fraction(3), Fraction(1), Fraction(0)),
+    (Fraction(1), Fraction(3), Fraction(0)),
+    (Fraction(5, 2), Fraction(1), Fraction(1, 2)),
+    (Fraction(3), Fraction(5, 2), Fraction(0)),
+])
+def test_target_reached_not_removed_distance_is_leftover(arrival_edge_length, target_edge_length, expected_distance):
+    """
+    Single agent on a straight corridor at speed 1, target (0, 3), not removed at target. The edge through (0, 2) into
+    the target has length `arrival_edge_length`, the edge through the target cell (0, 3) `target_edge_length`.
+    - Target reached, not removed: the agent crosses into the target edge like any other crossing. Its distance is
+      the leftover of that step, `expected_distance`, within the target edge also when the edge it arrived on is
+      longer. Its edge length is the target edge's.
+    """
+    env, _ = _run_straight({_edge(2): arrival_edge_length, _edge(3): target_edge_length}, Fraction(1),
+                           remove_agents_at_target=False, target_col=3)
+    agent = env.agents[0]
+    assert agent.current_entry_point == ((0, 3), EAST)
+    assert agent.speed_counter.edge_length == target_edge_length
+    assert agent.speed_counter.distance == expected_distance
+    assert agent.speed_counter.distance < agent.speed_counter.edge_length

@@ -231,7 +231,9 @@ load (off map → `None`/`None`; on-map `MALFUNCTION` → `speed=0`, distance le
 for the accel/brake/crossing math, all return `None` off map (`pre_speed` resp. `distance` is `None`) - used both
 by `rail_env.py`'s collect phase (candidate speed/distance, then passed to `SpeedCounter.set()`) and by its
 post-step postcondition checks to verify the actual post-step value against the same formula. Change the math in
-one place, not independently in `step()` and in the postcondition check that verifies it.
+one place, not independently in `step()` and in the postcondition check that verifies it. `step()` doesn't use
+`distance_without_crossing`: reaching a target is a crossing like any other (`distance_after_crossing`), also when
+the agent is not removed, and a DONE agent keeps its distance.
 
 `design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
 `AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect

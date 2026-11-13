@@ -86,9 +86,8 @@ class SpeedCounter:
     None while off map (see set()) and become concrete Fractions once the agent enters the map.
 
     On map, distance is in [0, edge_length): an agent never sits on the exit of its edge - a crossing wraps
-    into the next edge, and a denied crossing keeps the pre-step distance. The only exception is an agent parked
-    at its target (remove_agents_at_target=False, then DONE), capped at exactly edge_length
-    (distance_without_crossing).
+    into the next edge, also into a target edge (target reached, not removed), and a denied crossing keeps the
+    pre-step distance.
 
     Definition: speed is the distance travelled per step - each step adds the pre-step speed to the distance. Its
     inverse `1 / speed` is the number of steps it takes to pass through an edge of length 1 (`edge_length / speed`
@@ -107,8 +106,8 @@ class SpeedCounter:
     |---|---|---|
     | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
     | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
-    | `distance_after_crossing` | `(distance + pre_speed - edge_length) % MAX_SPEED` if `distance + pre_speed >= edge_length`, else `distance + pre_speed` | cell boundary crossed |
-    | `distance_without_crossing` | `min(distance + pre_speed, edge_length)` | target reached, not removed |
+    | `distance_after_crossing` | `(distance + pre_speed - edge_length) % MAX_SPEED` if `distance + pre_speed >= edge_length`, else `distance + pre_speed` | keep moving, or cross (also into a target edge) |
+    | `distance_without_crossing` | `min(distance + pre_speed, edge_length)` | not used by `RailEnv.step()` |
 
     A denied crossing (invalid action or resource_check) uses none of them: the agent doesn't move, its
     distance stays at the pre-step value and its speed is set to 0 (see RailEnv.step()'s (13)).
@@ -236,8 +235,8 @@ class SpeedCounter:
 
         Never returns exactly the new edge's length: a modulo result is always in [0, `MAX_SPEED`) by construction
         (every edge is at least `MIN_EDGE_LENGTH` = `MAX_SPEED` long) - physically, having actually crossed into the new cell, the train is now somewhere
-        inside it, never still sitting exactly on the boundary it just crossed (the only agent sitting on
-        the boundary is one parked at its target, see distance_without_crossing below).
+        inside it, never still sitting exactly on the boundary it just crossed. This also holds for a crossing
+        into a target edge (target reached, not removed).
         """
         if distance is None:
             return None
@@ -251,13 +250,13 @@ class SpeedCounter:
     def distance_without_crossing(distance: Optional[Fraction], pre_speed: Optional[Fraction],
                                   edge_length: Optional[EdgeLength]) -> Optional[Fraction]:
         """
-        Expected distance of an agent parked at/beyond a just-reached target (remove_agents_at_target=False,
-        and DONE afterwards): pre-step distance plus pre-step speed, capped at the current edge's boundary
-        (`edge_length`) rather than wrapping into a new edge, since there is no further edge to wrap into.
-        Off map (`distance` is None, and then so are `pre_speed` and `edge_length`), returns None.
+        Pre-step distance plus pre-step speed, capped at the current edge's boundary (`edge_length`) rather than
+        wrapping into a new edge. Off map (`distance` is None, and then so are `pre_speed` and `edge_length`),
+        returns None.
 
-        The result equals exactly edge_length once the target is reached, as reaching it requires
-        `is_cell_exit()` pre-step (distance + speed at least edge_length).
+        Not used by RailEnv.step(): an agent whose target is reached and not removed (remove_agents_at_target=False)
+        crosses into its target edge like any other crossing (distance_after_crossing), and its distance stays there
+        once it is DONE (see RailEnv._candidate_distance).
 
         Not used for a denied crossing (invalid action or resource_check): there the agent doesn't move at
         all - its distance stays at the pre-step value (see RailEnv.step()'s (13)), so a restart after the
