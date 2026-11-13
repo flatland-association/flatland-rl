@@ -243,8 +243,9 @@ class GridTransitionMap(TransitionMap[Tuple[Tuple[int, int], int], Grid4Transiti
     edge_lengths : Optional[Mapping[GridEdge, EdgeLength]]
         Length of the edge `(u, v)` from entry point `u = ((r, c), d)` to its successor entry point
         `v = ((r2, c2), d2)`, i.e. how far an agent travels through cell `(r, c)` entered with heading `d`
-        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`), an `int` or a `Fraction` (floats are rejected) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have
-        length `DEFAULT_EDGE_LENGTH` (1).
+        when leaving it with heading `d2`. Must be an edge of the grid (see `has_edge`), an `int` or a `Fraction`
+        (floats are rejected) and at least `MIN_EDGE_LENGTH` (1). Edges not in the map have length
+        `DEFAULT_EDGE_LENGTH` (1).
         Intended workflow: `RailEnv.reset()` calls the rail generator, which builds this transition map and returns
         the edge lengths as `optionals["edge_lengths"]`; `RailEnv` sets them here, then resets its distance map
         (constructed once in `RailEnv.__init__`), which computes the distances from them on first use

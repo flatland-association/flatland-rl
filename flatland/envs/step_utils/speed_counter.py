@@ -106,7 +106,7 @@ class SpeedCounter:
     |---|---|---|
     | `speed_after_acceleration` | `min(pre_speed + acceleration_delta, max_speed)` | `MOVE_FORWARD` / start from rest |
     | `speed_after_braking` | `max(pre_speed + braking_delta, 0)` | `STOP_MOVING` |
-    | `distance_after_crossing` | `(distance + pre_speed - edge_length) % MAX_SPEED` if `distance + pre_speed >= edge_length`, else `distance + pre_speed` | keep moving, or cross (also into a target edge) |
+    | `distance_after_crossing` | `d = distance + pre_speed`; `(d - edge_length) % MAX_SPEED` if `d >= edge_length` | keep moving, or cross (also to a target) |
     | `distance_without_crossing` | `min(distance + pre_speed, edge_length)` | not used by `RailEnv.step()` |
 
     A denied crossing (invalid action or resource_check) uses none of them: the agent doesn't move, its

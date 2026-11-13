@@ -12,7 +12,6 @@ from flatland.core.entry_point_distance_map import (
 from flatland.core.distance_map_walker import DistanceMapWalker, _unit_edge_length
 from flatland.core.transition_map import Distance
 from flatland.envs.agent_utils import EnvAgent
-from flatland.envs.step_utils.states import TrainState
 
 
 class AgentSourceTargetDistanceMap(
