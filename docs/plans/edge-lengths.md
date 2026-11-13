@@ -1,7 +1,7 @@
 # Edges of different lengths in the grid and graph model (#526)
 
-> **Status:** plan of 2026-11-13, built by 2026-11-11. Based on `main` 40ee6582 (with #545); `main` has moved on to
-> 3e30f9ef (#566) since. Issue [#526](https://github.com/flatland-association/flatland-rl/issues/526) ("Introduce edge
+> **Status:** plan of 2026-11-13, built by 2026-11-11. Based on `main` 8a4261a5 (with #545, #541 and #566, merged in
+> 266d02b8). Issue [#526](https://github.com/flatland-association/flatland-rl/issues/526) ("Introduce edge
 > lengths."). Branch `526-edge-lengths`, PR [#542](https://github.com/flatland-association/flatland-rl/pull/542).
 > Written after the implementation, from the branch, the PR description and its review threads. No open questions
 > (§9.1). Findings: F-1–F-14, F-16–F-20 and F-23–F-28 fixed, F-15, F-21 (#544) and F-22
@@ -65,7 +65,7 @@ Requirements:
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
 | Illustrate edge lengths for users. | The flatland-book illustrates them, not a notebook here (Q-7). | Q-7 | F-15 | [flatland-book#42](https://github.com/flatland-association/flatland-book/pull/42) |
-| Saving an env as `.mpk` fails with "can not serialize 'set' object", also without edge lengths. | Not related to edge lengths (Q-9); `main` fails as well (checked 2026-11-13). | Q-9 | F-19 | - |
+| Saving an env as `.mpk` fails with "can not serialize 'set' object", also without edge lengths; `SpeedCounter` and `StationsLinks` can't be serialized either. | Not related to edge lengths (Q-9); `main` fails as well (checked 2026-11-13). | Q-9 | F-19 | [#129](https://github.com/flatland-association/flatland-rl/issues/129) (state and configuration refactoring) |
 | Option for `sparse_rail_generator` to generate edge lengths (e.g. longer edges on straight track between cities) into `optionals["edge_lengths"]`. | This PR adds edge lengths to the models and their consumers; generating them is a feature on top. Custom rail generators can already return them. | §4.3 | - | untracked |
 | `ShortestPathPredictorForRailEnv` ignores the agent's progress along its current edge, so its predictions are late: on `main` for slow agents partway through a cell, with edge lengths up to a whole edge length. Fix: start the count of steps on the edge at `distance × times_per_cell`. | Not caused by edge lengths (Q-13); changes predictions and tree observations also with unit lengths. | Q-13 | F-22 | [#570](https://github.com/flatland-association/flatland-rl/issues/570) |
 | `timetable_generator`'s intermediate waypoint times add the raw segment lengths, not divided by the agent's speed, so they are too tight for slow agents (at speed 1/2 a segment of length 4 takes 8 steps, the timetable allows 4). Dividing by the speed changes generated timetables of slow agents with intermediate waypoints. | Only matters for `max_speed < 1`, with unit lengths as well: not related to edge lengths (Q-12). Tried on 2026-11-13: only `test_timetable_segments_scale_with_edge_lengths` (this PR) fails. | Q-4, Q-12 | - | [#569](https://github.com/flatland-association/flatland-rl/issues/569) |
@@ -498,11 +498,11 @@ make the error larger. The fix changes predictions and tree observations also wi
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-PR [#542](https://github.com/flatland-association/flatland-rl/pull/542), branch based on `main` 40ee6582. All findings
-come from PR review threads (F-1–F-17), added between 2026-10-19 and 2026-11-13. Code review findings (F-18–F-28) were added on 2026-11-13, at 716a0199; their line numbers refer
-to it (`/code-review` and the checks of `/flatland-association:custom-code-review`). Their line numbers refer to the commit
-each comment was made on, named in the finding (66615a0 is a commit from before a rebase). The PR adds no TODOs, and
-no code review findings were recorded before 2026-11-13. ✅ in Fixed marks a finding fixed on the branch, ⏭️ one taken over by a
+PR [#542](https://github.com/flatland-association/flatland-rl/pull/542), branch based on `main` 8a4261a5. PR review
+comments (F-1–F-17) were added between 2026-10-19 and 2026-11-13; their line numbers refer to the commit each comment
+was made on, named in the finding (66615a0 is a commit from before a rebase). Code review findings (F-18–F-28) were
+added on 2026-11-13, at 716a0199 (`/code-review` and the checks of `/flatland-association:custom-code-review`); their
+line numbers refer to it. The PR adds no TODOs. ✅ in Fixed marks a finding fixed on the branch, ⏭️ one taken over by a
 follow-up (§1.4), `⚠️` one resolved on GitHub without a code change and without a reason, and ❌ next to ✅ one fixed
 in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source marks threads resolved on GitHub.
 
@@ -523,7 +523,7 @@ in the code whose PR comment is not resolved on GitHub yet. "resolved" in Source
 | ✅ | F-13 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364079744), resolved | bug | high | `flatland/envs/step_utils/speed_counter.py:237` (be8cd305): an agent waiting at the exit of its edge loses a step when it crosses. Not related to edge lengths; fixed on `main` by #545. Fixed in 52ffcc2e: merged, and extended to edge lengths. | Merge main into 526-edge-lengths: denied crossings keep the distance (#545). |
 | ✅ | F-14 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4364127389), resolved | bug | high | `flatland/envs/step_utils/speed_counter.py:249` (be8cd305): with `distance == edge_length` (crossing prevented) and `pre_speed == MAX_SPEED`, the next distance is 0, not `MAX_SPEED`. Same cause as F-13. Fixed in 52ffcc2e: a refused crossing keeps the pre-step distance. | Merge main into 526-edge-lengths: denied crossings keep the distance (#545). |
 | ✅ | F-16 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4470281894), resolved | docs | medium | `design_by_contract.md:1` (be8cd305): the step contract is kept twice, here and in the flatland-book page. Decided a) (Q-6). Fixed in 7549edf7 for this PR's part: the file shows the edge lengths. The book's take-over and the removal of the file are follow-ups (§1.4). | docs(design-by-contract): pass the edge length in the signatures of the distance formulas and cell_exit. |
-| ✅ ❌ | F-17 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4561357863) | docs | low | `flatland/envs/step_utils/speed_counter.py:148` (52ffcc2e): explains why `set()` needs `crossed` since #545. No change asked for. `set()`'s design comment says the same, but `AGENTS.md`, "Edge lengths", named `SpeedCounter.set(speed, distance, edge_length)` without `crossed`. Fixed in 8f1247b6 (S-29): `AGENTS.md` names `crossed` and why the caller passes it. | docs(agents): name the crossed flag of SpeedCounter.set(). |
+| ✅ | F-17 | [PR comment](https://github.com/flatland-association/flatland-rl/pull/542#discussion_r4561357863), resolved | docs | low | `flatland/envs/step_utils/speed_counter.py:148` (52ffcc2e): explains why `set()` needs `crossed` since #545. No change asked for. `set()`'s design comment says the same, but `AGENTS.md`, "Edge lengths", named `SpeedCounter.set(speed, distance, edge_length)` without `crossed`. Fixed in 8f1247b6 (S-29): `AGENTS.md` names `crossed` and why the caller passes it. | docs(agents): name the crossed flag of SpeedCounter.set(). |
 | ✅ | F-18 | code review | bug | medium | `flatland/envs/rail_env.py:1425`, `flatland/envs/step_utils/speed_counter.py:265`: an agent whose target is reached and not removed (`remove_agents_at_target=False`) keeps the distance capped at the length of the edge it arrived on, but `SpeedCounter.set()` stores it with the length of the edge leaving the target. So the distance exceeds `edge_length`, against the class docstring. Reproduced: last edge of length 3, target `((0, 4), 1)` shows distance 3 with edge length 1. The progress bar and anything relying on `distance <= edge_length` then see an impossible state. On `main` both were 1, which hid the same mix-up of the two edges. Fix (Q-10): reaching the target is a crossing like any other, the distance is the leftover of that step (`distance_after_crossing`), and a DONE agent keeps its distance. Fixed in e4ee29e2 (S-30). | fix(env)!: cross into the target edge like any other edge when the agent is not removed. |
 | ✅ | F-19 | code review | bug | medium | `flatland/envs/persistence.py:456`, `tests/test_flatland_edge_lengths.py:302`: edge lengths are written to msgpack as raw `Fraction`s, which msgpack can't serialize. The test skips on `TypeError`, so the `.mpk` path is never tested. Saving `.mpk` fails earlier anyway, also without edge lengths ("can not serialize 'set' object", likely the agents' target sets, so probably on `main` too; not checked there). Fix: write each length as `(numerator, denominator)` and read it back as a `Fraction`; make the test fail instead of skipping, once `.mpk` saving works. Fixed in 27516b6e (S-32): lengths persisted as numerator and denominator; the encoding is tested with msgpack directly, the `.mpk` round trip stays skipped (Q-9). | fix(persistence): persist fractional edge lengths in msgpack files. |
 | ✅ | F-20 | code review | bug | medium | `flatland/envs/graph/rail_graph_transition_map.py:153`: `GraphTransitionMap.from_rail_env()` builds the graph with `grid_to_digraph(env.rail)` but doesn't copy the edge lengths; only `GraphRailEnv.from_rail_env` does (`_grid_edge_lengths`). Reproduced: an env with a length 3/2 gives a map with `has_edge_lengths()` False, so the decision point graph built from it has unit lengths. Fix: copy the lengths in `grid_to_digraph` (or in `from_rail_env`) and have `GraphRailEnv.from_rail_env` reuse it. Fixed in 38895290 (S-31): `grid_to_digraph` copies the lengths, so both conversions keep them. | fix(graph): copy edge lengths in GraphTransitionMap.from_rail_env. |
@@ -618,8 +618,9 @@ Goal and design in §4.7.
 
 - The branch merged `main` 40ee6582 (with #545) in 52ffcc2e; its message lists the resolved conflicts
   (`speed_counter.py`, `rail_env.py`, `design_by_contract.md`, tests).
-- `main` is at 3e30f9ef (#566, malfunction reproducibility) since. Before merging the PR, bring the branch up to date
-  again; #566 touches malfunction generation, not the files of the speed and distance code.
+- The branch merged `main` 8a4261a5 (with #541 and #566) in 266d02b8, without conflicts: `persistence.py` and
+  `tests/test_flatland_envs_observations.py` changed on both sides, in different code (#541 saves the state machine
+  setting). Before merging the PR, bring the branch up to date again if `main` has moved on.
 
 ## 12. Change inventory
 
