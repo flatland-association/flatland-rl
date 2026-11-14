@@ -1,0 +1,154 @@
+--- a/flatland/envs/stations_links.py
++++ b/flatland/envs/stations_links.py
+@@ -1,8 +1,20 @@
+ """Data model stations and links, see https://flatland-association.github.io/flatland-book/environment/environment/stations_links.html
+ Convention: use fully qualified names.
++
++Conventions on the grid:
++
++- A node (`Pin.node`, `StoppingPoint.node`) and an edge (`Station.edges`, `Fibre.edges`) is a cell `(row, column)`,
++  row 0 at the top, column 0 on the left: the resource a train occupies, without a direction. It is not a node of
++  `GraphTransitionMap`, which is a cell entered in a direction, `(row, column, direction)`; a graph node belongs to a
++  station, stopping point or pin when its cell does, in every direction.
++- Directions are `Grid4TransitionsEnum`: N=0, E=1, S=2, W=3, N up (row - 1).
++- A gate's key is the side of the station its pins lie on, which is also the direction of a train leaving the station
++  through it: `N`, `E`, `S`, `W`, or `N1`, `N2`, ... along that side when it has several gates. Its pins are numbered
++  from 0.
++- Everything grid-specific beyond cells and gate keys is in `Station.grid`, so a non-grid producer can leave it out.
+ """
+ from dataclasses import dataclass
+-from typing import Dict, List
++from typing import Dict, List, Optional, Tuple
+ 
+ from flatland.core.grid.grid_utils import IntVector2D
+ 
+@@ -29,6 +41,17 @@
+ 
+ 
+ @dataclass(frozen=True)
++class GridStation:
++    """Where a station lies on the grid, as the rail generator's `agents_hints` describe it."""
++    # The station's reference cell (agents_hints' city_position).
++    position: IntVector2D
++    # A direction along the station's tracks (agents_hints' city_orientation); d and (d + 2) % 4 are the same axis.
++    orientation: int
++    # Inclusive rectangle (row 0, column 0, row 1, column 1) the station was drawn or generated in; contains all edges.
++    bounding_box: Optional[Tuple[int, int, int, int]] = None
++
++
++@dataclass(frozen=True)
+ class Station:
+     # A, B, ..., Z, AA, AB, .., ZZ, ..
+     name: str
+@@ -36,6 +59,11 @@
+     gates: Dict[str, Gate]
+     stopping_points: List[StoppingPoint]
+     edges: List[IntVector2D]
++    # Optional, so that producers and pickles from before keep working.
++    # The producer's own key for the station (e.g. the drawing tool's station id, the city index); not the name.
++    id: Optional[int] = None
++    # Grid-specific placement; None for producers without a grid.
++    grid: Optional[GridStation] = None
+ 
+ 
+ @dataclass(frozen=True)
+--- a/flatland/envs/rail_generators.py
++++ b/flatland/envs/rail_generators.py
+@@ -20,7 +20,7 @@
+ from flatland.envs.grid4_generators_utils import connect_rail_in_grid_map, connect_straight_line_in_grid_map, \
+     fix_inner_nodes, align_cell_to_city
+ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+-from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks
++from flatland.envs.stations_links import Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks, GridStation
+ 
+ RailGeneratorProduct = Tuple[RailGridTransitionMap, Optional[Dict]]
+ """ A rail generator returns a RailGenerator Product, which is just
+@@ -189,6 +189,14 @@
+     return f"{_gate_name(station_idx, gate_idx)}.{track_number}"
+ 
+ 
++def _bounding_box(city_position: IntVector2D, city_radius: int, height: int, width: int) -> Tuple[int, int, int, int]:
++    """
++    The city's square, `city_radius` around its position, clipped to the grid: (r0, c0, r1, c1), inclusive.
++    """
++    r, c = city_position
++    return max(0, r - city_radius), max(0, c - city_radius), min(height - 1, r + city_radius), min(width - 1, c + city_radius)
++
++
+ def _stopping_point_name(station_idx: int, stopping_point_idx: int) -> str:
+     """
+     Stopping point name: <station name>.<stopping point index>
+@@ -357,7 +365,8 @@
+                 positions_diamond_crossings = (grid_map.grid == RailEnvTransitionsEnum.diamond_crossing).nonzero()
+                 level_free_positions = {(positions_diamond_crossings[0][choice[i]], positions_diamond_crossings[1][choice[i]]) for i in range(len(choice))}
+ 
+-        stations_links = self._extract_stations_links(grid_map, free_rails, inter_city_lines_split, outer_connection_points, train_stations)
++        stations_links = self._extract_stations_links(grid_map, free_rails, inter_city_lines_split, outer_connection_points, train_stations,
++                                                      city_positions, city_orientations, city_radius)
+ 
+         return grid_map, {
+             'agents_hints':
+@@ -371,7 +380,8 @@
+         }
+ 
+     def _extract_stations_links(self, grid_map: RailGridTransitionMap, free_rails: tuple[list[Any], list[list[list[Any]]]],
+-                                inter_city_lines_split: list[list[Any]], outer_connection_points, train_stations: list[list[tuple[Any, int]]]) -> StationsLinks:
++                                inter_city_lines_split: list[list[Any]], outer_connection_points, train_stations: list[list[tuple[Any, int]]],
++                                city_positions: list[IntVector2D], city_orientations: list[int], city_radius: int) -> StationsLinks:
+         # collect and group fibres
+         city_to_gate_to_pins = {i: {k: pins for k, pins in enumerate(city)} for i, city in
+                                 enumerate(outer_connection_points)}
+@@ -417,10 +427,16 @@
+                     StoppingPoint(node=train_station[0], name=_stopping_point_name(i, train_station[1]))
+                     for train_station in train_stations_city
+                 ],
+-                edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction]
++                edges=[c for bar in free_rails_city for c in bar] + [ocp for direction in outer_connection_points_city for ocp in direction],
++                id=i,
++                grid=GridStation(
++                    position=tuple(city_position),
++                    orientation=int(city_orientation),
++                    bounding_box=_bounding_box(city_position, city_radius, grid_map.height, grid_map.width),
++                ),
+             )
+-            for i, (free_rails_city, outer_connection_points_city, train_stations_city) in
+-            enumerate(zip(free_rails_flooded, outer_connection_points, train_stations))
++            for i, (free_rails_city, outer_connection_points_city, train_stations_city, city_position, city_orientation) in
++            enumerate(zip(free_rails_flooded, outer_connection_points, train_stations, city_positions, city_orientations))
+         }
+ 
+         links = [
+--- a/tests/test_flatland_envs_sparse_rail_generator.py
++++ b/tests/test_flatland_envs_sparse_rail_generator.py
+@@ -11,7 +11,7 @@
+ from flatland.envs.observations import GlobalObsForRailEnv
+ from flatland.envs.rail_env import RailEnv
+ from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name, _stopping_point_name
+-from flatland.envs.stations_links import Pin
++from flatland.envs.stations_links import Pin, Station
+ from flatland.utils.rendertools import RenderTool
+ 
+ 
+@@ -678,3 +678,22 @@
+     pin = Pin(node=(0, 0), name="A.N.0")
+     with pytest.raises(dataclasses.FrozenInstanceError):
+         pin.name = "changed"
++
++
++def test_stations_links_station_reference_fields():
++    """Each station carries its id (city index), its grid position and orientation as in agents_hints, and a
++    bounding box containing all its edges."""
++    rail, optionals = sparse_rail_generator(max_num_cities=3, seed=1, max_rail_pairs_in_city=2)(30, 30, 2, 0, np.random.RandomState(1))
++    hints = optionals['agents_hints']
++    stations = list(optionals['stations_links'].stations.values())
++    assert [s.id for s in stations] == list(range(len(hints['city_positions'])))
++    assert [s.grid.position for s in stations] == [tuple(p) for p in hints['city_positions']]
++    assert [s.grid.orientation for s in stations] == [int(o) for o in hints['city_orientations']]
++    for s in stations:
++        r0, c0, r1, c1 = s.grid.bounding_box
++        assert all(r0 <= r <= r1 and c0 <= c <= c1 for r, c in s.edges)
++
++
++def test_station_without_reference_fields_is_unchanged():
++    station = Station(name='A', gates={}, stopping_points=[], edges=[])
++    assert (station.id, station.grid) == (None, None)

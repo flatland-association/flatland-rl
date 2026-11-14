@@ -1,0 +1,692 @@
+{
+ "format": "flatland-scenario",
+ "version": "1.0.0",
+ "binding": "grid",
+ "extensions_used": {
+  "drawing-tool": null,
+  "flatland-scenarios": null
+ },
+ "configuration": {
+  "rail": {
+   "width": 25,
+   "height": 6,
+   "transitions": [
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     16386,
+     1025,
+     1025,
+     1025,
+     4608,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     4,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     3089,
+     1025,
+     1025,
+     1025,
+     1097,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     1025,
+     256,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ],
+    [
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0,
+     0
+    ]
+   ],
+   "level_free_positions": []
+  },
+  "stations_links": {
+   "version": "2.0.0",
+   "binding": "grid",
+   "extensions_used": {
+    "drawing-tool": null
+   },
+   "stations": {
+    "A": {
+     "name": "A",
+     "id": 1,
+     "area": [
+      [
+       2,
+       2
+      ],
+      [
+       2,
+       3
+      ],
+      [
+       2,
+       4
+      ]
+     ],
+     "gates": {
+      "E": {
+       "name": "A.E",
+       "pins": {
+        "0": {
+         "name": "A.E.0",
+         "node": [
+          2,
+          4
+         ]
+        }
+       }
+      },
+      "W": {
+       "name": "A.W",
+       "pins": {
+        "0": {
+         "name": "A.W.0",
+         "node": [
+          2,
+          2
+         ]
+        }
+       }
+      }
+     },
+     "stopping_points": [
+      {
+       "name": "A.0",
+       "node": [
+        2,
+        3
+       ]
+      }
+     ],
+     "placement": {
+      "position": [
+       2,
+       3
+      ],
+      "orientation": 90.0,
+      "outline": [
+       [
+        1,
+        2
+       ],
+       [
+        1,
+        4
+       ],
+       [
+        3,
+        4
+       ],
+       [
+        3,
+        2
+       ]
+      ]
+     }
+    },
+    "B": {
+     "name": "B",
+     "id": 2,
+     "area": [
+      [
+       2,
+       20
+      ],
+      [
+       2,
+       21
+      ],
+      [
+       2,
+       22
+      ]
+     ],
+     "gates": {
+      "E": {
+       "name": "B.E",
+       "pins": {
+        "0": {
+         "name": "B.E.0",
+         "node": [
+          2,
+          22
+         ]
+        }
+       }
+      },
+      "W": {
+       "name": "B.W",
+       "pins": {
+        "0": {
+         "name": "B.W.0",
+         "node": [
+          2,
+          20
+         ]
+        }
+       }
+      }
+     },
+     "stopping_points": [
+      {
+       "name": "B.0",
+       "node": [
+        2,
+        21
+       ]
+      }
+     ],
+     "placement": {
+      "position": [
+       2,
+       21
+      ],
+      "orientation": 90.0,
+      "outline": [
+       [
+        1,
+        20
+       ],
+       [
+        1,
+        22
+       ],
+       [
+        3,
+        22
+       ],
+       [
+        3,
+        20
+       ]
+      ]
+     }
+    }
+   },
+   "links": [
+    {
+     "from_gate": "A.E",
+     "to_gate": "B.W",
+     "fibres": [
+      {
+       "from_pin": "A.E.0",
+       "to_pin": "B.W.0",
+       "edges": [
+        [
+         1,
+         10
+        ],
+        [
+         1,
+         11
+        ],
+        [
+         1,
+         12
+        ],
+        [
+         1,
+         13
+        ],
+        [
+         1,
+         14
+        ],
+        [
+         2,
+         5
+        ],
+        [
+         2,
+         6
+        ],
+        [
+         2,
+         7
+        ],
+        [
+         2,
+         8
+        ],
+        [
+         2,
+         9
+        ],
+        [
+         2,
+         10
+        ],
+        [
+         2,
+         11
+        ],
+        [
+         2,
+         12
+        ],
+        [
+         2,
+         13
+        ],
+        [
+         2,
+         14
+        ],
+        [
+         2,
+         15
+        ],
+        [
+         2,
+         16
+        ],
+        [
+         2,
+         17
+        ],
+        [
+         2,
+         18
+        ],
+        [
+         2,
+         19
+        ]
+       ]
+      }
+     ]
+    }
+   ],
+   "gate_links": [
+    {
+     "from_gate": "A.W",
+     "to_gate": "A.E",
+     "fibres": [
+      {
+       "from_pin": "A.W.0",
+       "to_pin": "A.E.0",
+       "edges": [
+        [
+         2,
+         3
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "from_gate": "B.W",
+     "to_gate": "B.E",
+     "fibres": [
+      {
+       "from_pin": "B.W.0",
+       "to_pin": "B.E.0",
+       "edges": [
+        [
+         2,
+         21
+        ]
+       ]
+      }
+     ]
+    }
+   ]
+  },
+  "lines": [
+   {
+    "handle": 0,
+    "waypoints": [
+     [
+      {
+       "position": [
+        2,
+        3
+       ],
+       "direction": 1
+      }
+     ],
+     [
+      {
+       "position": [
+        2,
+        21
+       ],
+       "direction": 1
+      },
+      {
+       "position": [
+        2,
+        21
+       ],
+       "direction": 3
+      }
+     ]
+    ],
+    "earliest_departures": [
+     0,
+     null
+    ],
+    "latest_arrivals": [
+     null,
+     18
+    ],
+    "max_speed": "1"
+   },
+   {
+    "handle": 1,
+    "waypoints": [
+     [
+      {
+       "position": [
+        2,
+        21
+       ],
+       "direction": 3
+      }
+     ],
+     [
+      {
+       "position": [
+        2,
+        3
+       ],
+       "direction": 1
+      },
+      {
+       "position": [
+        2,
+        3
+       ],
+       "direction": 3
+      }
+     ]
+    ],
+    "earliest_departures": [
+     2,
+     null
+    ],
+    "latest_arrivals": [
+     null,
+     20
+    ],
+    "max_speed": "1"
+   }
+  ],
+  "max_episode_steps": 40,
+  "seed": 42,
+  "generators": {
+   "rail": {
+    "cls": "flatland.envs.rail_generators.RailFromGridGen"
+   },
+   "line": {
+    "cls": "flatland.envs.line_generators.FileLineGenerator"
+   },
+   "timetable": {
+    "cls": "flatland.envs.timetable_generators.FileTimetableGenerator"
+   },
+   "effects": {
+    "cls": "flatland.envs.malfunction_effects_generators.MalfunctionEffectsGenerator"
+   }
+  },
+  "skip_state_machine_update": true,
+  "extensions": {
+   "drawing-tool": {
+    "cellSize": 30,
+    "nextStationId": 3,
+    "lines": [
+     {
+      "id": 1794084461089,
+      "name": "A-B",
+      "stationIds": [
+       1,
+       2
+      ],
+      "startCell": {
+       "r": 2,
+       "c": 3
+      },
+      "endCell": {
+       "r": 2,
+       "c": 21
+      }
+     },
+     {
+      "id": 1794084473831,
+      "name": "B-A",
+      "stationIds": [
+       2,
+       1
+      ],
+      "startCell": {
+       "r": 2,
+       "c": 21
+      },
+      "endCell": {
+       "r": 2,
+       "c": 3
+      }
+     }
+    ],
+    "timetables": [
+     {
+      "id": 1794084502192,
+      "name": "AB",
+      "lineId": 1794084461089,
+      "trainCategoryId": 1,
+      "trainCategory": "IC",
+      "travelFactor": 1,
+      "dwellTime": 2,
+      "stops": [
+       {
+        "stationId": 1,
+        "earliestDeparture": 0,
+        "latestArrival": null
+       },
+       {
+        "stationId": 2,
+        "earliestDeparture": 22,
+        "latestArrival": 18
+       }
+      ]
+     },
+     {
+      "id": 1794084521320,
+      "name": "BA",
+      "lineId": 1794084473831,
+      "trainCategoryId": 1,
+      "trainCategory": "IC",
+      "travelFactor": 1,
+      "dwellTime": 2,
+      "stops": [
+       {
+        "stationId": 2,
+        "earliestDeparture": 2,
+        "latestArrival": null
+       },
+       {
+        "stationId": 1,
+        "earliestDeparture": 22,
+        "latestArrival": 20
+       }
+      ]
+     }
+    ],
+    "trainCategories": {
+     "IC": {
+      "id": 1,
+      "description": "High-Speed",
+      "speed": 1
+     },
+     "RE": {
+      "id": 2,
+      "description": "Express",
+      "speed": 0.8
+     },
+     "S": {
+      "id": 3,
+      "description": "Local",
+      "speed": 0.6
+     },
+     "C": {
+      "id": 4,
+      "description": "Cargo",
+      "speed": 0.5
+     }
+    },
+    "trains": {
+     "0": "AB",
+     "1": "BA"
+    }
+   },
+   "flatland-scenarios": {
+    "malfunctions": {
+     "scheduled": [
+      {
+       "train": "AB",
+       "step": 8,
+       "duration": 4
+      }
+     ]
+    }
+   }
+  }
+ },
+ "state": {}
+}
