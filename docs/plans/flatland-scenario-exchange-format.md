@@ -798,6 +798,21 @@ or block of a file, the code that reads it, what flatland-ui-hub makes of it, an
 (S-11, S-12). `GET /hmi/geography` is the one station source for the map's names, the ZWL (time-distance diagram)
 axis, the route picker and the impact assessment; the env drives the simulation.
 
+In short:
+
+| Flavour | Read at run time | Not read |
+|---|---|---|
+| plan-b folders | `scenario.pkl` → the env; `env.stations_links` → `_stations_links_geography` → `/hmi/geography` rows `{code, name, track: i + 1, cell}`; `generator.json`'s `timetables[i].name` → train names; `scenario.json` → intro card, pace, `locked` | `draw.json`, `config.json` (kept only to rebuild the `.pkl`) |
+| Olten | `olten*.pkl` → the env; `olten.geography.json` → `network_geography`, used as it is; `disturbances_tour/` → the disturbances a session can pick | - |
+| PF–CH | `*.scene.json`: `cells` → rail and `agents` → trains (`infrastructure_scene_adapter`), `stations`/`metadata` → `scene_geography`; `*.plan.json`'s `trainruns` → `plans.load_plan` → the plan policy; `disturbances*/` | - |
+| Gotthard | - | `gotthard.topology.json` and `gotthard.traffic.json`: read only by `scripts/generate_gotthard.py` and a test; no session uses them yet |
+| ECML2026 | `ecml2026_scene1_level0.pkl` → the env, with no `/hmi/geography` names | `stations.pkl` |
+
+The last column of the detailed table below says where a block goes in the exchange format: the `configuration`
+(rail, `stations_links`, lines), the `state` (what changes while a scenario runs), an owner's extension
+(`drawing-tool`, `flatland-ui-hub` or `flatland-scenarios`), or nowhere, staying flatland-ui-hub's own file
+(`scenario.json`, the disturbance files, Gotthard's traffic).
+
 | Flavour | File: block (excerpt) | Read by | Goes into (flatland-ui-hub) | Exchange format |
 |---|---|---|---|---|
 | plan-b folder (`tutorial`, `uc2-1`…`uc2-4`) | `scenario.pkl`: the env | `experiment_scenarios` via `RailEnvPersister.load_new` | the session's env: rail, agents, timetables, scheduled malfunctions | `configuration` and `state`; the `.pkl` a cache (S-11) |
