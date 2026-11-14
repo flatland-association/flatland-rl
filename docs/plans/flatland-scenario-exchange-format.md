@@ -11,8 +11,7 @@
 > serialization of all generators); implements [#129](https://github.com/flatland-association/flatland-rl/issues/129) (state and configuration representation). Split out of flatland-scenarios PR
 > [#39](https://github.com/flatland-association/flatland-scenarios/pull/39) (its plan's Q-4), which decided it out of
 > scope there; the PR #39 plan's decisions this plan relies on are restated where they are used; read against flatland-scenarios PR #39 at `150782e` and flatland-ui-hub
-> [#164](https://github.com/flatland-association/flatland-ui-hub/pull/164) (merged, `c33028f`). No issue. All questions
-> decided (§9.1).
+> [#164](https://github.com/flatland-association/flatland-ui-hub/pull/164) (merged, `c33028f`). No issue. All questions decided.
 >
 > **Why:** stations and links are written in three repos, each with its own converter: the drawing tool's export,
 > flatland-rl's `StationsLinks`, and flatland-ui-hub's station geography. The converters lose data (ids, areas, grid
@@ -111,7 +110,7 @@ The repos and their roles:
 |---|---|---|---|---|
 | Links and fibres drawn in the drawing tool. | The tool does not capture lines between station areas yet; the format already has links. | PR #39 | - | - |
 | Stations in simplified graphs (`DecisionPointGraph`). | Merged nodes can swallow a station's cells. | §4.6 | - | - |
-| Incremental snapshots: a state stored as a diff against a base snapshot (e.g. per step in evaluation trajectories). | Needs a diffable format first (NFR-4); the increment format is its own design. | NFR-4 | - | - |
+| Incremental snapshots: a state stored as a diff against a base snapshot (e.g. per step in evaluation trajectories). | Needs a diffable format first (NFR-4) and the state document (Q-20 b)); the increment format is its own design. | NFR-4, Q-20 | - | - |
 | A check in `StationsLinks` that a station's pins are complete (book plan REQ-5): every transition from its area to outside starts at a listed pin; next to a check of unique gate and pin names. | Needs the station area (book plan Q-4 b), Q-8) and the transition map; the drawing tool's own check is in the book plan's drawing tool draft (row below). | §2.2 | - | - |
 | Links from the grid include loops of the line back to the own station, as a `Link` whose two gates are in that station, or one gate to itself (book plan Q-19). | Producers derive links from the transition map only later (book plan Q-5); today sparse makes no link for such a loop. | §4.9 | - | - |
 | Both producers fill `gate_links`, and `Chain` in `stations_links.py`: a gate link bundles the fibres through a station between two of its gates, stored like links (book plan Q-6, Q-9 d)); a chain alternates links and gate links. | Code in flatland-rl and both producers; the class and the field land before S-2's release (Q-17 a)), the producers fill them later. Book plan draft: [`issue-flatland-rl-gate-links-and-chains.md`](https://github.com/flatland-association/flatland-book/blob/2f599ca/docs/plans/stations-links-logical-model/issue-flatland-rl-gate-links-and-chains.md). | Q-13 | - | - |
@@ -341,6 +340,7 @@ files and the format is shown side by side in [`side-by-side.html`](flatland-sce
 | T-1 | `.pkl` (`RailEnvPersister`) | the regression episodes, ECML2026, flatland-ui-hub's plan-b `scenario.pkl` and `olten.pkl` | `.pkl` → exchange → `.pkl` | the full state equal except what is derived (distance map, caches, `agent_positions`, `TrainState`); replaying the recorded actions gives the same trajectory | S-6 |
 | T-2 | `RailEnv` in memory | `sparse_rail_generator` envs, the tutorial at step 0 and step 10 (§4.10) | env → exchange → env | as T-1 | S-6 |
 | T-3 | `GraphRailEnv` | `from_rail_env` of T-2's envs | env → exchange → env; the grid and the graph document of one env | as T-1; both documents give the same trajectory | S-6 |
+| T-10 | State document (Q-20) | the tutorial: configuration once, a state document at steps 0, 5 and 10 | configuration + state → env, against T-2's env at that step; a state joined with another configuration, or another binding | the same env; the mismatch refused | S-6 |
 | T-4 | `stations_links` alone | sparse, the book plan's `example-*.json`, all three bindings | `from_dict(to_dict(x)) == x`; valid against its binding's schema | equal objects | S-2, S-4 |
 | T-5 | Binary encoding | all documents of T-1–T-4 | JSON → binary → JSON and binary → JSON → binary | identical documents | S-6 |
 | T-6 | Drawing tool export, the exchange format | flatland-scenarios' examples, flatland-ui-hub's plan-b folders | export → load → export | identical bytes | S-8 |
@@ -694,7 +694,7 @@ A scenario in the exchange format has two parts ([#129](https://github.com/flatl
 |---|---|
 | human-readable, machine-diffable (NFR-4) | JSON, deterministic key order, cells as lists; generators by class name (Q-16) |
 | backwards compatibility and versioning (NFR-2, REQ-12) | `version` at the top (Q-6); readers convert older versions; old `.pkl`s convert on load and through `RailEnvPersister` (§8.2) |
-| schema (REQ-11) | one JSON schema per binding for the scenario, the stations and links part as today (§4.4) |
+| schema (REQ-11) | one JSON schema per binding for the scenario, the stations and links part as today (§4.4); a state document with a schema of its own per binding, for small snapshots (Q-20 b), below) |
 | performance and size (NFR-5) | benchmarked against `.pkl` and `.mpk` for the ECML2026 scenarios (S-6); no budgets yet (Q-15 c)) |
 | normalization | configuration and state apart, as above |
 
@@ -757,6 +757,16 @@ The scenario's `binding` and its embedded `stations_links`'s are the same: `scen
 `from_exchange` checks the two are equal for readers that do not validate. A mismatch would make the stations refer to
 resources the rail does not have (graph node ids on a grid, grid positions read as latitude and longitude).
 
+A snapshot needs only the state (Q-20 b)). Next to the scenario document, the **state document** holds one state
+alone: `{"format": "flatland-scenario-state", "version", "binding", "configuration_hash", "state": {…}}`, validated by
+`scenario-state.<binding>.schema.json`, whose `state` is the scenario schema's `state` by `$ref`. `configuration_hash`
+is `sha256:` and the hex SHA-256 of the configuration in canonical JSON (sorted keys, no whitespace, UTF-8), so a
+state cannot be joined with another configuration. `to_exchange(env, part="state")` writes it;
+`from_exchange(configuration, state)` joins a configuration and a state document, and refuses a state whose hash or
+binding does not match. A trajectory then stores its configuration once and one state document per snapshot. The
+scenario document keeps its optional `state`, so a single file still holds a whole started scenario. Increments
+against a previous state are a follow-up (§1.4) on top of the state document.
+
 Left out of the state, since derived or caches (DP-5): the distance map (most of a `.pkl`'s size, Q-15),
 `dev_pred_dict`, `dev_obs_dict`, `agent_positions`, the agents' `TrainState` and state machine signals (derived by
 `EnvAgent.derived_state()`), `next_entry_point`, the speed counter's `edge_length` (the length of the agent's edge, from
@@ -782,6 +792,31 @@ document, the geography's rows its stations with flatland-ui-hub's extension (`t
 `*.scene.json` become scenario documents (rail and stations), their `*.plan.json` the lines and timetables; the
 Gotthard topology's operating points become stations of binding `graph-geo` (S-12), its other parts stay
 flatland-ui-hub's until it has rail (§1.4); the ECML2026 pickles are converted like any `.pkl`.
+
+**What flatland-ui-hub reads, block by block** (flatland-ui-hub `fd0c70c`, checked 2026-11-14): per flavour, each file
+or block of a file, the code that reads it, what flatland-ui-hub makes of it, and where it sits in the exchange format
+(S-11, S-12). `GET /hmi/geography` is the one station source for the map's names, the ZWL (time-distance diagram)
+axis, the route picker and the impact assessment; the env drives the simulation.
+
+| Flavour | File: block (excerpt) | Read by | Goes into (flatland-ui-hub) | Exchange format |
+|---|---|---|---|---|
+| plan-b folder (`tutorial`, `uc2-1`…`uc2-4`) | `scenario.pkl`: the env | `experiment_scenarios` via `RailEnvPersister.load_new` | the session's env: rail, agents, timetables, scheduled malfunctions | `configuration` and `state`; the `.pkl` a cache (S-11) |
+| | `scenario.pkl`: `env.stations_links.stations[name].stopping_points[i].node` | `_stations_links_geography` | `/hmi/geography` rows `{code: name, name, track: i + 1, cell: node, kind: "platform"}`, `layout: "corridor"` | `configuration.stations_links`, through the adapter (S-9) |
+| | `generator.json`: `gridDimensions`, `timetables[i].name` | `_load_train_names` | train names in handle order (`G4`, `IC3`, …), checked against the `.pkl`'s size and train count | the `drawing-tool` extension (the tool's timetables by name) |
+| | `scenario.json`: `title`, `description`, `image`, `source`, `seconds_per_step`, `locked` | `experiment_scenarios` (`ScenarioMeta`, `scenario.schema.json`) | the intro card, the pace, "locked" (no disturbances or live malfunctions) | unchanged: flatland-ui-hub's own file |
+| | `draw.json`, `config.json` | not read | kept to rebuild the `.pkl` with `scenario_generator` | the document itself (Q-5); `seed` → `configuration.seed`, `malfunctions.scheduled` → the `flatland-scenarios` extension |
+| Olten (`olten`, `olten-dense`, `olten-disrupted`, `olten-partially-closed`) | `olten*.pkl`: the env | `env_factory` via `RailEnvPersister.load_new` | the session's env | `configuration` and `state`; the `.pkl` a cache |
+| | `olten.geography.json`: `{"layout": "network", "stations": [{"code": "OL", "name": "Olten", "track": 1, "cell": [37, 7], "kind": "platform", "basis": "…"}], "locations": [], "single_track": []}` | `network_geography` | `/hmi/geography` as it is | `configuration.stations_links`, `track` and `basis` as `flatland-ui-hub` extension (S-12) |
+| | `disturbances_tour/*.json` | `list_disturbances` | the disturbances a session can pick | not covered: flatland-ui-hub's files |
+| PF–CH (`pf-ch-corridor`, `-stops`, `-wn-wal-conflict`, `-wn-wal-long-approach`) | `*.scene.json`: `cells` (`{"x": 0, "y": 0, "kind": "dead-end", "connections": ["E"]}`) | `infrastructure_scene_adapter` | the env's rail | `configuration.rail` (S-12) |
+| | `*.scene.json`: `agents` (`start`, `target`, `speed`, `metadata.from`/`to`) | `infrastructure_scene_adapter` | the trains, their start, target and stops | `configuration.lines` |
+| | `*.scene.json`: `stations` (`{"x": 17, "y": 0, "metadata": {"station": "Siebnen-Wangen", "code": "SIB", "track": 1}}`), `metadata.locationOrder`, `locationColumns`, `singleTrackSection` | `scene_geography` (names from `STATION_NAMES`) | `/hmi/geography` rows `{code, name, track, cell}`, places by column, the single-track section, `layout: "corridor"` | `configuration.stations_links` (book plan §8.4), `track` as `flatland-ui-hub` extension |
+| | `*.plan.json`: `trainruns` (`{"0": [{"scheduled_at": 6, "position": [3, 12], "direction": 1}, …]}`) | `plans.load_plan` | the plan policy's route and timing per train (`env._trainrun_plan`) | `configuration.lines` and timetables, the run per cell as `flatland-ui-hub` extension |
+| | `disturbances*/*.json` | `list_disturbances` | the disturbances a session can pick | not covered: flatland-ui-hub's files |
+| Gotthard | `gotthard.topology.json`: `operatingPoints` (`{"id": "GD", "name": "Arth-Goldau", "kind": "station", "kmBG": 8.864, "lat": 47.049, "lon": 8.549, "route": "north"}`), `portals`, `sections`, `routes`, `crossovers` | not read at run time: only `scripts/generate_gotthard.py` and `tests/test_gotthard_fixtures.py` | no session yet | `operatingPoints` → stations of binding `graph-geo` (S-12); the rest stays flatland-ui-hub's (§1.4) |
+| | `gotthard.traffic.json`: `volumes`, `passenger`, `freight` | as above | no session yet | stays flatland-ui-hub's |
+| ECML2026 (`ecml2026-scene1-level0`) | `ecml2026_scene1_level0.pkl`: the env | `env_factory` via `RailEnvPersister.load_new` | the session's env; no `/hmi/geography` names (no sidecar) | `configuration` and `state`, its `stations_links` included |
+| | `stations.pkl` | not read | - | stations through the `.pkl`'s `stations_links`, or the book plan's `stations.pkl` mapping (its §8.4) |
 
 ## 5. Building block view
 
@@ -923,6 +958,7 @@ Compared with flatland-rl `main`. What is reused, and what is not new on purpose
 | PAT-16 | Golden fixtures: the envs the old code builds are saved before the old code is removed, and the new path is checked against them | T-7, S-7 |
 | PAT-17 | Converter and switch in one PR, the converter's commits first, so every commit reads its own fixtures | §4.5, S-7, S-8 |
 | PAT-18 | Rollout across repos in waves, each consumer moving only on a released and pinned flatland-rl | §11.2 |
+| PAT-19 | A state document bound to its configuration by a content hash of the canonical JSON | §4.10, Q-20 |
 
 The model's own patterns (gates by the corridor rule, derived entry points, places as stations) are in the book plan's
 §8.1.
@@ -1066,6 +1102,22 @@ flatland-ui-hub's. Where the book plan answers a question, its answer holds (C-8
   (equal, §4.10). Not taken: a) the caller passes it to `to_exchange` (each caller must know it); c) guessed from
   the placements (fails for planar coordinates).
 
+- ~~**(Q-20)** A schema of its own for the state, so a snapshot holds only the env's dynamic part. #129 asks to
+  normalize state apart from configuration and names incremental snapshots (e.g. per step in evaluation) as a later
+  use. The plan splits the document into `configuration` and `state` (§4.10) and leaves derived data out of the
+  state, but has one scenario schema per binding, and a document always carries its configuration: a per-step
+  snapshot repeats the rail, the stations and links and the timetables every step.~~ ✅ Decided 2026-11-14: b) (§4.10).
+  - a) As now: one document, `state` optional; a snapshot is a whole document. Simple; snapshots stay large
+    (the rail grows with the grid, PR #97's 200 × 200 case).
+  - b) Two documents: the scenario document as now (configuration, optionally a state), and a state document of its
+    own (`format` `flatland-scenario-state`, its own `version`, schema `scenario-state.<binding>.schema.json`) that
+    names the configuration it belongs to by a content hash. A trajectory stores the configuration once and a state
+    per snapshot; `from_exchange(configuration, state)` joins them, refusing a state whose hash does not match.
+  - c) b), and increments (a state as a diff against a previous one) in the same step.
+
+  *Proposal:* b): the split already exists in S-5 and S-6, so the extra schema is small and keeps snapshots to the
+  dynamic part; increments stay the follow-up of §1.4, built on b)'s state document. Needed before S-6.
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -1094,6 +1146,7 @@ flatland-ui-hub's. Where the book plan answers a question, its answer holds (C-8
 | 2026-11-14 | ✅ Q-19 b): the env carries its binding (`AbstractRailEnv.binding`), set by the builder; `to_exchange` writes it. | The builder knows whether its coordinates are grid positions or `(lat, lon)`; the writer and later readers of the env need no extra argument. Not taken: a) a `binding` argument per call, c) a guess from the placements. | S-4 adds the attribute, S-6 writes it; the scenario's and `stations_links`'s bindings stay equal (§4.10). |
 | 2026-11-14 | ✅ Q-18 c): no in-between export; the drawing tool switches to the exchange format with S-8, S-3 is dropped, S-7 and S-8 land in one flatland-scenarios PR. | One switch for the tool and its fixtures, no interim shape to convert again; the cost is a later switch, after #129's release. Not taken: a) side-by-side keys, b) a scenario shell with the tool's data as extension. | §4.5, §5.1, S-7, S-8, §11.2; the S-3 draft removed. |
 | 2026-11-14 | ✅ Q-17 a): `gate_links` is part of 2.0.0; the book plan's gate links issue lands the class and the field before S-2's release, producers fill them later. | The class is small, the book plan's examples already carry it, and 2.1.0 stays free for `Track`. Not taken: b), a minor version right after 2.0.0. | S-2 needs the class; §11.2's wave 2. |
+| 2026-11-14 | ✅ Q-20 b): a state document of its own (`flatland-scenario-state`, schema `scenario-state.<binding>.schema.json`), naming its configuration by a SHA-256 of the canonical JSON; `from_exchange(configuration, state)` joins them. | #129 asks for state apart from configuration and small snapshots; the split of S-5 and S-6 already exists, so one small schema keeps a snapshot to the env's dynamic part. Not taken: a) whole documents per snapshot (the rail repeated every step), c) increments now (their own design). | §4.10, PAT-19, S-6 (no longer blocked); increments stay a follow-up (§1.4). |
 
 ### 9.3 Code Review Findings
 
@@ -1109,6 +1162,7 @@ None yet.
 |---|---|
 | Exchange format | A scenario in JSON: configuration (rail, `StationsLinks` 2.0.0, lines, timetables, generators) and state (§4.10); what the drawing tool writes and every repo reads. Not flatland-ui-hub's geography, not a pickle. |
 | Configuration, state | What builds an env, and what changes while it runs ([#129](https://github.com/flatland-association/flatland-rl/issues/129)). |
+| State document (`flatland-scenario-state`) | One state alone, naming its configuration by `configuration_hash`, for snapshots (Q-20). Not a scenario document, which always holds the configuration. |
 | Placement (`Station.placement`) | Where a station is drawn: `position` (the env's `CoordinateT`: `(r, c)` or `(lat, lon)`), `orientation` (a bearing) and an optional `outline` (the drawn shape). Not the area, which holds rail resources. |
 | Station id (`Station.id`) | The producer's own key (the drawing tool's station id, the city index). Not the name. |
 | Resource (`ResourceT`) | What a train occupies: on grid a cell `(r, c)`, or `((r, c), d % 2)` at a level-free crossing; on a graph converted from a grid `"(r, c)"` or `"(r, c, d % 2)"`. Not a graph node. |
@@ -1142,7 +1196,7 @@ flatland-scenarios and flatland-ui-hub.
 | 💡 S-7 | - | External converter: a command-line script turns the drawing tool's older exports (flat per-cell, `station_cells`, PR #39's `stations` list) into whole scenario documents of the exchange format (grid, stations, lines, timetables); the stored fixtures converted with it, in one PR with S-8, S-7 first (§4.5); the envs the old `scenario_generator` builds saved first as T-7's fixtures. Repo: flatland-scenarios. Verification (T-7): every older fixture converts, validates against the scenario schema of the grid binding and builds the same env as before. | feature | - | feat(scenario_generator): convert older drawing tool exports to the exchange format. |  | S-6 released | - |
 | 💡 S-4 | - | Generic stations links and `CoordinateT` on `AbstractRailEnv` (every rail field a resource, book plan Q-14 revisited, Q-17; issue draft [`issue-flatland-rl-generic-stations-links.md`](https://github.com/flatland-association/flatland-book/blob/2f599ca/docs/plans/stations-links-logical-model/issue-flatland-rl-generic-stations-links.md)), resource lookups, `GraphRailEnv` carries `stations_links`, `AbstractRailEnv.binding` set by each builder (Q-19), the graph and graph-geo schemas, 1.x pickles' level-free crossing cells converted on load (§4.6, §8.2). Repo: flatland-rl. Verification (T-4): converting a `RailEnv`'s stations links maps every resource to the graph's resource; `from_rail_env` keeps `stations_links`; level-free crossings hold the axis's resource, also in an old `.pkl`; the book plan's `example-graph.json` and `example-graph-geo.json` validate and round-trip. | feature | - | feat(graph): type stations and links by the env's resource and coordinate types, and carry them into GraphRailEnv. |  | S-1, S-2 | - |
 | 💡 S-5 | - | Scenario configuration: serialize rail, line, timetable and effects generators generically into the format, by class name (parameters only to regenerate, Q-16), with the rail's edge lengths (PR #542), `max_episode_steps`, the seed and `skip_state_machine_update`, and the configuration's schema with the stations and links schema by `$ref` (§4.10). Repo: flatland-rl. Verification: configuration → env → configuration is unchanged, also with fractional edge lengths, for `sparse_rail_generator` envs and the ECML2026 scenarios. | feature | - | feat(persistence): add scenario configuration to the exchange format. |  | S-2 | [#145](https://github.com/flatland-association/flatland-rl/issues/145), [#242](https://github.com/flatland-association/flatland-rl/issues/242) |
-| 💡 S-6 | - | Scenario state and the hops of §4.10: `RailEnv`, `GraphRailEnv` and `.pkl` ↔ exchange format; schema, version, saving `.mpk` repaired (on `main` it fails on sets, `StationsLinks` and `SpeedCounter`, tracked in #129), benchmark against `.pkl`/`.mpk` ([#129](https://github.com/flatland-association/flatland-rl/issues/129)). `.pkl` stays readable and a cache. Repo: flatland-rl. Verification (T-1–T-3, T-5): env → format → env reproduces the episode; every `.pkl` of the regression episodes converts and back; benchmark recorded. | feature | - | feat(persistence): exchange whole scenarios, configuration and state, in one versioned format. |  | S-4, S-5 | - |
+| 💡 S-6 | - | Scenario state and the hops of §4.10: `RailEnv`, `GraphRailEnv` and `.pkl` ↔ exchange format; schema, version, the state document with its configuration hash (Q-20), saving `.mpk` repaired (on `main` it fails on sets, `StationsLinks` and `SpeedCounter`, tracked in #129), benchmark against `.pkl`/`.mpk` ([#129](https://github.com/flatland-association/flatland-rl/issues/129)). `.pkl` stays readable and a cache. Repo: flatland-rl. Verification (T-1–T-3, T-5, T-10): env → format → env reproduces the episode; every `.pkl` of the regression episodes converts and back; benchmark recorded. | feature | - | feat(persistence): exchange whole scenarios, configuration and state, in one versioned format. |  | S-4, S-5 | - |
 | 💡 S-8 | - | The drawing tool writes and reads whole scenarios in the exchange format: the grid, `stations_links` (`id`, `name`, `placement` with the rectangle as `outline`, `area`, stopping points and the tool's gates; links and gate links empty), lines and timetables as configuration; `scenario_generator` builds envs with flatland-rl's reader, `stations_to_stations_links` and the per-format branches go away; fields and extension data it does not edit written back unchanged; bump `env.flatland-rl-ref` (§4.5, §4.10, Q-18 c)). Repo: flatland-scenarios. Verification (T-6): export → load → export is unchanged, also for a document with `display_name`, `kind` and another owner's extension; converted older fixtures build the same envs; `pytest scenario_generator competitions`. | feature | - | feat(scenario_generator): replace the drawing tool's export with the exchange format. |  | S-6 released, S-7 (one PR with it, §4.5) | - |
 | 💡 S-9 | - | flatland-ui-hub's geography adapter: `to_geography`, `from_geography(geography, base)`, replacing `_stations_links_geography` (§4.7, Q-7 b); draft [`issue-flatland-ui-hub-geography-adapter.md`](https://github.com/flatland-association/flatland-book/blob/2f599ca/docs/plans/stations-links-logical-model/issue-flatland-ui-hub-geography-adapter.md) in flatland-book PR #45). Repo: flatland-ui-hub. Verification (T-9): exchange → geography → exchange with `base` gives the same document for plan-b and Olten; the geography equals today's. | feature | - | feat(geography): compute the station geography from flatland-rl's exchange format, loss free. |  | S-2 released | - |
 | 💡 S-10 | - | TypeScript types generated from flatland-rl's schemas, used where the frontend reads stations and scenarios: the stations and links schemas first, the scenario schemas once S-6 is released (regenerated with every flatland-rl pin bump) (draft [`issue-flatland-ui-hub-typescript-types.md`](flatland-scenario-exchange-format/issue-flatland-ui-hub-typescript-types.md)). Repo: flatland-ui-hub. Verification: the generated types are current with the pinned flatland-rl (a check in CI); the frontend builds. | build | - | build(frontend): generate the exchange format's types from flatland-rl's schemas. |  | S-2 released | - |
@@ -1210,6 +1264,7 @@ This plan drafts the issues about scenarios and the repos using them: S-5, S-7, 
 | flatland-rl `flatland/envs/schemas/stations_links.grid.schema.json` | the grid binding's schema, generated (S-2) |
 | flatland-rl `flatland/envs/schemas/stations_links.graph.schema.json`, `stations_links.graph-geo.schema.json` | the graph bindings' schemas, generated (S-4) |
 | flatland-rl `flatland/envs/schemas/scenario.<binding>.schema.json` | the scenario's schemas: configuration (S-5), state (S-6), the stations and links schema by `$ref` |
+| flatland-rl `flatland/envs/schemas/scenario-state.<binding>.schema.json` | the state document's schemas, the state by `$ref` to the scenario schema (S-6, Q-20) |
 | flatland-rl `flatland/envs/scenario_exchange.py` | the scenario document: configuration (S-5) and state (S-6) to and from the format, `to_exchange`/`from_exchange` |
 | flatland-rl `tests/envs/test_scenario_exchange.py` | T-1–T-3, T-5 (S-5, S-6) |
 | flatland-rl `benchmarks/bench_persistence.py` | the benchmark of PR #97 on the ECML2026 scenarios, JSON gzipped, msgpack, protobuf against `.pkl`/`.mpk` (S-6) |
