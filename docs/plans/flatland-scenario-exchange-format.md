@@ -4,7 +4,7 @@
 > nothing built. Based on flatland-rl `main` `e1cc8109a` (rebased 2026-11-14 from `3a66efe9`; the newer commits do not touch
 > `stations_links`, but `RailEnvPersister` now saves `skip_state_machine_update` and starts state machines from the
 > derived state on load, ba95f933f and 397137458, and the rail has edge lengths, PR [#542](https://github.com/flatland-association/flatland-rl/pull/542); the
-> scenario's configuration carries both, §4.10; checked 2026-11-14); branch `docs/flatland-scenario-exchange-format`, no PR yet.
+> scenario's configuration carries both, §4.10; checked 2026-11-14); branch `docs/flatland-scenario-exchange-format`, PR [#572](https://github.com/flatland-association/flatland-rl/pull/572).
 > Depends on flatland-book's plan [`docs/plans/stations-links-logical-model.md`](https://github.com/flatland-association/flatland-book/blob/2f599ca/docs/plans/stations-links-logical-model.md) (flatland-book PR
 > [#45](https://github.com/flatland-association/flatland-book/pull/45), all its questions decided; the model's decisions on gates, links, gate links, area, tracks, producer data, graph and
 > visualization) and on flatland-rl [#145](https://github.com/flatland-association/flatland-rl/issues/145) (consistent generator type hints) and [#242](https://github.com/flatland-association/flatland-rl/issues/242) (generic
