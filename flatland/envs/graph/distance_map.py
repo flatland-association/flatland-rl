@@ -4,6 +4,7 @@ from typing import List, Dict, Set
 from flatland.core.entry_point_distance_map import _infinite_distance
 from flatland.core.distance_map import AgentSourceTargetDistanceMap
 from flatland.envs.agent_utils import EnvAgent
+from flatland.core.transition_map import Distance
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 
 
@@ -11,11 +12,11 @@ def _infinite_agent_distances():
     return defaultdict(_infinite_distance)
 
 
-class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int, Dict[str, int]], str, str]):
+class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int, Dict[str, Distance]], str, str]):
     def __init__(self, agents: List[EnvAgent]):
         super().__init__(agents=agents, waypoint_init=str)
 
-    def _new_distance_map(self, num_agents: int) -> Dict[int, Dict[str, int]]:
+    def _new_distance_map(self, num_agents: int) -> Dict[int, Dict[str, Distance]]:
         return defaultdict(_infinite_agent_distances)
 
     def _valid_targets(self, agent: EnvAgent, rail: GraphTransitionMap) -> Set[str]:
@@ -24,7 +25,7 @@ class GraphDistanceMap(AgentSourceTargetDistanceMap[GraphTransitionMap, Dict[int
     def _copy_agent_distance(self, target_nr: int, source_target_nr: int):
         self.distance_map[target_nr] = self.distance_map[source_target_nr]
 
-    def _set_geometric_distance(self, source_entry_point: str, target_nr: int, new_distance: int):
+    def _set_geometric_distance(self, source_entry_point: str, target_nr: int, new_distance: Distance):
         self.distance_map[target_nr][source_entry_point] = new_distance
 
     def _geometric_distance(self, source_entry_point: str, target_nr: int):

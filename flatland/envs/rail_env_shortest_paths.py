@@ -221,6 +221,6 @@ def visualize_distance_map(distance_map: DistanceMap, agent_handle: int = 0):
         print("Error: agent_handle cannot be larger than actual number of agents")
         return
     # take min value of all 4 directions
-    min_distance_map = np.min(distance_map.get(), axis=3)
+    min_distance_map = np.min(distance_map.get().astype(float), axis=3)
     plt.imshow(min_distance_map[agent_handle][:][:])
     plt.show()

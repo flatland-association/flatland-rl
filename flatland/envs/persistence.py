@@ -1,7 +1,8 @@
 import io
 import pickle
+from fractions import Fraction
 from pathlib import Path
-from typing import Tuple, Dict, Optional, Union, Any
+from typing import Tuple, Dict, List, Optional, Union, Any
 
 import msgpack
 import msgpack_numpy
@@ -48,6 +49,35 @@ class _LegacyCompatUnpickler(pickle.Unpickler):
         if stub is not None:
             return stub
         return super().find_class(module, name)
+
+
+def _to_tuple(x: Any) -> Any:
+    """Recursively convert (msgpack-deserialized) lists back to tuples."""
+    if isinstance(x, (list, tuple)):
+        return tuple(_to_tuple(e) for e in x)
+    return x
+
+
+def edge_lengths_to_env_dict(edge_lengths: Dict) -> List[Tuple]:
+    """
+    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state`: a list of `(u, v, numerator,
+    denominator)` tuples. msgpack cannot persist tuple keys, nor `Fraction`s, so each length is split into two ints
+    (an `int` length has denominator 1). See `edge_lengths_from_env_dict()` for the way back.
+    """
+    return [(u, v, length.numerator, length.denominator) for (u, v), length in edge_lengths.items()]
+
+
+def edge_lengths_from_env_dict(env_dict: Dict) -> Optional[Dict]:
+    """
+    The rail's edge lengths as persisted by `RailEnvPersister.get_full_state` (see `edge_lengths_to_env_dict()`) back
+    to a dict keyed by `(u, v)`. msgpack round-trips tuples as lists, so the `((r, c), d)` entry point tuples are
+    restored. A length with denominator 1 comes back as `int`, any other as `Fraction`. None if not persisted.
+    """
+    entries = env_dict.get("edge_lengths", None)
+    if not entries:
+        return None
+    return {(_to_tuple(u), _to_tuple(v)): numerator if denominator == 1 else Fraction(numerator, denominator)
+            for u, v, numerator, denominator in entries}
 
 
 def _serialize_agent(agent: EnvAgent) -> Agent:
@@ -295,6 +325,7 @@ class RailEnvPersister(object):
         # use new rail object instance for lru cache scoping and garbage collection to work properly
         env.rail = RailGridTransitionMap(height=env.height, width=env.width)
         env.rail.grid = grid
+        env.rail.edge_lengths = edge_lengths_from_env_dict(env_dict)
 
         # Replace the agents tuple with EnvAgent objects. Target entry points are not serialised with rail
         # validity, so `load_env_agent`/`load_legacy_static_agent` filter them against the (now available) rail
@@ -445,6 +476,8 @@ class RailEnvPersister(object):
         }
         if hasattr(env, "stations_links"):
             msg_data_dict["stations_links"] = env.stations_links
+        if env.rail.edge_lengths:
+            msg_data_dict["edge_lengths"] = edge_lengths_to_env_dict(env.rail.edge_lengths)
         return msg_data_dict
 
     ################################################################################################

@@ -13,7 +13,8 @@ from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
-from flatland.envs.step_utils.speed_counter import SpeedCounter, SEGMENT_LENGTH
+from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
+from flatland.envs.step_utils.speed_counter import SpeedCounter
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils.simple_rail import make_simple_rail
 from tests.test_utils import ReplayConfig, Replay, run_replay_config, set_penalties_for_replay
@@ -249,14 +250,10 @@ def _make_straight_rail(n_cells: int):
     switch-free corridor of `n_cells` cells, dead end - straight* - dead end (a plain 2-cell corridor
     for n_cells=2, no straight tiles needed in between at all).
 
-    Used by the test_distance_without_crossing_reaches_segment_length_on_target_* tests below, which
-    exercise SpeedCounter.distance_without_crossing's "target reached, remove_agents_at_target=False"
-    case via an actual RailEnv rather than by calling the formula directly - this matters because the
-    formula alone doesn't explain *why* it applies here: by the time RailEnv.step()'s (13) runs,
-    agent.state is already DONE (see (12)'s update_if_reached(), called before (13)), so
-    _candidate_distance's own "done" branch is the one that applies (not its ordinary 
-    "crossing" branch, which would wrap distance via distance_after_crossing) - it calls
-    distance_without_crossing directly.
+    Used by the test_target_reached_not_removed_distance_is_leftover_* tests below, which exercise the
+    "target reached, remove_agents_at_target=False" case via an actual RailEnv: the agent crosses into its
+    target edge like any other crossing, so its distance is the leftover of that step
+    (SpeedCounter.distance_after_crossing), and it stays there once the agent is DONE.
     """
     transitions = RailEnvTransitions()
     cells = transitions.transition_list
@@ -287,7 +284,7 @@ def _place_agent_on_map(env, handle, position, direction, target, state, max_spe
     agent.targets = {(target, d) for d in Grid4TransitionsEnum}
     agent._set_state(state)
     agent.speed_counter = SpeedCounter(max_speed=max_speed, speed=speed)
-    agent.speed_counter.set(speed=speed, distance=Fraction(0))  # bootstrap distance to 0 on-map
+    agent.speed_counter.set(speed=speed, distance=Fraction(0), edge_length=DEFAULT_EDGE_LENGTH)  # bootstrap distance to 0 on-map
     next_entry_point = env.rail.apply_action_independent(first_action, agent.current_entry_point)
     assert next_entry_point is not None
     agent.next_entry_point = _sanitize_entry_point(next_entry_point)
@@ -298,31 +295,26 @@ def _place_agent_on_map(env, handle, position, direction, target, state, max_spe
     pytest.param(Fraction(1, 2), 3, Fraction(0), id="exact_fit-fractional_speed"),
     pytest.param(Fraction(3, 4), 3, Fraction(1, 2), id="excess-non_dividing_max_speed"),
 ])
-def test_distance_without_crossing_reaches_segment_length_on_target_single_agent(max_speed, n_steps, expected_excess):
+def test_target_reached_not_removed_distance_is_leftover_single_agent(max_speed, n_steps, expected_excess):
     """
     A single agent on the smallest possible corridor (2 cells: start, and target immediately next to
-    it) reaching its target with `remove_agents_at_target=False` - `distance` always ends up at exactly
-    `SEGMENT_LENGTH`, discarding `expected_excess` momentum in the process (see
-    `_make_straight_rail`/`SpeedCounter.distance_without_crossing`'s docstrings for why).
-
-    Note `distance == SEGMENT_LENGTH` alone is true of *any* target arrival (exact-fit or excess) and
-    stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a now-frozen speed=0)
-    - it does not distinguish these cases from each other. What actually varies between them, and is
-    what these parametrizations are for, is `expected_excess` - checked below from the last pre-step
-    `configurations` entry, i.e. before the cap is applied.
+    it) reaching its target with `remove_agents_at_target=False` - it crosses into the target edge like any
+    other crossing, so `distance` ends up at the leftover of that step, `expected_excess` (see
+    `_make_straight_rail`'s docstring). The leftover is also checked against the last pre-step `configurations`
+    entry.
 
     - exact_fit-default_speed: max_speed=1 (the common default). Step 0 is the agent's own departure
       settling step (distance deferred at 0, speed ramps 0 -> 1); step 1 already has pre_distance=0,
-      pre_speed=1, so it crosses directly into the target with zero excess (sum == SEGMENT_LENGTH
+      pre_speed=1, so it crosses directly into the target with zero excess (sum == DEFAULT_EDGE_LENGTH
       exactly).
-    - exact_fit-fractional_speed: max_speed=1/2 evenly divides SEGMENT_LENGTH. Step 0 settles (distance
+    - exact_fit-fractional_speed: max_speed=1/2 evenly divides DEFAULT_EDGE_LENGTH. Step 0 settles (distance
       0, speed ramps to 1/2); step 1 advances mid-cell to distance=1/2 (pre_distance=0, pre_speed=1/2,
       sum=1/2, no crossing yet); step 2 crosses into the target with pre_distance=1/2, pre_speed=1/2,
       sum=1 exactly - zero excess again, purely because 1/2 divides 1.
-    - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide SEGMENT_LENGTH. Step 0
+    - excess-non_dividing_max_speed: max_speed=3/4 does *not* evenly divide DEFAULT_EDGE_LENGTH. Step 0
       settles (speed ramps to 3/4); step 1 advances to distance=3/4 (sum=3/4, no crossing yet); step 2
-      crosses into the target with pre_distance=3/4, pre_speed=3/4, sum=3/2 - an excess of 1/2 gets
-      silently discarded by the cap, with no prior blocking involved at all.
+      crosses into the target with pre_distance=3/4, pre_speed=3/4, sum=3/2 - the agent enters the
+      target edge with a leftover of 1/2.
     """
     rail, optionals = _make_straight_rail(2)
     env = RailEnv(width=2, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
@@ -343,17 +335,17 @@ def test_distance_without_crossing_reaches_segment_length_on_target_single_agent
 
     _, final_pre_distance, final_pre_speed = configurations[-1]
     assert agent.current_entry_point in agent.targets
-    assert agent.speed_counter.distance == SEGMENT_LENGTH
-    assert agent.speed_counter.distance == SpeedCounter.distance_without_crossing(final_pre_distance, final_pre_speed)
-    assert (final_pre_distance + final_pre_speed) == (SEGMENT_LENGTH + expected_excess)
+    assert agent.speed_counter.distance == expected_excess
+    assert agent.speed_counter.distance == SpeedCounter.distance_after_crossing(final_pre_distance, final_pre_speed, DEFAULT_EDGE_LENGTH)
+    assert (final_pre_distance + final_pre_speed) == (DEFAULT_EDGE_LENGTH + expected_excess)
 
 
-def test_distance_without_crossing_reaches_segment_length_on_target_restart_after_denial():
+def test_target_reached_not_removed_distance_is_leftover_restart_after_denial():
     """
     A restart after a denied crossing reaches the target without excess at max_speed=1, like an agent that was
     never blocked (see exact_fit-default_speed above): a denied crossing doesn't move the agent, so its distance
-    is still at its pre-step value (0) when it makes its successful attempt, not at SEGMENT_LENGTH - no momentum
-    is discarded by the cap.
+    is still at its pre-step value (0) when it makes its successful attempt, not at DEFAULT_EDGE_LENGTH - it
+    enters the target edge with a leftover of 0.
 
     Why 2 agents: the restart needs a denied crossing - either an invalid action or a
     resource_check denial. A switch-free corridor has no invalid action to give (a no-choice cell treats
@@ -417,20 +409,17 @@ def test_distance_without_crossing_reaches_segment_length_on_target_restart_afte
         pre_step_distance_speed = (agent0.speed_counter.distance, agent0.speed_counter.speed)
         env.step({0: actions0[step], 1: actions1[step]})
 
-    # design: distance == SEGMENT_LENGTH alone (checked below) is true of *any* target arrival, exact-fit
-    # or excess, and stays true forever afterward (DONE's (13) fallback keeps re-deriving it from a
-    # now-frozen speed == 0) - it does not by itself distinguish an exact fit from an excess. What shows that
-    # the denied crossing left nothing to discard is the pre-step sum on the final (granted) crossing
-    # attempt: pre_distance(0, not moved while denied) + pre_speed(1, ramped) == SEGMENT_LENGTH exactly -
+    # the denied crossing left the distance at 0: the pre-step sum on the final (granted) crossing attempt is
+    # pre_distance(0, not moved while denied) + pre_speed(1, ramped) == DEFAULT_EDGE_LENGTH exactly -
     # captured here from the last iteration's pre-step values.
-    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == SEGMENT_LENGTH
+    assert pre_step_distance_speed[0] + pre_step_distance_speed[1] == DEFAULT_EDGE_LENGTH
 
     assert agent0.current_entry_point in agent0.targets
-    assert agent0.speed_counter.distance == SEGMENT_LENGTH
+    assert agent0.speed_counter.distance == 0
     assert agent0.state == TrainState.DONE
     # agent 1 completed its own (non-excess, exact-fit) crossing along the way
     assert agent1.current_entry_point in agent1.targets
-    assert agent1.speed_counter.distance == SEGMENT_LENGTH
+    assert agent1.speed_counter.distance == 0
     assert agent1.state == TrainState.DONE
 
 
@@ -449,9 +438,9 @@ def test_distance_without_crossing_reaches_segment_length_on_target_restart_afte
 ])
 def test_distance_after_crossing_restart_after_denied_crossing_into_non_target_edge(restart_speed, expected_after_restart):
     """
-    Same set-up as test_distance_without_crossing_reaches_segment_length_on_target_restart_after_denial above, but on a
+    Same set-up as test_target_reached_not_removed_distance_is_leftover_restart_after_denial above, but on a
     4-cell corridor A - B - C - D, so the restart after the denied crossing crosses into B, which is not agent 0's
-    target (C) - this goes through SpeedCounter.distance_after_crossing, not distance_without_crossing.
+    target (C).
 
     Agent 0 (start A, target C) is denied A->B by agent 1 (STOPPED at B, target D): it doesn't move, it stays at the
     start of A (distance 0) with speed 0. Agent 1 leaves B (B->C, then C->D), then agent 0 restarts with speed

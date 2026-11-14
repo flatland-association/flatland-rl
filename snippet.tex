@@ -62,7 +62,7 @@ simulation checks whether agents can move.
 \begin{equation}
 \tilde{d}_i^{t+1} =
         \begin{cases}
-            \min(d_i^{t} + s_i^t, \lVert c_i^t \rVert) & \text{if } i \in dones^t \qquad (\textit{done}) \\
+            d_i^{t} & \text{if } i \in dones^t \qquad (\textit{done}) \\
             \bot & \text{elif } stayOffMap_i^t \text{ and } m_i^{t} = \bot \qquad (\textit{stay off map}) \\
             d_i^{t} + s_i^t \mod \lVert c_i^t \rVert & \text{elif } s_i^t \not= 0 \text{ and } c_i^t \not= \bot \text{ and } m_i^{t} = \bot \text{ and not } targetReached_i^t \\
                                                       & \quad \text{ and not } invalidAction_i^t \qquad (\textit{keep moving mid-cell}) \\
