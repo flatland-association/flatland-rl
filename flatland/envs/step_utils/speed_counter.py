@@ -125,7 +125,7 @@ class SpeedCounter:
         self._edge_length: Optional[EdgeLength] = None
         self._is_cell_entry = False
 
-    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], edge_length: Optional[EdgeLength],
+    def set(self, speed: Optional[Fraction], distance: Optional[Fraction], edge_length: Optional[EdgeLength], *,
             crossed: bool = False) -> None:
         """
         Directly set speed/distance to an already-computed value - e.g. RailEnv.step()'s own
@@ -145,7 +145,8 @@ class SpeedCounter:
             The length of the edge the agent is on after this update, i.e.
             `rail.edge_length(current_entry_point, next_entry_point)` - ignored while off map (distance None).
         crossed : bool
-            Whether the agent crossed into a new edge with this update (on map before and after).
+            Whether the agent crossed into a new edge with this update (on map before and after). Keyword-only: passed
+            by position, `True` would be taken as `edge_length` (`True == 1`) and go unnoticed.
         """
         # design: is_cell_entry is "just entered a new cell" - true exactly when the agent just
         # bootstrapped onto the map (previous distance None, new distance concrete), or the caller says it

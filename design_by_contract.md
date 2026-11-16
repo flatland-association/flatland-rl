@@ -168,7 +168,7 @@ returns `None` for both directly (Table 1).
 
 ### `SpeedCounter.is_cell_entry` — derived after Table 3 resolves speed/distance
 
-`SpeedCounter.set(speed, distance, edge_length, crossed)` (`step_utils/speed_counter.py`) is what (13) actually calls
+`SpeedCounter.set(speed, distance, edge_length, *, crossed)` (`step_utils/speed_counter.py`) is what (13) actually calls
 to commit each row of Table 3 above - it doesn't just store the two values, it also derives `is_cell_entry`, a boolean
 tracked alongside them: `True` exactly when the agent just bootstrapped onto the map (pre-step `distance is None`, new
 `distance is not None`), or (13) passes `crossed=True`: the candidate was accepted and the agent's entry point

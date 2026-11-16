@@ -458,3 +458,10 @@ def test_setstate_missing_is_cell_entry_and_counter_leaves_it_unset():
     sc.__setstate__({"speed": Fraction(1, 2), "distance": Fraction(1, 4)})
     with pytest.raises(AttributeError):
         _ = sc.is_cell_entry
+
+
+def test_set_takes_crossed_by_keyword_only():
+    """`crossed` passed by position would be taken as the edge length (`True == 1`) without any error."""
+    sc = SpeedCounter(max_speed=1.0, speed=1.0)
+    with pytest.raises(TypeError):
+        sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH, True)
