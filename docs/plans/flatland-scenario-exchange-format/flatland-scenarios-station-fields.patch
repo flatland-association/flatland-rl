@@ -1,0 +1,92 @@
+--- a/scenario_generator/flatland_integration/flatland_generators.py
++++ b/scenario_generator/flatland_integration/flatland_generators.py
+@@ -1,7 +1,7 @@
+ from typing import Dict, List, Tuple
+ 
+ from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+-from flatland.envs.stations_links import StationsLinks, Station, StoppingPoint, Gate, Pin
++from flatland.envs.stations_links import StationsLinks, Station, StoppingPoint, Gate, Pin, GridStation
+ from flatland.envs.timetable_utils import Timetable, Line
+ 
+ 
+@@ -12,11 +12,11 @@
+     city_positions/city_orientations/train_stations triple RailEnv's rail
+     generators expect under agents_hints.
+     """
+-    stations_by_id = sorted(stations, key=lambda s: s['id'])
++    stations_by_id = list(stations_to_stations_links(stations).stations.values())
+     return {
+-        'city_positions': [tuple(s['city_position']) for s in stations_by_id],
+-        'city_orientations': [s['city_orientation'] for s in stations_by_id],
+-        'train_stations': [[(node, index) for index, node in enumerate(_stopping_point_nodes(s))] for s in stations_by_id],
++        'city_positions': [s.grid.position for s in stations_by_id],
++        'city_orientations': [s.grid.orientation for s in stations_by_id],
++        'train_stations': [[(sp.node, index) for index, sp in enumerate(s.stopping_points)] for s in stations_by_id],
+     }
+ 
+ 
+@@ -49,7 +49,8 @@
+         # Exported before the stations_links vocabulary: named if the tool had a name for it.
+         name = s.get('name') or str(s['id'])
+         nodes = _stopping_point_nodes(s)
+-        return Station(name=name, gates={}, stopping_points=[StoppingPoint(name=f"{name}.{i}", node=node) for i, node in enumerate(nodes)], edges=nodes)
++        return Station(name=name, gates={}, stopping_points=[StoppingPoint(name=f"{name}.{i}", node=node) for i, node in enumerate(nodes)], edges=nodes,
++                       id=s['id'], grid=_grid_station(s))
+     return Station(
+         name=s['name'],
+         gates={
+@@ -58,9 +59,16 @@
+         },
+         stopping_points=[StoppingPoint(name=sp['name'], node=tuple(sp['node'])) for sp in s['stopping_points']],
+         edges=[tuple(cell) for cell in s['edges']],
++        id=s['id'],
++        grid=_grid_station(s),
+     )
+ 
+ 
++def _grid_station(s: dict) -> GridStation:
++    """The export's city_position, city_orientation (0 vertical, 1 horizontal: N or E) and area."""
++    return GridStation(position=tuple(s['city_position']), orientation=s['city_orientation'], bounding_box=tuple(s['area']) if 'area' in s else None)
++
++
+ def group_flat_per_cell_stations(stations: List[dict], grid_map: RailGridTransitionMap) -> List[dict]:
+     """
+     Group a station export in the flat per-cell format (one {id, r, c} entry per
+--- a/scenario_generator/flatland_integration/test_flatland_generators.py
++++ b/scenario_generator/flatland_integration/test_flatland_generators.py
+@@ -167,3 +167,35 @@
+     assert optionals['agents_hints'] == {'city_positions': [(0, 1)], 'city_orientations': [1], 'train_stations': [[((0, 0), 0), ((0, 1), 1), ((0, 2), 2)]]}
+     assert optionals['stations_links'].stations['1'].stopping_points == [
+         StoppingPoint(name='1.0', node=(0, 0)), StoppingPoint(name='1.1', node=(0, 1)), StoppingPoint(name='1.2', node=(0, 2))]
++
++
++def _to_export(station) -> dict:
++    """The drawing tool's export entry of a station, from flatland's Station alone."""
++    entry = {
++        'id': station.id, 'name': station.name, 'city_position': list(station.grid.position), 'city_orientation': station.grid.orientation,
++        'stopping_points': [{'name': sp.name, 'node': list(sp.node)} for sp in station.stopping_points],
++        'edges': [list(cell) for cell in station.edges],
++        'gates': {key: {'name': gate.name, 'pins': {str(k): {'name': pin.name, 'node': list(pin.node)} for k, pin in gate.pins.items()}}
++                  for key, gate in station.gates.items()},
++    }
++    if station.grid.bounding_box is not None:
++        entry['area'] = list(station.grid.bounding_box)
++    return entry
++
++
++def test_stations_links_converts_back_to_the_export_loss_free():
++    stations = [
++        {
++            'id': 3, 'name': 'Ziegelbrücke', 'city_position': [3, 4], 'city_orientation': 1,
++            'stopping_points': [{'name': 'Ziegelbrücke.0', 'node': [2, 4]}, {'name': 'Ziegelbrücke.1', 'node': [3, 4]}],
++            'edges': [[2, 3], [2, 4], [2, 5], [3, 3], [3, 4], [3, 5]],
++            'gates': {'W': {'name': 'Ziegelbrücke.W', 'pins': {'0': {'name': 'Ziegelbrücke.W.0', 'node': [2, 3]}}}},
++            'area': [2, 3, 4, 5],
++        },
++        {'id': 1, 'name': '1', 'city_position': [3, 56], 'city_orientation': 0,
++         'stopping_points': [{'name': '1.0', 'node': [3, 56]}], 'edges': [[3, 56]], 'gates': {}},
++    ]
++
++    stations_links = stations_to_stations_links(stations)
++
++    assert [_to_export(station) for station in stations_links.stations.values()] == sorted(stations, key=lambda s: s['id'])
