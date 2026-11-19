@@ -1,6 +1,6 @@
 # A general, graph-aware exchange format: drawing tool, `RailEnv`, `GraphRailEnv` and `.pkl` to flatland-ui-hub scenarios
 
-> **Status:** plan of 2026-11-11, scope broadened 2026-11-12, revised 2026-11-13 against the decided book plan and 2026-11-14, draft;
+> **Status:** plan of 2026-11-11, scope broadened 2026-11-12, revised 2026-11-13 against the decided book plan, 2026-11-14, and 2026-11-19 (Q-21: open rail formats), draft;
 > nothing built. Based on flatland-rl `main` `e1cc8109a` (rebased 2026-11-14 from `3a66efe9`; the newer commits do not touch
 > `stations_links`, but `RailEnvPersister` now saves `skip_state_machine_update` and starts state machines from the
 > derived state on load, ba95f933f and 397137458, and the rail has edge lengths, PR [#542](https://github.com/flatland-association/flatland-rl/pull/542); the
@@ -125,6 +125,8 @@ The repos and their roles:
 | flatland-hmi loads scenarios from the exchange format. | Another repo; it reads `.pkl`s, which stay readable. | §8.2 | - | - |
 | A generator for scheduled malfunctions in flatland-rl; until then they are `flatland-scenarios` extension data. | Not needed for the format; flatland-scenarios PR #39 designs them. | §4.10 | - | - |
 | The Gotthard scenario with rail: its sections as links, its traffic as lines and timetables. | flatland-ui-hub has no rail for it yet. | §4.10, T-8 | - | - |
+| A railML 3 adapter: export a scenario document (graph and geographic bindings first) as railML 3 infrastructure (`netElements`/`netRelations`, `operationalPoint`, `platformEdge`, `stoppingPlace`) and timetable, import real networks from it; Flatland's own parts (gates, pins, links, fibres, gate links, the grid binding, configuration and state) as `xsi:type` extensions in a `flatland` namespace. Lossy, like the protobuf adapter (§4.4): the exchange format stays canonical. | Needs the format first (S-6); needs railML.org's answer on whether an MIT repo may bundle and validate against the railML 3 schemas (CC-BY-NC-ND-4.0, registration to download, certification per interface before productive use). | Q-21 | - | - |
+| An OSRD RailJSON import: real networks from OSRD's JSON infrastructure (track sections, switches, operational points) into a `graph-geo` scenario document. | Needs the format first (S-6); no producer asks for it yet. | Q-21 | - | - |
 
 ## 2. Constraints
 
@@ -1133,6 +1135,55 @@ flatland-ui-hub's. Where the book plan answers a question, its answer holds (C-8
   *Proposal:* b): the split already exists in S-5 and S-6, so the extra schema is small and keeps snapshots to the
   dynamic part; increments stay the follow-up of §1.4, built on b)'s state document. Needed before S-6.
 
+- ~~**(Q-21)** Could an open rail format, [railML](https://www.railml.org/en/about-railml) 3 or another, be the
+  exchange format instead of a format of flatland-rl's own?~~ ✅ Decided 2026-11-19: a) no; flatland-rl's format stays
+  canonical (DP-1), its terms follow the open formats where they fit (as the book plan's Q-15 does), and railML 3 and
+  OSRD RailJSON get adapters as follow-ups (§1.4). Checked 2026-11-19 against railML 3.3 SR2 (June 2025).
+  - What railML 3 covers: graph topology (`netElements`/`netRelations`, built on UIC RailTopoModel) for the `graph`
+    and `graph-geo` bindings (REQ-3); `operationalPoint` with `@id`, `name`, `designator` and operational types for
+    `Station.id`, `display_name` and `kind`; `platform`, `platformEdge`, `stoppingPlace` and `track` for stopping
+    points and the 2.1.0 `Track`; geometry and coordinates for `placement`; the timetable subschema for lines and
+    timetables, in structure.
+  - What it lacks in semantics: the grid binding (cells with 16-bit transitions, Grid4 directions, the resource
+    `((r, c), axis)` at a level-free crossing); gates, pins, links, fibres and gate links (the book plan's model);
+    integer steps (railML has clock times; a mapping needs a step length as a convention); speeds as fractions of a
+    cell per step (railML has km/h); exact fractions (DP-11); and #129's whole configuration and state part: agent
+    positions, directions, speed counters and malfunctions, the random state, generators (#242), scheduled
+    malfunctions. railML exchanges planning data, not simulation state, so half of REQ-9 and REQ-10 would be
+    extension data.
+  - What it lacks against the requirements: REQ-11 and REQ-1 (railML is XSD and XML only, no JSON form, so the
+    drawing tool and flatland-ui-hub's TypeScript would write and validate XML); REQ-12 and C-1 (the version follows
+    railML.org's release cycle, not flatland-rl's semver); NFR-4 and NFR-5 (a net element per cell makes grid
+    documents far larger than `.pkl` and `.mpk`; estimated, not benchmarked).
+  - Licence: railML 3 is CC-BY-NC-ND-4.0 by default, its schemas downloadable after registration; productive or
+    commercial use needs a certification per interface and subschema, which switches it to CC-BY-ND-4.0, or a
+    commercial licence. "No derivatives" rules out a modified schema, "non-commercial" does not go with MIT-licensed
+    flatland-rl used by railways. Bundling the schemas needs railML.org's answer first.
+  - Extension points exist: `xs:any`, `xs:anyAttribute` and `tOtherEnumerationValue` (`other:` values) in railML 2 and
+    3.1; `xsi:type` in an own namespace from 3.2 on; the namespace needs no published XSD. A
+    `flatland` namespace could carry everything above, but then most of a Flatland scenario would be extension data.
+  - Other open formats, none with a grid binding or simulation state:
+
+    | Format | What it is | Licence | Fit |
+    |---|---|---|---|
+    | RailTopoModel (UIC IRS 30100) | the conceptual topology model behind railML 3 | UIC standard | terms to align with; no file format of its own |
+    | [OSRD](https://github.com/OpenRailAssociation/osrd) RailJSON | JSON infrastructure of OSRD (OpenRail Association): track sections, switches, operational points, signals, routes; elements with an `extensions` field | LGPL-3.0 (OSRD) | the closest technically (JSON, graph, simulation); an import source (§1.4) |
+    | [ERA vocabulary](https://github.com/Interoperable-data/ERA_vocabulary) / RINF | EU ontology (RDF, SHACL) of the railway infrastructure register | EUPL-1.2 | terms and real networks; RDF is no format for the drawing tool |
+    | NeTEx / Transmodel (CEN), GTFS | passenger timetables and stops | open specifications | names and timetables only, no track topology (the book plan's Q-15 uses their naming) |
+    | OpenStreetMap, OpenRailwayMap tagging | geodata with `railway=*` | ODbL (data) | an import source (flatland-scenarios PR #36) |
+    | IFC 4.3 (ISO 16739) | BIM for design and construction | open (buildingSMART) | not for operation |
+    | EULYNX, PlanPro | signalling interfaces, interlocking planning | open specifications | too detailed, out of scope |
+    | SUMO network, MATSim transit schedule | the simulators' own formats | EPL-2.0, GPL | simulator-specific |
+
+  - a) The format stays flatland-rl's own; its terms follow the open formats; adapters to railML 3 and from RailJSON
+    as follow-ups.
+  - b) railML 3 as the exchange format, Flatland's parts in a `flatland` namespace.
+  - c) RailJSON as the exchange format, Flatland's parts in its `extensions`.
+
+  *Proposal:* a): b) misses REQ-1, REQ-11, REQ-12 and NFR-5 and depends on a licence decision outside the association;
+  c) has no grid binding, gates or state either, and ties the format to OSRD's releases. Adapters keep the
+  interoperability at the edges: real networks in, planning tools that read railML out.
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -1162,6 +1213,7 @@ flatland-ui-hub's. Where the book plan answers a question, its answer holds (C-8
 | 2026-11-14 | ✅ Q-18 c): no in-between export; the drawing tool switches to the exchange format with S-8, S-3 is dropped, S-7 and S-8 land in one flatland-scenarios PR. | One switch for the tool and its fixtures, no interim shape to convert again; the cost is a later switch, after #129's release. Not taken: a) side-by-side keys, b) a scenario shell with the tool's data as extension. | §4.5, §5.1, S-7, S-8, §11.2; the S-3 draft removed. |
 | 2026-11-14 | ✅ Q-17 a): `gate_links` is part of 2.0.0; the book plan's gate links issue lands the class and the field before S-2's release, producers fill them later. | The class is small, the book plan's examples already carry it, and 2.1.0 stays free for `Track`. Not taken: b), a minor version right after 2.0.0. | S-2 needs the class; §11.2's wave 2. |
 | 2026-11-14 | ✅ Q-20 b): a state document of its own (`flatland-scenario-state`, schema `scenario-state.<binding>.schema.json`), naming its configuration by a SHA-256 of the canonical JSON; `from_exchange(configuration, state)` joins them. | #129 asks for state apart from configuration and small snapshots; the split of S-5 and S-6 already exists, so one small schema keeps a snapshot to the env's dynamic part. Not taken: a) whole documents per snapshot (the rail repeated every step), c) increments now (their own design). | §4.10, PAT-19, S-6 (no longer blocked); increments stay a follow-up (§1.4). |
+| 2026-11-19 | ✅ Q-21 a): no open rail format as the exchange format; flatland-rl's format stays canonical, its terms follow railML, RailTopoModel, NeTEx and OSM where they fit; railML 3 and OSRD RailJSON get adapters. | railML 3 is XML only (REQ-1, REQ-11), versioned by railML.org (REQ-12, C-1), has no grid binding, gates, pins, fibres or simulation state, and is CC-BY-NC-ND-4.0 until certified; RailJSON lacks the same model parts. Not taken: b) railML 3 with a `flatland` namespace, c) RailJSON with extensions. | Two follow-ups in §1.4 (railML 3 adapter after a licence check with railML.org, RailJSON import); no step changes. |
 
 ### 9.3 Code Review Findings
 
