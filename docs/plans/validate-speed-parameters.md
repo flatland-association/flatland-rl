@@ -1,6 +1,6 @@
 # Validate the speed parameters when the env is built (#578)
 
-> **Status:** plan of 2026-11-23, draft. Based on `main` ac932d16. Issue
+> **Status:** plan of 2026-11-23, built by 2026-11-23. Based on `main` ac932d16. Issue
 > [#578](https://github.com/flatland-association/flatland-rl/issues/578) ("refactor(core): validate acceleration_delta,
 > braking_delta and max speed when the env is built.", chenkins, from a
 > [comment on #526](https://github.com/flatland-association/flatland-rl/issues/526#issuecomment-6635579968)). Branch
@@ -108,7 +108,7 @@ Context:
 
 - `AbstractRailEnv.__init__()` (`flatland/envs/rail_env.py`) takes `acceleration_delta: Fraction = Fraction(1)`,
   `braking_delta: Fraction = -Fraction(1)` and stores them unchecked as plain attributes. `RailEnv.__init__()`,
-  `GraphRailEnv.__init__()` (`flatland/envs/graph_rail_env.py`) and `env_generator()`/`env_generator_graph()`
+  `GraphRailEnv.__init__()` (`flatland/envs/graph_rail_env.py`) and `env_generator()`/`env_generator_legacy()`
   (`flatland/env_generation/env_generator.py`) default them to floats `1.0`/`-1.0`, and the docstrings type them as
   `float`. The issue's "`RailEnv`'s defaults are `Fraction(1)`" holds only for `AbstractRailEnv`.
 - `step()` reads `self.acceleration_delta`/`self.braking_delta` per agent and passes them to `_candidate_speed()`,
@@ -181,13 +181,13 @@ Screenshots: none, nothing is visible.
 
 | ID | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
-| REQ-1 | `acceleration_delta > 0` | `test_flatland_envs_rail_env.py`: `RailEnv(acceleration_delta=0)`, `-1`, and `env.acceleration_delta = 0` raise `ValueError` naming `acceleration_delta` (S-2). | | - |
-| REQ-2 | `braking_delta < 0` | Same for `braking_delta` `0` and `1` (S-2). | | - |
-| REQ-3 | Max speed in (0, 1] | `test_speed_counter.py`: `SpeedCounter(max_speed=0)`, `-1/2`, `3/2`, `True` raise `ValueError`; a `sparse_line_generator({0.0: 1.0})` env raises in `reset()` (S-1). | | - |
-| REQ-4 | `Fraction`s after validation | `RailEnv(acceleration_delta=0.5)` holds `Fraction(1, 2)` and runs the issue's 60 steps; `SpeedCounter(max_speed=0.33).max_speed == Fraction(1, 3)` (S-1, S-2). | | - |
-| REQ-5 | Named `ValueError` at build | The tests above match the parameter name in the message (`pytest.raises(ValueError, match="acceleration_delta")`). | | - |
-| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | | - |
-| NFR-2 | No slowdown | `step()` unchanged except reading the private field (S-2); CI profiling job. | | - |
+| REQ-1 | `acceleration_delta > 0` | `test_flatland_envs_rail_env.py`: `RailEnv(acceleration_delta=0)`, `-1`, and `env.acceleration_delta = 0` raise `ValueError` naming `acceleration_delta` (S-2). | ✅ passes | - |
+| REQ-2 | `braking_delta < 0` | Same for `braking_delta` `0` and `1` (S-2). | ✅ passes | - |
+| REQ-3 | Max speed in (0, 1] | `test_speed_counter.py`: `SpeedCounter(max_speed=0)`, `-1/2`, `3/2`, `True` raise `ValueError`; a `sparse_line_generator({0.0: 1.0})` env raises in `reset()` (S-1). | ✅ passes | - |
+| REQ-4 | `Fraction`s after validation | `RailEnv(acceleration_delta=0.5)` holds `Fraction(1, 2)` and runs the issue's 60 steps; `SpeedCounter(max_speed=0.33).max_speed == Fraction(1, 3)` (S-1, S-2). | ✅ passes | - |
+| REQ-5 | Named `ValueError` at build | The tests above match the parameter name in the message (`pytest.raises(ValueError, match="acceleration_delta")`). | ✅ passes | - |
+| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | ✅ core suite green (1321 passed, 58 skipped; `test_episode`'s 12 regression episodes are skipped on `main` too); `flatland-baselines`' tests can't import `ObservationType`, also against `main` | - |
+| NFR-2 | No slowdown | `step()` unchanged except reading the private field (S-2); CI profiling job. | ✅ `step()` reads `_acceleration_delta`/`_braking_delta` | - |
 
 ### 4.3 Values and conversion (REQ-1–REQ-5; Q-1)
 
@@ -209,7 +209,7 @@ Each rejects `bool`, converts numpy integers to `int`, converts the rest with `_
   assignments (`env.acceleration_delta = …`) are both checked. `step()` and the postcondition check read the private
   fields (NFR-2). (Q-2)
 - The float defaults of `RailEnv.__init__()`, `GraphRailEnv.__init__()`, `env_generator()` and
-  `env_generator_graph()` become `Fraction(1)`/`-Fraction(1)`, and the docstrings say "`Fraction` or a number
+  `env_generator_legacy()` become `Fraction(1)`/`-Fraction(1)`, and the docstrings say "`Fraction` or a number
   converted to one".
 - `SpeedCounter.__init__()` and `__setstate__()` call `validated_max_speed()` (replacing the `assert`). (Q-3)
 
@@ -270,7 +270,7 @@ existing float conversion, so both owners use the same rules (DP-2).
 | `AbstractRailEnv` (and `RailEnv`, `GraphRailEnv`) | Holds the env-wide acceleration and braking rates every agent uses. Not for an agent's own max speed, which stays with its speed counter. | 🟨 modified: an invalid rate raises a `ValueError` when set, a float rate is converted to `Fraction`. |
 | `SpeedCounter` | Holds an agent's max speed, speed and distance along its edge. Not for the env-wide rates. | 🟨 modified: a max speed outside (0, 1] raises a `ValueError` when the agent is created or loaded. |
 | `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()` | Check and convert one speed parameter. Not for edge lengths, which keep `validated_edge_length()`. | 🟩 added: one rule set for all speed parameters. |
-| `env_generator()`, `env_generator_graph()` | Build an env from a spec. | 🟨 modified: defaults are `Fraction`s; behaviour unchanged. |
+| `env_generator()`, `env_generator_legacy()` | Build an env from a spec. | 🟨 modified: defaults are `Fraction`s; behaviour unchanged. |
 
 **Important interfaces:** `AbstractRailEnv.acceleration_delta`/`braking_delta` keep their names and stay assignable;
 they now always return a `Fraction`.
@@ -386,8 +386,8 @@ None yet.
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| 💡 S-1 | - | Add `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` validate the max speed; tests in `test_speed_counter.py`. | correctness | medium | `refactor(core): validate the max speed of an agent when its speed counter is built.` |  | - | - |
-| 💡 S-2 | - | `AbstractRailEnv.acceleration_delta`/`braking_delta` as validating properties, `step()` reads the private fields; `Fraction` defaults and docstrings in `RailEnv`, `GraphRailEnv`, `env_generator()`, `env_generator_graph()`; tests incl. the issue's reproduction in `test_flatland_envs_rail_env.py`. | correctness | medium | `refactor(core): validate acceleration_delta and braking_delta when they are set.` |  | S-1 | - |
+| ✅ S-1 | - | Add `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` validate the max speed; tests in `test_speed_counter.py`. | correctness | medium | `refactor(core): validate the max speed of an agent when its speed counter is built.` | a65db8b8 | - | - |
+| ✅ S-2 | - | `AbstractRailEnv.acceleration_delta`/`braking_delta` as validating properties, `step()` reads the private fields; `Fraction` defaults and docstrings in `RailEnv`, `GraphRailEnv`, `env_generator()`, `env_generator_legacy()`; tests incl. the issue's reproduction in `test_flatland_envs_rail_env.py`. | correctness | medium | `refactor(core): validate acceleration_delta and braking_delta when they are set.` | c8475ff9 | S-1 | - |
 
 ## 12. Change inventory
 
@@ -410,7 +410,7 @@ None yet.
 | `flatland/envs/step_utils/speed_counter.py` | `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` call `validated_max_speed()` instead of the `assert` (S-1). |
 | `flatland/envs/rail_env.py` | `AbstractRailEnv.acceleration_delta`/`braking_delta` properties with validating setters; `step()` and the postcondition check read `_acceleration_delta`/`_braking_delta`; `RailEnv.__init__()` defaults `Fraction(1)`/`-Fraction(1)`; docstrings (S-2). |
 | `flatland/envs/graph_rail_env.py` | `GraphRailEnv.__init__()` defaults `Fraction(1)`/`-Fraction(1)` (S-2). |
-| `flatland/env_generation/env_generator.py` | `env_generator()`, `env_generator_graph()` defaults and docstrings (S-2). |
+| `flatland/env_generation/env_generator.py` | `env_generator()`, `env_generator_legacy()` defaults and docstrings (S-2). |
 | `tests/test_speed_counter.py` | Max speed validation and conversion (S-1). |
 | `tests/test_flatland_envs_rail_env.py` | Delta validation on construction and assignment; the issue's reproduction with `acceleration_delta=0.5` (S-2). |
 | `AGENTS.md` | "Speed/distance are `Fraction`s": floats passed as deltas are converted and checked, no longer a pitfall (S-2). |
