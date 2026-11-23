@@ -1,5 +1,6 @@
 import sys
 import warnings
+from fractions import Fraction
 from typing import Tuple, Dict, Optional
 
 from numpy.random import RandomState
@@ -33,8 +34,8 @@ def env_generator(n_agents=7,
                   seed=None,
                   post_seed=None,
                   obs_builder_object=None,
-                  acceleration_delta=1.0,
-                  braking_delta=-1.0,
+                  acceleration_delta: Fraction = Fraction(1),
+                  braking_delta: Fraction = -Fraction(1),
                   rewards: Rewards = None,
                   effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
                   skip_state_machine_update: bool = True,
@@ -84,10 +85,10 @@ def env_generator(n_agents=7,
          in the latter case, rail/line/schedule are loaded from file (not changing!).
     obs_builder_object: Optional[ObservationBuilder]
         Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
-    acceleration_delta : float
-        Defaults to `1.0`
-    braking_delta : float
-        Defaults to `-1.0`
+    acceleration_delta : Fraction
+        Must be > 0, floats are converted (see `RailEnv`). Defaults to `Fraction(1)`.
+    braking_delta : Fraction
+        Must be < 0, floats are converted (see `RailEnv`). Defaults to `-Fraction(1)`.
     rewards : Rewards
         Rewards function. Defaults to `DefaultRewards`.
     effects_generator : EffectsGenerator[RailEnv]
@@ -183,8 +184,8 @@ def env_generator_legacy(
     seed=None,
     post_seed=None,
     obs_builder_object=None,
-    acceleration_delta=1.0,
-    braking_delta=-1.0,
+    acceleration_delta: Fraction = Fraction(1),
+    braking_delta: Fraction = -Fraction(1),
     rewards: Rewards = None,
     effects_generator: Optional[EffectsGenerator[RailEnv]] = None,
     skip_state_machine_update: bool = True,

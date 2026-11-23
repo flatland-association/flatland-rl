@@ -215,12 +215,13 @@ shortest edge must be at least `MAX_SPEED` long, not `1 / MAX_SPEED`. Hence `MIN
 every other step - `rail_env.py`'s "(13) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
 from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
 `max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
-(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
-`acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to match. Passing a plain `float`
-for either instead (as opposed to a `Fraction`) can silently reintroduce floats into `new_speed` mid-`step()`,
-since `Fraction + float` coerces to `float` in Python — this can violate the `Fraction`-only invariant assumed
-by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that doesn't saturate to a speed boundary (0
-or `max_speed`) in one step.
+(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). The speed parameters are
+checked and converted where they are set, never in `step()`: `SpeedCounter` checks `max_speed` in (0, `MAX_SPEED`]
+(`validated_max_speed()`, also on unpickling), and `AbstractRailEnv`'s `acceleration_delta`/`braking_delta`
+properties check > 0 resp. < 0 on construction and on assignment (`validated_acceleration_delta()`/
+`validated_braking_delta()`). Each raises a `ValueError` naming the parameter and converts floats as
+`_pseudo_fractional()` does, so `step()` only ever sees `Fraction`s (`_cap_speed`'s `assert isinstance(v, Fraction)`).
+`step()` reads the private `_acceleration_delta`/`_braking_delta` fields to skip the property call.
 
 A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -
 `agent_utils.py`'s `load_env_agent()` normalizes a loaded agent's `speed_counter` against its `TrainState` on

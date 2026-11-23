@@ -2736,3 +2736,60 @@ def test_railenvwrapper_matches_unwrapped_control_flow(seed):
             break
 
     assert any_real_state_diverged_from_derived_fallback
+
+
+def _make_speed_parameter_env(**kwargs) -> RailEnv:
+    return RailEnv(width=30, height=30, number_of_agents=2, rail_generator=sparse_rail_generator(max_num_cities=2, seed=1),
+                   line_generator=sparse_line_generator({1.0: 1.0}, seed=1), **kwargs)
+
+
+@pytest.mark.parametrize("name,value", [
+    ("acceleration_delta", 0), ("acceleration_delta", Fraction(0)), ("acceleration_delta", -1), ("acceleration_delta", True),
+    ("braking_delta", 0), ("braking_delta", Fraction(1)), ("braking_delta", 0.5), ("braking_delta", None),
+])
+def test_invalid_speed_delta_raises_on_construction_and_assignment(name, value):
+    """An acceleration_delta <= 0 or a braking_delta >= 0 raises a ValueError naming the parameter, when the env is built
+    and when the value is assigned to a built env. A rejected assignment leaves the previous value."""
+    with pytest.raises(ValueError, match=name):
+        _make_speed_parameter_env(**{name: value})
+    env = _make_speed_parameter_env()
+    with pytest.raises(ValueError, match=name):
+        setattr(env, name, value)
+    assert getattr(env, name) == (Fraction(1) if name == "acceleration_delta" else Fraction(-1))
+
+
+def test_speed_deltas_default_to_fractions():
+    env = _make_speed_parameter_env()
+    assert isinstance(env.acceleration_delta, Fraction) and env.acceleration_delta == 1
+    assert isinstance(env.braking_delta, Fraction) and env.braking_delta == -1
+
+
+@pytest.mark.parametrize("acceleration_delta,braking_delta,expected_acceleration_delta,expected_braking_delta", [
+    (0.5, -0.5, Fraction(1, 2), Fraction(-1, 2)),
+    (1.0, -1.0, Fraction(1), Fraction(-1)),
+    (0.33, -0.25, Fraction(1, 3), Fraction(-1, 4)),
+    (np.int64(1), np.int64(-1), Fraction(1), Fraction(-1)),
+])
+def test_float_speed_deltas_are_converted_and_run(acceleration_delta, braking_delta, expected_acceleration_delta, expected_braking_delta):
+    """Two agents with max speed 1 on a sparse rail, float deltas: the env holds Fractions and steps through 60 steps of
+    MOVE_FORWARD (or until the episode ends), braking every third step, with the state machine wrapper and the step
+    postconditions."""
+    env = _make_speed_parameter_env(acceleration_delta=acceleration_delta, braking_delta=braking_delta)
+    assert env.acceleration_delta == expected_acceleration_delta and isinstance(env.acceleration_delta, Fraction)
+    assert env.braking_delta == expected_braking_delta and isinstance(env.braking_delta, Fraction)
+    env = RailEnvStateMachineWrapper(env)
+    env.reset(random_seed=1)
+    for i in range(60):
+        action = RailEnvActions.STOP_MOVING if i % 3 == 2 else RailEnvActions.MOVE_FORWARD
+        _, _, dones, _ = env.step({h: action for h in env.get_agent_handles()})
+        if dones["__all__"]:
+            break
+    assert env._elapsed_steps > 1
+
+
+def test_speed_delta_assigned_after_construction_is_converted():
+    env = _make_speed_parameter_env()
+    env.acceleration_delta = 0.1
+    env.braking_delta = -0.2
+    assert env.acceleration_delta == Fraction(1, 10)
+    assert env.braking_delta == Fraction(-1, 5)
