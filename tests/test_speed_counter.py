@@ -7,7 +7,7 @@ import pytest
 
 from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
-    cached_cell_exit
+    cached_cell_exit, validated_max_speed, validated_acceleration_delta, validated_braking_delta
 
 
 # design: distance update with pre-step speed.
@@ -406,9 +406,59 @@ def test_eq_between_independently_constructed_identical_speed_counters():
     assert SpeedCounter(speed=0.5, max_speed=1.0) == SpeedCounter(speed=0.5, max_speed=1.0)
 
 
-def test_init_rejects_max_speed_above_one():
-    with pytest.raises(AssertionError):
-        SpeedCounter(max_speed=1.5)
+@pytest.mark.parametrize("max_speed", [0, 0.0, Fraction(0), -0.5, Fraction(-1, 2), 1.5, Fraction(3, 2), True, None, "1"])
+def test_init_rejects_invalid_max_speed(max_speed):
+    """A max speed outside (0, 1], a bool, None or a string raises a ValueError naming max_speed."""
+    with pytest.raises(ValueError, match="max_speed"):
+        SpeedCounter(max_speed=max_speed)
+
+
+@pytest.mark.parametrize("max_speed,expected", [
+    (1, Fraction(1)), (1.0, Fraction(1)), (0.5, Fraction(1, 2)), (0.33, Fraction(1, 3)), (Fraction(1, 3), Fraction(1, 3)),
+    (np.int64(1), Fraction(1)), (np.float64(0.25), Fraction(1, 4)), (Decimal("0.1"), Fraction(1, 10)),
+])
+def test_init_converts_max_speed_to_fraction(max_speed, expected):
+    """Whole numbers, floats, numpy numbers and Decimals are converted to a Fraction, floats near 1/n to exactly 1/n."""
+    sc = SpeedCounter(max_speed=max_speed)
+    assert isinstance(sc.max_speed, Fraction)
+    assert sc.max_speed == expected
+
+
+def test_setstate_rejects_invalid_max_speed():
+    """A pickled speed counter with max speed 0 does not load."""
+    sc = SpeedCounter.__new__(SpeedCounter)
+    with pytest.raises(ValueError, match="max_speed"):
+        sc.__setstate__({"speed": None, "max_speed": Fraction(0), "distance": None, "edge_length": None, "is_cell_entry": False})
+
+
+@pytest.mark.parametrize("value,expected", [(1, Fraction(1)), (0.5, Fraction(1, 2)), (Fraction(1, 10), Fraction(1, 10)), (2, Fraction(2))])
+def test_validated_acceleration_delta_converts(value, expected):
+    v = validated_acceleration_delta(value)
+    assert isinstance(v, Fraction)
+    assert v == expected
+
+
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), -1, Fraction(-1, 2), True, None, "1"])
+def test_validated_acceleration_delta_rejects(value):
+    with pytest.raises(ValueError, match="acceleration_delta"):
+        validated_acceleration_delta(value)
+
+
+@pytest.mark.parametrize("value,expected", [(-1, Fraction(-1)), (-0.5, Fraction(-1, 2)), (-Fraction(1, 10), Fraction(-1, 10)), (-2, Fraction(-2))])
+def test_validated_braking_delta_converts(value, expected):
+    v = validated_braking_delta(value)
+    assert isinstance(v, Fraction)
+    assert v == expected
+
+
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), 1, Fraction(1, 2), False, None, "-1"])
+def test_validated_braking_delta_rejects(value):
+    with pytest.raises(ValueError, match="braking_delta"):
+        validated_braking_delta(value)
+
+
+def test_validated_max_speed_upper_bound_is_inclusive():
+    assert validated_max_speed(1) == Fraction(1)
 
 
 def test_init_rejects_speed_above_max_speed():
@@ -465,3 +515,14 @@ def test_set_takes_crossed_by_keyword_only():
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
     with pytest.raises(TypeError):
         sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH, True)
+
+
+def test_reset_rejects_line_with_max_speed_zero():
+    """An env whose line generator samples max speed 0 raises a ValueError naming max_speed in reset(), not in a later step."""
+    from flatland.envs.line_generators import sparse_line_generator
+    from flatland.envs.rail_env import RailEnv
+    from flatland.envs.rail_generators import sparse_rail_generator
+    env = RailEnv(width=30, height=30, number_of_agents=2, rail_generator=sparse_rail_generator(max_num_cities=2, seed=1),
+                  line_generator=sparse_line_generator({0.0: 1.0}, seed=1))
+    with pytest.raises(ValueError, match="max_speed"):
+        env.reset(random_seed=1)
