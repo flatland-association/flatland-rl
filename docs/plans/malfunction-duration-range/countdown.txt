@@ -1,0 +1,125 @@
+# Malfunction countdown, one agent at speed 1 given MOVE_FORWARD, a malfunction drawn in step 6 (min_duration = max_duration = D).
+# Run 2026-11-23: v4.3.0 (git archive), main ac932d16, prototype = ac932d16 without the + 1 in ParamMalfunctionGen.generate().
+# Script:
+#   """Observe the malfunction countdown: a malfunction drawn in one chosen step, duration min=max=D."""
+#   import sys
+#   from numpy.random import RandomState
+#   from flatland.envs.malfunction_generators import ParamMalfunctionGen, MalfunctionParameters
+#   from flatland.envs.rail_env import RailEnv
+#   from flatland.envs.rail_generators import sparse_rail_generator
+#   from flatland.envs.line_generators import sparse_line_generator
+#   from flatland.envs.observations import GlobalObsForRailEnv
+#   from flatland.envs.rail_env_action import RailEnvActions
+#   
+#   D = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+#   DRAW_STEP = int(sys.argv[2]) if len(sys.argv) > 2 else 6
+#   
+#   
+#   class OneShot:
+#       """Draws from ParamMalfunctionGen(rate=inf, D, D) only in step DRAW_STEP."""
+#       def __init__(self):
+#           self.inner = ParamMalfunctionGen(MalfunctionParameters(malfunction_rate=1e9, min_duration=D, max_duration=D))
+#           self.env = None
+#   
+#       def generate(self, np_random):
+#           if self.env._elapsed_steps == DRAW_STEP:
+#               return self.inner.generate(np_random)
+#           return None
+#   
+#       def get_process_data(self):
+#           return self.inner.get_process_data()
+#   
+#   
+#   gen = OneShot()
+#   env = RailEnv(width=30, height=30, number_of_agents=1,
+#                 rail_generator=sparse_rail_generator(max_num_cities=2, seed=1, max_rails_between_cities=1, max_rail_pairs_in_city=1),
+#                 line_generator=sparse_line_generator(seed=1),
+#                 malfunction_generator=gen, obs_builder_object=GlobalObsForRailEnv(), random_seed=1)
+#   gen.env = env
+#   env.reset(random_seed=1)
+#   a = env.agents[0]
+#   def pos():
+#       c = getattr(a, "current_entry_point", None) if hasattr(a, "current_entry_point") else a.current_configuration
+#       return c[0] if c else None
+#   print(f"D={D}, malfunction drawn in step {DRAW_STEP}")
+#   for t in range(1, 16):
+#       _, _, dones, info = env.step({0: RailEnvActions.MOVE_FORWARD})
+#       print(f"after step {t:2d}: info['malfunction']={info['malfunction'][0]}  state={a.state.name:22s} pos={pos()}")
+
+## v4.3.0, D=2, draw step 6
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=READY_TO_DEPART        pos=None
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  6: info['malfunction']=2  state=MALFUNCTION            pos=(12, 26)
+after step  7: info['malfunction']=1  state=MALFUNCTION            pos=(12, 26)
+after step  8: info['malfunction']=0  state=MALFUNCTION            pos=(12, 26)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+
+## v4.3.0, D=2, draw step 999
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=READY_TO_DEPART        pos=None
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  6: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  7: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step  8: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(14, 28)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(15, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(16, 28)
+
+## main ac932d16, D=2, draw step 6
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  6: info['malfunction']=3  state=MALFUNCTION            pos=(12, 27)
+after step  7: info['malfunction']=2  state=MALFUNCTION            pos=(12, 27)
+after step  8: info['malfunction']=1  state=MALFUNCTION            pos=(12, 27)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+
+## main ac932d16, D=2, draw step 999
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  6: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step  7: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+after step  8: info['malfunction']=0  state=MOVING                 pos=(14, 28)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(15, 28)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(16, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(16, 27)
+
+## prototype, D=2, draw step 6
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  6: info['malfunction']=2  state=MALFUNCTION            pos=(12, 27)
+after step  7: info['malfunction']=1  state=MALFUNCTION            pos=(12, 27)
+after step  8: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(14, 28)
+
+## prototype, D=2, draw step 999
+after step  1: info['malfunction']=0  state=WAITING                pos=None
+after step  2: info['malfunction']=0  state=MOVING                 pos=(12, 24)
+after step  3: info['malfunction']=0  state=MOVING                 pos=(12, 25)
+after step  4: info['malfunction']=0  state=MOVING                 pos=(12, 26)
+after step  5: info['malfunction']=0  state=MOVING                 pos=(12, 27)
+after step  6: info['malfunction']=0  state=MOVING                 pos=(12, 28)
+after step  7: info['malfunction']=0  state=MOVING                 pos=(13, 28)
+after step  8: info['malfunction']=0  state=MOVING                 pos=(14, 28)
+after step  9: info['malfunction']=0  state=MOVING                 pos=(15, 28)
+after step 10: info['malfunction']=0  state=MOVING                 pos=(16, 28)
+after step 11: info['malfunction']=0  state=MOVING                 pos=(16, 27)
