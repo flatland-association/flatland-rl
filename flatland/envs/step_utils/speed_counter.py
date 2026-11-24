@@ -104,7 +104,9 @@ def validated_max_speed(max_speed) -> Fraction:
     """
     v = _validated_fraction("max_speed", max_speed, snap_floats=True)
     if not 0 < v <= MAX_SPEED:
-        raise ValueError(f"max_speed must be in (0, {MAX_SPEED}], found {max_speed}.")
+        # a float may be snapped out of range (`1e-09` to 0): then the message names both values
+        converted = f", converted to {v}" if v != max_speed else ""
+        raise ValueError(f"max_speed must be in (0, {MAX_SPEED}], found {max_speed}{converted}.")
     return v
 
 

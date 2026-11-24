@@ -603,3 +603,10 @@ def test_not_a_number_error_names_the_value_passed_in(validate, value):
 @pytest.mark.parametrize("value,expected", [(np.float32(0.3), Fraction(3, 10)), (np.float32(0.33), Fraction(1, 3)), (np.float16(0.25), Fraction(1, 4))])
 def test_numpy_float_max_speed_is_converted_from_its_decimal_value(value, expected):
     assert validated_max_speed(value) == expected
+
+
+def test_max_speed_snapped_out_of_range_names_the_converted_value():
+    with pytest.raises(ValueError, match=r"found 1e-09, converted to 0\."):
+        validated_max_speed(1e-9)
+    with pytest.raises(ValueError, match=r"found 1\.5\.$"):
+        validated_max_speed(1.5)
