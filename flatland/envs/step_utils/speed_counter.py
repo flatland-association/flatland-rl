@@ -234,10 +234,10 @@ class SpeedCounter:
     def __init__(self, max_speed: float, speed: Optional[float] = None):
         self._max_speed: Fraction = validated_max_speed(max_speed)
         # design: speed is None until the agent enters the map (see step())
-        self._speed: Optional[Fraction] = _pseudo_fractional(speed) if speed is not None else None
-        if self._speed is not None:
-            assert self._speed <= self._max_speed
-            assert self._speed >= 0.0
+        self._speed: Optional[Fraction] = None
+        if speed is not None:
+            self._speed = _validated_in_range("speed", speed, ZERO_FRACTION, self._max_speed, low_open=False, high_open=False,
+                                              snap_floats=True)
         self._distance: Optional[Fraction] = None
         self._edge_length: Optional[EdgeLength] = None
         self._is_cell_entry = False

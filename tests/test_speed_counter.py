@@ -462,12 +462,12 @@ def test_validated_max_speed_upper_bound_is_inclusive():
 
 
 def test_init_rejects_speed_above_max_speed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="speed must be in \\[0, "):
         SpeedCounter(speed=0.5, max_speed=0.3)
 
 
 def test_init_rejects_negative_speed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="speed must be in \\[0, "):
         SpeedCounter(speed=-0.1, max_speed=1.0)
 
 
@@ -623,3 +623,9 @@ def test_range_error_names_the_range_and_the_value(validate, value, message):
     with pytest.raises(ValueError) as e:
         validate(value)
     assert str(e.value) == message
+
+
+@pytest.mark.parametrize("speed", [True, "0.5", float("nan")])
+def test_init_rejects_initial_speed_that_is_not_a_number(speed):
+    with pytest.raises(ValueError, match="speed must be a number"):
+        SpeedCounter(max_speed=1, speed=speed)
