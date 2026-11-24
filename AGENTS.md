@@ -218,7 +218,9 @@ from `0` by `acceleration_delta` immediately on the step the agent departs, rath
 (including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). The speed parameters are
 checked and converted where they are set, never in `step()`: `SpeedCounter` checks `max_speed` in (0, `MAX_SPEED`]
 (`validated_max_speed()`, also on unpickling), and `AbstractRailEnv`'s `acceleration_delta`/`braking_delta`
-properties check > 0 resp. < 0 on construction and on assignment (`validated_acceleration_delta()`/
+properties check (0, `MAX_SPEED`] resp. [-`MAX_SPEED`, 0) on construction and on assignment (a delta beyond ±1
+changes the speed by more than its whole range in one step, so it has no meaning; a delta beyond a train's max speed
+is not an error, as the deltas are global: `_cap_speed()` caps per train) (`validated_acceleration_delta()`/
 `validated_braking_delta()`). Each raises a `ValueError` naming the parameter and converts floats, by two rules on
 purpose: max speeds snap to 1/n as `_pseudo_fractional()` does (`0.33 -> Fraction(1, 3)`, the `speed_ratio_map`
 convention), deltas are exact from their decimal value (`0.33 -> Fraction(33, 100)`, `0.15 -> Fraction(3, 20)`, where

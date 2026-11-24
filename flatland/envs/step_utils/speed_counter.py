@@ -105,35 +105,50 @@ def validated_max_speed(max_speed) -> Fraction:
 
 def validated_acceleration_delta(acceleration_delta) -> Fraction:
     """
-    Check `acceleration_delta` is > 0 and return it as a `Fraction`. Floats are converted exactly from their decimal value
-    (`0.15` becomes `Fraction(3, 20)`), not snapped to 1/n as max speeds are (see `_validated_fraction()`).
-    There is no upper bound: the speed is capped at the agent's max speed.
+    Check `acceleration_delta` is in (0, `MAX_SPEED`] and return it as a `Fraction`. Floats are converted exactly from
+    their decimal value (`0.15` becomes `Fraction(3, 20)`), not snapped to 1/n as max speeds are (see
+    `_validated_fraction()`).
+
+    What is checked, and fails: the range (0, `MAX_SPEED`]. `MAX_SPEED` (1) is the highest speed the env supports, so
+    that an agent never jumps over a cell or edge in one step; a delta above it would change the speed by more than
+    the whole speed range in one step, and so has no meaning of its own (`2` would act as `1`).
+
+    What is not checked, and does not fail: a delta above an agent's max speed. The deltas are global, the same for all
+    agents, while the max speeds differ per agent, so `step()` caps the new speed at each agent's max speed
+    (`_cap_speed()`): with `acceleration_delta=1`, an agent with max speed `1/4` reaches `1/4` in one step.
 
     Raises
     ------
     ValueError
-        if `acceleration_delta` is not a number, or not > 0.
+        if `acceleration_delta` is not a number, or not in (0, `MAX_SPEED`].
     """
     v = _validated_fraction("acceleration_delta", acceleration_delta, snap_floats=False)
-    if not v > 0:
-        raise ValueError(f"acceleration_delta must be > 0, found {acceleration_delta}.")
+    if not 0 < v <= MAX_SPEED:
+        raise ValueError(f"acceleration_delta must be in (0, {MAX_SPEED}], found {acceleration_delta}.")
     return v
 
 
 def validated_braking_delta(braking_delta) -> Fraction:
     """
-    Check `braking_delta` is < 0 and return it as a `Fraction`. Floats are converted exactly from their decimal value
-    (`-0.15` becomes `Fraction(-3, 20)`), not snapped to 1/n as max speeds are (see `_validated_fraction()`).
-    There is no lower bound: the speed is floored at 0, so `-1` stops an agent in one step.
+    Check `braking_delta` is in [-`MAX_SPEED`, 0) and return it as a `Fraction`. Floats are converted exactly from their
+    decimal value (`-0.15` becomes `Fraction(-3, 20)`), not snapped to 1/n as max speeds are (see
+    `_validated_fraction()`).
+
+    What is checked, and fails: the range [-`MAX_SPEED`, 0). `-MAX_SPEED` (-1) stops any agent in one step, from the
+    highest speed the env supports; a delta below it has no meaning of its own (`-2` would act as `-1`).
+
+    What is not checked, and does not fail: a delta below minus an agent's max speed. The deltas are global, the same
+    for all agents, so `step()` floors the new speed at 0 for each agent (`_cap_speed()`): with `braking_delta=-1/2`, an
+    agent at speed `1/4` stops in one step.
 
     Raises
     ------
     ValueError
-        if `braking_delta` is not a number, or not < 0.
+        if `braking_delta` is not a number, or not in [-`MAX_SPEED`, 0).
     """
     v = _validated_fraction("braking_delta", braking_delta, snap_floats=False)
-    if not v < 0:
-        raise ValueError(f"braking_delta must be < 0, found {braking_delta}.")
+    if not -MAX_SPEED <= v < 0:
+        raise ValueError(f"braking_delta must be in [-{MAX_SPEED}, 0), found {braking_delta}.")
     return v
 
 

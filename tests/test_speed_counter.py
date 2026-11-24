@@ -431,27 +431,27 @@ def test_setstate_rejects_invalid_max_speed():
         sc.__setstate__({"speed": None, "max_speed": Fraction(0), "distance": None, "edge_length": None, "is_cell_entry": False})
 
 
-@pytest.mark.parametrize("value,expected", [(1, Fraction(1)), (0.5, Fraction(1, 2)), (Fraction(1, 10), Fraction(1, 10)), (2, Fraction(2))])
+@pytest.mark.parametrize("value,expected", [(1, Fraction(1)), (0.5, Fraction(1, 2)), (Fraction(1, 10), Fraction(1, 10)), (1.0, Fraction(1))])
 def test_validated_acceleration_delta_converts(value, expected):
     v = validated_acceleration_delta(value)
     assert isinstance(v, Fraction)
     assert v == expected
 
 
-@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), -1, Fraction(-1, 2), True, None, "1"])
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), -1, Fraction(-1, 2), 2, 1.01, Fraction(11, 10), True, None, "1"])
 def test_validated_acceleration_delta_rejects(value):
     with pytest.raises(ValueError, match="acceleration_delta"):
         validated_acceleration_delta(value)
 
 
-@pytest.mark.parametrize("value,expected", [(-1, Fraction(-1)), (-0.5, Fraction(-1, 2)), (-Fraction(1, 10), Fraction(-1, 10)), (-2, Fraction(-2))])
+@pytest.mark.parametrize("value,expected", [(-1, Fraction(-1)), (-0.5, Fraction(-1, 2)), (-Fraction(1, 10), Fraction(-1, 10)), (-1.0, Fraction(-1))])
 def test_validated_braking_delta_converts(value, expected):
     v = validated_braking_delta(value)
     assert isinstance(v, Fraction)
     assert v == expected
 
 
-@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), 1, Fraction(1, 2), False, None, "-1"])
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), 1, Fraction(1, 2), -2, -1.01, Fraction(-11, 10), False, None, "-1"])
 def test_validated_braking_delta_rejects(value):
     with pytest.raises(ValueError, match="braking_delta"):
         validated_braking_delta(value)
@@ -572,3 +572,11 @@ def test_setstate_old_pickle_with_invalid_speed_names_the_pickled_speed(speed):
     sc = SpeedCounter.__new__(SpeedCounter)
     with pytest.raises(ValueError, match="taken from the pickled speed"):
         sc.__setstate__({"speed": speed, "distance": None, "is_cell_entry": False})
+
+
+def test_deltas_beyond_an_agents_max_speed_are_capped_not_rejected():
+    """The deltas are global: a delta above an agent's max speed (or below minus its speed) is valid, and the new speed is
+    capped at the agent's max speed (or floored at 0) instead."""
+    max_speed = validated_max_speed(Fraction(1, 4))
+    assert _cap_speed(max_speed, Fraction(0) + validated_acceleration_delta(1)) == Fraction(1, 4)
+    assert _cap_speed(max_speed, Fraction(1, 4) + validated_braking_delta(Fraction(-1, 2))) == Fraction(0)

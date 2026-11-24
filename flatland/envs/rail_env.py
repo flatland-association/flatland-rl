@@ -147,14 +147,20 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
         As speed is between 0 and 1, acceleration_delta=1 restores the previous constant speed behaviour
         (i.e. MOVE_FORWARD always sets to max speed allowed for train).
-        Must be > 0. A whole number or a float is converted to a `Fraction`, a float exactly from its decimal value
+        Must be in (0, 1], 1 being `MAX_SPEED`, the highest speed the env supports so that an agent never jumps over a
+        cell or edge in one step: a delta above 1 would change the speed by more than the whole speed range in one step
+        and has no meaning of its own. Not checked: a delta above a train's max speed. The delta is the same for all
+        trains, so `step()` caps the new speed at each train's max speed instead of failing.
+        A whole number or a float is converted to a `Fraction`, a float exactly from its decimal value
         (`0.15` to `Fraction(3, 20)`, `0.33` to `Fraction(33, 100)`). Unlike max speeds, which are snapped to the nearest
         1/n (`0.33` to `Fraction(1, 3)`, see `speed_counter.py`'s `_validated_fraction()`). An invalid value raises a
         `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
     braking_delta : Fraction
         Determines how much speed is decreased by STOP_MOVING action.
         As speed is between 0 and 1, braking_delta=-1 restores to previous full stop behaviour.
-        Must be < 0. Converted and checked as `acceleration_delta`.
+        Must be in [-1, 0): -1 stops any train in one step, a delta below it has no meaning of its own. Not checked: a
+        delta below minus a train's speed; `step()` floors the new speed at 0 instead of failing. Converted and checked
+        as `acceleration_delta`.
     check_step_pre_post_conditions : bool
         Set to False to skip checking step() pre- and postconditions, e.g. in performance-sensitive production use.
     rewards : DefaultRewards

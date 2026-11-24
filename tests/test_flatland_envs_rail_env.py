@@ -2739,8 +2739,8 @@ def _make_speed_parameter_env(**kwargs) -> RailEnv:
 
 
 @pytest.mark.parametrize("name,value", [
-    ("acceleration_delta", 0), ("acceleration_delta", Fraction(0)), ("acceleration_delta", -1), ("acceleration_delta", True),
-    ("braking_delta", 0), ("braking_delta", Fraction(1)), ("braking_delta", 0.5), ("braking_delta", None),
+    ("acceleration_delta", 0), ("acceleration_delta", Fraction(0)), ("acceleration_delta", -1), ("acceleration_delta", True), ("acceleration_delta", 2),
+    ("braking_delta", 0), ("braking_delta", Fraction(1)), ("braking_delta", 0.5), ("braking_delta", None), ("braking_delta", -2),
 ])
 def test_invalid_speed_delta_raises_on_construction_and_assignment(name, value):
     """An acceleration_delta <= 0 or a braking_delta >= 0 raises a ValueError naming the parameter, when the env is built
