@@ -4,7 +4,7 @@
 > [#578](https://github.com/flatland-association/flatland-rl/issues/578) ("refactor(core): validate acceleration_delta,
 > braking_delta and max speed when the env is built.", chenkins, from a
 > [comment on #526](https://github.com/flatland-association/flatland-rl/issues/526#issuecomment-6635579968)). Branch
-> `578-validate-speed-parameters`, PR [#579](https://github.com/flatland-association/flatland-rl/pull/579). Open questions: none; Q-1–Q-4 decided 2026-11-23.
+> `578-validate-speed-parameters`, PR [#579](https://github.com/flatland-association/flatland-rl/pull/579). Open questions: none; Q-1–Q-4 decided 2026-11-23, Q-5 2026-11-24.
 >
 > **Why:** `RailEnv` accepts any `acceleration_delta`, `braking_delta` and agent max speed. Invalid values fail much
 > later, in the middle of an episode, with an `AssertionError` or a `ZeroDivisionError` that does not name the
@@ -34,8 +34,8 @@
 
 Requirements:
 
-- **REQ-1** `acceleration_delta` must be > 0.
-- **REQ-2** `braking_delta` must be < 0.
+- **REQ-1** `acceleration_delta` must be > 0 (and ≤ `MAX_SPEED`, Q-5).
+- **REQ-2** `braking_delta` must be < 0 (and ≥ -`MAX_SPEED`, Q-5).
 - **REQ-3** Every agent's max speed must be in (0, `MAX_SPEED`] (`MAX_SPEED` = 1), for lines that are generated,
   loaded from a pickle or built from a static env.
 - **REQ-4** Floats are either rejected or converted to `Fraction` (Q-1). After validation, the env and the speed
@@ -183,12 +183,12 @@ Screenshots: none, nothing is visible.
 
 | ID | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
-| REQ-1 | `acceleration_delta > 0` | `test_flatland_envs_rail_env.py`: `RailEnv(acceleration_delta=0)`, `-1`, and `env.acceleration_delta = 0` raise `ValueError` naming `acceleration_delta` (S-2). | ✅ passes | - |
-| REQ-2 | `braking_delta < 0` | Same for `braking_delta` `0` and `1` (S-2). | ✅ passes | - |
+| REQ-1 | `acceleration_delta` in (0, 1] | `test_flatland_envs_rail_env.py`: `RailEnv(acceleration_delta=0)`, `-1`, `2`, and `env.acceleration_delta = 0` raise `ValueError` naming `acceleration_delta` (S-2, S-9); `test_speed_counter.py`: `1` is accepted, `1.01` rejected, a delta above an agent's max speed is capped, not rejected (S-9). | ✅ passes | - |
+| REQ-2 | `braking_delta` in [-1, 0) | Same for `braking_delta` `0`, `1` and `-2` (S-2, S-9). | ✅ passes | - |
 | REQ-3 | Max speed in (0, 1] | `test_speed_counter.py`: `SpeedCounter(max_speed=0)`, `-1/2`, `3/2`, `True` raise `ValueError`; a `sparse_line_generator({0.0: 1.0})` env raises in `reset()` (S-1). | ✅ passes | - |
-| REQ-4 | `Fraction`s after validation | `RailEnv(acceleration_delta=0.5)` holds `Fraction(1, 2)` and runs the issue's 60 steps; `SpeedCounter(max_speed=0.33).max_speed == Fraction(1, 3)` (S-1, S-2). | ✅ passes | - |
+| REQ-4 | `Fraction`s after validation | `RailEnv(acceleration_delta=0.5)` holds `Fraction(1, 2)` and runs the issue's 60 steps; `SpeedCounter(max_speed=0.33).max_speed == Fraction(1, 3)` (S-1, S-2); float deltas exact (`0.15` → `3/20`, `-0.004` → `-1/250`) while max speeds snap (`0.15` → `1/7`); `np.float32` accepted; NaN and infinities raise `ValueError` (S-3, S-4). | ✅ passes | - |
 | REQ-5 | Named `ValueError` at build | The tests above match the parameter name in the message (`pytest.raises(ValueError, match="acceleration_delta")`). | ✅ passes | - |
-| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | ✅ core suite green (1321 passed, 58 skipped; `test_episode`'s 12 regression episodes are skipped on `main` too); `flatland-baselines`' tests can't import `ObservationType`, also against `main` | - |
+| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | ✅ core suite green at c8475ff9 (1321 passed, 58 skipped; `test_episode`'s 12 regression episodes are skipped on `main` too); `flatland-baselines`' tests can't import `ObservationType`, also against `main`. After S-3–S-9 the affected test files pass (245 passed, 2 skipped); the full run was stopped for low memory and is still to be repeated | - |
 | NFR-2 | No slowdown | `step()` unchanged except reading the private field (S-2); CI profiling job. | ✅ `step()` reads `_acceleration_delta`/`_braking_delta` | - |
 
 ### 4.3 Values and conversion (REQ-1–REQ-5; Q-1, Q-4)
@@ -210,9 +210,16 @@ exactly, converts floats (numpy floats too), then checks the range. Floats are c
 | `0.99` | `1` | `99/100` |
 | `-0.004` | - | `-1/250` |
 
- Message, as `validated_edge_length()`:
-`"acceleration_delta must be > 0, found 0."`. No upper bound on `acceleration_delta` or lower bound on
-`braking_delta`: values beyond 1 are capped by the max speed and by 0 (as `braking_delta=-1` means "stop at once").
+Message, as `validated_edge_length()`: `"acceleration_delta must be in (0, 1], found 0."`.
+
+Bounds of the deltas (Q-5), as the validators' and `RailEnv`'s docstrings explain:
+
+- **Checked, fails:** `acceleration_delta` in (0, `MAX_SPEED`], `braking_delta` in [-`MAX_SPEED`, 0). `MAX_SPEED` (1)
+  is the highest speed the env supports, so that an agent never jumps over a cell or edge in one step. A delta beyond
+  ±1 changes the speed by more than its whole range in one step and has no meaning of its own (`2` acts as `1`).
+- **Not checked, does not fail:** a delta beyond an agent's max speed (or below minus its speed). The deltas are
+  global, the same for all agents, while max speeds differ per agent; `_cap_speed()` caps the new speed at each
+  agent's max speed and floors it at 0.
 
 ### 4.4 Where the values are checked (REQ-3, REQ-5; Q-2, Q-3)
 
@@ -309,11 +316,16 @@ None for callers with valid values: floats keep working and are converted (Q-1).
 
 - **Invalid values raise `ValueError` early.** `acceleration_delta <= 0`, `braking_delta >= 0`, max speed `<= 0` or
   `> 1`, and `bool` values: before, they were accepted and failed in `reset()` or `step()` (§3), except a max speed
-  `> 1`, which raised an `AssertionError` in `SpeedCounter`. No known user relies on them (grep of `flatland-rl`,
+  `> 1`, which raised an `AssertionError` in `SpeedCounter`. `acceleration_delta > 1` and `braking_delta < -1` were
+  accepted and acted as `1`/`-1`; they now raise (Q-5), migration: pass `1`/`-1`. No known user relies on them (grep of `flatland-rl`,
   `flatland-baselines`). Migration: none, the configuration was broken.
-- **Type of `env.acceleration_delta`/`env.braking_delta`:** `Fraction` instead of the float passed in.
-  `env_stats.csv` of `trajectory_analysis.py` shows `1`/`-1` instead of `1.0`/`-1.0` (a converted `0.1` as `1/10`).
-  Migration: `float(...)` when reading the CSV needs `Fraction(...)` for `1/10`; no reader in the repo parses it.
+- **Type of `env.acceleration_delta`/`env.braking_delta`:** `Fraction` instead of the float passed in, a float delta
+  as its exact decimal value (`0.15` → `3/20`, Q-4). `env_stats.csv` of `trajectory_analysis.py` keeps writing floats
+  (S-6). Migration: `float(env.acceleration_delta)` where a float is needed.
+- **Whole `RailEnv` objects pickled before this change** (`pickle.dump(env)`, not `RailEnvPersister`) raise an
+  `AttributeError` in `step()` after loading: their `__dict__` has `acceleration_delta`, not `_acceleration_delta`
+  (F-6). Nothing in `flatland-rl` or `flatland-baselines` pickles whole envs; `RailEnvPersister` stores no deltas.
+  Migration: none; set `env.acceleration_delta`/`env.braking_delta` after loading, or rebuild the env.
 - **Pickles with an invalid max speed** no longer load (Q-3). None known; the regression episodes check it.
 
 ## 9. Decisions
@@ -367,6 +379,14 @@ the max speeds' conversion for the deltas (DP-2) without this in view.
 
 *Proposal:* b). A delta is a rate the user writes down as a decimal; only max speeds have the 1/n convention.
 
+✅ ~~**(Q-5) (Q-1) revisited: bound the deltas by `MAX_SPEED`?**~~ **Decided 2026-11-24:** a), user request. §4.3 had
+no upper bound on `acceleration_delta` or lower bound on `braking_delta`, as `_cap_speed()` caps the speed anyway.
+- a) `acceleration_delta` in (0, `MAX_SPEED`], `braking_delta` in [-`MAX_SPEED`, 0); docstrings say what is checked
+  (the env's range) and what is only capped (each agent's max speed, as the deltas are global).
+- b) No bound: `2` acts as `1`, a typo such as a percentage (`20`) goes unnoticed.
+
+*Proposal:* a). No caller in `flatland-rl` or `flatland-baselines` passes a delta beyond ±1.
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -377,6 +397,7 @@ the max speeds' conversion for the deltas (DP-2) without this in view.
 | 2026-11-23 | ✅ Float deltas are converted exactly from their decimal value; max speeds keep the 1/n snapping (Q-4, §4.3). | F-2: the snapping turned `acceleration_delta=0.15` into `1/7`. Max speeds keep it, as `speed_ratio_map`'s `0.33` means `1/3`. Not taken: keeping the snapping for deltas, exact conversion for max speeds too (changes every generated timetable). | DP-2 has two rules, documented in the docstrings and `AGENTS.md`; S-4. |
 | 2026-11-23 | ✅ The deltas are validating properties; `step()` reads the private fields (Q-2, §4.4). | Tests and users assign after construction. Not taken: checking only in `__init__()`. | PAT-1; no per-step cost (NFR-2). |
 | 2026-11-23 | ✅ The max speed is checked in `SpeedCounter.__init__()` and `__setstate__()` (Q-3, §4.4). | One place for every creation path, pickles included. Not taken: only `__init__()`, or the line generators. | A pickle with an invalid max speed no longer loads (§8.2). |
+| 2026-11-24 | ✅ The deltas are bounded by `MAX_SPEED`: `acceleration_delta` in (0, 1], `braking_delta` in [-1, 0); a delta beyond an agent's max speed is capped, not rejected (Q-5, §4.3). | A delta beyond ±1 has no meaning of its own, as no speed may exceed `MAX_SPEED`; the deltas are global, so per-agent max speeds can only cap. Not taken: no bound. | `acceleration_delta > 1`/`braking_delta < -1` now raise (§8.2); S-9. |
 
 ### 9.3 Code Review Findings
 
@@ -387,14 +408,14 @@ PR [#579](https://github.com/flatland-association/flatland-rl/pull/579), base `m
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
 |---|---|---|---|---|---|---|
-|  | F-1 | code review | bug | medium | `flatland/envs/step_utils/speed_counter.py:46-49,121`: `_pseudo_fractional()` snaps small negative floats to 0 (`-0.004 % 1 = 0.996` is close to 1, giving `1 + int(-0.004 // 1) = 0`), so `validated_braking_delta(-0.004)` rejects a valid braking delta with "must be < 0", while `acceleration_delta=0.004` is accepted. Fix: convert negatives by symmetry (`-_pseudo_fractional(-v)`), which also drops the third `elif`. Open. | fix(core): convert small negative float speed deltas to Fractions instead of 0. |
-|  | F-2 | code review | design | medium | `flatland/envs/step_utils/speed_counter.py:42-49,71`: the absolute tolerance `atol=1e-2` snaps floats to 1/n far from their value: `0.15` becomes `1/7`, `0.12` becomes `1/8`, `0.21` becomes `1/5`, `0.505` becomes `1/2`, `0.99` becomes `1`. For max speeds this is so on `main`. Since Q-1 the float deltas are snapped too, so `acceleration_delta=0.15` changes the time to max speed without a warning. Reopens Q-1 as Q-4, decided b) on 2026-11-23. Open. | fix(core): convert float speed deltas exactly from their decimal value. |
-|  | F-3 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:66-72`: only `numbers.Integral` is normalised, so `np.float32(0.5)` (not a `float` subclass) is rejected with "must be a number, found float32 0.5", for the deltas and the max speed. On `main` `SpeedCounter(max_speed=np.float32(0.25))` failed as well. Fix: convert other `numbers.Real` with `float()` first. Open. | fix(core): accept numpy float speed parameters. |
-|  | F-4 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:69-72`: `Fraction.from_decimal(Decimal("Infinity"))` raises `OverflowError`, which `_validated_fraction()` does not catch, so `validated_max_speed(Decimal("Infinity"))` breaks the documented "raises `ValueError`". Fix: catch `ArithmeticError` too. Open. | fix(core): raise ValueError for infinite Decimal speed parameters. |
-|  | F-5 | code review | robustness | low | `flatland/evaluators/trajectory_analysis.py:61-62`: `env_stats` now holds `Fraction`s, so `env_stats.csv` shows `1`, `-1` or `1/2` instead of `1.0`/`-1.0`/`0.5`; `pd.read_csv` gives a string column for `1/2`. Listed in §8.2 as a change. Fix: write `float(env.acceleration_delta)`/`float(env.braking_delta)`, so the CSV stays as on `main`. Open. | fix(evaluators): write the speed deltas to env_stats as floats, as before. |
-|  | F-6 | code review | robustness | low | `flatland/envs/rail_env.py:269-289,701,1608`: a `RailEnv` pickled as a whole object before this change has `acceleration_delta` in its `__dict__`; the property ignores it and `step()` reads the missing `_acceleration_delta` (`AttributeError`). `RailEnvPersister` stores no deltas, and nothing in the repo pickles whole envs. Fix: name it in §8.2; no code change. Open. | docs(plans): name whole-object RailEnv pickles as a breaking change. |
-|  | F-7 | code review | docs | low | `tests/test_flatland_envs_rail_env.py:1454-1458`: the comment says `RailEnv.__init__`'s `acceleration_delta` default is the plain float `1.0` and forces a `Fraction`; both are stale since the default is `Fraction(1)`. Fix: remove the comment and the override. Open. | test(rail_env): drop the stale float-default workaround in the eta test. |
-|  | F-8 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:412`: an old pickle without `max_speed` takes the max speed from its speed; a speed of `None` or 0 there raises "max_speed must be a number, found NoneType None", naming a field the pickle doesn't have. The fixture pickles load (`test_restore_episode`). Fix: say in the message that the max speed was taken from the pickled speed. Open. | fix(core): name the pickled speed when an old pickle's max speed is invalid. |
+| ✅ | F-1 | code review | bug | medium | `flatland/envs/step_utils/speed_counter.py:46-49,121`: `_pseudo_fractional()` snaps small negative floats to 0 (`-0.004 % 1 = 0.996` is close to 1, giving `1 + int(-0.004 // 1) = 0`), so `validated_braking_delta(-0.004)` rejects a valid braking delta with "must be < 0", while `acceleration_delta=0.004` is accepted. Fix: convert negatives by symmetry (`-_pseudo_fractional(-v)`), which also drops the third `elif`. Fixed in 76655cf4. | fix(core): convert small negative float speed deltas to Fractions instead of 0. |
+| ✅ | F-2 | code review | design | medium | `flatland/envs/step_utils/speed_counter.py:42-49,71`: the absolute tolerance `atol=1e-2` snaps floats to 1/n far from their value: `0.15` becomes `1/7`, `0.12` becomes `1/8`, `0.21` becomes `1/5`, `0.505` becomes `1/2`, `0.99` becomes `1`. For max speeds this is so on `main`. Since Q-1 the float deltas are snapped too, so `acceleration_delta=0.15` changes the time to max speed without a warning. Reopens Q-1 as Q-4, decided b) on 2026-11-23. Fixed in 7e20387a. | fix(core): convert float speed deltas exactly from their decimal value. |
+| ✅ | F-3 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:66-72`: only `numbers.Integral` is normalised, so `np.float32(0.5)` (not a `float` subclass) is rejected with "must be a number, found float32 0.5", for the deltas and the max speed. On `main` `SpeedCounter(max_speed=np.float32(0.25))` failed as well. Fix: convert other `numbers.Real` with `float()` first. Fixed in 76655cf4. | fix(core): accept numpy float speed parameters. |
+| ✅ | F-4 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:69-72`: `Fraction.from_decimal(Decimal("Infinity"))` raises `OverflowError`, which `_validated_fraction()` does not catch, so `validated_max_speed(Decimal("Infinity"))` breaks the documented "raises `ValueError`". Fix: catch `ArithmeticError` too. Fixed in 76655cf4. | fix(core): raise ValueError for infinite Decimal speed parameters. |
+| ✅ | F-5 | code review | robustness | low | `flatland/evaluators/trajectory_analysis.py:61-62`: `env_stats` now holds `Fraction`s, so `env_stats.csv` shows `1`, `-1` or `1/2` instead of `1.0`/`-1.0`/`0.5`; `pd.read_csv` gives a string column for `1/2`. Listed in §8.2 as a change. Fix: write `float(env.acceleration_delta)`/`float(env.braking_delta)`, so the CSV stays as on `main`. Fixed in bdf51ad5. | fix(evaluators): write the speed deltas to env_stats as floats, as before. |
+| ✅ | F-6 | code review | robustness | low | `flatland/envs/rail_env.py:269-289,701,1608`: a `RailEnv` pickled as a whole object before this change has `acceleration_delta` in its `__dict__`; the property ignores it and `step()` reads the missing `_acceleration_delta` (`AttributeError`). `RailEnvPersister` stores no deltas, and nothing in the repo pickles whole envs. Fix: name it in §8.2; no code change. Fixed by S-8: §8.2 names it. | docs(plans): name whole-object RailEnv pickles as a breaking change. |
+| ✅ | F-7 | code review | docs | low | `tests/test_flatland_envs_rail_env.py:1454-1458`: the comment says `RailEnv.__init__`'s `acceleration_delta` default is the plain float `1.0` and forces a `Fraction`; both are stale since the default is `Fraction(1)`. Fix: remove the comment and the override. Fixed in f5143ee8. | test(rail_env): drop the stale float-default workaround in the eta test. |
+| ✅ | F-8 | code review | robustness | low | `flatland/envs/step_utils/speed_counter.py:412`: an old pickle without `max_speed` takes the max speed from its speed; a speed of `None` or 0 there raises "max_speed must be a number, found NoneType None", naming a field the pickle doesn't have. The fixture pickles load (`test_restore_episode`). Fix: say in the message that the max speed was taken from the pickled speed. Fixed in 14ddee30. | fix(core): name the pickled speed when an old pickle's max speed is invalid. |
 |  | F-9 | code review | design | low | `flatland/envs/step_utils/speed_counter.py:76-121`: `validated_max_speed()`, `validated_acceleration_delta()` and `validated_braking_delta()` are three near-identical bodies (convert, compare, raise). A shared helper with a range argument would need fixes such as F-1 and F-3 only once; they already share `_validated_fraction()`, where both fixes go. Dropped 2026-11-23: kept as one function per quantity, as `validated_edge_length()`. | refactor(core): fold the three speed parameter checks into one helper. |
 
 ## 10. Glossary
@@ -424,11 +445,12 @@ PR [#579](https://github.com/flatland-association/flatland-rl/pull/579), base `m
 |---|---|---|---|---|---|---|---|---|
 | ✅ S-1 | - | Add `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` validate the max speed; tests in `test_speed_counter.py`. | correctness | medium | `refactor(core): validate the max speed of an agent when its speed counter is built.` | a65db8b8 | - | - |
 | ✅ S-2 | - | `AbstractRailEnv.acceleration_delta`/`braking_delta` as validating properties, `step()` reads the private fields; `Fraction` defaults and docstrings in `RailEnv`, `GraphRailEnv`, `env_generator()`, `env_generator_legacy()`; tests incl. the issue's reproduction in `test_flatland_envs_rail_env.py`. | correctness | medium | `refactor(core): validate acceleration_delta and braking_delta when they are set.` | c8475ff9 | S-1 | - |
-| 💡 S-3 | F-1, F-3, F-4 | `_pseudo_fractional()` converts negatives by symmetry; `_validated_fraction()` converts other `numbers.Real` with `float()` and catches `ArithmeticError`; tests for `-0.004`, `np.float32(0.5)`, `Decimal("Infinity")`. | bug | medium | `fix(core): convert small negative and numpy float speed parameters to Fractions.` |  | S-1 | - |
-| 💡 S-4 | F-2 | Deltas converted exactly from their decimal value, max speeds keep the 1/n snapping (Q-4); the validators', `RailEnv`'s, `GraphRailEnv`'s and `env_generator()`'s docstrings and `AGENTS.md` name both rules with examples; tests for `0.15` → `3/20` as a delta and `1/7` as a max speed. | design | medium | `fix(core): convert float speed deltas exactly from their decimal value.` |  | S-3 | - |
-| 💡 S-5 | F-8 | The error of an old pickle without `max_speed` names the pickled speed it came from. | robustness | low | `fix(core): name the pickled speed when an old pickle's max speed is invalid.` |  | S-1 | - |
-| 💡 S-6 | F-5 | `trajectory_analysis.py` writes `float()` of the deltas, so `env_stats.csv` stays as on `main`; §8.2 drops that item. | robustness | low | `fix(evaluators): write the speed deltas to env_stats as floats, as before.` |  | S-2 | - |
-| 💡 S-7 | F-7 | Remove the stale float-default comment and override in the eta test. | docs | low | `test(rail_env): drop the stale float-default workaround in the eta test.` |  | S-2 | - |
+| ✅ S-3 | F-1, F-3, F-4 | `_pseudo_fractional()` converts negatives by symmetry; `_validated_fraction()` converts other `numbers.Real` with `float()` and catches `ArithmeticError`; tests for `-0.004`, `np.float32(0.5)`, `Decimal("Infinity")`. | bug | medium | `fix(core): convert small negative and numpy float speed parameters to Fractions.` | 76655cf4 | S-1 | - |
+| ✅ S-4 | F-2 | Deltas converted exactly from their decimal value, max speeds keep the 1/n snapping (Q-4); the validators', `RailEnv`'s and `env_generator()`'s docstrings and `AGENTS.md` name both rules with examples; tests for `0.15` → `3/20` as a delta and `1/7` as a max speed. | design | medium | `fix(core): convert float speed deltas exactly from their decimal value.` | 7e20387a | S-3 | - |
+| ✅ S-5 | F-8 | The error of an old pickle without `max_speed` names the pickled speed it came from. | robustness | low | `fix(core): name the pickled speed when an old pickle's max speed is invalid.` | 14ddee30 | S-1 | - |
+| ✅ S-6 | F-5 | `trajectory_analysis.py` writes `float()` of the deltas, so `env_stats.csv` stays as on `main`; §8.2 drops that item. | robustness | low | `fix(evaluators): write the speed deltas to env_stats as floats, as before.` | bdf51ad5 | S-2 | - |
+| ✅ S-7 | F-7 | Remove the stale float-default comment and override in the eta test. | docs | low | `test(rail_env): drop the stale float-default workaround in the eta test.` | f5143ee8 | S-2 | - |
+| ✅ S-9 | - | Bound `acceleration_delta` to (0, `MAX_SPEED`] and `braking_delta` to [-`MAX_SPEED`, 0) (Q-5); docstrings of the validators, `RailEnv`, `env_generator()` and `AGENTS.md` say what is checked and what is capped; tests. | correctness | low | `fix(core): bound acceleration_delta and braking_delta by MAX_SPEED.` | a5203551 | S-4 | - |
 | 💡 S-8 | F-6 | §8.2 names whole-object `RailEnv` pickles made before this change (no code change). | docs | low | `docs(plans): name whole-object RailEnv pickles as a breaking change.` |  | - | - |
 
 ## 12. Change inventory
@@ -449,14 +471,15 @@ PR [#579](https://github.com/flatland-association/flatland-rl/pull/579), base `m
 
 | File | Changes |
 |---|---|
-| `flatland/envs/step_utils/speed_counter.py` | `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` call `validated_max_speed()` instead of the `assert` (S-1). |
-| `flatland/envs/rail_env.py` | `AbstractRailEnv.acceleration_delta`/`braking_delta` properties with validating setters; `step()` and the postcondition check read `_acceleration_delta`/`_braking_delta`; `RailEnv.__init__()` defaults `Fraction(1)`/`-Fraction(1)`; docstrings (S-2). |
+| `flatland/envs/step_utils/speed_counter.py` | `validated_max_speed()`, `validated_acceleration_delta()`, `validated_braking_delta()`; `SpeedCounter.__init__()`/`__setstate__()` call `validated_max_speed()` instead of the `assert` (S-1). `_pseudo_fractional()` converts negative floats by symmetry; numpy floats, NaN and infinities (S-3). Float deltas exact, max speeds snapped (S-4). Old pickles' error names the pickled speed (S-5). Deltas bounded by `MAX_SPEED`, docstrings on checked vs. capped (S-9). |
+| `flatland/evaluators/trajectory_analysis.py` | `env_stats` writes the deltas as floats (S-6). |
+| `flatland/envs/rail_env.py` | `AbstractRailEnv.acceleration_delta`/`braking_delta` properties with validating setters; `step()` and the postcondition check read `_acceleration_delta`/`_braking_delta`; `RailEnv.__init__()` defaults `Fraction(1)`/`-Fraction(1)`; docstrings (S-2); the docstrings name the exact delta conversion (S-4), the bounds and what is only capped (S-9). |
 | `flatland/envs/graph_rail_env.py` | `GraphRailEnv.__init__()` defaults `Fraction(1)`/`-Fraction(1)` (S-2). |
-| `flatland/env_generation/env_generator.py` | `env_generator()`, `env_generator_legacy()` defaults and docstrings (S-2). |
-| `tests/test_speed_counter.py` | Max speed validation and conversion (S-1). |
-| `tests/test_flatland_envs_rail_env.py` | Delta validation on construction and assignment; the issue's reproduction with `acceleration_delta=0.5` (S-2). |
-| `AGENTS.md` | "Speed/distance are `Fraction`s": floats passed as deltas are converted and checked, no longer a pitfall (S-2). |
+| `flatland/env_generation/env_generator.py` | `env_generator()`, `env_generator_legacy()` defaults and docstrings (S-2); the docstrings name the exact delta conversion (S-4) and the bounds (S-9). |
+| `tests/test_speed_counter.py` | Max speed validation and conversion (S-1); negatives, numpy floats, NaN and infinities (S-3); exact deltas vs. snapped max speeds (S-4); old pickles' error (S-5); delta bounds and capping (S-9). |
+| `tests/test_flatland_envs_rail_env.py` | Delta validation on construction and assignment; the issue's reproduction with `acceleration_delta=0.5` (S-2); `0.33` → `33/100`, `0.15`/`-0.004` deltas (S-4); the eta test's stale float-default workaround removed (S-7); deltas `2`/`-2` rejected (S-9). |
+| `AGENTS.md` | "Speed/distance are `Fraction`s": floats passed as deltas are converted and checked, no longer a pitfall (S-2); the two float conversions (S-4); the delta bounds, checked vs. capped (S-9). |
 
-Unchanged on purpose: `_pseudo_fractional()`, `_cap_speed()` and its asserts (internal invariants), the speed
+Unchanged on purpose: `_pseudo_fractional()` for non-negative values, `_cap_speed()` and its asserts (internal invariants), the speed
 formulas, `distance_map.py`'s `eta()`, `validated_edge_length()`, `SpeedCounter`'s initial `speed` argument (internal
-state, not a parameter), the persisted env format, `trajectory_analysis.py`.
+state, not a parameter), the persisted env format.
