@@ -564,3 +564,11 @@ def test_float_deltas_are_exact_and_max_speeds_snap_to_unit_fractions(value, del
     assert validated_acceleration_delta(value) == delta
     assert validated_braking_delta(-value) == -delta
     assert validated_max_speed(value) == max_speed
+
+
+@pytest.mark.parametrize("speed", [None, 0])
+def test_setstate_old_pickle_with_invalid_speed_names_the_pickled_speed(speed):
+    """An old pickle without max_speed takes it from the speed; the error says so."""
+    sc = SpeedCounter.__new__(SpeedCounter)
+    with pytest.raises(ValueError, match="taken from the pickled speed"):
+        sc.__setstate__({"speed": speed, "distance": None, "is_cell_entry": False})

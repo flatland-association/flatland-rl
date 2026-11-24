@@ -426,7 +426,10 @@ class SpeedCounter:
             self._max_speed = validated_max_speed(load_dict["max_speed"])
         else:
             # old pickles have constant speed
-            self._max_speed = validated_max_speed(self._speed)
+            try:
+                self._max_speed = validated_max_speed(self._speed)
+            except ValueError as e:
+                raise ValueError(f"{e} The pickle has no max_speed, it was taken from the pickled speed.") from None
         if "edge_length" in load_dict:
             self._edge_length = validated_edge_length(load_dict["edge_length"]) if load_dict["edge_length"] is not None else None
         else:
