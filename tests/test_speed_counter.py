@@ -580,3 +580,21 @@ def test_deltas_beyond_an_agents_max_speed_are_capped_not_rejected():
     max_speed = validated_max_speed(Fraction(1, 4))
     assert _cap_speed(max_speed, Fraction(0) + validated_acceleration_delta(1)) == Fraction(1, 4)
     assert _cap_speed(max_speed, Fraction(1, 4) + validated_braking_delta(Fraction(-1, 2))) == Fraction(0)
+
+
+@pytest.mark.parametrize("cached_first", [Fraction(21, 64), Decimal("0.328125"), 0.328125])
+def test_float_conversion_does_not_depend_on_what_was_converted_before(cached_first):
+    """0.328125 is exact in binary and equal to Fraction(21, 64): as a max speed it snaps to 1/3, as a delta it stays
+    21/64, whatever value was converted before."""
+    _pseudo_fractional(cached_first)
+    validated_acceleration_delta(cached_first if not isinstance(cached_first, float) else 0.328125)
+    assert validated_max_speed(0.328125) == Fraction(1, 3)
+    assert validated_acceleration_delta(0.328125) == Fraction(21, 64)
+    assert validated_max_speed(0.328125) == Fraction(1, 3)
+
+
+@pytest.mark.parametrize("validate,value", [(validated_acceleration_delta, float("nan")), (validated_braking_delta, np.float32("-inf")),
+                                            (validated_max_speed, np.float64("nan"))])
+def test_not_a_number_error_names_the_value_passed_in(validate, value):
+    with pytest.raises(ValueError, match=f"found {type(value).__name__} "):
+        validate(value)

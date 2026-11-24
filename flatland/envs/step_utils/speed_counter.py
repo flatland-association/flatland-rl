@@ -14,7 +14,9 @@ from flatland.core.transition_map import DEFAULT_EDGE_LENGTH, EdgeLength, MAX_SP
 ZERO_FRACTION: Fraction = Fraction(0)
 
 
-@lru_cache()
+# typed: a float and an equal `Fraction` or `Decimal` must not share a cache entry, as only the float is snapped
+# (`_pseudo_fractional(Fraction(21, 64))` cached first would turn `0.328125` into `21/64` instead of `1/3`).
+@lru_cache(typed=True)
 def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     """
     Convert float to fractional with special consideration of inverses of integers.
@@ -71,20 +73,22 @@ def _validated_fraction(name: str, value, snap_floats: bool) -> Fraction:
     ValueError
         if the value is a `bool`, `None`, not a number, NaN or infinite.
     """
+    # the message names the value passed in, not a converted one
+    not_a_number = ValueError(f"{name} must be a number, found {type(value).__name__} {value}.")
     if value is None or isinstance(value, bool):
-        raise ValueError(f"{name} must be a number, found {type(value).__name__} {value}.")
-    if isinstance(value, numbers.Integral):
-        value = int(value)
-    elif isinstance(value, numbers.Real) and not isinstance(value, Fraction):
-        if not snap_floats:
-            # str() gives the shortest decimal that reads back as the same float, also for numpy floats (`np.float32(0.15)` -> "0.15")
-            value = Decimal(str(value))
-        elif not isinstance(value, float):
-            value = float(value)
+        raise not_a_number
     try:
+        if isinstance(value, numbers.Integral):
+            return Fraction(int(value))
+        if isinstance(value, numbers.Real) and not isinstance(value, Fraction) and not snap_floats:
+            # exact: str() gives the shortest decimal that reads back as the same float, also for numpy floats
+            # (`np.float32(0.15)` -> "0.15")
+            return Fraction(Decimal(str(value)))
+        if isinstance(value, numbers.Real) and not isinstance(value, (float, Fraction)):
+            value = float(value)
         return _pseudo_fractional(value)
     except (ValueError, TypeError, ArithmeticError):
-        raise ValueError(f"{name} must be a number, found {type(value).__name__} {value}.") from None
+        raise not_a_number from None
 
 
 def validated_max_speed(max_speed) -> Fraction:
