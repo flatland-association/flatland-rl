@@ -553,3 +553,14 @@ def test_validators_accept_numpy_floats(validate, value):
 def test_validators_reject_nan_and_infinity_with_value_error(validate, name, value):
     with pytest.raises(ValueError, match=name):
         validate(value)
+
+
+@pytest.mark.parametrize("value,delta,max_speed", [
+    (0.5, Fraction(1, 2), Fraction(1, 2)), (0.33, Fraction(33, 100), Fraction(1, 3)), (0.15, Fraction(3, 20), Fraction(1, 7)),
+    (0.99, Fraction(99, 100), Fraction(1)), (np.float32(0.15), Fraction(3, 20), Fraction(1, 7)),
+])
+def test_float_deltas_are_exact_and_max_speeds_snap_to_unit_fractions(value, delta, max_speed):
+    """Deltas are converted from their decimal value, max speeds are snapped to the nearest 1/n (Q-4 of the plan)."""
+    assert validated_acceleration_delta(value) == delta
+    assert validated_braking_delta(-value) == -delta
+    assert validated_max_speed(value) == max_speed

@@ -54,10 +54,17 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     raise ValueError(f"Cannot convert {v} to Fraction.")
 
 
-def _validated_fraction(name: str, value) -> Fraction:
+def _validated_fraction(name: str, value, snap_floats: bool) -> Fraction:
     """
-    Convert a speed parameter to a `Fraction`, as `_pseudo_fractional()` does for speeds (`0.33` becomes `Fraction(1, 3)`).
-    Numpy integers are converted to `int` first, other real numbers that are no `float` (e.g. `np.float32`) to `float`.
+    Convert a speed parameter to a `Fraction`. Whole numbers, `Fraction`s and `Decimal`s are kept exactly; numpy integers
+    are converted to `int` first.
+
+    Floats (numpy floats too) are converted by one of two rules, on purpose:
+
+    - `snap_floats=True` (max speeds): as `_pseudo_fractional()` does for speeds, snapped to the nearest 1/n within 0.01,
+      so `0.33` becomes `Fraction(1, 3)` (the convention of `speed_ratio_map`), and `0.15` becomes `Fraction(1, 7)`.
+    - `snap_floats=False` (acceleration and braking deltas): exactly from the decimal the float is written as, so `0.33`
+      becomes `Fraction(33, 100)` and `0.15` becomes `Fraction(3, 20)`.
 
     Raises
     ------
@@ -68,8 +75,12 @@ def _validated_fraction(name: str, value) -> Fraction:
         raise ValueError(f"{name} must be a number, found {type(value).__name__} {value}.")
     if isinstance(value, numbers.Integral):
         value = int(value)
-    elif isinstance(value, numbers.Real) and not isinstance(value, (float, Fraction)):
-        value = float(value)
+    elif isinstance(value, numbers.Real) and not isinstance(value, Fraction):
+        if not snap_floats:
+            # str() gives the shortest decimal that reads back as the same float, also for numpy floats (`np.float32(0.15)` -> "0.15")
+            value = Decimal(str(value))
+        elif not isinstance(value, float):
+            value = float(value)
     try:
         return _pseudo_fractional(value)
     except (ValueError, TypeError, ArithmeticError):
@@ -78,15 +89,15 @@ def _validated_fraction(name: str, value) -> Fraction:
 
 def validated_max_speed(max_speed) -> Fraction:
     """
-    Check an agent's max speed is in (0, `MAX_SPEED`] and return it as a `Fraction`. Floats are converted as by
-    `_pseudo_fractional()`.
+    Check an agent's max speed is in (0, `MAX_SPEED`] and return it as a `Fraction`. Floats are snapped to the nearest
+    1/n as by `_pseudo_fractional()` (`0.33` becomes `Fraction(1, 3)`), unlike the deltas (see `_validated_fraction()`).
 
     Raises
     ------
     ValueError
         if the max speed is not a number, or not in (0, `MAX_SPEED`].
     """
-    v = _validated_fraction("max_speed", max_speed)
+    v = _validated_fraction("max_speed", max_speed, snap_floats=True)
     if not 0 < v <= MAX_SPEED:
         raise ValueError(f"max_speed must be in (0, {MAX_SPEED}], found {max_speed}.")
     return v
@@ -94,7 +105,8 @@ def validated_max_speed(max_speed) -> Fraction:
 
 def validated_acceleration_delta(acceleration_delta) -> Fraction:
     """
-    Check `acceleration_delta` is > 0 and return it as a `Fraction`. Floats are converted as by `_pseudo_fractional()`.
+    Check `acceleration_delta` is > 0 and return it as a `Fraction`. Floats are converted exactly from their decimal value
+    (`0.15` becomes `Fraction(3, 20)`), not snapped to 1/n as max speeds are (see `_validated_fraction()`).
     There is no upper bound: the speed is capped at the agent's max speed.
 
     Raises
@@ -102,7 +114,7 @@ def validated_acceleration_delta(acceleration_delta) -> Fraction:
     ValueError
         if `acceleration_delta` is not a number, or not > 0.
     """
-    v = _validated_fraction("acceleration_delta", acceleration_delta)
+    v = _validated_fraction("acceleration_delta", acceleration_delta, snap_floats=False)
     if not v > 0:
         raise ValueError(f"acceleration_delta must be > 0, found {acceleration_delta}.")
     return v
@@ -110,7 +122,8 @@ def validated_acceleration_delta(acceleration_delta) -> Fraction:
 
 def validated_braking_delta(braking_delta) -> Fraction:
     """
-    Check `braking_delta` is < 0 and return it as a `Fraction`. Floats are converted as by `_pseudo_fractional()`.
+    Check `braking_delta` is < 0 and return it as a `Fraction`. Floats are converted exactly from their decimal value
+    (`-0.15` becomes `Fraction(-3, 20)`), not snapped to 1/n as max speeds are (see `_validated_fraction()`).
     There is no lower bound: the speed is floored at 0, so `-1` stops an agent in one step.
 
     Raises
@@ -118,7 +131,7 @@ def validated_braking_delta(braking_delta) -> Fraction:
     ValueError
         if `braking_delta` is not a number, or not < 0.
     """
-    v = _validated_fraction("braking_delta", braking_delta)
+    v = _validated_fraction("braking_delta", braking_delta, snap_floats=False)
     if not v < 0:
         raise ValueError(f"braking_delta must be < 0, found {braking_delta}.")
     return v

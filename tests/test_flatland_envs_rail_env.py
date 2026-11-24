@@ -2767,7 +2767,8 @@ def test_speed_deltas_default_to_fractions():
 @pytest.mark.parametrize("acceleration_delta,braking_delta,expected_acceleration_delta,expected_braking_delta", [
     (0.5, -0.5, Fraction(1, 2), Fraction(-1, 2)),
     (1.0, -1.0, Fraction(1), Fraction(-1)),
-    (0.33, -0.25, Fraction(1, 3), Fraction(-1, 4)),
+    (0.33, -0.25, Fraction(33, 100), Fraction(-1, 4)),
+    (0.15, -0.004, Fraction(3, 20), Fraction(-1, 250)),
     (np.int64(1), np.int64(-1), Fraction(1), Fraction(-1)),
 ])
 def test_float_speed_deltas_are_converted_and_run(acceleration_delta, braking_delta, expected_acceleration_delta, expected_braking_delta):

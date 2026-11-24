@@ -147,8 +147,10 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
         As speed is between 0 and 1, acceleration_delta=1 restores the previous constant speed behaviour
         (i.e. MOVE_FORWARD always sets to max speed allowed for train).
-        Must be > 0. A whole number or a float is converted to a `Fraction` (`0.33` to `Fraction(1, 3)`); an invalid value
-        raises a `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
+        Must be > 0. A whole number or a float is converted to a `Fraction`, a float exactly from its decimal value
+        (`0.15` to `Fraction(3, 20)`, `0.33` to `Fraction(33, 100)`). Unlike max speeds, which are snapped to the nearest
+        1/n (`0.33` to `Fraction(1, 3)`, see `speed_counter.py`'s `_validated_fraction()`). An invalid value raises a
+        `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
     braking_delta : Fraction
         Determines how much speed is decreased by STOP_MOVING action.
         As speed is between 0 and 1, braking_delta=-1 restores to previous full stop behaviour.
