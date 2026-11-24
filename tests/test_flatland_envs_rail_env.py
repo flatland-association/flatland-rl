@@ -1452,11 +1452,6 @@ def test_map_entry_eager(wrapped, n_cells, max_speed, earliest_departure) -> Non
     env = RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail, optionals),
                   line_generator=sparse_line_generator(speed_ratio_map={max_speed: 1.0}), number_of_agents=1,
                   obs_builder_object=DummyObservationBuilder(), remove_agents_at_target=True)
-    # RailEnv.__init__'s own acceleration_delta default (1.0) is a plain float, unlike
-    # AbstractRailEnv's (Fraction(1)) - force it back to a Fraction so eta()'s arithmetic below stays
-    # exact (a float operand anywhere in a Fraction expression converts the whole result to a lossy
-    # float - see AGENTS.md's "Speed/distance are Fractions" note).
-    env.acceleration_delta = Fraction(1)
     if wrapped:
         env = RailEnvStateMachineWrapper(env)
     env.reset(random_seed=1)
