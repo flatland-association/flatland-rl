@@ -598,3 +598,8 @@ def test_float_conversion_does_not_depend_on_what_was_converted_before(cached_fi
 def test_not_a_number_error_names_the_value_passed_in(validate, value):
     with pytest.raises(ValueError, match=f"found {type(value).__name__} "):
         validate(value)
+
+
+@pytest.mark.parametrize("value,expected", [(np.float32(0.3), Fraction(3, 10)), (np.float32(0.33), Fraction(1, 3)), (np.float16(0.25), Fraction(1, 4))])
+def test_numpy_float_max_speed_is_converted_from_its_decimal_value(value, expected):
+    assert validated_max_speed(value) == expected

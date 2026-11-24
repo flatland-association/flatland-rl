@@ -85,7 +85,8 @@ def _validated_fraction(name: str, value, snap_floats: bool) -> Fraction:
             # (`np.float32(0.15)` -> "0.15")
             return Fraction(Decimal(str(value)))
         if isinstance(value, numbers.Real) and not isinstance(value, (float, Fraction)):
-            value = float(value)
+            # via str(), as float() widens a numpy float to its binary value (`np.float32(0.3)` -> 0.30000001192092896)
+            value = float(str(value))
         return _pseudo_fractional(value)
     except (ValueError, TypeError, ArithmeticError):
         raise not_a_number from None
