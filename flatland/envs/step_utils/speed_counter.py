@@ -2,7 +2,7 @@ import numbers
 from decimal import Decimal
 from fractions import Fraction
 from functools import lru_cache
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 
@@ -92,6 +92,25 @@ def _validated_fraction(name: str, value, snap_floats: bool) -> Fraction:
         raise not_a_number from None
 
 
+def _validated_in_range(name: str, value, low: Union[int, Fraction], high: Union[int, Fraction], *, low_open: bool, high_open: bool,
+                        snap_floats: bool) -> Fraction:
+    """
+    Convert a speed parameter as `_validated_fraction()` does and check it is in the range from `low` to `high`, each
+    bound open or closed.
+
+    Raises
+    ------
+    ValueError
+        if the value is not a number, or not in the range. The message names the range and the value passed in, and
+        the converted value when a float was snapped to a different value (`1e-09` to 0).
+    """
+    v = _validated_fraction(name, value, snap_floats=snap_floats)
+    if (v <= low if low_open else v < low) or (v >= high if high_open else v > high):
+        converted = f", converted to {v}" if snap_floats and v != value else ""
+        raise ValueError(f"{name} must be in {'(' if low_open else '['}{low}, {high}{')' if high_open else ']'}, found {value}{converted}.")
+    return v
+
+
 def validated_max_speed(max_speed) -> Fraction:
     """
     Check an agent's max speed is in (0, `MAX_SPEED`] and return it as a `Fraction`. Floats are snapped to the nearest
@@ -102,12 +121,7 @@ def validated_max_speed(max_speed) -> Fraction:
     ValueError
         if the max speed is not a number, or not in (0, `MAX_SPEED`].
     """
-    v = _validated_fraction("max_speed", max_speed, snap_floats=True)
-    if not 0 < v <= MAX_SPEED:
-        # a float may be snapped out of range (`1e-09` to 0): then the message names both values
-        converted = f", converted to {v}" if v != max_speed else ""
-        raise ValueError(f"max_speed must be in (0, {MAX_SPEED}], found {max_speed}{converted}.")
-    return v
+    return _validated_in_range("max_speed", max_speed, ZERO_FRACTION, MAX_SPEED, low_open=True, high_open=False, snap_floats=True)
 
 
 def validated_acceleration_delta(acceleration_delta) -> Fraction:
@@ -129,10 +143,8 @@ def validated_acceleration_delta(acceleration_delta) -> Fraction:
     ValueError
         if `acceleration_delta` is not a number, or not in (0, `MAX_SPEED`].
     """
-    v = _validated_fraction("acceleration_delta", acceleration_delta, snap_floats=False)
-    if not 0 < v <= MAX_SPEED:
-        raise ValueError(f"acceleration_delta must be in (0, {MAX_SPEED}], found {acceleration_delta}.")
-    return v
+    return _validated_in_range("acceleration_delta", acceleration_delta, ZERO_FRACTION, MAX_SPEED, low_open=True, high_open=False,
+                               snap_floats=False)
 
 
 def validated_braking_delta(braking_delta) -> Fraction:
@@ -153,10 +165,8 @@ def validated_braking_delta(braking_delta) -> Fraction:
     ValueError
         if `braking_delta` is not a number, or not in [-`MAX_SPEED`, 0).
     """
-    v = _validated_fraction("braking_delta", braking_delta, snap_floats=False)
-    if not -MAX_SPEED <= v < 0:
-        raise ValueError(f"braking_delta must be in [-{MAX_SPEED}, 0), found {braking_delta}.")
-    return v
+    return _validated_in_range("braking_delta", braking_delta, -MAX_SPEED, ZERO_FRACTION, low_open=False, high_open=True,
+                               snap_floats=False)
 
 
 @lru_cache()

@@ -610,3 +610,16 @@ def test_max_speed_snapped_out_of_range_names_the_converted_value():
         validated_max_speed(1e-9)
     with pytest.raises(ValueError, match=r"found 1\.5\.$"):
         validated_max_speed(1.5)
+
+
+@pytest.mark.parametrize("validate,value,message", [
+    (validated_max_speed, 0, "max_speed must be in (0, 1], found 0."),
+    (validated_max_speed, Fraction(3, 2), "max_speed must be in (0, 1], found 3/2."),
+    (validated_acceleration_delta, 2, "acceleration_delta must be in (0, 1], found 2."),
+    (validated_braking_delta, 0, "braking_delta must be in [-1, 0), found 0."),
+    (validated_braking_delta, -1.5, "braking_delta must be in [-1, 0), found -1.5."),
+])
+def test_range_error_names_the_range_and_the_value(validate, value, message):
+    with pytest.raises(ValueError) as e:
+        validate(value)
+    assert str(e.value) == message
