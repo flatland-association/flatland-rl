@@ -141,7 +141,7 @@ EntryPoint)`. `reset()` calls `rail_generators.py` (topology), `line_generators.
 assignment), `timetable_generators.py` (departure/arrival windows). `step()` runs two per-agent phases,
 both state-machine-independent - `collect()` derives each agent's candidate next entry point/speed/distance
 purely from its pre-step position/speed and the given action (`_candidate_entry_points`/`_candidate_speed`/
-`_candidate_distance` - see `design_by_contract.md`), never from `agent.state`, and registers the
+`_candidate_distance` - see the Design by Contract page below), never from `agent.state`, and registers the
 `(current_resource, new_resource)` pair (via `resource_map.get_resource(...)`) with `agent_chains.py`'s
 `MotionCheck`; once every agent's pair is registered, `MotionCheck.find_conflicts()` resolves cross-agent
 conflicts (head-on swaps, same-target collisions) for the whole step at once. `distribute()` then, per agent,
@@ -235,15 +235,17 @@ one place, not independently in `step()` and in the postcondition check that ver
 `distance_without_crossing`: reaching a target is a crossing like any other (`distance_after_crossing`), also when
 the agent is not removed, and a DONE agent keeps its distance.
 
-`design_by_contract.md` (repo root) is the authoritative branch-by-branch contract for
+flatland-book's [Design by Contract](https://flatland-association.github.io/flatland-book/key-concepts/design_by_contract.html) page is the authoritative branch-by-branch contract for
 `AbstractRailEnv._candidate_entry_points()`/`_candidate_speed()`/`_candidate_distance()` (`rail_env.py`'s collect
 phase - the per-agent, per-step derivation of the optimistic candidate entry point/speed/distance that the
 distribute phase's resource check then accepts or discards): a table of every case (done/target reached/
 malfunction/map entry/off-map-no-departure/on-map cell transition/invalid action at cell exit/keep-moving) against
 each method's own formula and returned value, plus the shared preconditions/postconditions each branch's
-condition is built from. The methods' own docstrings/comments point back into it (e.g. "See design_by_contract.md's
-Table 2") rather than re-deriving the same branch-exclusion reasoning inline - read it before changing any of the
-three methods' branch conditions, not just the code.
+condition is built from. The methods' own docstrings/comments point back into it (e.g. "See flatland-book's Design by
+Contract page, Tables 2a and 2b") rather than re-deriving the same branch-exclusion reasoning inline - read it before
+changing any of the three methods' branch conditions, not just the code. A change to `step()`'s contract (a branch, a
+condition, a formula of the collect or distribute phase) needs a flatland-book PR updating that page
+([flatland-book](https://github.com/flatland-association/flatland-book), `key-concepts/design_by_contract.md`).
 
 ### Edge lengths
 

@@ -69,7 +69,8 @@ def cached_cell_exit(max_speed: Fraction, speed: Optional[Fraction], distance: O
     `distance is None` (off map) is
     trivially `True` (see `SpeedCounter.set()`) - checked first, before `_cap_speed`, which can't handle
     `speed=None`. All on-map call sites already only reach this after excluding off_map themselves, so
-    this convention is never actually read bare off map (see design_by_contract.md's `cell_exit` row).
+    this convention is never actually read bare off map (see Table 2a's `cell_exit` row on flatland-book's Design by Contract page,
+    https://flatland-association.github.io/flatland-book/key-concepts/design_by_contract.html).
     """
     if distance is None:
         return True

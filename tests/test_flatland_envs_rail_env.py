@@ -676,7 +676,8 @@ def test_symmetric_switch_move_forward_action():
     in RailEnv.step()), so the crossing into the switch is denied and the agent is forced to a
     stop where it was. A moving-action retry (MOVE_FORWARD, still invalid at this switch)
     is optimistically promoted back to MOVING regardless (SpeedCounter.is_cell_exit() requires
-    speed > 0, so a STOPPED agent never blocks its own promotion - see design_by_contract.md),
+    speed > 0, so a STOPPED agent never blocks its own promotion - see flatland-book's Design by Contract page,
+    https://flatland-association.github.io/flatland-book/key-concepts/design_by_contract.html),
     but its next re-attempt at the boundary is denied and penalized again; a non-moving
     STOP_MOVING retry never promotes at all. Only a valid action (MOVE_LEFT/MOVE_RIGHT)
     lets the agent actually enter the switch. Each MOVING->STOPPED transition that denies a crossing
@@ -744,7 +745,7 @@ def test_symmetric_switch_move_forward_action():
     assert rewards[agent.handle][DefaultPenalties.INVALID_ACTION.value] == -1 * Fraction(1, 2) * COLLISION_FACTOR
     assert rewards[agent.handle][DefaultPenalties.COLLISION.value] == 0
 
-    # design: is_cell_exit() reads False at speed 0 (see design_by_contract.md) - a STOPPED agent given
+    # design: is_cell_exit() reads False at speed 0 (see flatland-book's Design by Contract page) - a STOPPED agent given
     # a moving action is always optimistically promoted back to MOVING, regardless of whether that
     # action (MOVE_FORWARD's straight-through look-ahead) is itself structurally valid here. Distance
     # stays unchanged (speed was still 0 going into this step). This promotion step is not a
@@ -1738,7 +1739,7 @@ def test_action_required_after_refused_crossing(with_malfunction):
     exits are north/south - continuing MOVE_FORWARD (straight through) is invalid there, so the agent
     is force-stopped one cell short, where it was on (2,2): distance == 0, speed == 0. Design: for an
     on-map state, info['action_required'] depends purely on SpeedCounter.is_cell_exit() (speed > 0 and
-    distance + speed >= DEFAULT_EDGE_LENGTH - see design_by_contract.md), not on which on-map state
+    distance + speed >= DEFAULT_EDGE_LENGTH - see flatland-book's Design by Contract page), not on which on-map state
     (MOVING/STOPPED/MALFUNCTION) the agent is actually in - is_cell_exit() (and so action_required)
     reads False for any agent parked at speed 0, whether or not it also happens to be malfunctioning
     at that same position.
