@@ -188,7 +188,7 @@ Screenshots: none, nothing is visible.
 | REQ-3 | Max speed in (0, 1] | `test_speed_counter.py`: `SpeedCounter(max_speed=0)`, `-1/2`, `3/2`, `True` raise `ValueError`; a `sparse_line_generator({0.0: 1.0})` env raises in `reset()` (S-1). | ✅ passes | - |
 | REQ-4 | `Fraction`s after validation | `RailEnv(acceleration_delta=0.5)` holds `Fraction(1, 2)` and runs the issue's 60 steps; `SpeedCounter(max_speed=0.33).max_speed == Fraction(1, 3)` (S-1, S-2); float deltas exact (`0.15` → `3/20`, `-0.004` → `-1/250`) while max speeds snap (`0.15` → `1/7`); `np.float32` accepted; NaN and infinities raise `ValueError` (S-3, S-4). | ✅ passes | - |
 | REQ-5 | Named `ValueError` at build | The tests above match the parameter name in the message (`pytest.raises(ValueError, match="acceleration_delta")`). | ✅ passes | - |
-| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | ✅ core suite green at c8475ff9 (1321 passed, 58 skipped; `test_episode`'s 12 regression episodes are skipped on `main` too); `flatland-baselines`' tests can't import `ObservationType`, also against `main`. After S-3–S-9 the affected test files pass (245 passed, 2 skipped); the full run was stopped for low memory and is still to be repeated | - |
+| NFR-1 | Compatible | Full test suite incl. `test_flatland_regression_episodes.py`; `flatland-baselines` unit tests (workspace rule). | ✅ core suite green at c8475ff9 (1321 passed, 58 skipped; `test_episode`'s 12 regression episodes are skipped on `main` too); `flatland-baselines`' tests can't import `ObservationType`, also against `main`. After S-3–S-9 the affected test files pass (245 passed, 2 skipped); the full suite runs in CI on 73552eff (not repeated locally, decided 2026-11-24) | - |
 | NFR-2 | No slowdown | `step()` unchanged except reading the private field (S-2); CI profiling job. | ✅ `step()` reads `_acceleration_delta`/`_braking_delta` | - |
 
 ### 4.3 Values and conversion (REQ-1–REQ-5; Q-1, Q-4)
@@ -451,7 +451,7 @@ PR [#579](https://github.com/flatland-association/flatland-rl/pull/579), base `m
 | ✅ S-6 | F-5 | `trajectory_analysis.py` writes `float()` of the deltas, so `env_stats.csv` stays as on `main`; §8.2 drops that item. | robustness | low | `fix(evaluators): write the speed deltas to env_stats as floats, as before.` | bdf51ad5 | S-2 | - |
 | ✅ S-7 | F-7 | Remove the stale float-default comment and override in the eta test. | docs | low | `test(rail_env): drop the stale float-default workaround in the eta test.` | f5143ee8 | S-2 | - |
 | ✅ S-9 | - | Bound `acceleration_delta` to (0, `MAX_SPEED`] and `braking_delta` to [-`MAX_SPEED`, 0) (Q-5); docstrings of the validators, `RailEnv`, `env_generator()` and `AGENTS.md` say what is checked and what is capped; tests. | correctness | low | `fix(core): bound acceleration_delta and braking_delta by MAX_SPEED.` | a5203551 | S-4 | - |
-| 💡 S-8 | F-6 | §8.2 names whole-object `RailEnv` pickles made before this change (no code change). | docs | low | `docs(plans): name whole-object RailEnv pickles as a breaking change.` |  | - | - |
+| ✅ S-8 | F-6 | §8.2 names whole-object `RailEnv` pickles made before this change (no code change). | docs | low | `docs(plans): name whole-object RailEnv pickles as a breaking change.` | 73552eff | - | - |
 
 ## 12. Change inventory
 
