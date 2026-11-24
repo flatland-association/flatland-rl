@@ -526,3 +526,30 @@ def test_reset_rejects_line_with_max_speed_zero():
                   line_generator=sparse_line_generator({0.0: 1.0}, seed=1))
     with pytest.raises(ValueError, match="max_speed"):
         env.reset(random_seed=1)
+
+
+@pytest.mark.parametrize("v", [0.004, 0.33, 0.5, 1.5, 2.25])
+def test_pseudo_fractional_converts_negatives_by_symmetry(v):
+    """A negative float converts to the negated conversion of its absolute value: `-0.004` does not snap to 0."""
+    assert _pseudo_fractional(-v) == -_pseudo_fractional(v)
+    assert _pseudo_fractional(-v) < 0
+
+
+def test_validated_braking_delta_accepts_small_negative_float():
+    assert validated_braking_delta(-0.004) < 0
+
+
+@pytest.mark.parametrize("validate,value", [(validated_max_speed, np.float32(0.5)), (validated_acceleration_delta, np.float32(0.5)),
+                                            (validated_braking_delta, np.float32(-0.5))])
+def test_validators_accept_numpy_floats(validate, value):
+    v = validate(value)
+    assert isinstance(v, Fraction)
+    assert abs(v) == Fraction(1, 2)
+
+
+@pytest.mark.parametrize("validate,name", [(validated_max_speed, "max_speed"), (validated_acceleration_delta, "acceleration_delta"),
+                                           (validated_braking_delta, "braking_delta")])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), Decimal("Infinity"), Decimal("-Infinity"), Decimal("NaN")])
+def test_validators_reject_nan_and_infinity_with_value_error(validate, name, value):
+    with pytest.raises(ValueError, match=name):
+        validate(value)

@@ -40,12 +40,13 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
     elif isinstance(v, int):
         return Fraction(v)
     elif isinstance(v, float):
+        if v < 0:
+            # by symmetry, so that small negative values do not snap to 0 (`-0.004 % 1` is close to 1)
+            return -_pseudo_fractional(-v, atol)
         if np.isclose(v % 1, 0.0):
             return Fraction(0, 1) + int(v // 1)
         elif np.isclose(1 / round(1 / (v % 1)), v % 1, atol=atol):
             return Fraction(1, round(1 / (v % 1))) + int(v // 1)
-        elif v < 0 and np.isclose(1 / round(1 / ((-v) % 1)), (-v) % 1, atol=atol):
-            return - Fraction(1, round(1 / ((-v) % 1))) + int((-v) // 1)
         elif np.isclose(float(Decimal(str(v))), v):
             return Fraction.from_decimal(Decimal(str(v)))
         else:
@@ -56,20 +57,22 @@ def _pseudo_fractional(v: Optional[float], atol=1.e-2) -> Optional[Fraction]:
 def _validated_fraction(name: str, value) -> Fraction:
     """
     Convert a speed parameter to a `Fraction`, as `_pseudo_fractional()` does for speeds (`0.33` becomes `Fraction(1, 3)`).
-    Numpy integers are converted to `int` first.
+    Numpy integers are converted to `int` first, other real numbers that are no `float` (e.g. `np.float32`) to `float`.
 
     Raises
     ------
     ValueError
-        if the value is a `bool`, `None` or not a number.
+        if the value is a `bool`, `None`, not a number, NaN or infinite.
     """
     if value is None or isinstance(value, bool):
         raise ValueError(f"{name} must be a number, found {type(value).__name__} {value}.")
     if isinstance(value, numbers.Integral):
         value = int(value)
+    elif isinstance(value, numbers.Real) and not isinstance(value, (float, Fraction)):
+        value = float(value)
     try:
         return _pseudo_fractional(value)
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, ArithmeticError):
         raise ValueError(f"{name} must be a number, found {type(value).__name__} {value}.") from None
 
 
