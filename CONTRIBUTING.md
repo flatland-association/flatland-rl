@@ -344,6 +344,14 @@ Releases are managed by [release-please](https://github.com/googleapis/release-p
 that PR tags the release, publishes the package to PyPI and builds/pushes the Docker images - see
 `.github/workflows/publish.yml`.
 
+Don't edit the release PR's body or `CHANGELOG.md` by hand: release-please regenerates both on the next push to `main`
+and overwrites the edits. To fix the release notes, squash-merge a PR to `main` whose description contains a
+[`BEGIN_COMMIT_OVERRIDE`/`END_COMMIT_OVERRIDE`](https://github.com/googleapis/release-please#how-can-i-fix-release-notes)
+block, one conventional commit message per line. Release-please uses these lines instead of that PR's own commit
+message, so include a line for the PR itself if it should appear in the changelog. This is needed for a stack of PRs
+that reaches `main` as a plain merge commit: release-please then lists the stack's individual commits without their
+PR numbers, and drops the stacked PRs' own titles.
+
 To publish a release candidate to Test PyPI without cutting a real release, manually trigger
 `.github/workflows/publish.yml` (workflow_dispatch) with a version number.
 
