@@ -58,8 +58,9 @@ def data_frame_for_trajectories(root_data_dir: Path, verbose: bool = False) -> T
             # line_length=2,
             # TODO https://github.com/flatland-association/flatland-rl/issues/7 standardization of obs builder interface and serialization
             "obs_builder": type(env.obs_builder),
-            "acceleration_delta": env.acceleration_delta,
-            "braking_delta": env.braking_delta,
+            # floats, as before the deltas became Fractions, so env_stats.csv keeps its numeric columns
+            "acceleration_delta": float(env.acceleration_delta),
+            "braking_delta": float(env.braking_delta),
             # TODO https://github.com/flatland-association/flatland-rl/issues/242 rewards not serializable currently.
             "rewards": type(env.rewards),
         }]))
