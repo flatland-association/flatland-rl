@@ -391,6 +391,15 @@ a higher-level, tabular (pandas) episode recorder: per-step actions/positions/re
 plus `RailEnvPersister`-saved env snapshots so a trajectory can be replayed/resumed from any recorded step, not
 just step 0.
 
+Backwards compatibility with older files lives in `RailEnvPersister` only (`_LegacyCompatUnpickler`,
+`load_legacy_static_agent()`, `_patch_*_effects_generator()`), plus the `__setstate__()` of the state objects
+it pickles (e.g. `SpeedCounter`). It saves `get_full_state()`'s dict, not the `RailEnv` object, and `load()`
+puts that dict into an env built by the constructor, so the constructor's checks (e.g. the validated
+`acceleration_delta`/`braking_delta` properties) apply to every loaded env. A whole `RailEnv` pickled directly
+(`pickle.dump(env)`) bypasses `RailEnvPersister` and is not supported across versions: `RailEnv` has no
+`__setstate__()`, and e.g. an env pickled before the deltas became properties fails in `step()` with
+`AttributeError: '_acceleration_delta'`. Save envs with `RailEnvPersister.save()` instead.
+
 ### Testing patterns
 
 Most state-machine/speed/malfunction behavior tests (`tests/test_multi_speed.py`, `tests/test_variable_speed.py`,
