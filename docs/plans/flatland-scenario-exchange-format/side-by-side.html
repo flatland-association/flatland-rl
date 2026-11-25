@@ -1,0 +1,429 @@
+<!doctype html><meta charset=utf-8><title>flatland-ui-hub vs exchange format</title><style>body{font-family:system-ui,sans-serif;margin:16px;background:#fff;color:#222}h1{font-size:20px}h2{font-size:17px;margin:28px 0 6px;border-top:2px solid #ccc;padding-top:10px}
+h3{font-size:13px;color:#666;margin:4px 0}.cols{display:grid;grid-template-columns:max-content max-content;gap:14px}.file{margin-bottom:10px}.fn{font:12px monospace;background:#f1f3f5;padding:3px 6px;border-radius:3px 3px 0 0}
+pre{font:12px/1.55 ui-monospace,Menlo,monospace;margin:0;padding:6px;border:1px solid #e9ecef;white-space:pre}
+.box{border:2px solid;border-radius:3px;padding:0 2px;position:relative}.box sup{color:#fff;font:bold 9px sans-serif;padding:0 3px;border-radius:6px;margin-right:2px;vertical-align:top}
+.cm{color:#868e96;font-style:italic}.el{color:#adb5bd}.notes{font-size:13px;color:#444}</style><h1>flatland-ui-hub scenario files and the exchange format</h1><p>Boxes with the same number hold the same value on both sides (1:1, possibly reshaped: moved, grouped, or renamed as a key). Grey comments mark what is derived, converted or not in the format.</p><section><h2>Olten network (fixtures/olten/)</h2><div class="cols"><div><h3>flatland-ui-hub</h3><div class="file"><div class="fn">olten.geography.json</div><pre>{
+ &quot;layout&quot;: &quot;network&quot;,<span class="cm">  // derived from the links</span>
+ &quot;stations&quot;: [
+  {
+   &quot;code&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;OL&quot;</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>&quot;Olten&quot;</span>,
+   &quot;track&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>1</span>,
+   &quot;cell&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>[37, 7]</span>,
+   &quot;kind&quot;: &quot;platform&quot;,<span class="cm">  // → station: kind absent</span>
+   &quot;basis&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>&quot;notebook variable olten1&quot;</span>
+  },
+  {
+   &quot;code&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;OL&quot;</span>,<span class="cm">  // same station, next row</span>
+   &quot;name&quot;: &quot;Olten&quot;,
+   &quot;track&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>2</span>,
+   &quot;cell&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>[37, 8]</span>,
+   &quot;kind&quot;: &quot;platform&quot;,
+   &quot;basis&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>&quot;notebook variable olten2&quot;</span>
+  },
+  <span class="el">… 30 more rows</span>,
+  {
+   &quot;code&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>&quot;P-BASEL&quot;</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>&quot;Basel&quot;</span>,
+   &quot;track&quot;: null,
+   &quot;cell&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>[0, 23]</span>,
+   &quot;kind&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>&quot;portal&quot;</span>,
+   &quot;via&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>&quot;Hauenstein-Basistunnel&quot;</span>,
+   &quot;basis&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup>&quot;notebook variable end10north; …&quot;</span>
+  },
+  <span class="el">…</span>
+ ],
+ &quot;locations&quot;: [],
+ &quot;single_track&quot;: [],<span class="cm">  // derived from the links</span>
+ &quot;_comment&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup>&quot;Names for the Olten network …&quot;</span>
+}</pre></div><div class="file"><div class="fn">olten.pkl</div><pre><span class="el">RailEnv, pickled</span><span class="cm">  // → configuration.rail and state: see the plan-b panel</span></pre></div></div><div><h3>exchange format</h3><div class="file"><div class="fn">stations_links (book example-ui-hub-olten.json)</div><pre>{
+ &quot;version&quot;: &quot;2.0.0&quot;,
+ &quot;binding&quot;: &quot;grid&quot;,
+ &quot;extensions_used&quot;: {&quot;flatland-ui-hub&quot;: null},
+ &quot;stations&quot;: {
+  &quot;OL&quot;: {
+   &quot;name&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;OL&quot;</span>,
+   &quot;display_name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>&quot;Olten&quot;</span>,
+   &quot;gates&quot;: {},
+   &quot;stopping_points&quot;: [
+    {
+     &quot;name&quot;: &quot;OL.0&quot;,<span class="cm">  // derived: &lt;station&gt;.&lt;index&gt;</span>
+     &quot;node&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>[37, 7]</span>,
+     &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;track&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>1</span>, &quot;basis&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>&quot;notebook variable olten1&quot;</span>}}
+    },
+    {
+     &quot;name&quot;: &quot;OL.1&quot;,
+     &quot;node&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>[37, 8]</span>,
+     &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;track&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>2</span>, &quot;basis&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>&quot;notebook variable olten2&quot;</span>}}
+    },
+    <span class="el">…</span>
+   ]
+  },
+  &quot;P-BASEL&quot;: {
+   &quot;name&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>&quot;P-BASEL&quot;</span>,
+   &quot;display_name&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>&quot;Basel&quot;</span>,
+   &quot;kind&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>&quot;portal&quot;</span>,
+   &quot;gates&quot;: {},
+   &quot;stopping_points&quot;: [
+    {
+     &quot;name&quot;: &quot;P-BASEL.0&quot;,
+     &quot;node&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>[0, 23]</span>,
+     &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;basis&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup>&quot;notebook variable end10north; …&quot;</span>}}
+    },
+    <span class="el">…</span>
+   ],
+   &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;via&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>&quot;Hauenstein-Basistunnel&quot;</span>}}
+  },
+  &quot;…&quot;: <span class="el">…</span>
+ },
+ &quot;links&quot;: [],<span class="cm">  // from olten.pkl&#x27;s rail, once derived</span>
+ &quot;gate_links&quot;: [],
+ &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;comment&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup>&quot;Names for the Olten network …&quot;</span>}}
+}</pre></div></div></div><ul class="notes"><li>Rows are grouped by code: one station per code, one stopping point per row, in row order.</li><li>Not 1:1: kind platform (station, the default), layout and single_track (derived from the links), stopping point names (derived).</li></ul></section><section><h2>PF–CH corridor (fixtures/pf_ch/*.scene.json, *.plan.json)</h2><div class="cols"><div><h3>flatland-ui-hub</h3><div class="file"><div class="fn">*.scene.json</div><pre>{
+ &quot;id&quot;: &quot;scene_pf_ch_corridor_stops&quot;,
+ &quot;grid&quot;: {&quot;width&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>191</span>, &quot;height&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>9</span>, &quot;cellSizePx&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>28</span>},
+ &quot;cells&quot;: [
+  {
+   &quot;id&quot;: &quot;cell_87_0&quot;,
+   &quot;x&quot;: 87,
+   &quot;y&quot;: 0,
+   &quot;kind&quot;: &quot;station&quot;,
+   &quot;connections&quot;: [&quot;E&quot;, &quot;W&quot;],
+   &quot;stationId&quot;: &quot;st_WN_1&quot;
+  },
+  <span class="el">… 548 cells</span>
+ ],<span class="cm">  // → rail transitions: converted, not 1:1</span>
+ &quot;graph&quot;: {&quot;nodes&quot;: [<span class="el">548</span>], &quot;edges&quot;: [<span class="el">617</span>]},<span class="cm">  // a second form of the same rail: dropped</span>
+ &quot;stations&quot;: [
+  {
+   &quot;id&quot;: &quot;st_WN_1&quot;,<span class="cm">  // derived: st_&lt;code&gt;_&lt;track&gt;</span>
+   &quot;name&quot;: &quot;WN 1&quot;,<span class="cm">  // derived: &lt;code&gt; &lt;track&gt;</span>
+   &quot;x&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>87</span>,
+   &quot;y&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>0</span>,
+   &quot;metadata&quot;: {
+    &quot;station&quot;: &quot;Weesen&quot;,<span class="cm">  // spelling; display name from STATION_NAMES[code]</span>
+    &quot;code&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>&quot;WN&quot;</span>,
+    &quot;track&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>1</span>
+   }
+  },
+  {
+   &quot;id&quot;: &quot;st_WN_2&quot;,
+   &quot;name&quot;: &quot;WN 2&quot;,
+   &quot;x&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>87</span>,
+   &quot;y&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>2</span>,
+   &quot;metadata&quot;: {
+    &quot;station&quot;: &quot;Weesen&quot;,
+    &quot;code&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>&quot;WN&quot;</span>,<span class="cm">  // same station</span>
+    &quot;track&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>2</span>
+   }
+  },
+  <span class="el">…</span>
+ ],
+ &quot;agents&quot;: [
+  {
+   &quot;id&quot;: &quot;train_1&quot;,
+   &quot;name&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>&quot;T01&quot;</span>,
+   &quot;start&quot;: {&quot;x&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>17</span>, &quot;y&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>0</span>},
+   &quot;target&quot;: {&quot;x&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup>71</span>, &quot;y&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup>8</span>},
+   &quot;speed&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">16</sup>1.0</span>,
+   &quot;metadata&quot;: {&quot;from&quot;: &quot;SIB&quot;, &quot;fromTrack&quot;: 1, &quot;to&quot;: &quot;ZB&quot;, &quot;toTrack&quot;: 5},
+   &quot;via&quot;: [{&quot;x&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">18</sup>28</span>, &quot;y&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">17</sup>2</span>, &quot;station&quot;: &quot;Schuebelbach-Butt.&quot;, &quot;code&quot;: &quot;SCBU&quot;}, <span class="el">…</span>]
+  },
+  <span class="el">…</span>
+ ],
+ &quot;metadata&quot;: {
+  &quot;locationOrder&quot;: [&quot;…&quot;, &quot;WN&quot;, &quot;MH&quot;, &quot;TIEF&quot;, &quot;MG&quot;, &quot;…&quot;],<span class="cm">  // order along the line: derived from positions</span>
+  &quot;locationColumns&quot;: {&quot;MH&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">19</sup>95</span>, &quot;…&quot;: <span class="el">…</span>},
+  &quot;tracksPerStation&quot;: {&quot;WN&quot;: 3, &quot;…&quot;: <span class="el">…</span>},<span class="cm">  // derived: number of stopping points</span>
+  &quot;singleTrackSection&quot;: [&quot;MH&quot;, &quot;TIEF&quot;]<span class="cm">  // derived from the links</span>
+ }
+}</pre></div><div class="file"><div class="fn">*.plan.json</div><pre><span class="el">each train&#x27;s route and timing</span><span class="cm">  // → lines and timetables: per train, not shown</span></pre></div></div><div><h3>exchange format</h3><div class="file"><div class="fn">scenario document (shape of Q-16)</div><pre>{
+ &quot;format&quot;: &quot;flatland-scenario&quot;,
+ &quot;version&quot;: &quot;1.0.0&quot;,
+ &quot;binding&quot;: &quot;grid&quot;,
+ &quot;configuration&quot;: {
+  &quot;rail&quot;: {
+   &quot;width&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>191</span>,
+   &quot;height&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>9</span>,
+   &quot;transitions&quot;: [<span class="el">9 rows of 191 numbers</span>]<span class="cm">  // from cells[].connections</span>
+  },
+  &quot;stations_links&quot;: {
+   &quot;version&quot;: &quot;2.0.0&quot;,
+   &quot;binding&quot;: &quot;grid&quot;,
+   &quot;stations&quot;: {
+    &quot;WN&quot;: {
+     &quot;name&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>&quot;WN&quot;</span>,
+     &quot;display_name&quot;: &quot;Weesen&quot;,<span class="cm">  // STATION_NAMES[&#x27;WN&#x27;]</span>
+     &quot;gates&quot;: {},
+     &quot;stopping_points&quot;: [
+      {
+       &quot;name&quot;: &quot;WN.0&quot;,
+       &quot;node&quot;: [<span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>0</span>, <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>87</span>],
+       &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;track&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>1</span>}}
+      },
+      {
+       &quot;name&quot;: &quot;WN.1&quot;,
+       &quot;node&quot;: [<span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>2</span>, <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>87</span>],
+       &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;track&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>2</span>}}
+      },
+      <span class="el">…</span>
+     ],
+     &quot;placement&quot;: {&quot;position&quot;: [2, 87], &quot;orientation&quot;: 90.0}<span class="cm">  // derived: middle platform row, column</span>
+    },
+    &quot;MH&quot;: {
+     &quot;name&quot;: &quot;MH&quot;,
+     &quot;display_name&quot;: &quot;Mühlehorn&quot;,
+     &quot;gates&quot;: {},
+     &quot;stopping_points&quot;: [],
+     &quot;placement&quot;: {&quot;position&quot;: [
+      1,<span class="cm">  // middle row</span>
+      <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">19</sup>95</span>
+     ], &quot;orientation&quot;: 90.0}
+    },
+    &quot;…&quot;: <span class="el">…</span>
+   }
+  },
+  &quot;lines&quot;: [
+   {
+    &quot;handle&quot;: 0,
+    &quot;waypoints&quot;: [
+     [{
+      &quot;position&quot;: [<span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>0</span>, <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>17</span>],
+      &quot;direction&quot;: 1<span class="cm">  // derived from the rail</span>
+     }],
+     [{&quot;position&quot;: [<span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">17</sup>2</span>, <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">18</sup>28</span>], &quot;direction&quot;: <span class="el">…</span>}],
+     <span class="el">…</span>,
+     [{&quot;position&quot;: [<span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup>8</span>, <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup>71</span>], &quot;direction&quot;: null}]
+    ],
+    &quot;max_speed&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">16</sup>&quot;1&quot;</span>,
+    &quot;earliest_departures&quot;: <span class="el">…</span>,<span class="cm">  // from *.plan.json</span>
+    &quot;latest_arrivals&quot;: <span class="el">…</span>
+   },
+   <span class="el">…</span>
+  ],
+  &quot;extensions&quot;: {&quot;flatland-ui-hub&quot;: {&quot;cellSizePx&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>28</span>, &quot;trains&quot;: {&quot;0&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>&quot;T01&quot;</span>}}}
+ }
+}</pre></div></div></div><ul class="notes"><li>Scene x, y become [row, column] = [y, x]: the same numbers, swapped.</li><li>Not 1:1: the rail (cells and graph are converted to transitions), display names (looked up), placement, the order along the line, tracks per station and the single-track section (derived).</li></ul></section><section><h2>Gotthard (fixtures/gotthard/gotthard.topology.json, gotthard.traffic.json)</h2><div class="cols"><div><h3>flatland-ui-hub</h3><div class="file"><div class="fn">gotthard.topology.json</div><pre>{
+ &quot;id&quot;: &quot;gotthard&quot;,
+ &quot;version&quot;: 1,
+ &quot;generated&quot;: &quot;2026-10-04&quot;,
+ &quot;scope&quot;: &quot;stage 1: Arth-Goldau .. Bellinzona&quot;,
+ &quot;portals&quot;: {&quot;north&quot;: &quot;Arth-Goldau&quot;, &quot;south&quot;: &quot;Bellinzona&quot;},<span class="cm">  // rest of the scenario</span>
+ &quot;speedAssumptions&quot;: <span class="el">…</span>,<span class="cm">  // rest of the scenario</span>
+ &quot;operatingPoints&quot;: [
+  {
+   &quot;id&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;GD&quot;</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>&quot;Arth-Goldau&quot;</span>,
+   &quot;kind&quot;: &quot;station&quot;,<span class="cm">  // → kind absent</span>
+   &quot;kmBG&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>8.864</span>,
+   &quot;lat&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>47.04904</span>,
+   &quot;lon&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>8.54945</span>,
+   &quot;basis&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>&quot;sbb-open-data:linie-mit-betriebspunkten&quot;</span>,
+   &quot;route&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>&quot;north&quot;</span>
+  },
+  {
+   &quot;id&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>&quot;STNS&quot;</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>&quot;Steinen Nord (Spw)&quot;</span>,
+   &quot;kind&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>&quot;crossover&quot;</span>,
+   &quot;kmBG&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>13.223</span>,
+   &quot;lat&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>47.05045</span>,
+   &quot;lon&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>8.60009</span>,
+   &quot;basis&quot;: &quot;sbb-open-data:…&quot;,
+   &quot;route&quot;: &quot;north&quot;
+  },
+  <span class="el">… 44 more</span>
+ ],
+ &quot;sections&quot;: [{&quot;id&quot;: &quot;GD-STNS&quot;, &quot;from&quot;: &quot;GD&quot;, &quot;to&quot;: &quot;STNS&quot;, &quot;km&quot;: 4.359, &quot;tracks&quot;: 2}, <span class="el">…</span>],<span class="cm">  // → links with 2 fibres, once there is rail</span>
+ &quot;routes&quot;: <span class="el">…</span>,<span class="cm">  // rest of the scenario</span>
+ &quot;crossovers&quot;: <span class="el">…</span><span class="cm">  // rest of the scenario</span>
+}</pre></div><div class="file"><div class="fn">gotthard.traffic.json</div><pre><span class="el">trips of one service day, synthetic freight</span><span class="cm">  // → lines and timetables, once there is rail</span></pre></div></div><div><h3>exchange format</h3><div class="file"><div class="fn">stations_links (book example-ui-hub-gotthard.json)</div><pre>{
+ &quot;version&quot;: &quot;2.0.0&quot;,
+ &quot;binding&quot;: &quot;graph-geo&quot;,
+ &quot;extensions_used&quot;: {&quot;flatland-ui-hub&quot;: null},
+ &quot;stations&quot;: {
+  &quot;GD&quot;: {
+   &quot;name&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;GD&quot;</span>,
+   &quot;display_name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>&quot;Arth-Goldau&quot;</span>,
+   &quot;gates&quot;: {},
+   &quot;stopping_points&quot;: [],
+   &quot;placement&quot;: {
+    &quot;position&quot;: [<span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>47.04904</span>, <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>8.54945</span>],
+    &quot;orientation&quot;: 87.6<span class="cm">  // derived: bearing along its route</span>
+   },
+   &quot;extensions&quot;: {
+    &quot;flatland-ui-hub&quot;: {
+     &quot;kmBG&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>8.864</span>,
+     &quot;route&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>&quot;north&quot;</span>,
+     &quot;basis&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>&quot;sbb-open-data:linie-mit-betriebspunkten&quot;</span>
+    }
+   }
+  },
+  &quot;STNS&quot;: {
+   &quot;name&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>&quot;STNS&quot;</span>,
+   &quot;display_name&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>&quot;Steinen Nord (Spw)&quot;</span>,
+   &quot;kind&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>&quot;crossover&quot;</span>,
+   &quot;gates&quot;: {},
+   &quot;stopping_points&quot;: [],
+   &quot;placement&quot;: {&quot;position&quot;: [<span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>47.05045</span>, <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>8.60009</span>], &quot;orientation&quot;: 92.0},
+   &quot;extensions&quot;: {
+    &quot;flatland-ui-hub&quot;: {&quot;kmBG&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>13.223</span>, &quot;route&quot;: &quot;north&quot;, &quot;basis&quot;: &quot;sbb-open-data:…&quot;}
+   }
+  },
+  &quot;…&quot;: <span class="el">…</span>
+ },
+ &quot;links&quot;: [],<span class="cm">  // none until a graph is built</span>
+ &quot;gate_links&quot;: []
+}</pre></div></div></div><ul class="notes"><li>No rail yet: stations without stopping points, area or gates; kind loop becomes flatland-ui-hub:loop.</li><li>Not 1:1: orientation (derived), sections, routes, portals, speed assumptions and the traffic file (rest of the scenario, flatland-ui-hub&#x27;s until there is rail).</li></ul></section><section><h2>plan-b experiment folder (fixtures/plan-b/tutorial/)</h2><div class="cols"><div><h3>flatland-ui-hub</h3><div class="file"><div class="fn">generator.json (= draw.json + malfunctions)</div><pre>{
+ &quot;gridDimensions&quot;: {&quot;rows&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>6</span>, &quot;cols&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>25</span>, &quot;cellSize&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>30</span>},
+ &quot;grid&quot;: [
+  <span class="el">row 0</span>,
+  <span class="el">row 1</span>,
+  <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>[0, 4, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 3089, 1025, 1025, 1025, 1097, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 256, 0]</span>,
+  <span class="el">rows 3–5</span>
+ ],
+ &quot;overpasses&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>[]</span>,
+ &quot;stations&quot;: [
+  {
+   &quot;id&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>1</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>&quot;A&quot;</span>,
+   &quot;city_position&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>[2, 3]</span>,
+   &quot;city_orientation&quot;: 1,<span class="cm">  // × 90 → orientation</span>
+   &quot;stopping_points&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>[{&quot;name&quot;: &quot;A.0&quot;, &quot;node&quot;: [2, 3]}]</span>,
+   &quot;edges&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>[[2, 2], [2, 3], [2, 4]]</span>,
+   &quot;gates&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>{&quot;E&quot;: {&quot;name&quot;: &quot;A.E&quot;, &quot;pins&quot;: {&quot;0&quot;: {&quot;name&quot;: &quot;A.E.0&quot;, &quot;node&quot;: [2, 4]}}}, &quot;W&quot;: {&quot;name&quot;: &quot;A.W&quot;, &quot;pins&quot;: {&quot;0&quot;: {&quot;name&quot;: &quot;A.W.0&quot;, &quot;node&quot;: [2, 2]}}}}</span>,
+   &quot;area&quot;: [1, 2, 3, 4]<span class="cm">  // → outline: its corners</span>
+  },
+  <span class="el">station B</span>
+ ],
+ &quot;nextStationId&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>3</span>,
+ &quot;lines&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup>[{&quot;id&quot;: 1794084461089, &quot;name&quot;: &quot;A-B&quot;, &quot;stationIds&quot;: [1, 2], &quot;…&quot;: <span class="el">…</span>}, <span class="el">…</span>]</span>,
+ &quot;timetables&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup>[{&quot;id&quot;: 1794084502192, &quot;name&quot;: &quot;AB&quot;, &quot;lineId&quot;: 1794084461089, &quot;…&quot;: <span class="el">…</span>}, <span class="el">…</span>]</span>,
+ &quot;trainCategories&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup>{&quot;IC&quot;: {&quot;id&quot;: 1, &quot;speed&quot;: 1}, &quot;…&quot;: <span class="el">…</span>}</span>,
+ &quot;flatlandLine&quot;: {
+  &quot;agent_positions&quot;: [[[<span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">16</sup>[2, 3]</span>], [<span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">17</sup>[2, 21]</span>]], <span class="el">…</span>],
+  &quot;agent_directions&quot;: [[[<span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">18</sup>1</span>]], <span class="el">…</span>],
+  &quot;agent_targets&quot;: <span class="el">…</span>,<span class="cm">  // = last waypoints</span>
+  &quot;agent_speeds&quot;: [<span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">19</sup>1</span>, <span class="el">…</span>]
+ },
+ &quot;flatlandTimetable&quot;: {
+  &quot;earliest_departures&quot;: [[
+   <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">20</sup>0</span>,
+   22<span class="cm">  // at the target: none</span>
+  ], <span class="el">…</span>],
+  &quot;latest_arrivals&quot;: [<span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">21</sup>[null, 18]</span>, <span class="el">…</span>],
+  &quot;max_episode_steps&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">22</sup>40</span>
+ },
+ &quot;malfunctions&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">23</sup>{&quot;scheduled&quot;: [{&quot;train&quot;: &quot;AB&quot;, &quot;step&quot;: 8, &quot;duration&quot;: 4}]}</span>
+}</pre></div><div class="file"><div class="fn">config.json (where a folder has one, e.g. example-sm)</div><pre>{
+ &quot;malfunctions&quot;: {&quot;scheduled&quot;: [{&quot;train&quot;: &quot;IC 1.1&quot;, &quot;step&quot;: 12, &quot;duration&quot;: 15}]},<span class="cm">  // → extensions.flatland-scenarios.malfunctions</span>
+ &quot;seed&quot;: 42<span class="cm">  // → configuration.seed</span>
+}</pre></div><div class="file"><div class="fn">scenario.pkl</div><pre><span class="el">RailEnv, pickled</span><span class="cm">  // the same configuration, plus the state of a started env</span></pre></div><div class="file"><div class="fn">scenario.json, scenario.schema.json, scenario.png</div><pre>{
+ &quot;id&quot;: &quot;tutorial&quot;,
+ &quot;title&quot;: &quot;Tutorial&quot;,
+ &quot;description&quot;: &quot;…&quot;,
+ &quot;seconds_per_step&quot;: 5,
+ &quot;locked&quot;: true
+}<span class="cm">  // kept: flatland-ui-hub&#x27;s card, not in the format</span></pre></div></div><div><h3>exchange format</h3><div class="file"><div class="fn">example-scenario-ui-hub-tutorial.json</div><pre>{
+ &quot;format&quot;: &quot;flatland-scenario&quot;,
+ &quot;version&quot;: &quot;1.0.0&quot;,
+ &quot;binding&quot;: &quot;grid&quot;,
+ &quot;extensions_used&quot;: {&quot;drawing-tool&quot;: null, &quot;flatland-scenarios&quot;: null},
+ &quot;configuration&quot;: {
+  &quot;rail&quot;: {
+   &quot;width&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>25</span>,
+   &quot;height&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>6</span>,
+   &quot;transitions&quot;: [
+    <span class="el">row 0</span>,
+    <span class="el">row 1</span>,
+    <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>[0, 4, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 3089, 1025, 1025, 1025, 1097, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 1025, 256, 0]</span>,
+    <span class="el">rows 3–5</span>
+   ],
+   &quot;level_free_positions&quot;: []
+  },
+  &quot;stations_links&quot;: {
+   &quot;version&quot;: &quot;2.0.0&quot;,
+   &quot;binding&quot;: &quot;grid&quot;,
+   &quot;extensions_used&quot;: {&quot;drawing-tool&quot;: null},
+   &quot;stations&quot;: {
+    &quot;A&quot;: {
+     &quot;name&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">7</sup>&quot;A&quot;</span>,
+     &quot;id&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>1</span>,
+     &quot;area&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">10</sup>[[2, 2], [2, 3], [2, 4]]</span>,
+     &quot;gates&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">11</sup>{&quot;E&quot;: {&quot;name&quot;: &quot;A.E&quot;, &quot;pins&quot;: {&quot;0&quot;: {&quot;name&quot;: &quot;A.E.0&quot;, &quot;node&quot;: [2, 4]}}}, &quot;W&quot;: {&quot;name&quot;: &quot;A.W&quot;, &quot;pins&quot;: {&quot;0&quot;: {&quot;name&quot;: &quot;A.W.0&quot;, &quot;node&quot;: [2, 2]}}}}</span>,
+     &quot;stopping_points&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">9</sup>[{&quot;name&quot;: &quot;A.0&quot;, &quot;node&quot;: [2, 3]}]</span>,
+     &quot;placement&quot;: {
+      &quot;position&quot;: <span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">8</sup>[2, 3]</span>,
+      &quot;orientation&quot;: 90.0,
+      &quot;outline&quot;: [[1, 2], [1, 4], [3, 4], [3, 2]]
+     }
+    },
+    &quot;B&quot;: <span class="el">…</span>
+   },
+   &quot;links&quot;: [<span class="el">A.E → B.W</span>],<span class="cm">  // derived from the rail</span>
+   &quot;gate_links&quot;: [<span class="el">…</span>]<span class="cm">  // derived from the rail</span>
+  },
+  &quot;lines&quot;: [
+   {
+    &quot;handle&quot;: 0,
+    &quot;waypoints&quot;: [
+     [{&quot;position&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">16</sup>[2, 3]</span>, &quot;direction&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">18</sup>1</span>}],
+     [
+      {&quot;position&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">17</sup>[2, 21]</span>, &quot;direction&quot;: 1},
+      {&quot;position&quot;: [2, 21], &quot;direction&quot;: 3}
+     ]
+    ],
+    &quot;earliest_departures&quot;: [<span class="box" style="border-color:#5c940d"><sup style="background:#5c940d">20</sup>0</span>, null],
+    &quot;latest_arrivals&quot;: <span class="box" style="border-color:#3b5bdb"><sup style="background:#3b5bdb">21</sup>[null, 18]</span>,
+    &quot;max_speed&quot;: <span class="box" style="border-color:#c2255c"><sup style="background:#c2255c">19</sup>&quot;1&quot;</span>
+   },
+   <span class="el">…</span>
+  ],
+  &quot;max_episode_steps&quot;: <span class="box" style="border-color:#d9480f"><sup style="background:#d9480f">22</sup>40</span>,
+  &quot;seed&quot;: 42,<span class="cm">  // config.json&#x27;s seed</span>
+  &quot;generators&quot;: <span class="el">…</span>,
+  &quot;extensions&quot;: {
+   &quot;drawing-tool&quot;: {
+    &quot;cellSize&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>30</span>,
+    &quot;nextStationId&quot;: <span class="box" style="border-color:#862e9c"><sup style="background:#862e9c">12</sup>3</span>,
+    &quot;overpasses&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>[]</span>,
+    &quot;lines&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">13</sup><span class="el">as in generator.json</span></span>,
+    &quot;timetables&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">14</sup><span class="el">as in generator.json</span></span>,
+    &quot;trainCategories&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">15</sup><span class="el">as in generator.json</span></span>,
+    &quot;trains&quot;: {&quot;0&quot;: &quot;AB&quot;, &quot;1&quot;: &quot;BA&quot;}
+   },
+   &quot;flatland-scenarios&quot;: {
+    &quot;malfunctions&quot;: <span class="box" style="border-color:#087f5b"><sup style="background:#087f5b">23</sup>{&quot;scheduled&quot;: [{&quot;train&quot;: &quot;AB&quot;, &quot;step&quot;: 8, &quot;duration&quot;: 4}]}</span>
+   }
+  }
+ },
+ &quot;state&quot;: {}<span class="cm">  // not started; a started env (scenario.pkl) fills it, see example-scenario-grid.json</span>
+}</pre></div></div></div><ul class="notes"><li>draw.json, generator.json, config.json and scenario.pkl become one document; the intro card stays.</li><li>Not 1:1: orientation (× 90), the rectangle (→ outline corners), links and gate links (derived), the target&#x27;s waypoint directions (derived).</li></ul></section><section><h2>Derived geography (_stations_links_geography, from scenario.pkl; replaced by the adapter)</h2><div class="cols"><div><h3>flatland-ui-hub</h3><div class="file"><div class="fn">GET /hmi/geography for plan-b/tutorial</div><pre>{
+ &quot;layout&quot;: &quot;corridor&quot;,<span class="cm">  // derived from the links</span>
+ &quot;stations&quot;: [
+  {
+   &quot;code&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;A&quot;</span>,
+   &quot;name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>&quot;A&quot;</span>,<span class="cm">  // display_name, else name</span>
+   &quot;track&quot;: 1,<span class="cm">  // index + 1</span>
+   &quot;cell&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>[2, 3]</span>,
+   &quot;kind&quot;: &quot;platform&quot;<span class="cm">  // kind absent: station</span>
+  },
+  {&quot;code&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>&quot;B&quot;</span>, &quot;name&quot;: <span class="box" style="border-color:#f08c00"><sup style="background:#f08c00">5</sup>&quot;B&quot;</span>, &quot;track&quot;: 1, &quot;cell&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>[2, 21]</span>, &quot;kind&quot;: &quot;platform&quot;}
+ ],
+ &quot;locations&quot;: [],
+ &quot;single_track&quot;: []<span class="cm">  // derived from the links</span>
+}</pre></div></div><div><h3>exchange format</h3><div class="file"><div class="fn">stations_links</div><pre>{
+ &quot;stations&quot;: {
+  &quot;A&quot;: {
+   &quot;name&quot;: <span class="box" style="border-color:#e8590c"><sup style="background:#e8590c">1</sup>&quot;A&quot;</span>,
+   &quot;display_name&quot;: <span class="box" style="border-color:#1c7ed6"><sup style="background:#1c7ed6">2</sup>null</span>,<span class="cm">  // absent</span>
+   &quot;stopping_points&quot;: [{&quot;name&quot;: &quot;A.0&quot;, &quot;node&quot;: <span class="box" style="border-color:#2f9e44"><sup style="background:#2f9e44">3</sup>[2, 3]</span>}],
+   &quot;id&quot;: 1,
+   &quot;area&quot;: <span class="el">…</span>,
+   &quot;gates&quot;: <span class="el">…</span>,
+   &quot;placement&quot;: <span class="el">…</span>
+  },
+  &quot;B&quot;: {&quot;name&quot;: <span class="box" style="border-color:#ae3ec9"><sup style="background:#ae3ec9">4</sup>&quot;B&quot;</span>, &quot;stopping_points&quot;: [{&quot;name&quot;: &quot;B.0&quot;, &quot;node&quot;: <span class="box" style="border-color:#0c8599"><sup style="background:#0c8599">6</sup>[2, 21]</span>}], &quot;…&quot;: <span class="el">…</span>}
+ },
+ &quot;links&quot;: <span class="el">…</span>,
+ &quot;gate_links&quot;: <span class="el">…</span>
+}</pre></div></div></div><ul class="notes"><li>The adapter computes the geography from the stored document (Q-7 b)); everything unboxed on the right stays in the document.</li><li>ECML2026 (fixtures/ecml2026/*.pkl): converted like any .pkl (plan-b panel); not opened here.</li></ul></section>

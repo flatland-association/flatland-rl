@@ -1,0 +1,87 @@
+diff --git a/tests/test_flatland_envs_sparse_rail_generator.py b/tests/test_flatland_envs_sparse_rail_generator.py
+index 665cb8af8..2b503f069 100644
+--- a/tests/test_flatland_envs_sparse_rail_generator.py
++++ b/tests/test_flatland_envs_sparse_rail_generator.py
+@@ -1,15 +1,19 @@
+ import dataclasses
+ import unittest
+ import warnings
++from collections import deque
++from typing import Set, Tuple
+ 
+ import numpy as np
+ import pytest
+ from numpy.random import RandomState
+ 
++from flatland.core.grid.grid4_utils import get_new_position
+ from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
+ from flatland.envs.line_generators import sparse_line_generator
+ from flatland.envs.observations import GlobalObsForRailEnv
+ from flatland.envs.rail_env import RailEnv
++from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+ from flatland.envs.rail_generators import sparse_rail_generator, _city_name, _gate_name, _pin_name, _stopping_point_name
+ from flatland.envs.stations_links import Pin
+ from flatland.utils.rendertools import RenderTool
+@@ -673,6 +677,62 @@ def test_sparse_rail_generator_gates_to_fibres_reuses_connecting_line():
+             assert gate_of(fibre.to_pin) == link.to_gate
+ 
+ 
++def _pins_reached_through_station(rail: RailGridTransitionMap, station_cells: Set[Tuple[int, int]], pin: Tuple[int, int], heading_in: int,
++                                  target_pins: Set[Tuple[int, int]], heading_out: int) -> Set[Tuple[int, int]]:
++    """The target pins a train entering the station at `pin` with `heading_in` can leave the station from with
++    `heading_out`, moving only through the station's cells."""
++    start = (pin, heading_in)
++    seen = {start}
++    queue = deque([start])
++    reached = set()
++    while queue:
++        cell, heading = queue.popleft()
++        transitions = rail.get_transitions((cell, heading))
++        for new_heading in range(4):
++            if not transitions[new_heading]:
++                continue
++            if cell in target_pins and new_heading == heading_out:
++                reached.add(cell)
++            new_cell = tuple(get_new_position(cell, new_heading))
++            if new_cell in station_cells and (new_cell, new_heading) not in seen:
++                seen.add((new_cell, new_heading))
++                queue.append((new_cell, new_heading))
++    return reached
++
++
++@pytest.mark.parametrize("max_rail_pairs_in_city", [1, 2, 3])
++@pytest.mark.parametrize("max_rails_between_cities", [
++    1, 2,
++    # with three rails between cities, a pin of one gate can miss a pin of the other gate inside a four-track city
++    pytest.param(3, marks=pytest.mark.xfail(reason="sparse cities do not connect every pin of a gate to every pin of the other gate", strict=False)),
++])
++@pytest.mark.parametrize("seed", range(5))
++def test_sparse_rail_generator_gates_connect_all_pins(seed: int, max_rails_between_cities: int, max_rail_pairs_in_city: int):
++    """Up to five cities on a 60x60 grid; a city's gates are keyed by the side (N, E, S, W) its tracks leave it by.
++
++    - For every two gates of a city: a train entering the city through any pin of one gate can leave it through
++      every pin of the other gate, moving only through the city's cells (`Station.edges`).
++    """
++    generate = sparse_rail_generator(max_num_cities=5, seed=seed, max_rail_pairs_in_city=max_rail_pairs_in_city,
++                                     max_rails_between_cities=max_rails_between_cities)
++    rail, optionals = generate(width=60, height=60, num_agents=2, num_resets=0, np_random=RandomState(seed))
++
++    stations = optionals['stations_links'].stations
++    assert len(stations) > 0
++    for station in stations.values():
++        station_cells = {tuple(map(int, cell)) for cell in station.edges}
++        for from_key, from_gate in station.gates.items():
++            for to_key, to_gate in station.gates.items():
++                if from_key == to_key:
++                    continue
++                to_pins = {tuple(map(int, pin.node)) for pin in to_gate.pins.values()}
++                for pin in from_gate.pins.values():
++                    reached = _pins_reached_through_station(rail=rail, station_cells=station_cells, pin=tuple(map(int, pin.node)),
++                                                            heading_in=("NESW".index(from_key) + 2) % 4, target_pins=to_pins,
++                                                            heading_out="NESW".index(to_key))
++                    assert reached == to_pins, (station.name, pin.name, to_gate.name, reached, to_pins)
++
++
+ def test_stations_links_dataclasses_are_frozen():
+     """stations_links (Pin, Gate, StoppingPoint, Station, Fibre, Link, StationsLinks) must be
+     immutable dataclasses."""
