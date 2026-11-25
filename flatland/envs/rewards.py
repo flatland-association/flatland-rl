@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List, Iterator
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List, Iterator, NamedTuple
 
 import numpy as np
 from fastenum import fastenum
@@ -106,6 +106,64 @@ def defaultdict_list():
     return defaultdict(lambda: [])
 
 
+class PendingHalt(NamedTuple):
+    """An agent's last halt at an entry point it has not left yet."""
+    entry_point: object
+    elapsed_steps: int
+
+
+class DepartureClock:
+    """
+    Dates an agent's departure from an entry point: the step in which it starts moving after its last halt there.
+
+    An agent that starts moving from a halt enters the next cell only once it has covered the rest of its cell, which
+    takes up to ``1 / max_speed`` steps. Its departure is the step in which its speed becomes positive again, i.e. the
+    step after its last halt there, not the step in which it enters the next cell. An agent that passes an entry point
+    without halting departs in the step in which it enters the next cell.
+
+    - Halt: the agent is on the map and has speed 0 after the step, for any reason: ``STOP_MOVING``, ``DO_NOTHING``
+      while stopped, a denied crossing (invalid action or occupied cell), or a malfunction.
+    - Last halt counts: an agent that halts, creeps forward within the cell and halts again departs in the step after
+      its second halt. Creeping forward is not a departure.
+    - Malfunction: an agent that halts at a stop, has a malfunction there (speed 0) and starts after the stop's
+      earliest departure departs on time. Whether the stop counts as served is not decided here:
+      :class:`BaseDefaultRewards` requires a halt without malfunction for that, :class:`PunctualityRewards` none.
+
+    Each reward object keeps its own clock. Per step and agent, call :meth:`departure` (only when a departure is
+    booked) before :meth:`record`, so that a halt in the new cell does not date the departure from the old one.
+    """
+
+    def __init__(self):
+        self._pending_halts: Dict[AgentHandle, PendingHalt] = {}
+
+    def record(self, agent: EnvAgent, agent_transition_data: Optional[AgentTransitionData], elapsed_steps: int) -> None:
+        """
+        Keeps the agent's halt at its current entry point if it is on the map and halted in this step; a later halt at
+        the same entry point replaces it. Without transition data (hand-built calls), the agent did not halt.
+        """
+        if agent_transition_data is None or agent.current_entry_point is None:
+            return
+        movement_allowed = agent_transition_data.action_valid and agent_transition_data.resource_check
+        # candidate_speed is 0 for STOP_MOVING down to 0, for a stopped agent without a moving action and in a malfunction;
+        # a denied crossing (not movement_allowed) ends with speed 0 as well.
+        if agent_transition_data.candidate_speed == 0 or not movement_allowed:
+            self._pending_halts[agent.handle] = PendingHalt(agent.current_entry_point, elapsed_steps)
+
+    def departure(self, agent: EnvAgent, elapsed_steps: int) -> int:
+        """
+        The departure of the agent from its old entry point, which it left in this step: the step after its last halt
+        there, or this step if it did not halt there.
+        """
+        halt = self._pending_halts.pop(agent.handle, None)
+        if halt is not None and halt.entry_point == agent.old_entry_point:
+            return halt.elapsed_steps + 1
+        return elapsed_steps
+
+    def forget(self, agent: EnvAgent) -> None:
+        """Drops the agent's last halt, when it left the entry point without a departure being booked."""
+        self._pending_halts.pop(agent.handle, None)
+
+
 class DefaultPenalties(fastenum.Enum):
     COLLISION = "COLLISION"
     INVALID_ACTION = "INVALID_ACTION"
@@ -163,7 +221,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     intermediate_late_arrival_penalty_factor : float
         Intermediate late arrival penalty factor :math:`\alpha \geq 0`. Defaults to 0.2.
     intermediate_early_departure_penalty_factor : float
-        Intermediate early departure penalty factor :math:`\delta \geq 0`. Defaults to 0.5.
+        Intermediate early departure penalty factor :math:`\delta \geq 0`. Defaults to 0.5. The departure from a stop
+        is the step in which the agent starts moving after its last halt there (speed 0 for any reason, a malfunction
+        included), not the step in which it enters the next cell; see :class:`DepartureClock`.
     collision_factor : float
         Crash penalty factor :math:`\kappa \geq 0`. Shared by both the collision and invalid-action
         penalties (see class docstring). Defaults to 0.0.
@@ -203,6 +263,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # entry points where the agent was ever recorded on-map and halted (not malfunctioning)
         # - a state-machine-independent equivalent of "was ever TrainState.STOPPED here".
         self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
+        # dates the departures: the step after the last halt at an entry point, see DepartureClock
+        self.departure_clock = DepartureClock()
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
@@ -245,9 +307,11 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
                 self.arrivals[agent.handle][agent.current_entry_point].append(elapsed_steps)
                 # Only record departure from old position when we arrive from on-map position
                 if agent.old_entry_point is not None:
-                    self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)
+                    self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
         elif agent.old_entry_point is not None:
-            self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)
+            self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
+        # after the departure from the old entry point, so that a halt at the new one does not date it
+        self.departure_clock.record(agent, agent_transition_data, elapsed_steps)
 
         if was_moving and is_stopped_now:
             # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step,
@@ -570,6 +634,8 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
     """
     Punctuality: n_stops_on_time / n_stops
     An agent is deemed not punctual at a stop if it arrives too late, departs too early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
+    The departure from a stop is the step in which the agent starts moving after its last halt there (speed 0 for any reason, a malfunction included),
+    not the step in which it enters the next cell; see :class:`DepartureClock`.
 
     The implementation returns the tuple `(n_stops_on_time, n_stops)`.
 
@@ -585,6 +651,8 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict_list)
         self.departures = defaultdict(defaultdict_list)
+        # dates the departures: the step after the last halt at an entry point, see DepartureClock
+        self.departure_clock = DepartureClock()
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
         # N.B. assuming an entry point is only ever visited once - arrivals[entry_point]/departures[entry_point]
@@ -605,7 +673,11 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             # journey reaching DONE on the very first on-map step) does not mean the target wasn't
             # really reached; it just means there's no real "previous stop" to book a departure against.
             if agent.old_entry_point is not None:
-                self.departures[agent.handle][agent.old_entry_point].append(elapsed_steps)
+                self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
+        elif entry_point is not None and agent.old_entry_point != agent.current_entry_point:
+            # moved to an entry point visited before: no departure is booked, so its last halt must not date a later one
+            self.departure_clock.forget(agent)
+        self.departure_clock.record(agent, agent_transition_data, elapsed_steps)
 
         return 0, 0
 
