@@ -35,6 +35,11 @@ Requirements:
 - **REQ-3** The initial stop, the target and `n_stops` are counted as on `main`.
 - **REQ-4** A test reproduces the issue: one agent, two and three intermediate stops served on time, gives
   `(n_stops, n_stops)`; it fails on `main`.
+- **REQ-5** (added 2026-11-25, Q-2 revisited, Q-4) `BaseDefaultRewards` and `PunctualityRewards` share one rule for a
+  served intermediate stop: the agent halts there, i.e. its speed is 0 after a step at the stop, not in a malfunction,
+  whatever the action (`STOP_MOVING`, `DO_NOTHING` while stopped, a denied move). An agent that passes the stop
+  without halting, or stands there only during a malfunction, does not serve it. After a malfunction at the stop, one
+  more step there with speed 0 serves it, with `STOP_MOVING` or `DO_NOTHING`.
 
 ### 1.2 Quality goals (non-functional requirements)
 
@@ -62,7 +67,6 @@ Requirements:
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
 | Early departure at intermediate stops is penalised one step late: the departure is booked when the agent enters the next cell. Affects `PunctualityRewards`' `departure >= ed` in the same loop. | Own issue, other lines of `rewards.py` (C-3). | §3 | - | [#554](https://github.com/flatland-association/flatland-rl/issues/554) |
-| `PunctualityRewards` counts an intermediate stop the agent rolls through without halting as served, unlike `BaseDefaultRewards`, which requires a halt. | Another behaviour change, not in the issue (Q-2). | §2.1, Q-2 | - | - |
 
 ## 2. Constraints
 
@@ -72,16 +76,13 @@ Requirements:
 |---|---|---|---|
 | C-1 | `Rewards` interface stays | technical | `PunctualityRewards` keeps `step_reward()`/`end_of_episode_reward()` and the `(n_stops_on_time, n_stops)` tuple that the evaluators and KPI aggregators read. |
 | C-2 | Release | organisational | Milestone 5.0.0; release-please writes the changelog from the squashed commit message (`AGENTS.md`, "Releases and versioning"). |
-| C-3 | Parallel fix [#554](https://github.com/flatland-association/flatland-rl/issues/554) in the same file | organisational | #554 changes when a departure is booked (`rewards.py:220-231`, `:570-578`) and may touch the departure comparisons (`:592`, `:605`, `:331`). This fix touches only `rewards.py:610`, four unchanged lines away from `:605`, and adds its test in the middle of `tests/test_rewards.py`, not at its end. Each test must hold with and without the other fix. |
+| C-3 | Parallel fix [#554](https://github.com/flatland-association/flatland-rl/issues/554) in the same file | organisational | #554 changes when a departure is booked (`rewards.py:220-231`, `:570-578`) and may touch the departure comparisons (`:592`, `:605`, `:331`). This fix touches `rewards.py:610`, four unchanged lines away from `:605`, and adds its tests in the middle of `tests/test_rewards.py`, not at its end. S-2 also touches `PunctualityRewards.__init__`, the top of its `step_reward()` and its docstring, each at least one unchanged line away from #554's changes there. Each test must hold with and without the other fix. |
 | C-4 | Conventions | conventions | `AGENTS.md`: Conventional Commits, numpydoc, test docstrings in domain words ("Docstrings for tests that step `RailEnv`"), flatland-baselines' tests before calling a flatland-rl change done. |
 
 ### 2.1 Limitations
 
 *What the built code gets wrong or ignores, each with the TODO or issue that tracks it.*
 
-- An intermediate stop counts as served when the agent passes its cell within the time window, also without halting
-  there (`PunctualityRewards.step_reward()` books every cell entry, `rewards.py:571-578`). With this fix such stops
-  count for every intermediate stop, not only the first (§3, roll-through run). Tracked by Q-2 and §1.4.
 - The departure booked at a stop lags the start of the agent by `ceil(1 / max_speed)` steps since D1 (#496): tracked
   by [#554](https://github.com/flatland-association/flatland-rl/issues/554).
 
@@ -169,18 +170,25 @@ is not new on purpose.*
 
 - **DP-1 Each stop is judged on its own.** The result of one intermediate stop never decides whether the next one
   is looked at; only the loop over a stop's alternatives may end early. (Q-1)
-- **DP-2 Fix the count, not the bookkeeping.** What counts as arrival, departure and "served" stays as on `main`;
-  those are #554 and Q-2.
+- **DP-2 Fix the count, not the arrival and departure bookkeeping.** What counts as arrival and departure stays as
+  on `main`; that is #554.
+- **DP-3 One halt rule for both rewards.** A stop is served only with a halt, not in a malfunction, decided by one
+  function that `BaseDefaultRewards` and `PunctualityRewards` both call, so the two can't disagree again. (Q-2
+  revisited)
+- **DP-4 Serving a stop is not the stop of the penalties.** Whether a halt serves a stop (speed 0 after the step) is
+  decided apart from `BaseDefaultRewards`' `is_stopped_now` (the MOVING -> STOPPED transition), which keeps deciding
+  the collision and invalid-action penalties as on `main`. (Q-4)
 
 Reused concepts:
 
 | Need | Reused concept | Instead of |
 |---|---|---|
 | Per-stop on-time flag | The existing `stop_on_time` flag of the intermediate loop (`rewards.py:598`) | A rewrite with `any()` or a helper method |
+| Halt that serves a stop | `BaseDefaultRewards`' `stopped_waypoints`, filled by `_is_halt_serving_stop()`, which both classes call | A second copy of the condition in `PunctualityRewards`; widening `is_stopped_now`, which also decides the penalties (DP-4) |
+| Test of the shared served rule | The multi-cell station tests and their `_visit()` helper, parametrized with the reward class | A separate env test for `PunctualityRewards` |
 | Scenario for the test | The issue's corridor (`rail_from_grid_transition_map`, `Line`, `Timetable`), as in #554's reproduction | A hand-built `EnvAgent` with direct `step_reward()` calls, which would pin today's departure booking that #554 changes |
 
-Not new on purpose: the `(n_stops_on_time, n_stops)` tuple, `PunctualityRewards`' docstring (it already says each
-punctual stop counts), the flatland-book page.
+Not new on purpose: the `(n_stops_on_time, n_stops)` tuple, the flatland-book page.
 
 ### 4.2 Verification
 
@@ -192,10 +200,11 @@ No screenshots: nothing visible changes.
 |---|---|---|---|---|
 | REQ-1 | Every on-time intermediate stop counts | New `test_punctuality_rewards_counts_every_intermediate_stop_on_time`, parametrised with 1, 2 and 3 intermediate stops served on time: `(n_stops, n_stops)`. | On 4856ebfe with S-1: `(3, 3)`, `(4, 4)`, `(5, 5)`, passes. | - |
 | REQ-2 | Late, missed and alternative stops unchanged | Same test, cases "first late, second on time" `(3, 4)` and "first on time, second late" `(3, 4)`; existing `test_punctuality_rewards_intermediate`. | Both `(3, 4)`, passes; `test_punctuality_rewards_intermediate` passes. | - |
-| REQ-3 | Initial stop, target, `n_stops` unchanged | Existing `test_punctuality_rewards_*` in `tests/test_rewards.py`; `tests/flatland/envs/graph/test_graph_rail_env.py`; flatland-baselines' `test_policy_grid_runner_evaluator.py` (pinned scores, §3). | With S-1: `tests/test_rewards.py` and `test_graph_rail_env.py` 170 passed; flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"` 28 passed, 50 skipped, 1 xfailed. | - |
+| REQ-3 | Initial stop, target, `n_stops` unchanged | Existing `test_punctuality_rewards_*` in `tests/test_rewards.py`; `tests/flatland/envs/graph/test_graph_rail_env.py`; flatland-baselines' `test_policy_grid_runner_evaluator.py` (pinned scores, §3). | With S-1: `tests/test_rewards.py` and `test_graph_rail_env.py` 170 passed; flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"` 28 passed, 50 skipped, 1 xfailed. With S-2: the 8 test modules that use the reward classes 459 passed, 3 skipped; flatland-baselines unchanged; flake8 nothing new. | - |
 | REQ-4 | Test of the issue | The REQ-1 test fails on `main` for 2 and 3 stops. | Without S-1 (`break` restored): `two-on-time` and `three-on-time` fail, the other 3 pass. | - |
-| NFR-1 | Mergeable with #554 | Diff touches `rewards.py:610` only; the test's `ed` 0 holds with any departure booking. Checked again when the second of the two PRs is rebased. | `rewards.py` 1 deletion only; to check at the rebase. | - |
-| NFR-2 | Minimal diff | `git diff --stat main`: `rewards.py` 1 deletion, `tests/test_rewards.py` one test, the plan. | `rewards.py` 1 deletion, `tests/test_rewards.py` +56 (the test and 2 imports). | - |
+| REQ-5 | Served only with a halt | The multi-cell station tests `test_multicell_station_served_regardless_of_halting_cell` and `test_multicell_station_not_served_when_only_rolled_through`, parametrized with `BaseDefaultRewards` and `PunctualityRewards`: one body, the same expectation for both. The served test halts with `STOP_MOVING` or `DO_NOTHING`, directly or after a malfunction at the station (Q-4); the roll-through test also passes the station within its time window and stands at it only in a malfunction; `_visit()` gets a malfunction case and the halt's action. An env run of the issue's corridor checks the malfunction cases through `env.step()`. | With S-2: the 27 station test cases pass. Without S-2's `rewards.py`: the on-time roll-through and the malfunction case fail for `PunctualityRewards`, the `DO_NOTHING` halts for `BaseDefaultRewards`. Env run, a malfunction of 2 steps at the stop: moving on right after it leaves the stop not served in both rewards; one more step with `STOP_MOVING` or `DO_NOTHING` serves it (`INTERMEDIATE_NOT_SERVED` 0, punctuality `(3, 3)`). `test_punctuality_rewards_intermediate` and `test_punctuality_rewards_departure_recorded_on_done_with_removal` now halt at their stop and stay halted until the step before they leave, as an env run would. | - |
+| NFR-1 | Mergeable with #554 | S-1 touches `rewards.py:610` only; S-2's hunks are at least one unchanged line away from #554's (C-3); the tests' `ed` 0 holds with any departure booking. Checked again when the second of the two PRs is rebased. | S-1: `rewards.py` 1 deletion. S-2: `git merge-tree` with #554's branch (bda8bb7e) has no conflict; `tests/test_rewards.py` on the merged tree: 74 passed. It needs the two hand-built tests to stay halted until the step before they leave: #554 dates the departure by the last halt. | - |
+| NFR-2 | Minimal diff | `git diff --stat main`: `rewards.py` 1 deletion, `tests/test_rewards.py` one test, the plan; S-2 adds the shared halt rule and its test. | `rewards.py` 1 deletion, `tests/test_rewards.py` +56 (the test and 2 imports). | - |
 
 ### 4.3 Count each intermediate stop (REQ-1-REQ-4; Q-1)
 
@@ -209,6 +218,24 @@ No screenshots: nothing visible changes.
   corridor, widened to 11 cells for three stops; the agent brakes into each stop and moves on in the next step;
   intermediate `ed` 0, so the result does not depend on when the departure is booked (C-3). Docstring in domain
   words (C-4).
+
+### 4.4 Serve a stop only with a halt (REQ-5; Q-2)
+
+*One part of the change: what changes and why, with the requirements and decisions it implements.*
+
+- `_is_halt_serving_stop(agent, agent_transition_data)` in `rewards.py`: on the map, not in a malfunction, and speed
+  0 after the step (`candidate_speed == 0`) or a denied move, whatever the action (Q-4). `BaseDefaultRewards` fills
+  `stopped_waypoints` with it instead of with `is_stopped_now` (DP-3); `is_stopped_now` stays for the penalties
+  (DP-4). Without transition data (hand-built calls) the agent did not halt.
+- `PunctualityRewards` keeps `stopped_waypoints` as `BaseDefaultRewards` does, filled at the top of `step_reward()`.
+  In `end_of_episode_reward()` an intermediate alternative is only looked at if the agent halted there.
+- The initial stop and the target need no halt, as in `BaseDefaultRewards`.
+- Class docstring: an intermediate stop is served only with a halt, as for `BaseDefaultRewards`.
+- Tests: the two hand-built tests that served a stop without transition data now pass the halt signal
+  (`_stopped_here_transition_data()`), as the `DefaultRewards` tests already do. The multi-cell station tests, which
+  pin the served rule for `BaseDefaultRewards`, are parametrized with the reward class, so one test body states the
+  rule for both; the served test halts with `STOP_MOVING` or `DO_NOTHING`, also after a malfunction, and the
+  roll-through test gets an on-time pass and a malfunction-only stand.
 
 ## 5. Building block view
 
@@ -234,13 +261,13 @@ flowchart LR
 Notation: [flowchart in Mermaid](https://mermaid.js.org/syntax/flowchart.html); yellow modified, grey unchanged.
 Arrows point from the caller to the code it calls.
 
-**Motivation:** the bug and its fix are inside one method; the callers keep reading the same tuple (C-1, DP-2).
+**Motivation:** the count's fix is inside one method; the halt rule is shared with `BaseDefaultRewards` (DP-3); the callers keep reading the same tuple (C-1, DP-2).
 
 **Contained building blocks:**
 
 | Component | Responsibility | Change |
 |---|---|---|
-| `PunctualityRewards` | Counts per agent how many of its stops were served on time, out of all its stops. Not for penalties or delays (`DefaultRewards`, `DelayRewards`). | 🟨 modified: every intermediate stop served on time counts, so an agent on time everywhere scores 1. |
+| `PunctualityRewards` | Counts per agent how many of its stops were served on time, out of all its stops. Not for penalties or delays (`DefaultRewards`, `DelayRewards`). | 🟨 modified: every intermediate stop served on time counts, so an agent on time everywhere scores 1; a stop counts as served only if the agent halts there, as for the default rewards. |
 | `RailEnv` | Runs the episode and asks the rewards for the end-of-episode value of each agent. | ⬜ unchanged |
 | Evaluators and KPI aggregators | Sum and divide the tuples into a punctuality score. | ⬜ unchanged |
 
@@ -248,7 +275,7 @@ Arrows point from the caller to the code it calls.
 
 *How the components work together at runtime: the flows and modes the change adds or changes, when it changes behaviour.*
 
-### 6.1 End-of-episode punctuality of one agent (REQ-1; Q-1)
+### 6.1 End-of-episode punctuality of one agent (REQ-1, REQ-5; Q-1, Q-2)
 
 *One flow or mode, as a sequence or state diagram.*
 
@@ -260,7 +287,7 @@ sequenceDiagram
     PunctualityRewards->>PunctualityRewards: count the initial stop
     loop every intermediate stop (main left it after the first stop on time)
         loop every alternative waypoint of the stop
-            PunctualityRewards->>PunctualityRewards: on time if arrived by latest arrival and left at or after earliest departure
+            PunctualityRewards->>PunctualityRewards: on time if halted there, arrived by latest arrival and left at or after earliest departure
         end
         opt stop on time
             PunctualityRewards->>PunctualityRewards: add one stop on time
@@ -282,7 +309,9 @@ Notation: [sequence diagram in Mermaid](https://mermaid.js.org/syntax/sequenceDi
 
 Compared with `main`. What is reused, and what is not new on purpose, is in §4.1.
 
-None.
+| ID | New | Defined in |
+|---|---|---|
+| PAT-1 | `_is_halt_serving_stop()`: one module-level rule for "halted here with speed 0, not in a malfunction", called by every reward class that decides whether a stop is served. | §4.4, DP-3, DP-4 |
 
 ### 8.2 Breaking changes
 
@@ -296,9 +325,18 @@ None for callers: no signature, tuple shape or file format changes. Changed beha
   `main`. Its and flatland-baselines' pinned scores come from scenarios without intermediate stops (§3) and stay.
   Scores from before and after the fix are not comparable for scenarios with intermediate stops. No migration:
   the new values are the documented ones.
+- **Punctuality scores fall** for agents that pass an intermediate stop within its time window without halting
+  there, or stand there only because of a malfunction (S-2): such a stop no longer counts as on time. Who: the same
+  evaluations and KPIs. Pinned scores in flatland-baselines and ai4realnet-orchestrators come from scenarios without
+  intermediate stops (§3) and stay. No migration: punctuality now uses the halt rule of the default rewards.
+- **Fewer "not served" penalties in the default rewards** (`DefaultRewards`, `BaseDefaultRewards`, and the ECML 2026
+  rewards built on them): a halt with speed 0 and `DO_NOTHING`, e.g. in the step a malfunction at the stop ends, now
+  serves the stop; on `main` only `STOP_MOVING` or a denied move did (Q-4). Who: evaluations with these rewards,
+  among them the ECML 2026 evaluation. Collision and invalid-action penalties are unchanged (DP-4). No migration:
+  the stop is served as the documentation describes it, by halting there.
 - **Stored data:** none affected (no stored episode holds `PunctualityRewards` tuples, §3).
 
-The commit is marked breaking (`fix(rewards)!:`, Q-3).
+The commits are marked breaking (`fix(rewards)!:`, Q-3).
 
 ## 9. Decisions
 
@@ -330,7 +368,10 @@ The commit is marked breaking (`fix(rewards)!:`, Q-3).
 *Proposal:* a). The issue asks only for the count; the halt rule is another behaviour change and collides with #554.
 The maintainers decide whether the follow-up gets an issue.
 
-✅ **Decided 2026-11-25:** a), not in this PR; a follow-up (§1.4), its issue still undecided.
+~~✅ **Decided 2026-11-25:** a), not in this PR; a follow-up (§1.4), its issue still undecided.~~
+
+✅ **Revisited 2026-11-25:** b), in this PR (S-2): the inconsistency between the two rewards is fixed with the count,
+not left as a follow-up. The halt rule is shared with `BaseDefaultRewards` (DP-3).
 
 ~~**(Q-3) Mark the commit as breaking (`fix(rewards)!:`)?**~~
 - a) No: it restores the behaviour the docstring and flatland-book describe.
@@ -342,6 +383,15 @@ which agents' scores change.
 
 ✅ **Decided 2026-11-25:** b), `fix(rewards)!:` with the score change in the body.
 
+~~**(Q-4) An agent stands at a stop only because of a malfunction, then keeps speed 0 one more step when it ends. Which
+actions in that step serve the stop?**~~
+- a) Only `STOP_MOVING`, as on `main` in `BaseDefaultRewards`; `DO_NOTHING` (also ending STOPPED at the stop) does
+  not.
+- b) Any action that leaves the agent at speed 0 (`STOP_MOVING`, `DO_NOTHING`), in both rewards; a rule of its own
+  next to `is_stopped_now`, which keeps deciding the penalties. Changes the default rewards too (§8.2).
+
+✅ **Decided 2026-11-25:** b), in this PR (S-2).
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -350,8 +400,10 @@ which agents' scores change.
 |---|---|---|---|
 | 2026-10-30 | ✅ Each intermediate stop served on time counts; two intermediate stops served on time give `(4, 4)` ([#555](https://github.com/flatland-association/flatland-rl/issues/555), "Expected behavior"). | The documented behaviour (`rewards.py:550-555`, flatland-book). | REQ-1, REQ-4; S-1. |
 | 2026-11-25 | ✅ Q-1: delete the `break` after the stop's count, keep the loop over the alternatives as it is. | Smallest diff, clear of the lines #554 may touch; b) and c) change the comparison lines. | S-1 is a one-line deletion (NFR-2). |
-| 2026-11-25 | ✅ Q-2: an intermediate stop passed without halting still counts as served. | Not in the issue; a halt rule changes scores also with one intermediate stop and touches the booking #554 changes. | Follow-up in §1.4; §2.1 keeps the limitation. |
+| 2026-11-25 | ~~✅ Q-2: an intermediate stop passed without halting still counts as served.~~ Replaced by the later Q-2 row of 2026-11-25. | Not in the issue; a halt rule changes scores also with one intermediate stop and touches the booking #554 changes. | Follow-up in §1.4; §2.1 keeps the limitation. |
 | 2026-11-25 | ✅ Q-3: mark S-1 as breaking, `fix(rewards)!:`. | Punctuality scores rise for agents with two or more on-time intermediate stops; release-please lists breaking changes apart, where KPI owners read them. | S-1's message and body (§8.2). |
+| 2026-11-25 | ✅ Q-2 revisited: an intermediate stop is served only with a halt, not in a malfunction, in `PunctualityRewards` as in `BaseDefaultRewards`, in this PR. | With every stop counted (S-1), the two rewards disagreed on every stop an agent passes without halting; fixing it with the count keeps one release note for the punctuality change. | REQ-5, DP-3, PAT-1; S-2 (breaking); the follow-up and the limitation are gone. |
+| 2026-11-25 | ✅ Q-4: a halt that serves a stop is speed 0 after a step there, not in a malfunction, whatever the action, in both rewards. | After a malfunction at the stop, `DO_NOTHING` leaves the agent STOPPED at speed 0 as `STOP_MOVING` does; only the latter served it, in `BaseDefaultRewards` on `main` as well. a) would keep that gap in both rewards. | REQ-5, DP-4; `BaseDefaultRewards` serves more stops, the ECML 2026 rewards too (§8.2); `is_stopped_now` unchanged. |
 
 ### 9.3 Code Review Findings
 
@@ -372,7 +424,10 @@ a14be873 on 2026-11-25: no code review yet, no PR review or conversation comment
 - **Alternative** (one `Waypoint` of a stop's list): one cell and direction at which the stop may be served, e.g. one
   platform. A stop counts once however many of its alternatives match.
 - **On time** at an intermediate stop: an arrival `<= la` (`waypoints_latest_arrival`) paired with a departure
-  `>= ed` (`waypoints_earliest_departure`) at one of its alternatives. Not "halted there" (Q-2).
+  `>= ed` (`waypoints_earliest_departure`) at one of its alternatives where the agent halted.
+- **Served** intermediate stop (`stopped_waypoints`, `_is_halt_serving_stop()`): the agent halted at one of its
+  alternatives, with speed 0 after a step or a denied move, not in a malfunction, whatever the action. Not passing it
+  at speed, and not standing there only because of a malfunction.
 - **Punctuality** (`PunctualityRewards`, `(n_stops_on_time, n_stops)`): the share of an agent's stops served on time.
   Not the delay at the target (`DelayRewards`) or the penalties of `DefaultRewards`.
 
@@ -388,6 +443,7 @@ a14be873 on 2026-11-25: no code review yet, no PR review or conversation comment
 |---|---|---|---|---|---|---|---|---|
 | ✅ S-0 | - | Add this plan. | docs | low | docs(plans): plan counting every intermediate stop served on time in PunctualityRewards (#555). | d76435fc | - | - |
 | ✅ S-1 | - | Delete the `break` at `rewards.py:610` (Q-1); add `test_punctuality_rewards_counts_every_intermediate_stop_on_time` after `test_punctuality_rewards_intermediate` (REQ-1-REQ-4); body names the score change (§8.2) and "Fixes #555.". | bug | medium | fix(rewards)!: count every intermediate stop served on time in PunctualityRewards. | 3e6bf2a4 | S-0 | - |
+| ✅ S-2 | - | One served rule `_is_halt_serving_stop()` for `BaseDefaultRewards` and `PunctualityRewards`: speed 0 after a step at the stop, not in a malfunction, whatever the action (§4.4, Q-2 revisited, Q-4); docstring; the two hand-built punctuality tests halt at their stop; the multi-cell station tests parametrized with both reward classes, with `DO_NOTHING` halts, halts after a malfunction, an on-time roll-through and a malfunction-only stand (REQ-5); body names the score changes (§8.2). | bug | medium | fix(rewards)!: serve an intermediate stop only with a halt at speed 0, in DefaultRewards and PunctualityRewards alike. | bb10fa8b | S-1 | - |
 
 Before the PR: `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`, and flatland-baselines'
 `deadlock_avoidance_heuristic/tests -m "not slow"` (`AGENTS.md`, C-4).
@@ -410,8 +466,8 @@ Before the PR: `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_ra
 
 | File | Changes |
 |---|---|
-| `flatland/envs/rewards.py` | `PunctualityRewards.end_of_episode_reward()`: the `break` after `n_stops_on_time += 1` in the intermediate loop is gone (S-1). |
-| `tests/test_rewards.py` | `test_punctuality_rewards_counts_every_intermediate_stop_on_time`, after `test_punctuality_rewards_intermediate` (S-1). |
+| `flatland/envs/rewards.py` | `PunctualityRewards.end_of_episode_reward()`: the `break` after `n_stops_on_time += 1` in the intermediate loop is gone (S-1). New `_is_halt_serving_stop()`; `BaseDefaultRewards.step_reward()` fills `stopped_waypoints` with it instead of `is_stopped_now`; `PunctualityRewards`: `stopped_waypoints`, filled in `step_reward()`, required in `end_of_episode_reward()`; class docstring (S-2). |
+| `tests/test_rewards.py` | `test_punctuality_rewards_counts_every_intermediate_stop_on_time`, after `test_punctuality_rewards_intermediate` (S-1). `test_multicell_station_served_regardless_of_halting_cell` and `test_multicell_station_not_served_when_only_rolled_through` parametrized with the reward class; `_agent_with_two_cell_intermediate_station()` builds either class, `_visit()` gets a malfunction case and the halt's action, the served test `DO_NOTHING` and malfunction cases, new `_intermediate_stop_counted()`; `test_punctuality_rewards_intermediate` and `test_punctuality_rewards_departure_recorded_on_done_with_removal` halt at their stop (S-2). |
 
-Unchanged on purpose: `PunctualityRewards.step_reward()` and the arrival/departure booking (#554), the initial-stop
-and target checks, `BaseDefaultRewards`, `PunctualityRewards`' docstring, the flatland-book rewards page.
+Unchanged on purpose: the arrival/departure booking (#554), the initial-stop and target checks, `BaseDefaultRewards`'
+penalties (`is_stopped_now`, DP-4), the flatland-book rewards page.
