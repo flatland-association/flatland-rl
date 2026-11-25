@@ -13,6 +13,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
@@ -25,6 +26,7 @@ from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.timetable_utils import Line, Timetable
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.simple_rail import make_simple_rail
 from tests.trajectories.test_policy_runner import RandomPolicy
@@ -341,7 +343,8 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
-    assert rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=5) == 0
+    # halts at (2,2,2) in step 4, so its departure is dated step 5 (the step after the last halt)
+    assert rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=4) == 0
     agent.old_entry_point = ((2, 2), 2)
     agent.current_entry_point = ((3, 3), 3)
     # records the (2,2,2) departure at elapsed_steps=5 (an early departure vs. ed=7, below) - kept as a
@@ -351,6 +354,149 @@ def test_rewards_intermediate_intermediate_early_departure_penalty():
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
     assert rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10) == -66
     assert rewards.end_of_episode_reward(agent, distance_map=distance_map, elapsed_steps=25) == 0
+
+
+def _corridor_env(width, stops, earliest_departures, max_speed, rewards):
+    """One agent on a straight east-bound corridor of `width` cells, with waypoints `stops` (initial, intermediate, target)
+    and their earliest departures; latest arrivals 40 at the intermediate stops and 60 at the target."""
+    transitions = RailEnvTransitions()
+    cells = transitions.transition_list
+    straight = transitions.rotate_transition(cells[1], 90)
+    rail = RailGridTransitionMap(width=width, height=1, transitions=transitions)
+    rail.grid = np.array(
+        [[transitions.rotate_transition(cells[7], 270)] + [straight] * (width - 2) + [transitions.rotate_transition(cells[7], 90)]],
+        dtype=np.uint16)
+    waypoints = [[Waypoint(*stop)] for stop in stops]
+    env = RailEnv(
+        width=width, height=1, rail_generator=rail_from_grid_transition_map(rail),
+        line_generator=lambda *args, **kwargs: Line(agent_waypoints={0: waypoints}, agent_speeds=[max_speed]),
+        timetable_generator=lambda *args, **kwargs: Timetable(
+            earliest_departures=[earliest_departures + [None]],
+            latest_arrivals=[[None] + [40] * (len(stops) - 2) + [60]],
+            max_episode_steps=60),
+        number_of_agents=1, obs_builder_object=FullEnvObservation(), rewards=rewards)
+    env.reset()
+    return env
+
+
+def _run_to_the_end(env, action_in_step):
+    """Steps the env until all agents are done, with `action_in_step(agent, step)` the agent's action in the step to
+    elapsed_steps = step, and returns the rewards summed with the rewards' own `cumulate()`."""
+    agent = env.agents[0]
+    collect = []
+    for _ in range(env._max_episode_steps):
+        _, rewards, dones, _ = env.step({0: action_in_step(agent, env._elapsed_steps + 1)})
+        collect.append(rewards[0])
+        if dones["__all__"]:
+            break
+    assert agent.state == TrainState.DONE
+    return env.rewards.cumulate(*collect)
+
+
+CORRIDOR_A, CORRIDOR_B, CORRIDOR_C = ((0, 1), 1), ((0, 4), 1), ((0, 7), 1)
+CORRIDOR_ED_B = 10
+
+
+def _halt_at_b_until(move_step):
+    """Brakes when crossing into B, halts at B and moves on from B in step `move_step`; MOVE_FORWARD elsewhere."""
+
+    def action_in_step(agent, step):
+        crossing_into_b = agent.next_entry_point == CORRIDOR_B and agent.speed_counter.is_cell_exit()
+        at_b = agent.current_entry_point == CORRIDOR_B and step < move_step
+        return RailEnvActions.STOP_MOVING if crossing_into_b or at_b else RailEnvActions.MOVE_FORWARD
+
+    return action_in_step
+
+
+@pytest.mark.parametrize("max_speed", [Fraction(1), Fraction(1, 2)], ids=["speed-1", "speed-1/2"])
+@pytest.mark.parametrize("move_step,expected_reward", [(9, -0.5), (10, 0.0), (11, 0.0)], ids=["early", "on-time", "late"])
+def test_rewards_early_departure_dated_by_the_start_from_the_halt(max_speed, move_step, expected_reward):
+    """
+    One agent at max speed 1 or 1/2 runs along a straight corridor from A=(0,1) via the intermediate stop B=(0,4) to its
+    target C=(0,7); B's earliest departure is 10.
+
+    - Setup: early departure penalty factor 0.5 (the default), no other penalty applies.
+    - The agent brakes to speed 0 when it enters B and halts there.
+    - It moves on from B in step 9, 10 or 11: its speed is positive after that step. At max speed 1/2 it needs two
+      steps to reach the next cell, at max speed 1 one step.
+    - The departure from B is the step it moves on, whatever its speed: 9 is one step early (-0.5), 10 and 11 are on time.
+    """
+    env = _corridor_env(width=9, stops=[CORRIDOR_A, CORRIDOR_B, CORRIDOR_C], earliest_departures=[2, CORRIDOR_ED_B], max_speed=max_speed,
+                        rewards=DefaultRewards())
+    assert _run_to_the_end(env, _halt_at_b_until(move_step)) == expected_reward
+    assert env.rewards._proxy.departures[0][CORRIDOR_B] == [move_step]
+
+
+@pytest.mark.parametrize("move_step,expected", [(9, (2, 3)), (10, (3, 3))], ids=["early", "on-time"])
+def test_punctuality_early_departure_dated_by_the_start_from_the_halt(move_step, expected):
+    """
+    One agent at max speed 1 runs along a straight corridor from A=(0,1) via the intermediate stop B=(0,4) to its target
+    C=(0,7); B's earliest departure is 10.
+
+    - The agent brakes to speed 0 when it enters B and halts there.
+    - It moves on from B in step 9 or 10 and reaches the next cell one step later.
+    - The departure from B is the step it moves on: in step 9 it leaves B too early, so B is not punctual `(2, 3)`;
+      in step 10 all three stops are punctual `(3, 3)`.
+    """
+    env = _corridor_env(width=9, stops=[CORRIDOR_A, CORRIDOR_B, CORRIDOR_C], earliest_departures=[2, CORRIDOR_ED_B], max_speed=Fraction(1),
+                        rewards=PunctualityRewards())
+    assert _run_to_the_end(env, _halt_at_b_until(move_step)) == expected
+    assert env.rewards.departures[0][CORRIDOR_B] == [move_step]
+
+
+def test_rewards_early_departure_malfunction_at_the_stop_counts_as_halt():
+    """
+    One agent at max speed 1 runs along a straight corridor from A=(0,1) via the intermediate stop B=(0,4) to its target
+    C=(0,7); B's earliest departure is 10.
+
+    - The agent brakes to speed 0 when it enters B and halts there.
+    - In step 7 it is given MOVE_FORWARD, but a malfunction starts in that step: its speed stays 0 in steps 7 to 9.
+    - The malfunction ends, and the agent moves on from B in step 10, on time.
+    - The departure from B is step 10: speed 0 during the malfunction is a halt like a voluntary one, so the agent is not
+      penalised for the start it was given in step 7. B still counts as served: the agent halted there before the
+      malfunction.
+    """
+    env = _corridor_env(width=9, stops=[CORRIDOR_A, CORRIDOR_B, CORRIDOR_C], earliest_departures=[2, CORRIDOR_ED_B], max_speed=Fraction(1),
+                        rewards=DefaultRewards())
+    halt_at_b = _halt_at_b_until(7)
+    speeds_at_b = {}
+
+    def action_in_step(agent, step):
+        if step == 7:
+            agent.malfunction_handler.malfunction_down_counter = 4
+        if agent.current_entry_point == CORRIDOR_B:
+            speeds_at_b[step - 1] = (agent.speed_counter.speed, agent.malfunction_handler.in_malfunction)
+        return halt_at_b(agent, step)
+
+    assert _run_to_the_end(env, action_in_step) == 0.0
+    assert {step: speeds_at_b[step] for step in range(7, 11)} == {7: (0, True), 8: (0, True), 9: (0, True), 10: (1, False)}
+    assert env.rewards._proxy.departures[0][CORRIDOR_B] == [CORRIDOR_ED_B]
+
+
+def test_rewards_early_departure_last_halt_counts():
+    """
+    One agent at max speed 1/4 runs along a straight corridor from A=(0,1) via the intermediate stop B=(0,2) to its
+    target C=(0,8); B's earliest departure is 12. This is the run of the plots in docs/plans/early-departure-intermediate-stops.md.
+
+    - The agent enters B in step 5 and brakes: speed 0 from step 6.
+    - It creeps forward in step 7 (speed 1/4) and halts again from step 8, still in B.
+    - It moves on from B in step 10, two steps before B's earliest departure, and reaches the next cell in step 12.
+    - The departure from B is step 10, the step after its last halt, not step 7 (the creep) and not step 12 (the next
+      cell): early by 2, penalty 0.5 * 2 = 1.
+    """
+    stop_b = ((0, 2), 1)
+    env = _corridor_env(width=10, stops=[CORRIDOR_A, stop_b, ((0, 8), 1)], earliest_departures=[1, 12], max_speed=Fraction(1, 4),
+                        rewards=DefaultRewards())
+    actions = {6: RailEnvActions.STOP_MOVING, 8: RailEnvActions.STOP_MOVING, 9: RailEnvActions.STOP_MOVING}
+    speeds = {}
+
+    def action_in_step(agent, step):
+        speeds[step - 1] = agent.speed_counter.speed
+        return actions.get(step, RailEnvActions.MOVE_FORWARD)
+
+    assert _run_to_the_end(env, action_in_step) == -1.0
+    assert [speeds[step] for step in range(5, 11)] == [Fraction(1, 4), 0, Fraction(1, 4), 0, 0, Fraction(1, 4)]
+    assert env.rewards._proxy.departures[0][stop_b] == [10]
 
 
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
