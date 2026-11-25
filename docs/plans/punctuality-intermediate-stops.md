@@ -1,9 +1,10 @@
 # `PunctualityRewards` counts every intermediate stop served on time (#555)
 
-> **Status:** plan of 2026-11-23, draft. Based on `main` ac932d16. Issue
+> **Status:** plan of 2026-11-23, built on 2026-11-25. Based on `main` 4856ebfe (planned on ac932d16; line numbers
+> from `rewards.py:250` on are one higher on 4856ebfe, so the `break` is at `:611`). Issue
 > [#555](https://github.com/flatland-association/flatland-rl/issues/555) ("PunctualityRewards counts at most one
 > intermediate stop as on time.", chenkins, 2026-10-30, milestone 5.0.0). Branch `555-punctuality-intermediate-stops`,
-> no PR yet. Open questions: §9.1.
+> no PR yet. Open questions: none (§9.1).
 >
 > **Why:** punctuality is `n_stops_on_time / n_stops`, but after the first intermediate stop served on time
 > `PunctualityRewards` stops looking at the other intermediate stops. An agent with two or more intermediate stops
@@ -189,12 +190,12 @@ No screenshots: nothing visible changes.
 
 | ID | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
-| REQ-1 | Every on-time intermediate stop counts | New `test_punctuality_rewards_counts_every_intermediate_stop_on_time`, parametrised with 1, 2 and 3 intermediate stops served on time: `(n_stops, n_stops)`. | Prototype (in-memory patch on ac932d16): `(3, 3)`, `(4, 4)`, `(5, 5)`; `main` gives `(3, 4)` and `(3, 5)`. | - |
-| REQ-2 | Late, missed and alternative stops unchanged | Same test, cases "first late, second on time" `(3, 4)` and "first on time, second late" `(3, 4)`; existing `test_punctuality_rewards_intermediate`. | Prototype: as on `main`. | - |
-| REQ-3 | Initial stop, target, `n_stops` unchanged | Existing `test_punctuality_rewards_*` in `tests/test_rewards.py`; `tests/flatland/envs/graph/test_graph_rail_env.py`; flatland-baselines' `test_policy_grid_runner_evaluator.py` (pinned scores, §3). | On `main`: 6 punctuality tests pass. | - |
-| REQ-4 | Test of the issue | The REQ-1 test fails on `main` for 2 and 3 stops. | - | - |
-| NFR-1 | Mergeable with #554 | Diff touches `rewards.py:610` only; the test's `ed` 0 holds with any departure booking. Checked again when the second of the two PRs is rebased. | - | - |
-| NFR-2 | Minimal diff | `git diff --stat main`: `rewards.py` 1 deletion, `tests/test_rewards.py` one test, the plan. | - | - |
+| REQ-1 | Every on-time intermediate stop counts | New `test_punctuality_rewards_counts_every_intermediate_stop_on_time`, parametrised with 1, 2 and 3 intermediate stops served on time: `(n_stops, n_stops)`. | On 4856ebfe with S-1: `(3, 3)`, `(4, 4)`, `(5, 5)`, passes. | - |
+| REQ-2 | Late, missed and alternative stops unchanged | Same test, cases "first late, second on time" `(3, 4)` and "first on time, second late" `(3, 4)`; existing `test_punctuality_rewards_intermediate`. | Both `(3, 4)`, passes; `test_punctuality_rewards_intermediate` passes. | - |
+| REQ-3 | Initial stop, target, `n_stops` unchanged | Existing `test_punctuality_rewards_*` in `tests/test_rewards.py`; `tests/flatland/envs/graph/test_graph_rail_env.py`; flatland-baselines' `test_policy_grid_runner_evaluator.py` (pinned scores, §3). | With S-1: `tests/test_rewards.py` and `test_graph_rail_env.py` 170 passed; flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"` 28 passed, 50 skipped, 1 xfailed. | - |
+| REQ-4 | Test of the issue | The REQ-1 test fails on `main` for 2 and 3 stops. | Without S-1 (`break` restored): `two-on-time` and `three-on-time` fail, the other 3 pass. | - |
+| NFR-1 | Mergeable with #554 | Diff touches `rewards.py:610` only; the test's `ed` 0 holds with any departure booking. Checked again when the second of the two PRs is rebased. | `rewards.py` 1 deletion only; to check at the rebase. | - |
+| NFR-2 | Minimal diff | `git diff --stat main`: `rewards.py` 1 deletion, `tests/test_rewards.py` one test, the plan. | `rewards.py` 1 deletion, `tests/test_rewards.py` +56 (the test and 2 imports). | - |
 
 ### 4.3 Count each intermediate stop (REQ-1-REQ-4; Q-1)
 
@@ -307,7 +308,7 @@ The commit is marked breaking or not by Q-3.
 
 *Choices not made yet, each with its options and a proposal.*
 
-💡 **(Q-1) How to end the loop over a stop's alternatives?**
+~~**(Q-1) How to end the loop over a stop's alternatives?**~~
 - a) Delete the `break` at `:610` only. The loop over the alternatives runs to its end after a match, which costs
   nothing that matters (a few alternatives per stop) and changes no result. One-line diff, no lines next to #554's.
 - b) Move the `break` into the loop over the alternatives (`if stop_on_time: break` after `:607`), as 8711f863 had
@@ -317,7 +318,9 @@ The commit is marked breaking or not by Q-3.
 
 *Proposal:* a). Smallest diff and no conflict with #554 (NFR-1, NFR-2).
 
-💡 **(Q-2) Should an intermediate stop count as served only when the agent halts there?**
+✅ **Decided 2026-11-25:** a), delete the `break` only.
+
+~~**(Q-2) Should an intermediate stop count as served only when the agent halts there?**~~
 - a) No, not in this PR: keep "passed the cell within the time window", as on `main`; open an issue for aligning
   `PunctualityRewards` with `BaseDefaultRewards`' halt rule.
 - b) Yes, in this PR: book halts as `BaseDefaultRewards` does (`stopped_waypoints`) and count only stops with a halt.
@@ -327,13 +330,17 @@ The commit is marked breaking or not by Q-3.
 *Proposal:* a). The issue asks only for the count; the halt rule is another behaviour change and collides with #554.
 The maintainers decide whether the follow-up gets an issue.
 
-💡 **(Q-3) Mark the commit as breaking (`fix(rewards)!:`)?**
+✅ **Decided 2026-11-25:** a), not in this PR; a follow-up (§1.4), its issue still undecided.
+
+~~**(Q-3) Mark the commit as breaking (`fix(rewards)!:`)?**~~
 - a) No: it restores the behaviour the docstring and flatland-book describe.
 - b) Yes, as #564's plan did for behaviour changes (its Q4 b)): punctuality scores change, and release-please lists
   breaking changes separately in the 5.0.0 notes.
 
 *Proposal:* b). KPI owners read the release notes, and the score change is what they need to know; the body names
 which agents' scores change.
+
+✅ **Decided 2026-11-25:** b), `fix(rewards)!:` with the score change in the body.
 
 ### 9.2 Decision log
 
@@ -342,6 +349,9 @@ which agents' scores change.
 | Date | Decision | Why | Consequences |
 |---|---|---|---|
 | 2026-10-30 | ✅ Each intermediate stop served on time counts; two intermediate stops served on time give `(4, 4)` ([#555](https://github.com/flatland-association/flatland-rl/issues/555), "Expected behavior"). | The documented behaviour (`rewards.py:550-555`, flatland-book). | REQ-1, REQ-4; S-1. |
+| 2026-11-25 | ✅ Q-1: delete the `break` after the stop's count, keep the loop over the alternatives as it is. | Smallest diff, clear of the lines #554 may touch; b) and c) change the comparison lines. | S-1 is a one-line deletion (NFR-2). |
+| 2026-11-25 | ✅ Q-2: an intermediate stop passed without halting still counts as served. | Not in the issue; a halt rule changes scores also with one intermediate stop and touches the booking #554 changes. | Follow-up in §1.4; §2.1 keeps the limitation. |
+| 2026-11-25 | ✅ Q-3: mark S-1 as breaking, `fix(rewards)!:`. | Punctuality scores rise for agents with two or more on-time intermediate stops; release-please lists breaking changes apart, where KPI owners read them. | S-1's message and body (§8.2). |
 
 ### 9.3 Code Review Findings
 
@@ -375,8 +385,8 @@ No review yet: the branch has no commits and no PR.
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| 💡 S-0 | - | Add this plan. | docs | low | docs(plans): add the plan for counting every punctual intermediate stop. |  | - | - |
-| 💡 S-1 | - | Delete the `break` at `rewards.py:610` (Q-1); add `test_punctuality_rewards_counts_every_intermediate_stop_on_time` after `test_punctuality_rewards_intermediate` (REQ-1-REQ-4); body names the score change (§8.2) and "Fixes #555.". | bug | medium | fix(rewards)!: count every intermediate stop served on time in PunctualityRewards. |  | S-0 | Q-1, Q-3 |
+| ✅ S-0 | - | Add this plan. | docs | low | docs(plans): plan counting every intermediate stop served on time in PunctualityRewards (#555). | d76435fc | - | - |
+| ✅ S-1 | - | Delete the `break` at `rewards.py:610` (Q-1); add `test_punctuality_rewards_counts_every_intermediate_stop_on_time` after `test_punctuality_rewards_intermediate` (REQ-1-REQ-4); body names the score change (§8.2) and "Fixes #555.". | bug | medium | fix(rewards)!: count every intermediate stop served on time in PunctualityRewards. | 3e6bf2a4 | S-0 | - |
 
 Before the PR: `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`, and flatland-baselines'
 `deadlock_avoidance_heuristic/tests -m "not slow"` (`AGENTS.md`, C-4).
