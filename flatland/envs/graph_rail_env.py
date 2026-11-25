@@ -1,5 +1,6 @@
 import ast
 import warnings
+from fractions import Fraction
 from typing import Callable, Dict, List, Optional, Tuple
 
 import networkx as nx
@@ -194,8 +195,8 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
         malfunction_generator: "MalfunctionGenerator" = None,
         random_seed=None,
         timetable_generator=None,
-        acceleration_delta=1.0,
-        braking_delta=-1.0,
+        acceleration_delta: Fraction = Fraction(1),
+        braking_delta: Fraction = -Fraction(1),
         rewards: Rewards = None,
         effects_generator: EffectsGenerator["GraphRailEnv"] = None,
         distance_map: GraphDistanceMap = None

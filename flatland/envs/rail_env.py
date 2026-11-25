@@ -31,7 +31,8 @@ from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.record_steps_effects_generator import RecordStepsEffectsGenerator
 from flatland.envs.rewards import DefaultRewards, Rewards
 from flatland.envs.step_utils import env_utils
-from flatland.envs.step_utils.speed_counter import _cap_speed, cached_cell_exit, SpeedCounter, ZERO_FRACTION
+from flatland.envs.step_utils.speed_counter import _cap_speed, cached_cell_exit, SpeedCounter, ZERO_FRACTION, \
+    validated_acceleration_delta, validated_braking_delta
 from flatland.envs.step_utils.states import TrainState
 from flatland.utils import seeding
 
@@ -142,13 +143,23 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         that stochastic operations are replicable across multiple operations
     timetable_generator
         Timetable generator to be used in `reset()`. Defaults to "ttg.timetable_generator".
-    acceleration_delta : float
+    acceleration_delta : Fraction
         Determines how much speed is increased by MOVE_FORWARD action up to max_speed set by train's Line (sampled from `speed_ratios` by `LineGenerator`).
-        As speed is between 0.0 and 1.0, acceleration_delta=1.0 restores the previous constant speed behaviour
+        As speed is between 0 and 1, acceleration_delta=1 restores the previous constant speed behaviour
         (i.e. MOVE_FORWARD always sets to max speed allowed for train).
-    braking_delta : float
+        Must be in (0, 1], 1 being `MAX_SPEED`, the highest speed the env supports so that an agent never jumps over a
+        cell or edge in one step: a delta above 1 would change the speed by more than the whole speed range in one step
+        and has no meaning of its own. Not checked: a delta above a train's max speed. The delta is the same for all
+        trains, so `step()` caps the new speed at each train's max speed instead of failing.
+        A whole number or a float is converted to a `Fraction`, a float snapped to the nearest 1/n as max speeds are
+        (`0.33` to `Fraction(1, 3)`, see `speed_counter.py`'s `_validated_fraction()`); pass a `Fraction` for an exact
+        value. An invalid value raises a `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
+    braking_delta : Fraction
         Determines how much speed is decreased by STOP_MOVING action.
-        As speed is between 0.0 and 1.0, braking_delta=-1.0 restores to previous full stop behaviour.
+        As speed is between 0 and 1, braking_delta=-1 restores to previous full stop behaviour.
+        Must be in [-1, 0): -1 stops any train in one step, a delta below it has no meaning of its own. Not checked: a
+        delta below minus a train's speed; `step()` floors the new speed at 0 instead of failing. Converted and checked
+        as `acceleration_delta`.
     check_step_pre_post_conditions : bool
         Set to False to skip checking step() pre- and postconditions, e.g. in performance-sensitive production use.
     rewards : DefaultRewards
@@ -247,6 +258,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         else:
             self.rewards = rewards
 
+        # design: assigned through the validating property setters below; step() reads the private fields
         self.acceleration_delta = acceleration_delta
         self.braking_delta = braking_delta
         self.check_step_pre_post_conditions = check_step_pre_post_conditions
@@ -260,6 +272,28 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         self.temp_transition_data = {i: env_utils.AgentTransitionData(None, None) for i in range(self.get_num_agents())}
 
         self.distance_map = distance_map
+
+    @property
+    def acceleration_delta(self) -> Fraction:
+        """
+        Speed gained per step by MOVE_FORWARD (or starting from rest), up to the agent's max speed. A `Fraction` > 0.
+        """
+        return self._acceleration_delta
+
+    @acceleration_delta.setter
+    def acceleration_delta(self, acceleration_delta) -> None:
+        self._acceleration_delta: Fraction = validated_acceleration_delta(acceleration_delta)
+
+    @property
+    def braking_delta(self) -> Fraction:
+        """
+        Speed change per step by STOP_MOVING, down to 0. A `Fraction` < 0.
+        """
+        return self._braking_delta
+
+    @braking_delta.setter
+    def braking_delta(self, braking_delta) -> None:
+        self._braking_delta: Fraction = validated_braking_delta(braking_delta)
 
     def _seed(self, seed):
         self.np_random, seed = seeding.np_random(seed)
@@ -672,8 +706,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
             done=done,
             in_malfunction=in_malfunction,
             agent_max_speed=agent_max_speed,
-            acceleration_delta=self.acceleration_delta,
-            braking_delta=self.braking_delta,
+            acceleration_delta=self._acceleration_delta,
+            braking_delta=self._braking_delta,
             off_map=off_map,
             target_reached=target_reached,
             invalid_action_at_cell_exit=invalid_action_at_cell_exit,
@@ -1579,8 +1613,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
                         done=done,
                         in_malfunction=in_malfunction,
                         agent_max_speed=agent.speed_counter.max_speed,
-                        acceleration_delta=self.acceleration_delta,
-                        braking_delta=self.braking_delta,
+                        acceleration_delta=self._acceleration_delta,
+                        braking_delta=self._braking_delta,
                         off_map=off_map,
                         target_reached=target_reached,
                         invalid_action_at_cell_exit=invalid_action_at_cell_exit,
@@ -1625,8 +1659,8 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                  random_seed=None,
                  record_steps=False,
                  timetable_generator=ttg.timetable_generator,
-                 acceleration_delta=1.0,
-                 braking_delta=-1.0,
+                 acceleration_delta: Fraction = Fraction(1),
+                 braking_delta: Fraction = -Fraction(1),
                  check_step_pre_post_conditions: bool = True,
                  rewards: Rewards = None,
                  effects_generator: EffectsGenerator["RailEnv"] = None

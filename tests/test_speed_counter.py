@@ -7,7 +7,7 @@ import pytest
 
 from flatland.core.transition_map import DEFAULT_EDGE_LENGTH
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional, _cap_speed, \
-    cached_cell_exit
+    cached_cell_exit, validated_max_speed, validated_acceleration_delta, validated_braking_delta
 
 
 # design: distance update with pre-step speed.
@@ -406,18 +406,68 @@ def test_eq_between_independently_constructed_identical_speed_counters():
     assert SpeedCounter(speed=0.5, max_speed=1.0) == SpeedCounter(speed=0.5, max_speed=1.0)
 
 
-def test_init_rejects_max_speed_above_one():
-    with pytest.raises(AssertionError):
-        SpeedCounter(max_speed=1.5)
+@pytest.mark.parametrize("max_speed", [0, 0.0, Fraction(0), -0.5, Fraction(-1, 2), 1.5, Fraction(3, 2), True, None, "1"])
+def test_init_rejects_invalid_max_speed(max_speed):
+    """A max speed outside (0, 1], a bool, None or a string raises a ValueError naming max_speed."""
+    with pytest.raises(ValueError, match="max_speed"):
+        SpeedCounter(max_speed=max_speed)
+
+
+@pytest.mark.parametrize("max_speed,expected", [
+    (1, Fraction(1)), (1.0, Fraction(1)), (0.5, Fraction(1, 2)), (0.33, Fraction(1, 3)), (Fraction(1, 3), Fraction(1, 3)),
+    (np.int64(1), Fraction(1)), (np.float64(0.25), Fraction(1, 4)), (Decimal("0.1"), Fraction(1, 10)),
+])
+def test_init_converts_max_speed_to_fraction(max_speed, expected):
+    """Whole numbers, floats, numpy numbers and Decimals are converted to a Fraction, floats near 1/n to exactly 1/n."""
+    sc = SpeedCounter(max_speed=max_speed)
+    assert isinstance(sc.max_speed, Fraction)
+    assert sc.max_speed == expected
+
+
+def test_setstate_rejects_invalid_max_speed():
+    """A pickled speed counter with max speed 0 does not load."""
+    sc = SpeedCounter.__new__(SpeedCounter)
+    with pytest.raises(ValueError, match="max_speed"):
+        sc.__setstate__({"speed": None, "max_speed": Fraction(0), "distance": None, "edge_length": None, "is_cell_entry": False})
+
+
+@pytest.mark.parametrize("value,expected", [(1, Fraction(1)), (0.5, Fraction(1, 2)), (Fraction(1, 10), Fraction(1, 10)), (1.0, Fraction(1))])
+def test_validated_acceleration_delta_converts(value, expected):
+    v = validated_acceleration_delta(value)
+    assert isinstance(v, Fraction)
+    assert v == expected
+
+
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), -1, Fraction(-1, 2), 2, 1.01, Fraction(11, 10), True, None, "1"])
+def test_validated_acceleration_delta_rejects(value):
+    with pytest.raises(ValueError, match="acceleration_delta"):
+        validated_acceleration_delta(value)
+
+
+@pytest.mark.parametrize("value,expected", [(-1, Fraction(-1)), (-0.5, Fraction(-1, 2)), (-Fraction(1, 10), Fraction(-1, 10)), (-1.0, Fraction(-1))])
+def test_validated_braking_delta_converts(value, expected):
+    v = validated_braking_delta(value)
+    assert isinstance(v, Fraction)
+    assert v == expected
+
+
+@pytest.mark.parametrize("value", [0, 0.0, Fraction(0), 1, Fraction(1, 2), -2, -1.01, Fraction(-11, 10), False, None, "-1"])
+def test_validated_braking_delta_rejects(value):
+    with pytest.raises(ValueError, match="braking_delta"):
+        validated_braking_delta(value)
+
+
+def test_validated_max_speed_upper_bound_is_inclusive():
+    assert validated_max_speed(1) == Fraction(1)
 
 
 def test_init_rejects_speed_above_max_speed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="speed must be in \\[0, "):
         SpeedCounter(speed=0.5, max_speed=0.3)
 
 
 def test_init_rejects_negative_speed():
-    with pytest.raises(AssertionError):
+    with pytest.raises(ValueError, match="speed must be in \\[0, "):
         SpeedCounter(speed=-0.1, max_speed=1.0)
 
 
@@ -465,3 +515,119 @@ def test_set_takes_crossed_by_keyword_only():
     sc = SpeedCounter(max_speed=1.0, speed=1.0)
     with pytest.raises(TypeError):
         sc.set(sc.speed, Fraction(0), DEFAULT_EDGE_LENGTH, True)
+
+
+def test_reset_rejects_line_with_max_speed_zero():
+    """An env whose line generator samples max speed 0 raises a ValueError naming max_speed in reset(), not in a later step."""
+    from flatland.envs.line_generators import sparse_line_generator
+    from flatland.envs.rail_env import RailEnv
+    from flatland.envs.rail_generators import sparse_rail_generator
+    env = RailEnv(width=30, height=30, number_of_agents=2, rail_generator=sparse_rail_generator(max_num_cities=2, seed=1),
+                  line_generator=sparse_line_generator({0.0: 1.0}, seed=1))
+    with pytest.raises(ValueError, match="max_speed"):
+        env.reset(random_seed=1)
+
+
+@pytest.mark.parametrize("v", [0.004, 0.33, 0.5, 1.5, 2.25])
+def test_pseudo_fractional_converts_negatives_by_symmetry(v):
+    """A negative float converts to the negated conversion of its absolute value: `-0.004` does not snap to 0."""
+    assert _pseudo_fractional(-v) == -_pseudo_fractional(v)
+    assert _pseudo_fractional(-v) < 0
+
+
+def test_validated_braking_delta_accepts_small_negative_float():
+    assert validated_braking_delta(-0.004) < 0
+
+
+@pytest.mark.parametrize("validate,value", [(validated_max_speed, np.float32(0.5)), (validated_acceleration_delta, np.float32(0.5)),
+                                            (validated_braking_delta, np.float32(-0.5))])
+def test_validators_accept_numpy_floats(validate, value):
+    v = validate(value)
+    assert isinstance(v, Fraction)
+    assert abs(v) == Fraction(1, 2)
+
+
+@pytest.mark.parametrize("validate,name", [(validated_max_speed, "max_speed"), (validated_acceleration_delta, "acceleration_delta"),
+                                           (validated_braking_delta, "braking_delta")])
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), Decimal("Infinity"), Decimal("-Infinity"), Decimal("NaN")])
+def test_validators_reject_nan_and_infinity_with_value_error(validate, name, value):
+    with pytest.raises(ValueError, match=name):
+        validate(value)
+
+
+@pytest.mark.parametrize("value,expected", [
+    (0.5, Fraction(1, 2)), (0.33, Fraction(1, 3)), (0.15, Fraction(1, 7)), (0.99, Fraction(1)), (np.float32(0.15), Fraction(1, 7)),
+    (Fraction(3, 20), Fraction(3, 20)), (Decimal("0.33"), Fraction(33, 100)),
+])
+def test_float_deltas_and_max_speeds_snap_to_unit_fractions_by_one_rule(value, expected):
+    """Floats are snapped to the nearest 1/n, deltas and max speeds alike; Fractions and Decimals are kept exactly (Q-4 of
+    the plan)."""
+    assert validated_acceleration_delta(value) == expected
+    assert validated_braking_delta(-value) == -expected
+    assert validated_max_speed(value) == expected
+
+
+@pytest.mark.parametrize("speed", [None, 0])
+def test_setstate_old_pickle_with_invalid_speed_names_the_pickled_speed(speed):
+    """An old pickle without max_speed takes it from the speed; the error says so."""
+    sc = SpeedCounter.__new__(SpeedCounter)
+    with pytest.raises(ValueError, match="taken from the pickled speed"):
+        sc.__setstate__({"speed": speed, "distance": None, "is_cell_entry": False})
+
+
+def test_deltas_beyond_an_agents_max_speed_are_capped_not_rejected():
+    """The deltas are global: a delta above an agent's max speed (or below minus its speed) is valid, and the new speed is
+    capped at the agent's max speed (or floored at 0) instead."""
+    max_speed = validated_max_speed(Fraction(1, 4))
+    assert _cap_speed(max_speed, Fraction(0) + validated_acceleration_delta(1)) == Fraction(1, 4)
+    assert _cap_speed(max_speed, Fraction(1, 4) + validated_braking_delta(Fraction(-1, 2))) == Fraction(0)
+
+
+@pytest.mark.parametrize("cached_first", [Fraction(21, 64), Decimal("0.328125"), 0.328125])
+def test_float_conversion_does_not_depend_on_what_was_converted_before(cached_first):
+    """0.328125 is exact in binary and equal to Fraction(21, 64): as a float it snaps to 1/3, as a Fraction or Decimal it
+    stays 21/64, whatever value was converted before."""
+    _pseudo_fractional(cached_first)
+    validated_acceleration_delta(cached_first)
+    assert validated_max_speed(0.328125) == Fraction(1, 3)
+    assert validated_acceleration_delta(0.328125) == Fraction(1, 3)
+    assert validated_acceleration_delta(Fraction(21, 64)) == Fraction(21, 64)
+    assert validated_max_speed(Decimal("0.328125")) == Fraction(21, 64)
+
+
+@pytest.mark.parametrize("validate,value", [(validated_acceleration_delta, float("nan")), (validated_braking_delta, np.float32("-inf")),
+                                            (validated_max_speed, np.float64("nan"))])
+def test_not_a_number_error_names_the_value_passed_in(validate, value):
+    with pytest.raises(ValueError, match=f"found {type(value).__name__} "):
+        validate(value)
+
+
+@pytest.mark.parametrize("value,expected", [(np.float32(0.3), Fraction(3, 10)), (np.float32(0.33), Fraction(1, 3)), (np.float16(0.25), Fraction(1, 4))])
+def test_numpy_float_max_speed_is_converted_from_its_decimal_value(value, expected):
+    assert validated_max_speed(value) == expected
+
+
+def test_max_speed_snapped_out_of_range_names_the_converted_value():
+    with pytest.raises(ValueError, match=r"found 1e-09, converted to 0\."):
+        validated_max_speed(1e-9)
+    with pytest.raises(ValueError, match=r"found 1\.5\.$"):
+        validated_max_speed(1.5)
+
+
+@pytest.mark.parametrize("validate,value,message", [
+    (validated_max_speed, 0, "max_speed must be in (0, 1], found 0."),
+    (validated_max_speed, Fraction(3, 2), "max_speed must be in (0, 1], found 3/2."),
+    (validated_acceleration_delta, 2, "acceleration_delta must be in (0, 1], found 2."),
+    (validated_braking_delta, 0, "braking_delta must be in [-1, 0), found 0."),
+    (validated_braking_delta, -1.5, "braking_delta must be in [-1, 0), found -1.5."),
+])
+def test_range_error_names_the_range_and_the_value(validate, value, message):
+    with pytest.raises(ValueError) as e:
+        validate(value)
+    assert str(e.value) == message
+
+
+@pytest.mark.parametrize("speed", [True, "0.5", float("nan")])
+def test_init_rejects_initial_speed_that_is_not_a_number(speed):
+    with pytest.raises(ValueError, match="speed must be a number"):
+        SpeedCounter(max_speed=1, speed=speed)

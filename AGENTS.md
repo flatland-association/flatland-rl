@@ -215,12 +215,16 @@ shortest edge must be at least `MAX_SPEED` long, not `1 / MAX_SPEED`. Hence `MIN
 every other step - `rail_env.py`'s "(13) SPEED_COUNTER UPDATE" bootstraps `distance` to `0` and accelerates
 from `0` by `acceleration_delta` immediately on the step the agent departs, rather than snapping straight to
 `max_speed`. `_pseudo_fractional()` snaps any `int`/`float`/`Decimal` input to a `Fraction` on the way in
-(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). `RailEnv.__init__`'s
-`acceleration_delta`/`braking_delta` default to `Fraction(1)`/`-Fraction(1)` to match. Passing a plain `float`
-for either instead (as opposed to a `Fraction`) can silently reintroduce floats into `new_speed` mid-`step()`,
-since `Fraction + float` coerces to `float` in Python — this can violate the `Fraction`-only invariant assumed
-by `_cap_speed`'s `assert isinstance(v, Fraction)` for any delta that doesn't saturate to a speed boundary (0
-or `max_speed`) in one step.
+(including a "nice fraction" heuristic, e.g. `0.33 -> Fraction(1, 3)` within tolerance). The speed parameters are
+checked and converted where they are set, never in `step()`: `SpeedCounter` checks `max_speed` in (0, `MAX_SPEED`]
+(`validated_max_speed()`, also on unpickling), and `AbstractRailEnv`'s `acceleration_delta`/`braking_delta`
+properties check (0, `MAX_SPEED`] resp. [-`MAX_SPEED`, 0) on construction and on assignment (a delta beyond ±1
+changes the speed by more than its whole range in one step, so it has no meaning; a delta beyond a train's max speed
+is not an error, as the deltas are global: `_cap_speed()` caps per train) (`validated_acceleration_delta()`/
+`validated_braking_delta()`). Each raises a `ValueError` naming the parameter and converts floats by one rule, max
+speeds and deltas alike: they snap to 1/n as `_pseudo_fractional()` does (`0.33 -> Fraction(1, 3)`, the
+`speed_ratio_map` convention); a `Fraction` or `Decimal` is kept exactly. So `step()` only ever sees `Fraction`s (`_cap_speed`'s `assert isinstance(v, Fraction)`).
+`step()` reads the private `_acceleration_delta`/`_braking_delta` fields to skip the property call.
 
 A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -
 `agent_utils.py`'s `load_env_agent()` normalizes a loaded agent's `speed_counter` against its `TrainState` on
@@ -385,6 +389,15 @@ optionally distance maps) to a single file — one env snapshot. `trajectories/t
 a higher-level, tabular (pandas) episode recorder: per-step actions/positions/rewards/dones as data frames,
 plus `RailEnvPersister`-saved env snapshots so a trajectory can be replayed/resumed from any recorded step, not
 just step 0.
+
+Backwards compatibility with older files lives in `RailEnvPersister` only (`_LegacyCompatUnpickler`,
+`load_legacy_static_agent()`, `_patch_*_effects_generator()`), plus the `__setstate__()` of the state objects
+it pickles (e.g. `SpeedCounter`). It saves `get_full_state()`'s dict, not the `RailEnv` object, and `load()`
+puts that dict into an env built by the constructor, so the constructor's checks (e.g. the validated
+`acceleration_delta`/`braking_delta` properties) apply to every loaded env. A whole `RailEnv` pickled directly
+(`pickle.dump(env)`) bypasses `RailEnvPersister` and is not supported across versions: `RailEnv` has no
+`__setstate__()`, and e.g. an env pickled before the deltas became properties fails in `step()` with
+`AttributeError: '_acceleration_delta'`. Save envs with `RailEnvPersister.save()` instead.
 
 ### Testing patterns
 
