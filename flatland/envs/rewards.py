@@ -608,7 +608,6 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                         break
             if stop_on_time:
                 n_stops_on_time += 1
-                break
 
         target_wps = agent_waypoints[-1]
         # N.B. assuming target is only travelled once:

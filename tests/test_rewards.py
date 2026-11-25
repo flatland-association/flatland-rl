@@ -13,6 +13,7 @@ from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions, RailEnvTransitionsEnum
 from flatland.envs.line_generators import sparse_line_generator
+from flatland.envs.observations import FullEnvObservation
 from flatland.envs.rail_env import RailEnv
 from flatland.envs.rail_env_action import RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
@@ -25,6 +26,7 @@ from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
 from flatland.envs.step_utils.states import TrainState, StateTransitionSignals
+from flatland.envs.timetable_utils import Line, Timetable
 from flatland.trajectories.policy_runner import PolicyRunner
 from flatland.utils.simple_rail import make_simple_rail
 from tests.trajectories.test_policy_runner import RandomPolicy
@@ -599,6 +601,60 @@ def test_punctuality_rewards_intermediate():
 
     # on time only at intermediate
     assert rewards.cumulate(*collect) == (1, 3)
+
+
+@pytest.mark.parametrize(
+    "intermediate_latest_arrivals,expected",
+    [
+        ([40], (3, 3)),
+        ([40, 40], (4, 4)),
+        ([40, 40, 40], (5, 5)),
+        ([1, 40], (3, 4)),
+        ([40, 1], (3, 4)),
+    ],
+    ids=["one-on-time", "two-on-time", "three-on-time", "first-late", "second-late"],
+)
+def test_punctuality_rewards_counts_every_intermediate_stop_on_time(intermediate_latest_arrivals, expected):
+    """
+    One agent at speed 1 runs along a straight corridor from A=(0,1) to its target C=(0,9), with one to three
+    intermediate stops at (0,3), (0,5) and (0,7), in this order.
+
+    - Setup: the agent may depart from A at step 2; every intermediate stop has earliest departure 0 and the latest
+      arrival given by the parameter (40 is on time, 1 is late); the target's latest arrival is 60.
+    - The agent brakes to speed 0 in each intermediate stop and moves on in the next step.
+    - The agent reaches C: the punctuality `(n_stops_on_time, n_stops)` counts A, C and every intermediate stop
+      reached by its latest arrival; a late stop counts 0 and does not change the count of the stops after it.
+    """
+    transitions = RailEnvTransitions()
+    cells = transitions.transition_list
+    straight = transitions.rotate_transition(cells[1], 90)
+    rail = RailGridTransitionMap(width=11, height=1, transitions=transitions)
+    rail.grid = np.array(
+        [[transitions.rotate_transition(cells[7], 270)] + [straight] * 9 + [transitions.rotate_transition(cells[7], 90)]],
+        dtype=np.uint16)
+    initial, target = ((0, 1), 1), ((0, 9), 1)
+    stops = [((0, 3), 1), ((0, 5), 1), ((0, 7), 1)][:len(intermediate_latest_arrivals)]
+    waypoints = [[Waypoint(*initial)]] + [[Waypoint(*s)] for s in stops] + [[Waypoint(*target)]]
+    env = RailEnv(
+        width=11, height=1, rail_generator=rail_from_grid_transition_map(rail),
+        line_generator=lambda *args, **kwargs: Line(agent_waypoints={0: waypoints}, agent_speeds=[1.0]),
+        timetable_generator=lambda *args, **kwargs: Timetable(
+            earliest_departures=[[2] + [0] * len(stops) + [None]],
+            latest_arrivals=[[None] + intermediate_latest_arrivals + [60]],
+            max_episode_steps=60),
+        number_of_agents=1, obs_builder_object=FullEnvObservation(), rewards=PunctualityRewards())
+    env.reset()
+    agent = env.agents[0]
+    total = (0, 0)
+    for _ in range(env._max_episode_steps):
+        # actions apply at cell entry: brake when crossing into a stop, move on in the next step
+        stop = agent.next_entry_point in stops and agent.speed_counter.is_cell_exit()
+        _, rewards, dones, _ = env.step({0: RailEnvActions.STOP_MOVING if stop else RailEnvActions.MOVE_FORWARD})
+        total = (total[0] + rewards[0][0], total[1] + rewards[0][1])
+        if dones["__all__"]:
+            break
+    assert agent.state == TrainState.DONE
+    assert total == expected
 
 
 def test_punctuality_rewards_target():
