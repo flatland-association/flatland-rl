@@ -350,7 +350,9 @@ and overwrites the edits. To fix the release notes, squash-merge a PR to `main` 
 block, one conventional commit message per line. Release-please uses these lines instead of that PR's own commit
 message, so include a line for the PR itself if it should appear in the changelog. This is needed for a stack of PRs
 that reaches `main` as a plain merge commit: release-please then lists the stack's individual commits without their
-PR numbers, and drops the stacked PRs' own titles.
+PR numbers, and drops the stacked PRs' own titles. Name the two markers only in the block itself, not in the prose of
+the description: release-please reads the override from the first `BEGIN_COMMIT_OVERRIDE` on, so a mention above the
+block makes the override start there, fail to parse and be dropped without an error.
 
 To publish a release candidate to Test PyPI without cutting a real release, manually trigger
 `.github/workflows/publish.yml` (workflow_dispatch) with a version number.

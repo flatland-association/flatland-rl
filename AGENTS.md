@@ -493,7 +493,8 @@ The `flatland-trajectory-*` scripts (generate-from-policy/generate-from-metadata
 - Don't edit the release PR's body by hand either: `release-please` regenerates it (and `CHANGELOG.md`) on the next
   push to `main`. To fix the release notes (e.g. for a PR stack that reached `main` as a plain merge commit), squash-merge
   a PR with a `BEGIN_COMMIT_OVERRIDE`/`END_COMMIT_OVERRIDE` block in its description (see `CONTRIBUTING.md`,
-  "Publishing").
+  "Publishing"). Name the markers only in the block: release-please starts the override at the first
+  `BEGIN_COMMIT_OVERRIDE` in the description and silently drops it if that text doesn't parse.
 - A PR that closes an issue (`Closes #NNN`) leaves no TODO or comment in the code referencing that issue - resolve
   them in the PR, or move the remaining work to a new issue and reference that one instead.
 
