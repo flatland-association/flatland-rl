@@ -4,7 +4,7 @@
 > `rewards.py` from line 250 on are one higher on 4856ebfe). Issue
 > [#554](https://github.com/flatland-association/flatland-rl/issues/554) ("Early departure at intermediate stops is
 > penalized one step late since D1 (#496).", chenkins, 2026-10-30, milestone 5.0.0). Branch
-> `554-early-departure-intermediate-stops`, PR none yet. Open questions: none (§9.1).
+> `554-early-departure-intermediate-stops`, PR [#585](https://github.com/flatland-association/flatland-rl/pull/585). Open questions: none (§9.1).
 >
 > **Why:** since D1 ([#496](https://github.com/flatland-association/flatland-rl/pull/496)) an agent that starts
 > moving from a halt enters the next cell only `ceil(1 / max_speed)` steps later. The rewards still date the
@@ -76,7 +76,7 @@ Requirements:
 |---|---|---|---|---|
 | `PunctualityRewards` counts at most one intermediate stop as on time (the `break` at `rewards.py:610` leaves the loop over all stops). | Own issue, older than D1; neighbouring code in the same method, see C-3. | §3 | - | [#555](https://github.com/flatland-association/flatland-rl/issues/555) |
 | Earliest departure at the origin evaluated in the rewards only; the initial departure would then be the map entry step. | Own issue; changes the env, not only the bookkeeping. This plan's rule (DP-1) carries over unchanged. | §2.1 | - | [#559](https://github.com/flatland-association/flatland-rl/issues/559) |
-| flatland-book `environment/environment/rewards.md`: say that the actual departure $d_j$ is the step the agent starts moving from its halt. | Another repo, once 5.0.0 is released. | §4.3 | - | - |
+| flatland-book `environment/environment/rewards.ipynb` (formerly `rewards.md`): say that the actual departure $d_j$ is the step the agent starts moving from its halt. | Another repo; the book PR runs an example against flatland-rl `main`, so it merges after this PR. | §4.3 | - | [flatland-book#64](https://github.com/flatland-association/flatland-book/pull/64) |
 | Rewards' arrival and departure bookkeeping after restoring a mid-episode snapshot. | Unchanged behaviour: rewards are not persisted (`persistence.py:205`), so the bookkeeping starts empty after a restore, on `main` too. | §2.2 | - | - |
 
 ## 2. Constraints
@@ -449,7 +449,8 @@ two reward classes, and pinned by its own test (a malfunction at the stop, then 
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-No review yet.
+PR [#585](https://github.com/flatland-association/flatland-rl/pull/585), based on `main` 4856ebfe, checked at
+bda8bb7e on 2026-11-25: no code review yet, no PR review or conversation comments, no TODOs added.
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
 |---|---|---|---|---|---|---|
