@@ -1,9 +1,10 @@
 # Departure from a stop is the step the agent starts moving (#554)
 
-> **Status:** plan of 2026-11-23, draft. Based on `main` ac932d16. Issue
+> **Status:** plan of 2026-11-23, draft. Based on `main` 4856ebfe (planned on ac932d16; line numbers in
+> `rewards.py` from line 250 on are one higher on 4856ebfe). Issue
 > [#554](https://github.com/flatland-association/flatland-rl/issues/554) ("Early departure at intermediate stops is
 > penalized one step late since D1 (#496).", chenkins, 2026-10-30, milestone 5.0.0). Branch
-> `554-early-departure-intermediate-stops`, PR none yet. Open questions: §9.1.
+> `554-early-departure-intermediate-stops`, PR none yet. Open questions: none (§9.1).
 >
 > **Why:** since D1 ([#496](https://github.com/flatland-association/flatland-rl/pull/496)) an agent that starts
 > moving from a halt enters the next cell only `ceil(1 / max_speed)` steps later. The rewards still date the
@@ -203,18 +204,18 @@ Not new on purpose: no new reward term or parameter, no change to `DefaultPenalt
 
 *How each requirement and quality goal is shown to work: tests, CI checks, before and after screenshots.*
 
-No screenshots: nothing visible changes.
+No screenshots: nothing visible changes. The plots of §6.2 show the rule. Results on 4856ebfe with S-1 (2026-11-25).
 
 | ID | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
-| REQ-1 | Departure is the start step | New test in `tests/test_rewards.py`: the issue's corridor driven through `env.step()`, move from B in step 9, 10, 11, at max speed 1 and 1/2; `departures[0][B]` is `[9]`, `[10]`, `[11]`. Plus a malfunction at B (start in step 10 → `[10]`). | Prototype on ac932d16: as expected (speed 1, 1/2 and malfunction). | - |
-| REQ-2 | Early departure penalty | Same test: `DefaultRewards` total `-0.5`, `0.0`, `0.0`. | Prototype: as expected. | - |
-| REQ-3 | Punctuality | Same corridor with `PunctualityRewards`: move in step 9 gives `(2, 3)`, in step 10 `(3, 3)`. | - | - |
-| REQ-4 | Issue's reproduction | The script of §3 on the branch. | Prototype: prints the issue's expected output. | - |
-| REQ-5 | Rolling through and arrivals unchanged | Existing tests of `tests/test_rewards.py` with `agent_transition_data=None` or a moving signal (e.g. `test_departure_only_when_moving`, `test_multicell_station_*`) keep their expectations. | - | - |
-| NFR-1 | Speed independence | REQ-1's test, parametrized by speed. | - | - |
-| NFR-2 | Step cost | Review: one `dict.pop` per crossing, one assignment per halted step. | - | - |
-| - | Neighbours | `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`, flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"`. | Prototype on ac932d16 (scratch copy, 2026-11-23): `tests/test_rewards.py` 51 passed, 1 failed (`test_rewards_intermediate_intermediate_early_departure_penalty`: `-33` instead of `-66`, its halt and its departure are recorded in the same step 5, see S-1); `test_graph_rail_env.py` seeds 42-44 18 passed; flatland-baselines' `test_intermediate_stops.py` and `test_policy_grid_runner_evaluator.py` 3 passed. | - |
+| REQ-1 | Departure is the start step | New test in `tests/test_rewards.py`: the issue's corridor driven through `env.step()`, move from B in step 9, 10, 11, at max speed 1 and 1/2; `departures[0][B]` is `[9]`, `[10]`, `[11]`. Plus a malfunction at B (start in step 10 → `[10]`). | `test_rewards_early_departure_dated_by_the_start_from_the_halt` (6 cases) passes; `test_rewards_early_departure_malfunction_at_the_stop_counts_as_halt` (Q-3) and `test_rewards_early_departure_last_halt_counts` (Q-1, the run of §6.2: departure 10, penalty -1) pass. All 10 new cases fail with `main`'s `rewards.py`. | - |
+| REQ-2 | Early departure penalty | Same test: `DefaultRewards` total `-0.5`, `0.0`, `0.0`. | Passes, at speed 1 and 1/2. | - |
+| REQ-3 | Punctuality | Same corridor with `PunctualityRewards`: move in step 9 gives `(2, 3)`, in step 10 `(3, 3)`. | `test_punctuality_early_departure_dated_by_the_start_from_the_halt` passes. | - |
+| REQ-4 | Issue's reproduction | The script of §3 on the branch. | Covered by REQ-1's test (the same corridor and steps). | - |
+| REQ-5 | Rolling through and arrivals unchanged | Existing tests of `tests/test_rewards.py` with `agent_transition_data=None` or a moving signal (e.g. `test_departure_only_when_moving`, `test_multicell_station_*`) keep their expectations. | Pass. `test_rewards_intermediate_intermediate_early_departure_penalty` halted and left in the same step 5; it now halts in step 4, as an env run would (S-1). | - |
+| NFR-1 | Speed independence | REQ-1's test, parametrized by speed. | Passes at speed 1 and 1/2; Q-1's test at 1/4. | - |
+| NFR-2 | Step cost | Review: one `dict.pop` per crossing, one assignment per halted step. | As planned (`DepartureClock.departure()`/`record()`). | - |
+| - | Neighbours | `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`, flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"`. | With S-1: the 8 test modules that use the reward classes (`test_rewards.py`, `test_graph_rail_env.py`, `test_flatland_edge_lengths.py`, `test_flatland_envs_persistence.py`, `test_flatland_envs_rail_env.py`, `test_flatland_states_edge_cases.py`, `test_multi_speed.py`, `trajectories/test_trajectories.py`) 461 passed, 3 skipped; flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"` 28 passed, 50 skipped, 1 xfailed; flake8 nothing new. | - |
 
 ### 4.3 Date the departure by the last halt (REQ-1–REQ-5; Q-1–Q-3)
 
@@ -255,19 +256,20 @@ classDiagram
     class BaseDefaultRewards {
         «modified»
         arrivals · departures · stopped_waypoints
-        +halts
+        +departure_clock
         step_reward()
     }
     class PunctualityRewards {
         «modified»
         arrivals · departures
-        +halts
+        +departure_clock
         step_reward()
     }
     class DepartureClock {
         «added»
         +record(agent, agent_transition_data, elapsed_steps)
         +departure(agent, elapsed_steps)
+        +forget(agent)
     }
     class AgentTransitionData {
         «unchanged»
@@ -275,8 +277,8 @@ classDiagram
     }
     AbstractRailEnv ..> BaseDefaultRewards : step_reward
     AbstractRailEnv ..> PunctualityRewards : step_reward
-    BaseDefaultRewards *-- "1" DepartureClock : halts
-    PunctualityRewards *-- "1" DepartureClock : halts
+    BaseDefaultRewards *-- "1" DepartureClock : departure_clock
+    PunctualityRewards *-- "1" DepartureClock : departure_clock
     DepartureClock ..> AgentTransitionData : reads
     style AbstractRailEnv fill:#f1f3f5,stroke:#868e96,color:#000
     style AgentTransitionData fill:#f1f3f5,stroke:#868e96,color:#000
@@ -286,7 +288,7 @@ classDiagram
 ```
 
 Notation: [UML class diagram in Mermaid](https://mermaid.js.org/syntax/classDiagram.html); grey «unchanged», yellow
-«modified», green «added», new members with a leading `+`. `DepartureClock` and `halts` are working names (Q-2).
+«modified», green «added», new members with a leading `+`.
 
 **Motivation:** the two reward classes keep separate bookkeeping today and must agree on the departure (DP-4); a
 shared helper holds the one rule. `DefaultRewards`, `ECML2026Rewards`, `BasicMultiObjectiveRewards` and
@@ -296,7 +298,7 @@ shared helper holds the one rule. `DefaultRewards`, `ECML2026Rewards`, `BasicMul
 
 | Component | Responsibility | Change |
 |---|---|---|
-| `DepartureClock` (working name) | Remembers where and when an agent last halted, and turns it into the departure step when the agent leaves. Not for deciding whether a stop is served (`stopped_waypoints`) or for arrivals. | 🟩 added: both reward classes date a departure the same way. |
+| `DepartureClock` | Remembers where and when an agent last halted, and turns it into the departure step when the agent leaves. Not for deciding whether a stop is served (`stopped_waypoints`) or for arrivals. | 🟩 added: both reward classes date a departure the same way. |
 | `BaseDefaultRewards` | Per-step and end-of-episode penalties of the default reward (punctuality, cancellation, collisions). Not for env dynamics. | 🟨 modified: a move-on before the earliest departure is penalized at any speed. |
 | `PunctualityRewards` | Counts the stops served on time. Not a penalty. | 🟨 modified: a stop left before its earliest departure is not on time, at any speed. |
 | `AbstractRailEnv.step()` | Commits position and speed, then calls `step_reward()` per agent. | ⬜ unchanged |
@@ -333,6 +335,29 @@ sequenceDiagram
 Notation: [sequence diagram in Mermaid](https://mermaid.js.org/syntax/sequenceDiagram.html). `PunctualityRewards`
 calls the clock the same way.
 
+### 6.2 Departure after halt, creep and halt, by rule (REQ-1, REQ-2; Q-1)
+
+*The same run, with the departure dated by `main` and by the two options of Q-1.*
+
+One agent, max speed 1/4, stop B is the cell at distance travelled 1-2, B's earliest departure is 12. The agent
+enters B in step 5 and halts (speed 0 from step 6), creeps 1/4 cell in step 7, halts again from step 8, starts in
+step 10 (two steps before the earliest departure) and reaches the next cell in step 12. Plots by
+[`plot_departure_rules.py`](early-departure-intermediate-stops/plot_departure_rules.py), a real `RailEnv` run drawn
+with `plot_trajectory()` of flatland-book's
+[Speed Profiles](https://flatland-association.github.io/flatland-book/environment/environment/speed_profiles.html)
+page; the purple line is the departure, the red dashed line B's earliest departure.
+
+| Rule | Departure from B | Early departure penalty | Plot |
+|---|---|---|---|
+| `main`: entry into the next cell | 12 | none: counted on time, 2 steps after the start (the bug) | [departure-main.png](early-departure-intermediate-stops/departure-main.png) |
+| a) last start: last halt + 1 (decided) | 10 | `0.5 * (10 - 12) = -1`: early by 2 | [departure-a.png](early-departure-intermediate-stops/departure-a.png) |
+| b) first start after the first halt | 7 | `0.5 * (7 - 12) = -2.5`: the creep counts, also if the agent leaves on time | [departure-b.png](early-departure-intermediate-stops/departure-b.png) |
+
+<img src="early-departure-intermediate-stops/departure-main.png" width="420"> <img src="early-departure-intermediate-stops/departure-a.png" width="420"> <img src="early-departure-intermediate-stops/departure-b.png" width="420">
+
+Speed, distance and states are the same in all three plots; only the departure moves. a) and `main` agree when the
+agent leaves at speed 1 without creeping, apart from the one-step lag of #554.
+
 ## 8. Crosscutting concepts
 
 *What the change introduces that other code will follow, and what it changes for existing callers.*
@@ -364,6 +389,9 @@ None for callers: no signature, parameter or format changes. Changed values:
 - **Stored data:** none affected. The regression episodes are skipped on `main` and `benchmark_episodes.py` skips
   rewards (§3); flatland-baselines pins `PunctualityRewards` only on envs without intermediate stops.
 
+S-1 is marked breaking (`fix(rewards)!:` with a `BREAKING CHANGE:` footer), as #555's fix: release-please lists the
+changed reward values apart in the 5.0.0 notes (decided 2026-11-25).
+
 ## 9. Decisions
 
 *The decisions behind the plan: the questions still open, the decisions taken, and how each review finding was settled.*
@@ -372,7 +400,7 @@ None for callers: no signature, parameter or format changes. Changed values:
 
 *Choices not made yet, each with its options and a proposal.*
 
-💡 **(Q-1) An agent starts, halts again at the same stop and starts later: which start is the departure?**
+~~**(Q-1) An agent starts, halts again at the same stop and starts later: which start is the departure?**~~
 - a) The last start before it leaves (last halt + 1). A creep forward that ends in a halt does not count as a
   departure; the agent is still at the stop.
 - b) The first start after the first halt. Penalizes the creep, but then the departure is dated before the agent's
@@ -381,7 +409,9 @@ None for callers: no signature, parameter or format changes. Changed values:
 *Proposal:* a). The issue's wording "the first step with speed > 0 after halting" reads as after the last halt; it
 matches a denied crossing (speed forced to 0) followed by a later start. Who decides: chenkins (issue author).
 
-💡 **(Q-2) Where does the shared rule live?**
+✅ **Decided 2026-11-25:** a), the last start, after comparing the three rules in the plots of §6.2.
+
+~~**(Q-2) Where does the shared rule live?**~~
 - a) A small class in `rewards.py` (working name `DepartureClock`), one instance per reward object, with `record()`
   and `departure()`; the pending halt as a `NamedTuple`. Follows `AGENTS.md` (a class for state with several
   methods, `NamedTuple` for structured data).
@@ -390,7 +420,9 @@ matches a denied crossing (speed forced to 0) followed by a later start. Who dec
 
 *Proposal:* a). The name is open (`DepartureClock`, `HaltTracker`, …).
 
-💡 **(Q-3) Does a malfunction at a stop count as a halt for the departure?**
+✅ **Decided 2026-11-25:** a), a helper class in `rewards.py`, named `DepartureClock`.
+
+~~**(Q-3) Does a malfunction at a stop count as a halt for the departure?**~~
 - a) Yes: speed 0 for any reason (voluntary stop, denied crossing, malfunction) is a halt (DP-2). An agent that
   halts at B, malfunctions and starts after `ed` is not penalized. Prototype: malfunction in steps 7-9, start in
   step 10, departure 10.
@@ -399,6 +431,9 @@ matches a denied crossing (speed forced to 0) followed by a later start. Who dec
 
 *Proposal:* a). The served-stop rule stays as it is.
 
+✅ **Decided 2026-11-25:** a), any speed 0 is a halt. Documented in the docstrings of `DepartureClock` and of the
+two reward classes, and pinned by its own test (a malfunction at the stop, then a start after the earliest departure).
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -406,6 +441,9 @@ matches a denied crossing (speed forced to 0) followed by a later start. Who dec
 | Date | Decision | Why | Consequences |
 |---|---|---|---|
 | 2026-10-30 | ✅ Fix the rewards' bookkeeping, not the env: D1's start-from-halt timing stays ([#554](https://github.com/flatland-association/flatland-rl/issues/554), "Expected behavior"). | The issue asks for the departure to be the step the agent starts moving; D1 is a deliberate 5.0.0 change ([#496](https://github.com/flatland-association/flatland-rl/pull/496)). | Only `rewards.py` changes (C-2, §3 Scope). |
+| 2026-11-25 | ✅ Q-1: the departure is the last start, the last halt at the entry point + 1. | A creep that ends in a halt is not a departure; b) would penalise it even when the agent leaves on time (§6.2 plots). | DP-1; S-1's halt-creep-halt test. |
+| 2026-11-25 | ✅ Q-2: a helper class `DepartureClock` in `rewards.py`, used by both reward classes. | One rule in one place (DP-4); inline copies drift, an env field puts reward bookkeeping into the env (C-1, C-2). | New class and `NamedTuple` (§8.1); S-1. |
+| 2026-11-25 | ✅ Q-3: any speed 0 is a halt, malfunctions included; documented and tested on its own. | An agent that waits out a malfunction at the stop and leaves after the earliest departure must not be penalised. | DP-2; S-1's malfunction test; the served-stop rule is unchanged. |
 
 ### 9.3 Code Review Findings
 
@@ -442,7 +480,7 @@ No review yet.
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| 💡 S-1 | - | Add the departure helper to `rewards.py`, use it in `BaseDefaultRewards.step_reward()` and `PunctualityRewards.step_reward()`, update the two docstrings (§4.3). New tests: the issue's corridor at speed 1 and 1/2, move in `ed - 1`, `ed`, `ed + 1`, for `DefaultRewards` and `PunctualityRewards`, plus a malfunction at the stop and a halt-start-halt-start case (Q-1). Update hand-built tests that record a halt and leave in the same step (`test_rewards_intermediate_intermediate_early_departure_penalty`: halt one step earlier, so the expected `-66` holds). Place new tests next to the related ones, not at the end of `tests/test_rewards.py` (C-3, #555 also adds tests there). Keep the `__init__` addition after `stopped_waypoints` and the call sites inside the departure block, away from the collision branch (#519). | bug | medium | `fix(rewards): date the departure from a stop by the step the agent starts moving.` |  | - | Q-1, Q-2, Q-3 |
+| ✅ S-1 | - | Add the departure helper to `rewards.py`, use it in `BaseDefaultRewards.step_reward()` and `PunctualityRewards.step_reward()`, update the two docstrings (§4.3). New tests: the issue's corridor at speed 1 and 1/2, move in `ed - 1`, `ed`, `ed + 1`, for `DefaultRewards` and `PunctualityRewards`, plus a malfunction at the stop and a halt-start-halt-start case (Q-1). Update hand-built tests that record a halt and leave in the same step (`test_rewards_intermediate_intermediate_early_departure_penalty`: halt one step earlier, so the expected `-66` holds). Place new tests next to the related ones, not at the end of `tests/test_rewards.py` (C-3, #555 also adds tests there). Keep the `__init__` addition after `stopped_waypoints` and the call sites inside the departure block, away from the collision branch (#519). | bug | medium | `fix(rewards)!: date the departure from a stop by the step the agent starts moving.` | c4866467 | - | - |
 
 Run before calling S-1 done: `tests/test_rewards.py`, `tests/flatland/envs/graph/test_graph_rail_env.py`, flake8,
 and flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"`.
@@ -455,7 +493,11 @@ and flatland-baselines' `deadlock_avoidance_heuristic/tests -m "not slow"`.
 
 *The files the change adds, and what each adds.*
 
-None.
+| File | Adds |
+|---|---|
+| `docs/plans/early-departure-intermediate-stops.md` | This plan. |
+| `docs/plans/early-departure-intermediate-stops/departure-main.png`, `departure-a.png`, `departure-b.png` | The plots of §6.2. |
+| `docs/plans/early-departure-intermediate-stops/plot_departure_rules.py` | The script that makes them from a `RailEnv` run and flatland-book's `plot_trajectory()`. |
 
 ### 12.2 Modified files
 
@@ -463,7 +505,7 @@ None.
 
 | File | Changes |
 |---|---|
-| `flatland/envs/rewards.py` | New helper class (Q-2) and its pending-halt `NamedTuple`; `BaseDefaultRewards.__init__`/`step_reward()` and `PunctualityRewards.__init__`/`step_reward()` use it; docstrings of `intermediate_early_departure_penalty_factor` and `PunctualityRewards`. |
+| `flatland/envs/rewards.py` | New helper class `DepartureClock` (`record()`, `departure()`, `forget()`, Q-2) and its pending-halt `NamedTuple` `PendingHalt`; attribute `departure_clock`; `BaseDefaultRewards.__init__`/`step_reward()` and `PunctualityRewards.__init__`/`step_reward()` use it; docstrings of `intermediate_early_departure_penalty_factor` and `PunctualityRewards`. |
 | `tests/test_rewards.py` | New tests of §4.2; `test_rewards_intermediate_intermediate_early_departure_penalty` (and any other hand-built test that halts and leaves in the same step) set up as the env would run it. |
 
 Unchanged on purpose: `rail_env.py`, `AgentTransitionData`, `EnvAgent`, `DefaultPenalties`, the reward parameters,
