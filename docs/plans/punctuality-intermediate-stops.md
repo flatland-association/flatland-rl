@@ -4,7 +4,7 @@
 > from `rewards.py:250` on are one higher on 4856ebfe, so the `break` is at `:611`). Issue
 > [#555](https://github.com/flatland-association/flatland-rl/issues/555) ("PunctualityRewards counts at most one
 > intermediate stop as on time.", chenkins, 2026-10-30, milestone 5.0.0). Branch `555-punctuality-intermediate-stops`,
-> no PR yet. Open questions: none (§9.1).
+> PR [#584](https://github.com/flatland-association/flatland-rl/pull/584). Open questions: none (§9.1).
 >
 > **Why:** punctuality is `n_stops_on_time / n_stops`, but after the first intermediate stop served on time
 > `PunctualityRewards` stops looking at the other intermediate stops. An agent with two or more intermediate stops
@@ -298,7 +298,7 @@ None for callers: no signature, tuple shape or file format changes. Changed beha
   the new values are the documented ones.
 - **Stored data:** none affected (no stored episode holds `PunctualityRewards` tuples, §3).
 
-The commit is marked breaking or not by Q-3.
+The commit is marked breaking (`fix(rewards)!:`, Q-3).
 
 ## 9. Decisions
 
@@ -357,7 +357,8 @@ which agents' scores change.
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-No review yet: the branch has no commits and no PR.
+PR [#584](https://github.com/flatland-association/flatland-rl/pull/584), based on `main` 4856ebfe, checked at
+a14be873 on 2026-11-25: no code review yet, no PR review or conversation comments, no TODOs added.
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
 |---|---|---|---|---|---|---|
