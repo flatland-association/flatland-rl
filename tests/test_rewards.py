@@ -21,7 +21,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, \
-    BaseECML2026Rewards, DelayRewards
+    BaseECML2026Rewards, DelayRewards, Rewards
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -584,8 +584,11 @@ def test_punctuality_rewards_intermediate():
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
-    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
+    # halts at the intermediate stop, so it is served
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=2))
+    # still halted at the stop in step 4, so it leaves in step 5
     agent.old_entry_point = ((2, 2), 2)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=4))
     agent.current_entry_point = ((4, 4), 0)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
@@ -735,9 +738,12 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
 
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
-    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2)
-
+    # halts at the intermediate stop, so it is served
+    rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=2)
+    # still halted at the stop in step 4, so it leaves in step 5
     agent.old_entry_point = ((2, 2), 2)
+    rewards.step_reward(agent=agent, agent_transition_data=_stopped_here_transition_data(), distance_map=distance_map, elapsed_steps=4)
+
     # mirrors AbstractRailEnv.handle_done_state(): transition to DONE, capture target_entry_point
     # from current_entry_point, then clear current_entry_point (remove_agents_at_target=True) -
     # all before step_reward() runs.
@@ -752,7 +758,7 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
 
     n_stops_on_time, n_stops = rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
     # initial departure (2) is before its earliest_departure (5), so not on time; intermediate and
-    # target are both on time - the intermediate only counts once its departure is recorded.
+    # target are both on time - the intermediate only counts once its departure is recorded (and the agent halted there).
     assert (n_stops_on_time, n_stops) == (2, 3)
 
 
@@ -994,13 +1000,19 @@ STATION_CELL_A = Waypoint((2, 2), 2)
 STATION_CELL_B = Waypoint((2, 3), 2)
 
 
-def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int = 11, earliest_departure_intermediate: int = 7) -> Tuple[BaseDefaultRewards, EnvAgent, DistanceMap]:
-    rewards = BaseDefaultRewards(intermediate_not_served_penalty=INTERMEDIATE_NOT_SERVED_PENALTY,
-                                 intermediate_late_arrival_penalty_factor=LATE_ARRIVAL_FACTOR)
+def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int = 11, earliest_departure_intermediate: int = 7,
+                                              rewards_cls=BaseDefaultRewards) -> Tuple[Rewards, EnvAgent, DistanceMap]:
+    if rewards_cls == PunctualityRewards:
+        rewards = PunctualityRewards()
+    else:
+        rewards = rewards_cls(intermediate_not_served_penalty=INTERMEDIATE_NOT_SERVED_PENALTY,
+                              intermediate_late_arrival_penalty_factor=LATE_ARRIVAL_FACTOR)
     agent = EnvAgent(initial_entry_point=((0, 0), 0),
                      targets={((3, 3), d) for d in Grid4TransitionsEnum},
                      current_entry_point=None,
-                     target_entry_point=((3, 3), 0),
+                     # BaseDefaultRewards scores the stops when the agent reaches its target (arrival_time); PunctualityRewards
+                     # books every visit at the target once it is set, so there the agent has not reached it yet
+                     target_entry_point=None if rewards_cls == PunctualityRewards else ((3, 3), 0),
                      state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
                      earliest_departure=3,
                      latest_arrival=30,
@@ -1013,14 +1025,16 @@ def _agent_with_two_cell_intermediate_station(latest_arrival_intermediate: int =
     return rewards, agent, distance_map
 
 
-def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint):
-    """`state` is STOPPED (a halt at `waypoint`) or MOVING (rolling through it without stopping) -
-    is_stopped_now is derived purely from this step's signals (see BaseDefaultRewards.step_reward), so the
-    two need distinct signal combinations rather than sharing one hardcoded set."""
+def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, elapsed_steps: int, old: Waypoint,
+           halt_action: RailEnvActions = RailEnvActions.STOP_MOVING):
+    """`state` is STOPPED (a halt at `waypoint`, with speed 0 after `halt_action`), MOVING (rolling through it without
+    stopping) or MALFUNCTION (standing at it with speed 0 only because of a malfunction, not a halt) - whether the agent
+    halted is derived purely from this step's signals (see rewards._is_halt_serving_stop), so the three need distinct
+    signal combinations rather than sharing one hardcoded set."""
     agent.old_entry_point = (old.position, old.direction)
     agent.current_entry_point = (waypoint.position, waypoint.direction)
     agent.next_entry_point = (waypoint.position, waypoint.direction)
-    is_stopped = state == TrainState.STOPPED
+    is_stopped = state in (TrainState.STOPPED, TrainState.MALFUNCTION)
     agent.speed_counter.set(Fraction(0) if is_stopped else Fraction(1), agent.speed_counter.distance or Fraction(0), DEFAULT_EDGE_LENGTH)
     # new_speed_zero (derived from candidate_speed == 0.0) and movement_allowed (derived from
     # action_valid and resource_check) are both recomputed by step_reward() itself - action_valid=True,
@@ -1028,29 +1042,57 @@ def _visit(rewards, agent, distance_map, waypoint: Waypoint, state: TrainState, 
     # (RailEnvStateMachineWrapper, not exercised here) so it's omitted.
     transition_data = AgentTransitionData(
         speed=Fraction(0) if is_stopped else Fraction(1), candidate_speed=Fraction(0) if is_stopped else Fraction(1),
-        action=RailEnvActions.STOP_MOVING if is_stopped else RailEnvActions.DO_NOTHING, action_valid=True, resource_check=True)
+        action=halt_action if is_stopped else RailEnvActions.DO_NOTHING, action_valid=True, resource_check=True)
+    if state == TrainState.MALFUNCTION:
+        agent.malfunction_handler.malfunction_down_counter = 1
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps)
+    agent.malfunction_handler.reset()
 
 
+def _intermediate_stop_counted(rewards, agent, distance_map) -> bool:
+    """Whether the station counts: served for BaseDefaultRewards (no stop-not-served penalty when the agent is done),
+    served on time for PunctualityRewards (the initial stop and the target are not visited, so only the station can
+    be on time)."""
+    if isinstance(rewards, PunctualityRewards):
+        return rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=25) == (1, 3)
+    d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
+    return d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0
+
+
+@pytest.mark.parametrize("rewards_cls", [BaseDefaultRewards, PunctualityRewards])
+@pytest.mark.parametrize("malfunction_first,halt_action", [
+    (False, RailEnvActions.STOP_MOVING),
+    (False, RailEnvActions.DO_NOTHING),  # speed 0 is what counts, not the action
+    (True, RailEnvActions.STOP_MOVING),  # one step with speed 0 after the malfunction ends
+    (True, RailEnvActions.DO_NOTHING),
+], ids=["stop-moving", "do-nothing", "malfunction-then-stop-moving", "malfunction-then-do-nothing"])
 @pytest.mark.parametrize("pass_through_cell,halting_cell", [
     (STATION_CELL_A, STATION_CELL_B),
     (STATION_CELL_B, STATION_CELL_A),
 ])
-def test_multicell_station_served_regardless_of_halting_cell(pass_through_cell, halting_cell):
+def test_multicell_station_served_regardless_of_halting_cell(pass_through_cell, halting_cell, malfunction_first, halt_action, rewards_cls):
     """Rolling through one station cell and stopping (on time) at the other serves the stop,
-    no matter which of the two cells the train halts at."""
-    rewards, agent, distance_map = _agent_with_two_cell_intermediate_station()
+    no matter which of the two cells the train halts at - the same for the default rewards and for punctuality.
+    A halt is speed 0 after a step at the stop, not in a malfunction, whatever the action: after a malfunction at the
+    stop, one more step with speed 0 serves it."""
+    rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(rewards_cls=rewards_cls)
 
     approach = Waypoint((1, 2), 2)
+    off_station = Waypoint((1, 3), 0)
+    k = 9
     _visit(rewards, agent, distance_map, pass_through_cell, TrainState.MOVING, 8, approach)   # roll into station
-    _visit(rewards, agent, distance_map, halting_cell, TrainState.STOPPED, 9, pass_through_cell)  # halt, on time
-    _visit(rewards, agent, distance_map, halting_cell, TrainState.MOVING, 10, halting_cell)   # depart after ed
+    if malfunction_first:
+        _visit(rewards, agent, distance_map, halting_cell, TrainState.MALFUNCTION, k, pass_through_cell)  # malfunction, on time
+        k += 1
+    _visit(rewards, agent, distance_map, halting_cell, TrainState.STOPPED, k, pass_through_cell, halt_action)  # halt, on time
+    _visit(rewards, agent, distance_map, halting_cell, TrainState.MOVING, k + 1, halting_cell)   # start after ed
+    _visit(rewards, agent, distance_map, off_station, TrainState.MOVING, k + 2, halting_cell)    # leave station
 
-    d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
-    assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == 0, \
-        "Halting at any cell of a multi-cell station serves the stop"
-    assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0
-    assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
+    assert _intermediate_stop_counted(rewards, agent, distance_map), "Halting at any cell of a multi-cell station serves the stop"
+    if isinstance(rewards, BaseDefaultRewards):
+        d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
+        assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0
+        assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
 
 
 def test_multicell_station_late_arrival_scored_on_halting_cell():
@@ -1071,20 +1113,32 @@ def test_multicell_station_late_arrival_scored_on_halting_cell():
     assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
 
 
-def test_multicell_station_not_served_when_only_rolled_through():
-    """Rolling through both station cells without ever halting -> only the not-served penalty,
-    no late/early penalties (even if the roll-through itself was late)."""
-    rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11)
+@pytest.mark.parametrize("rewards_cls", [BaseDefaultRewards, PunctualityRewards])
+@pytest.mark.parametrize("arrival,state_at_b", [
+    (20, TrainState.MOVING),  # late, but no halt
+    (8, TrainState.MOVING),  # within the time window, but no halt
+    (8, TrainState.MALFUNCTION),  # within the time window, standing at B only because of a malfunction
+], ids=["rolled-through-late", "rolled-through-on-time", "stood-in-malfunction"])
+def test_multicell_station_not_served_when_only_rolled_through(arrival, state_at_b, rewards_cls):
+    """Rolling through both station cells without ever halting, also within the time window, or standing at one of
+    them only because of a malfunction -> the stop is not served, the same for the default rewards and for
+    punctuality: only the not-served penalty, no late/early penalties (even if the roll-through itself was late), and
+    the stop is not on time for punctuality."""
+    rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(latest_arrival_intermediate=11, rewards_cls=rewards_cls)
 
     approach = Waypoint((1, 2), 2)
-    _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.MOVING, 20, approach)  # late, but no halt
-    _visit(rewards, agent, distance_map, STATION_CELL_B, TrainState.MOVING, 21, STATION_CELL_A)
+    off_station = Waypoint((1, 3), 0)
+    _visit(rewards, agent, distance_map, STATION_CELL_A, TrainState.MOVING, arrival, approach)
+    _visit(rewards, agent, distance_map, STATION_CELL_B, state_at_b, arrival + 1, STATION_CELL_A)
+    _visit(rewards, agent, distance_map, off_station, TrainState.MOVING, arrival + 2, STATION_CELL_B)  # leave station
 
-    d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
-    assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == -INTERMEDIATE_NOT_SERVED_PENALTY
-    assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0, \
-        "A stop that was not served must not additionally incur late/early penalties"
-    assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
+    assert not _intermediate_stop_counted(rewards, agent, distance_map)
+    if isinstance(rewards, BaseDefaultRewards):
+        d = rewards.step_reward(agent, None, distance_map, elapsed_steps=25)
+        assert d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] == -INTERMEDIATE_NOT_SERVED_PENALTY
+        assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0, \
+            "A stop that was not served must not additionally incur late/early penalties"
+        assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
 
 
 @pytest.mark.parametrize("revisit_cell,revisit_halts", [
