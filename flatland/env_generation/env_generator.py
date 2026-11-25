@@ -86,8 +86,8 @@ def env_generator(n_agents=7,
     obs_builder_object: Optional[ObservationBuilder]
         Defaults to `TreeObsForRailEnv(max_depth=3, predictor=ShortestPathPredictorForRailEnv(max_depth=50))`
     acceleration_delta : Fraction
-        Must be in (0, 1] (see `RailEnv`), floats are converted exactly from their decimal value, not snapped to 1/n as the `speed_ratios`
-        keys are (see `RailEnv`). Defaults to `Fraction(1)`.
+        Must be in (0, 1] (see `RailEnv`), floats are snapped to 1/n as the `speed_ratios` keys are
+        (see `RailEnv`). Defaults to `Fraction(1)`.
     braking_delta : Fraction
         Must be in [-1, 0) (see `RailEnv`), floats are converted as `acceleration_delta` (see `RailEnv`). Defaults to `-Fraction(1)`.
     rewards : Rewards

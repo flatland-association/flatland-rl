@@ -555,15 +555,16 @@ def test_validators_reject_nan_and_infinity_with_value_error(validate, name, val
         validate(value)
 
 
-@pytest.mark.parametrize("value,delta,max_speed", [
-    (0.5, Fraction(1, 2), Fraction(1, 2)), (0.33, Fraction(33, 100), Fraction(1, 3)), (0.15, Fraction(3, 20), Fraction(1, 7)),
-    (0.99, Fraction(99, 100), Fraction(1)), (np.float32(0.15), Fraction(3, 20), Fraction(1, 7)),
+@pytest.mark.parametrize("value,expected", [
+    (0.5, Fraction(1, 2)), (0.33, Fraction(1, 3)), (0.15, Fraction(1, 7)), (0.99, Fraction(1)), (np.float32(0.15), Fraction(1, 7)),
+    (Fraction(3, 20), Fraction(3, 20)), (Decimal("0.33"), Fraction(33, 100)),
 ])
-def test_float_deltas_are_exact_and_max_speeds_snap_to_unit_fractions(value, delta, max_speed):
-    """Deltas are converted from their decimal value, max speeds are snapped to the nearest 1/n (Q-4 of the plan)."""
-    assert validated_acceleration_delta(value) == delta
-    assert validated_braking_delta(-value) == -delta
-    assert validated_max_speed(value) == max_speed
+def test_float_deltas_and_max_speeds_snap_to_unit_fractions_by_one_rule(value, expected):
+    """Floats are snapped to the nearest 1/n, deltas and max speeds alike; Fractions and Decimals are kept exactly (Q-4 of
+    the plan)."""
+    assert validated_acceleration_delta(value) == expected
+    assert validated_braking_delta(-value) == -expected
+    assert validated_max_speed(value) == expected
 
 
 @pytest.mark.parametrize("speed", [None, 0])
@@ -584,13 +585,14 @@ def test_deltas_beyond_an_agents_max_speed_are_capped_not_rejected():
 
 @pytest.mark.parametrize("cached_first", [Fraction(21, 64), Decimal("0.328125"), 0.328125])
 def test_float_conversion_does_not_depend_on_what_was_converted_before(cached_first):
-    """0.328125 is exact in binary and equal to Fraction(21, 64): as a max speed it snaps to 1/3, as a delta it stays
-    21/64, whatever value was converted before."""
+    """0.328125 is exact in binary and equal to Fraction(21, 64): as a float it snaps to 1/3, as a Fraction or Decimal it
+    stays 21/64, whatever value was converted before."""
     _pseudo_fractional(cached_first)
-    validated_acceleration_delta(cached_first if not isinstance(cached_first, float) else 0.328125)
+    validated_acceleration_delta(cached_first)
     assert validated_max_speed(0.328125) == Fraction(1, 3)
-    assert validated_acceleration_delta(0.328125) == Fraction(21, 64)
-    assert validated_max_speed(0.328125) == Fraction(1, 3)
+    assert validated_acceleration_delta(0.328125) == Fraction(1, 3)
+    assert validated_acceleration_delta(Fraction(21, 64)) == Fraction(21, 64)
+    assert validated_max_speed(Decimal("0.328125")) == Fraction(21, 64)
 
 
 @pytest.mark.parametrize("validate,value", [(validated_acceleration_delta, float("nan")), (validated_braking_delta, np.float32("-inf")),

@@ -221,10 +221,9 @@ checked and converted where they are set, never in `step()`: `SpeedCounter` chec
 properties check (0, `MAX_SPEED`] resp. [-`MAX_SPEED`, 0) on construction and on assignment (a delta beyond ±1
 changes the speed by more than its whole range in one step, so it has no meaning; a delta beyond a train's max speed
 is not an error, as the deltas are global: `_cap_speed()` caps per train) (`validated_acceleration_delta()`/
-`validated_braking_delta()`). Each raises a `ValueError` naming the parameter and converts floats, by two rules on
-purpose: max speeds snap to 1/n as `_pseudo_fractional()` does (`0.33 -> Fraction(1, 3)`, the `speed_ratio_map`
-convention), deltas are exact from their decimal value (`0.33 -> Fraction(33, 100)`, `0.15 -> Fraction(3, 20)`, where
-snapping would give `1/7`). So `step()` only ever sees `Fraction`s (`_cap_speed`'s `assert isinstance(v, Fraction)`).
+`validated_braking_delta()`). Each raises a `ValueError` naming the parameter and converts floats by one rule, max
+speeds and deltas alike: they snap to 1/n as `_pseudo_fractional()` does (`0.33 -> Fraction(1, 3)`, the
+`speed_ratio_map` convention); a `Fraction` or `Decimal` is kept exactly. So `step()` only ever sees `Fraction`s (`_cap_speed`'s `assert isinstance(v, Fraction)`).
 `step()` reads the private `_acceleration_delta`/`_braking_delta` fields to skip the property call.
 
 A pickle predating this design can carry a stale off-map `speed` pinned at `max_speed` (instead of `None`) -

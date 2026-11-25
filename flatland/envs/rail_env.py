@@ -151,10 +151,9 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         cell or edge in one step: a delta above 1 would change the speed by more than the whole speed range in one step
         and has no meaning of its own. Not checked: a delta above a train's max speed. The delta is the same for all
         trains, so `step()` caps the new speed at each train's max speed instead of failing.
-        A whole number or a float is converted to a `Fraction`, a float exactly from its decimal value
-        (`0.15` to `Fraction(3, 20)`, `0.33` to `Fraction(33, 100)`). Unlike max speeds, which are snapped to the nearest
-        1/n (`0.33` to `Fraction(1, 3)`, see `speed_counter.py`'s `_validated_fraction()`). An invalid value raises a
-        `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
+        A whole number or a float is converted to a `Fraction`, a float snapped to the nearest 1/n as max speeds are
+        (`0.33` to `Fraction(1, 3)`, see `speed_counter.py`'s `_validated_fraction()`); pass a `Fraction` for an exact
+        value. An invalid value raises a `ValueError`, also when it is assigned later (`env.acceleration_delta = ...`).
     braking_delta : Fraction
         Determines how much speed is decreased by STOP_MOVING action.
         As speed is between 0 and 1, braking_delta=-1 restores to previous full stop behaviour.
