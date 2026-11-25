@@ -312,7 +312,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
           of anything else.
         - READY_TO_DEPART (off map, eligible to move): always True, regardless of anything else.
         - MOVING / STOPPED / MALFUNCTION (on map): collapses to `is_cell_entry` alone (speed > 0 and
-          distance + speed >= edge_length - see design_by_contract.md) - identical for all three
+          distance + speed >= edge_length - see flatland-book's Design by Contract page,
+          https://flatland-association.github.io/flatland-book/key-concepts/design_by_contract.html) - identical for all three
           on-map states, with no special case for MALFUNCTION. Since this requires speed > 0, it reads
           False for any on-map agent parked at speed 0, regardless of distance - including a
           STOPPED/MALFUNCTION agent after a denied crossing, or parked at its target exactly at the
@@ -625,7 +626,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         # showed off_map is 55-87% of calls, so skipping it there is a real, workload-independent
         # majority, not a one-scenario artifact. target_reached/action_invalid_on_rail/
         # invalid_action_at_cell_exit still need their own off_map special-casing regardless of
-        # cell_exit's value - see design_by_contract.md. Gate strictly on off_map alone (never
+        # cell_exit's value - see flatland-book's Design by Contract page. Gate strictly on off_map alone (never
         # additionally on in_malfunction): in_malfunction doesn't split cleanly by off_map (a
         # malfunctioning agent can be on- or off-map), and target_reached is checked with higher
         # priority than the malfunction branch in all 3 methods, so an on-map malfunctioning agent
@@ -1110,7 +1111,7 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         - a moving action given that doesn't resolve to a valid transition on the rail
           (transition_invalid) - an action was required, attempted, and invalid
 
-        See design_by_contract.md's Table 2.
+        See flatland-book's Design by Contract page, Tables 2a and 2b.
         """
         # off_map/cell_exit/target_reached/transition_invalid/action_invalid_on_rail/
         # invalid_action_at_cell_exit are hoisted params, computed once in collect() and shared
@@ -1240,8 +1241,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         params, computed once in collect() and shared across all 3 _candidate_ methods - see
         rail_env.py's collect() for their shared definitions. Unlike _candidate_entry_points, this
         method never reads cell_exit itself (only the already-derived target_reached/
-        invalid_action_at_cell_exit that are computed from it) - see design_by_contract.md's
-        cell_exit row.
+        invalid_action_at_cell_exit that are computed from it) - see flatland-book's Design by
+        Contract page, Table 2a's cell_exit row.
         """
         done_or_target_reached = done or target_reached
         # covers malfunction/map entry/stay off map/invalid action all at once, for the two branches below
@@ -1355,8 +1356,8 @@ class AbstractRailEnv(Environment, Generic[TransitionMapT, ResourceMapT, EntryPo
         params, computed once in collect() and shared across all 3 _candidate_ methods - see
         rail_env.py's collect() for their shared definitions. Unlike _candidate_entry_points, this
         method never reads cell_exit itself (only the already-derived target_reached/
-        invalid_action_at_cell_exit that are computed from it) - see design_by_contract.md's
-        cell_exit row. Note this narrows the lru_cache key from the
+        invalid_action_at_cell_exit that are computed from it) - see flatland-book's Design by
+        Contract page, Table 2a's cell_exit row. Note this narrows the lru_cache key from the
         original (which included current_entry_point/next_entry_point/candidate_entry_point/
         candidate_entry_point_independent/agent_targets - all high-cardinality) down to a handful of
         booleans plus speed/distance - expected to improve, not hurt, the cache hit rate.
