@@ -74,7 +74,7 @@ Requirements:
 
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
-| `PunctualityRewards` counts at most one intermediate stop as on time (the `break` at `rewards.py:610` leaves the loop over all stops). | Own issue, older than D1; neighbouring code in the same method, see C-3. | §3 | - | [#555](https://github.com/flatland-association/flatland-rl/issues/555) |
+| `PunctualityRewards` counts at most one intermediate stop as on time (the `break` at `rewards.py:610` leaves the loop over all stops). | Own issue, older than D1; neighbouring code in the same method, see C-3. | §3 | - | [#555](https://github.com/flatland-association/flatland-rl/issues/555), fixed by PR [#584](https://github.com/flatland-association/flatland-rl/pull/584) |
 | Earliest departure at the origin evaluated in the rewards only; the initial departure would then be the map entry step. | Own issue; changes the env, not only the bookkeeping. This plan's rule (DP-1) carries over unchanged. | §2.1 | - | [#559](https://github.com/flatland-association/flatland-rl/issues/559) |
 | flatland-book `environment/environment/rewards.ipynb` (formerly `rewards.md`): say that the actual departure $d_j$ is the step the agent starts moving from its halt. | Another repo; the book PR runs an example against flatland-rl `main`, so it merges after this PR. | §4.3 | - | [flatland-book#64](https://github.com/flatland-association/flatland-book/pull/64) |
 | Rewards' arrival and departure bookkeeping after restoring a mid-episode snapshot. | Unchanged behaviour: rewards are not persisted (`persistence.py:205`), so the bookkeeping starts empty after a restore, on `main` too. | §2.2 | - | - |
