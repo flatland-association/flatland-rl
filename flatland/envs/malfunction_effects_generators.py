@@ -274,8 +274,9 @@ class IntermediateStopMalfunctionEffectsGenerator(ConditionalMalfunctionEffectsG
 
     def __init__(self,
                  malfunction_rate: float = 0,
-                 min_duration: float = 0,
-                 max_duration: float = 0,
+                 # 1, not 0: a drawn duration of 0 is no malfunction (see ParamMalfunctionGen)
+                 min_duration: float = 1,
+                 max_duration: float = 1,
                  earliest_malfunction: int = 0,
                  num_malfunctions: int = 0,
                  malfunction_cached_random_state: Optional[tuple] = None,

@@ -7,7 +7,8 @@ import pytest
 
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, on_map_state_condition
+from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, on_map_state_condition, \
+    IntermediateStopMalfunctionEffectsGenerator
 from flatland.envs.malfunction_generators import malfunction_from_params, malfunction_from_file, \
     single_malfunction_generator, MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
@@ -168,6 +169,16 @@ def test_malfunction_blocks_agent_for_drawn_duration():
     ]
     assert rows[2][3] == rows[3][3] == rows[4][3] == rows[5][3] != rows[6][3]
     assert [agent.malfunction_handler.num_malfunctions for agent in env.agents] == [1, 0]
+
+
+def test_intermediate_stop_malfunctions_default_to_one_step():
+    """
+    `IntermediateStopMalfunctionEffectsGenerator` with only a malfunction rate: every positive draw is a malfunction of
+    1 step, not a duration of 0, which would be no malfunction.
+    """
+    generator = IntermediateStopMalfunctionEffectsGenerator(malfunction_rate=np.inf)._malfunction_generator
+    np_random = np.random.RandomState(0)
+    assert {generator.generate(np_random).num_broken_steps for _ in range(100)} == {1}
 
 
 def _env_with_malfunctions(malfunctions: bool = True, effects_generator: Optional[EffectsGenerator] = None) -> RailEnv:
