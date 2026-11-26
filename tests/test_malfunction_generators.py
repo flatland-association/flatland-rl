@@ -1,16 +1,25 @@
 import pickle
+from collections import Counter
 from typing import List, Optional, Tuple
 
+from fractions import Fraction
+
+import numpy as np
 import pytest
 
 from flatland.core.effects_generator import EffectsGenerator
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.line_generators import sparse_line_generator
-from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, on_map_state_condition
+from flatland.envs.malfunction_effects_generators import ConditionalMalfunctionEffectsGenerator, on_map_state_condition, \
+    IntermediateStopMalfunctionEffectsGenerator
 from flatland.envs.malfunction_generators import malfunction_from_params, malfunction_from_file, \
     single_malfunction_generator, MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.persistence import RailEnvPersister
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
+from flatland.envs.rail_trainrun_data_structures import Waypoint
+from flatland.envs.timetable_utils import Line, Timetable
 from flatland.utils.simple_rail import make_simple_rail2
 
 
@@ -82,6 +91,11 @@ def test_malfanction_to_and_from_file():
     assert env2.malfunction_process_data.min_duration == 2
     assert env2.malfunction_process_data.max_duration == 5
 
+    # the loaded generator draws durations from min_duration to max_duration, both inclusive
+    np_random = np.random.RandomState(0)
+    durations = {malfunction_generator(env.agents[0], np_random).num_broken_steps for _ in range(1000)}
+    assert durations == {2, 3, 4, 5}
+
 
 @pytest.mark.skip("Single malfunction generator is deprecated")
 def test_single_malfunction_generator():
@@ -119,6 +133,123 @@ def test_single_malfunction_generator():
             tot_malfunctions += agent.malfunction_handler.num_malfunctions
         assert tot_malfunctions == 1
 
+
+
+@pytest.mark.parametrize("min_duration,max_duration", [(1, 3), (2, 2), (0, 1)])
+def test_param_malfunction_gen_draws_durations_in_documented_range(min_duration, max_duration):
+    """
+    `ParamMalfunctionGen` with a rate high enough that every draw is a malfunction, 10,000 draws: the durations are
+    exactly the values of `[min_duration, max_duration]`, both inclusive, each drawn about equally often.
+    """
+    gen = ParamMalfunctionGen(MalfunctionParameters(malfunction_rate=1e9, min_duration=min_duration, max_duration=max_duration))
+    np_random = np.random.RandomState(0)
+    n = 10_000
+    durations = Counter(gen.generate(np_random).num_broken_steps for _ in range(n))
+
+    assert set(durations) == set(range(min_duration, max_duration + 1))
+    expected = n / (max_duration - min_duration + 1)
+    assert all(abs(count - expected) < 0.05 * n for count in durations.values()), durations
+
+
+def test_malfunction_blocks_agent_for_drawn_duration():
+    """
+    Two agents given MOVE_FORWARD in every step; one malfunction of duration 2, drawn as soon as an agent is on the map
+    (conditional generator, at most one malfunction).
+
+    - The agent is in MALFUNCTION in the step of the draw and the next one, exactly the drawn 2 steps;
+      `info['malfunction']` is 2, then 1, then 0.
+    - In the step the counter is 0 the agent is MOVING again (starting from speed 0, it doesn't move yet); it leaves
+      its cell in the step after.
+    """
+    env = _env_with_malfunctions(malfunctions=False, effects_generator=ConditionalMalfunctionEffectsGenerator(
+        malfunction_rate=1e9, min_duration=2, max_duration=2, max_num_malfunctions=1, condition=on_map_state_condition))
+    env.reset(random_seed=42)
+
+    rows = []
+    for _ in range(8):
+        _, _, _, info = env.step({h: RailEnvActions.MOVE_FORWARD for h in env.get_agent_handles()})
+        agent = env.agents[0]
+        rows.append((env._elapsed_steps, agent.state.name, info['malfunction'][0], agent.current_entry_point))
+
+    assert [row[:3] for row in rows[2:7]] == [
+        (3, "MOVING", 0),  # on the map
+        (4, "MALFUNCTION", 2),  # drawn
+        (5, "MALFUNCTION", 1),
+        (6, "MOVING", 0),  # starts again
+        (7, "MOVING", 0),
+    ]
+    assert rows[2][3] == rows[3][3] == rows[4][3] == rows[5][3] != rows[6][3]
+    assert [agent.malfunction_handler.num_malfunctions for agent in env.agents] == [1, 0]
+
+
+def test_intermediate_stop_malfunctions_default_to_one_step():
+    """
+    `IntermediateStopMalfunctionEffectsGenerator` with only a malfunction rate: every positive draw is a malfunction of
+    1 step, not a duration of 0, which would be no malfunction.
+    """
+    generator = IntermediateStopMalfunctionEffectsGenerator(malfunction_rate=np.inf)._malfunction_generator
+    np_random = np.random.RandomState(0)
+    assert {generator.generate(np_random).num_broken_steps for _ in range(100)} == {1}
+
+
+def test_drawn_zero_duration_is_no_malfunction():
+    """
+    Two agents given MOVE_FORWARD in every step, a conditional generator with a rate high enough that every draw is a
+    malfunction, but durations from 0 to 0: no agent ever breaks down, and neither the agents nor the generator count a
+    malfunction.
+    """
+    generator = ConditionalMalfunctionEffectsGenerator(malfunction_rate=1e9, min_duration=0, max_duration=0)
+    env = _env_with_malfunctions(malfunctions=False, effects_generator=generator)
+    env.reset(random_seed=42)
+
+    assert _run_malfunctions(env, steps=10) == (["0" * 10, "0" * 10], [0, 0])
+    assert generator._num_malfunctions == 0
+
+
+def _corridor_env(max_speed: Fraction, effects_generator: EffectsGenerator, n_cells: int = 8) -> RailEnv:
+    """One agent on a straight east-bound track of `n_cells` cells, from (0, 1) to (0, n_cells - 2), departing at 1."""
+    transitions = RailEnvTransitions()
+    straight = transitions.rotate_transition(transitions.transition_list[1], 90)
+    dead_end = transitions.transition_list[7]
+    rail = RailGridTransitionMap(width=n_cells, height=1, transitions=transitions)
+    rail.grid = np.array([[transitions.rotate_transition(dead_end, 270)] + [straight] * (n_cells - 2)
+                          + [transitions.rotate_transition(dead_end, 90)]], dtype=np.uint16)
+    waypoints = [[Waypoint((0, 1), 1)], [Waypoint((0, n_cells - 2), 1)]]
+    return RailEnv(width=n_cells, height=1, rail_generator=rail_from_grid_transition_map(rail),
+                   line_generator=lambda *args, **kwargs: Line(agent_waypoints={0: waypoints}, agent_speeds=[max_speed]),
+                   timetable_generator=lambda *args, **kwargs: Timetable(earliest_departures=[[1, None]], latest_arrivals=[[None, 50]],
+                                                                         max_episode_steps=50),
+                   number_of_agents=1, effects_generator=effects_generator)
+
+
+def test_malfunction_in_the_middle_of_a_cell_keeps_the_distance():
+    """
+    One agent with max speed 1/2 given MOVE_FORWARD in every step; a malfunction of duration 2 drawn at the start of
+    step 3, when the agent is halfway through its first cell.
+
+    - In malfunction after steps 3 and 4: speed 0, distance 1/2 kept, still in its first cell.
+    - Step 5: speed 1/2 again, distance still 1/2 (the distance grows with the speed before the step).
+    - Step 6: the agent covers the second half and enters the next cell.
+    """
+    env = _corridor_env(Fraction(1, 2), ConditionalMalfunctionEffectsGenerator(
+        malfunction_rate=1e9, min_duration=2, max_duration=2, earliest_malfunction=3, max_num_malfunctions=1))
+    env.reset(random_seed=1)
+    agent = env.agents[0]
+
+    rows = []
+    for _ in range(6):
+        env.step({0: RailEnvActions.MOVE_FORWARD})
+        rows.append((agent.state.name, agent.current_entry_point[0], agent.speed_counter.speed, agent.speed_counter.distance))
+
+    half = Fraction(1, 2)
+    assert rows == [
+        ("MOVING", (0, 1), half, 0),
+        ("MOVING", (0, 1), half, half),
+        ("MALFUNCTION", (0, 1), 0, half),
+        ("MALFUNCTION", (0, 1), 0, half),
+        ("MOVING", (0, 1), half, half),
+        ("MOVING", (0, 2), half, 0),
+    ]
 
 
 def _env_with_malfunctions(malfunctions: bool = True, effects_generator: Optional[EffectsGenerator] = None) -> RailEnv:
@@ -172,9 +303,11 @@ def test_seeded_reset_reproduces_malfunctions():
 
 
 # Malfunction counters per agent after each step, and number of malfunctions per agent, of the first episode of
-# _env_with_malfunctions() reset with seed 42, as recorded before malfunctions were started over per episode. Agent 1
-# has malfunctions that start right after the previous one ends ("21" followed by "321").
-PINNED_COUNTERS = ['0000000000043210000004321000004321000032', '0213210000000000021000321432121000321000']
+# _env_with_malfunctions() reset with seed 42, as recorded before malfunctions were started over per episode, with the
+# durations as drawn: the malfunctions start in the same steps as when every duration was one step longer (then agent 0
+# had '0000000000043210000004321000004321000032', agent 1 '0213210000000000021000321432121000321000'). Agent 1 has a
+# malfunction that starts in the step after the previous one ends ("1" followed by "021").
+PINNED_COUNTERS = ['0000000000032100000003210000003210000021', '0102100000000000010000210321210000210000']
 PINNED_NUM_MALFUNCTIONS = [4, 7]
 
 

@@ -150,7 +150,7 @@ def test_episode(data_sub_dir: str, ep_id: str, skip_rewards_dones_infos: bool, 
 
 
 def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0, start_step=None, skip_rewards_dones_infos: bool = False,
-                skip_rewards: bool = False, shifted_malfunction: bool = False, shifted_off_map_speed: bool = False):
+                skip_rewards: bool = False, shifted_off_map_speed: bool = False):
     """
     The data is structured as follows:
         -30x30 map
@@ -181,10 +181,6 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
             skip verification of rewards/dones/infos
     skip_rewards : bool
             skip verification of rewards
-    shifted_malfunction : bool
-            recorded episodes predate decrementing the malfunction counter at the start of step() - while an
-            actual malfunction is active, expect the recorded info's `malfunction` one lower than freshly computed.
-            # TODO remove this option once the malfunction episodes are regenerated
     shifted_off_map_speed : bool
             recorded episodes predate `SpeedCounter` speed being None while off map - while an agent is off
             map (freshly computed info's `speed` is None), ignore the recorded info's `speed` (pinned at the
@@ -196,6 +192,5 @@ def run_episode(data_dir: str, ep_id: str, rendering=False, snapshot_interval=0,
         snapshot_interval=snapshot_interval,
         skip_rewards_dones_infos=skip_rewards_dones_infos,
         skip_rewards=skip_rewards,
-        shifted_malfunction=shifted_malfunction,
         shifted_off_map_speed=shifted_off_map_speed,
     )

@@ -474,14 +474,14 @@ def test_energy_efficiency_smoothniss_in_morl():
     [
         (DefaultRewards(), (-1724.0,)),
         (BaseDefaultRewards(), (-1724.0,)),
-        (BasicMultiObjectiveRewards(), (-1724.0, -1360.0, -858.1875)),
+        (BasicMultiObjectiveRewards(), (-1724.0, -1361.0, -860.1875)),
         # design (D1/D2): STOPPED->MOVING promotion is granted optimistically (see rail_env.py's
         # movement_allowed design note) rather than withheld until the target is free, so a
         # persisting conflict under this seeded random policy run now accrues a fresh collision
         # penalty roughly every other step instead of just once - substantially increasing the
         # accumulated per-step penalty total.
-        (ECML2026Rewards(), (-119536.5,)),
-        (BaseECML2026Rewards(), (-119536.5,)),
+        (ECML2026Rewards(), (-119786.5,)),
+        (BaseECML2026Rewards(), (-119786.5,)),
     ],
 )
 def test_rewards_via_policy_runner(rewards, expected_sums):

@@ -302,12 +302,12 @@ class PolicyRunner:
               default=2)
 @click.option('--malfunction-duration-min',
               type=int,
-              help="Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.",
+              help="Minimal duration of a malfunction in steps, inclusive. Goes into `ParamMalfunctionGen`.",
               required=False,
               default=20)
 @click.option('--malfunction-duration-max',
               type=int,
-              help="Max duration of malfunction. Goes into `ParamMalfunctionGen`.",
+              help="Max duration of a malfunction in steps, inclusive. Goes into `ParamMalfunctionGen`.",
               required=False,
               default=50)
 @click.option('--malfunction-interval',

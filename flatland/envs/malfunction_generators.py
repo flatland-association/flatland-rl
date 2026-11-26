@@ -59,6 +59,12 @@ class ParamMalfunctionGen(object):
         snapshot is replayed within its episode (the next `reset()` starts the generator over anyway).
 
         `reset()` starts the generator over at the start of an episode, so an episode draws as in a new env.
+
+        The duration of a malfunction is uniform in `[min_duration, max_duration]`, both inclusive, in steps. The
+        agent is in malfunction from the step of the draw on, for exactly that many steps: `info['malfunction']` after
+        the draw step is the duration, and counts down to 0 in the step the agent may act again. A drawn duration of 0
+        (possible with `min_duration = 0`) is no malfunction, so the effective malfunction rate is then lower than
+        `malfunction_rate`.
     """
 
     def __init__(self, parameters: MalfunctionParameters):
@@ -113,8 +119,7 @@ class ParamMalfunctionGen(object):
         if self._rand_idx >= NBR_CHACHED_RAND:
             self._rand_idx = self._rand_idx % NBR_CHACHED_RAND
         if self._cached_broken[self._rand_idx]:
-            num_broken_steps = np_random.randint(self.MFP.min_duration,
-                                                 self.MFP.max_duration + 1) + 1
+            num_broken_steps = np_random.randint(self.MFP.min_duration, self.MFP.max_duration + 1)
             return _make_Malfunction_object(num_broken_steps)
         return None
 
@@ -321,8 +326,7 @@ def malfunction_from_file(filename: str, load_from_package=None) -> Tuple[Malfun
 
         if agent.malfunction_handler.malfunction_down_counter < 1:
             if np_random.rand() < _malfunction_prob(mean_malfunction_rate):
-                num_broken_steps = np_random.randint(min_number_of_steps_broken,
-                                                     max_number_of_steps_broken + 1) + 1
+                num_broken_steps = np_random.randint(min_number_of_steps_broken, max_number_of_steps_broken + 1)
                 return _make_Malfunction_object(num_broken_steps)
         return _make_Malfunction_object(0)
 
