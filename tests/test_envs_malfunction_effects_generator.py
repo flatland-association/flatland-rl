@@ -154,8 +154,8 @@ def test_conditional_earliest_and_max_num_malfunction(rendering: bool = False):
     assert conditional_malfunction_effects_generator._num_malfunctions == 2
     assert len(in_malfunction) == 2
     for agent in in_malfunction:
-        # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-        assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest) + 1
+        # in malfunction for `duration` steps from the draw step `earliest` on; the counter counts the current step
+        assert agent.malfunction_handler.malfunction_down_counter == duration - (num_steps_run - earliest)
 
 
 # TODO https://github.com/flatland-association/flatland-rl/issues/386 use ShortestPathPolicy instead

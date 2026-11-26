@@ -1,6 +1,8 @@
 import pickle
+from collections import Counter
 from typing import List, Optional, Tuple
 
+import numpy as np
 import pytest
 
 from flatland.core.effects_generator import EffectsGenerator
@@ -121,6 +123,53 @@ def test_single_malfunction_generator():
 
 
 
+@pytest.mark.parametrize("min_duration,max_duration", [(1, 3), (2, 2), (0, 1)])
+def test_param_malfunction_gen_draws_durations_in_documented_range(min_duration, max_duration):
+    """
+    `ParamMalfunctionGen` with a rate high enough that every draw is a malfunction, 10,000 draws: the durations are
+    exactly the values of `[min_duration, max_duration]`, both inclusive, each drawn about equally often (#565).
+    """
+    gen = ParamMalfunctionGen(MalfunctionParameters(malfunction_rate=1e9, min_duration=min_duration, max_duration=max_duration))
+    np_random = np.random.RandomState(0)
+    n = 10_000
+    durations = Counter(gen.generate(np_random).num_broken_steps for _ in range(n))
+
+    assert set(durations) == set(range(min_duration, max_duration + 1))
+    expected = n / (max_duration - min_duration + 1)
+    assert all(abs(count - expected) < 0.05 * n for count in durations.values()), durations
+
+
+def test_malfunction_blocks_agent_for_drawn_duration():
+    """
+    Two agents given MOVE_FORWARD in every step; one malfunction of duration 2, drawn as soon as an agent is on the map
+    (conditional generator, at most one malfunction).
+
+    - The agent is in MALFUNCTION in the step of the draw and the next one, exactly 2 steps (#565);
+      `info['malfunction']` is 2, then 1, then 0.
+    - In the step the counter is 0 the agent is MOVING again (starting from speed 0, it doesn't move yet); it leaves
+      its cell in the step after.
+    """
+    env = _env_with_malfunctions(malfunctions=False, effects_generator=ConditionalMalfunctionEffectsGenerator(
+        malfunction_rate=1e9, min_duration=2, max_duration=2, max_num_malfunctions=1, condition=on_map_state_condition))
+    env.reset(random_seed=42)
+
+    rows = []
+    for _ in range(8):
+        _, _, _, info = env.step({h: RailEnvActions.MOVE_FORWARD for h in env.get_agent_handles()})
+        agent = env.agents[0]
+        rows.append((env._elapsed_steps, agent.state.name, info['malfunction'][0], agent.current_entry_point))
+
+    assert [row[:3] for row in rows[2:7]] == [
+        (3, "MOVING", 0),  # on the map
+        (4, "MALFUNCTION", 2),  # drawn
+        (5, "MALFUNCTION", 1),
+        (6, "MOVING", 0),  # starts again
+        (7, "MOVING", 0),
+    ]
+    assert rows[2][3] == rows[3][3] == rows[4][3] == rows[5][3] != rows[6][3]
+    assert [agent.malfunction_handler.num_malfunctions for agent in env.agents] == [1, 0]
+
+
 def _env_with_malfunctions(malfunctions: bool = True, effects_generator: Optional[EffectsGenerator] = None) -> RailEnv:
     """Two agents on a sparse rail, seed 42; with `malfunctions`, the env's own malfunctions have rate 1/5 and durations 1 to 3."""
     return RailEnv(width=30, height=30, number_of_agents=2,
@@ -172,9 +221,11 @@ def test_seeded_reset_reproduces_malfunctions():
 
 
 # Malfunction counters per agent after each step, and number of malfunctions per agent, of the first episode of
-# _env_with_malfunctions() reset with seed 42, as recorded before malfunctions were started over per episode. Agent 1
-# has malfunctions that start right after the previous one ends ("21" followed by "321").
-PINNED_COUNTERS = ['0000000000043210000004321000004321000032', '0213210000000000021000321432121000321000']
+# _env_with_malfunctions() reset with seed 42, as recorded before malfunctions were started over per episode, with the
+# durations of #565: the malfunctions start in the same steps as before, each one step shorter (before #565, agent 0 had
+# '0000000000043210000004321000004321000032', agent 1 '0213210000000000021000321432121000321000'). Agent 1 has a
+# malfunction that starts in the step after the previous one ends ("1" followed by "021").
+PINNED_COUNTERS = ['0000000000032100000003210000003210000021', '0102100000000000010000210321210000210000']
 PINNED_NUM_MALFUNCTIONS = [4, 7]
 
 

@@ -25,9 +25,10 @@ def perturbation_tree_observation_builder_wrapper(
     perturbation_rate : int
         Poisson process with given rate.
     min_duration : int
-        If perturbed, duration uniformly in [min_duration,max_duration].
+        If perturbed, duration uniformly in [min_duration,max_duration] steps, both inclusive; a drawn 0 is no
+        perturbation (see `ParamMalfunctionGen`).
     max_duration : int
-        If perturbed, duration uniformly in [min_duration,max_duration].
+        If perturbed, duration uniformly in [min_duration,max_duration] steps, both inclusive.
     blank : float
         value to insert for perturbed trains.
 

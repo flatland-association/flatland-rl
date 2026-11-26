@@ -87,9 +87,10 @@ class ConditionalMalfunctionEffectsGenerator(EffectsGenerator["RailEnv"]):
         malfunction_rate : float
             Poisson process with given rate.
         min_duration : int
-            If malfunction, duration uniformly in [min_duration,max_duration].
+            If malfunction, duration uniformly in [min_duration,max_duration] steps, both inclusive; a drawn 0 is no
+            malfunction (see `ParamMalfunctionGen`).
         max_duration : int
-            If malfunction, duration uniformly in [min_duration,max_duration].
+            If malfunction, duration uniformly in [min_duration,max_duration] steps, both inclusive.
         earliest_malfunction : int
             Defaults to `None`.
         max_num_malfunctions : int

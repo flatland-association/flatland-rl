@@ -64,9 +64,10 @@ def env_generator(n_agents=7,
     p_level_free : float
         Percentage of diamond-crossings which are level-free.
     malfunction_duration_min: int
-        Minimal duration of malfunction. Goes into `ParamMalfunctionGen`.
+        Minimal duration of a malfunction in steps, inclusive. Goes into `ParamMalfunctionGen`, which draws the
+        duration uniformly in `[malfunction_duration_min, malfunction_duration_max]`.
     malfunction_duration_max: int
-        Max duration of malfunction. Goes into `ParamMalfunctionGen`.
+        Max duration of a malfunction in steps, inclusive. Goes into `ParamMalfunctionGen`.
     malfunction_interval: int
         Inverse of rate of malfunction occurrence. Goes into `ParamMalfunctionGen`.
     speed_ratios: Dict[float, float]

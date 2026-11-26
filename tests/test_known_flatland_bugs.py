@@ -120,17 +120,17 @@ def test_train_can_move_when_malfunction_counter_is_0_off_map_FIXED(wrapped):
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.DO_NOTHING})
     assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
+    # the drawn duration 5 counts the draw step: in malfunction in this step and the next 4
+    assert agent.malfunction_handler.malfunction_down_counter == 5
 
-    for _ in range(5):
+    for _ in range(4):
         rail_env.step({0: RailEnvActions.MOVE_FORWARD})
 
     # Here we can see the bug is fixed
     assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION_OFF_MAP)
     assert agent.malfunction_handler.in_malfunction
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
+    # last step of the malfunction: the counter is decremented to 0 at the start of the next step()
+    assert agent.malfunction_handler.malfunction_down_counter == 1
     # Train is not dispatched during malfunction
     assert agent.current_entry_point is None
 
@@ -170,19 +170,19 @@ def test_train_can_move_when_malfunction_counter_is_0_on_map_FIXED(wrapped):
     # After performing one action the agent should go into a malfunction.
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
     assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION)
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert agent.malfunction_handler.malfunction_down_counter == 5 + 1
+    # the drawn duration 5 counts the draw step: in malfunction in this step and the next 4
+    assert agent.malfunction_handler.malfunction_down_counter == 5
     old_pos = agent.current_entry_point[0]
     old_entry_point = agent.current_entry_point
 
-    for _ in range(5):
+    for _ in range(4):
         rail_env.step({0: RailEnvActions.DO_NOTHING})
 
     # Here we can see the bug is fixed
     assert_state(rail_env, agent, wrapped, TrainState.MALFUNCTION)
     assert agent.malfunction_handler.in_malfunction
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert agent.malfunction_handler.malfunction_down_counter == 0 + 1
+    # last step of the malfunction: the counter is decremented to 0 at the start of the next step()
+    assert agent.malfunction_handler.malfunction_down_counter == 1
     # Train is not moved during malfunction
     assert agent.current_entry_point == old_entry_point
 
@@ -229,8 +229,8 @@ def test_spawning_cell_not_reserved_if_id_is_lower_SANITYCHECK(wrapped):
     assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
     assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.MALFUNCTION_OFF_MAP)
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5 + 1
+    # the drawn duration 5 counts the draw step
+    assert rail_env.agents[3].malfunction_handler.malfunction_down_counter == 5
 
     assert_state(rail_env, rail_env.agents[0], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({0: RailEnvActions.MOVE_FORWARD})
@@ -261,8 +261,8 @@ def test_spawning_cell_reserved_if_id_is_higher_FIXED(wrapped):
     assert_state(rail_env, rail_env.agents[1], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({1: RailEnvActions.MOVE_FORWARD})
     assert_state(rail_env, rail_env.agents[1], wrapped, TrainState.MALFUNCTION_OFF_MAP)
-    # design: malfunction counter decremented at start of step(), before new malfunctions are generated
-    assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5 + 1
+    # the drawn duration 5 counts the draw step
+    assert rail_env.agents[1].malfunction_handler.malfunction_down_counter == 5
 
     assert_state(rail_env, rail_env.agents[3], wrapped, TrainState.READY_TO_DEPART)
     rail_env.step({3: RailEnvActions.MOVE_FORWARD})
