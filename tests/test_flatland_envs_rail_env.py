@@ -555,8 +555,9 @@ def test_speed_after_malfunction_full_acceleration_braking():
 
     distance = agent.speed_counter.distance
     assert speed == Fraction(0)
-    # the first malfunction on the map hits at the start of a cell (mid-cell, 1/2, before the malfunctions were one step
-    # shorter, #565: the agent now enters the map earlier)
+    # the first malfunction on the map hits at the start of a cell (when every malfunction was one step longer, the agent
+    # entered the map later and this one hit mid-cell, at 1/2: see
+    # test_malfunction_generators.py::test_malfunction_in_the_middle_of_a_cell_keeps_the_distance for that case)
     assert distance == Fraction(0)
 
     while agent.state.is_malfunction_state():
