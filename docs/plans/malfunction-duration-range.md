@@ -5,7 +5,7 @@
 > [#565](https://github.com/flatland-association/flatland-rl/issues/565) ("ParamMalfunctionGen draws malfunction
 > durations one step longer than documented", chenkins, milestone 5.0.0), found while documenting the default
 > malfunction generator in [flatland-book#43](https://github.com/flatland-association/flatland-book/pull/43). Branch
-> `565-malfunction-duration-range`, PR none yet. Open questions: none (§9.1).
+> `565-malfunction-duration-range`, PR [#586](https://github.com/flatland-association/flatland-rl/pull/586). Open questions: none (§9.1).
 >
 > **Why:** `min_duration` and `max_duration` are documented as the range of a malfunction's duration, but every
 > malfunction lasts one step longer. Users who set a duration get another one, and the flatland-book has to explain
@@ -66,7 +66,7 @@ Requirements:
 
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
-| Update the flatland-book Stochasticity page: the warning box "Malfunction duration and steps lost" and the 4.3.0/5.0.0 table. In 5.0.0 the duration $D$ is the drawn $d$, a moving agent loses $d + 1$ steps (as in 4.3.0) if it gets back to its max speed in one step, and `info['malfunction']` counts $d … 1$. The 5.0.0 malfunction plot is computed at build time; the Agent page's counter note and the Evaluation page's `shifted_malfunction` (S-2) change too. | Another repo; the book's checks run against flatland-rl `main`, so the book PR merges after this one. | §6.1 | - | flatland-book branch `565-malfunction-duration-range` (no PR yet) |
+| Update the flatland-book Stochasticity page: the warning box "Malfunction duration and steps lost" and the 4.3.0/5.0.0 table. In 5.0.0 the duration $D$ is the drawn $d$, a moving agent loses $d + 1$ steps (as in 4.3.0) if it gets back to its max speed in one step, and `info['malfunction']` counts $d … 1$. The 5.0.0 malfunction plot is computed at build time; the Agent page's counter note and the Evaluation page's `shifted_malfunction` (S-2) change too. | Another repo; the book's checks run against flatland-rl `main`, so the book PR merges after this one. | §6.1 | - | [flatland-book#66](https://github.com/flatland-association/flatland-book/pull/66) |
 | Re-record the regression episodes (`tests/test_flatland_regression_episodes.py`) and flatland-baselines' `test_episodes_deadlock_avoidance.py` episodes as the v8 archive, on a flatland-rl with this fix. | They are skipped on `main` and already diverge from it (#178, flatland-scenarios#37); one re-recording covers both changes (Q-5). | Q-5 | - | [flatland-scenarios#37](https://github.com/flatland-association/flatland-scenarios/issues/37) |
 | flatland-baselines: `test_policy_runner.py::test_env_path_and_seed[1003-...]` expects reward -19; with the fix it is -18 (normalized 0.99091 instead of 0.99041). Update the expectation on a flatland-baselines branch `565-malfunction-duration-range`, with `checks.yaml`'s `env.flatland-rl-ref` pointing at this branch until it is merged, then back to `main`. | Another repo (workspace rule for flatland-rl changes). | §8.2 | - | - |
 | The perturbed tree observation never ends a "blind" period: `get_many()` draws, but nothing calls `MalfunctionHandler.update_counter()`, so a perturbed agent stays blind for the rest of the episode. | Another bug; this PR only changes the duration it draws (§3). | §3 | - | - |
@@ -371,7 +371,9 @@ None for callers: no signature changes, except the removed `shifted_malfunction`
   of reactive policies differ. Benchmark results with malfunctions change against 4.x and against `main`. No
   migration: to keep the old durations, pass `min_duration + 1` and `max_duration + 1`.
 - **`min_duration = 0` with a positive rate:** a drawn 0 is now no malfunction, so fewer malfunctions happen than
-  the rate says (Q-3). No caller is known (§2.2).
+  the rate says (Q-3). `IntermediateStopMalfunctionEffectsGenerator` defaulted to `min_duration = max_duration = 0`,
+  which drew 1-step malfunctions with the `+ 1`; its defaults become 1 and 1, so a caller that passes only a rate keeps
+  its 1-step malfunctions (F-1, S-3). No other caller is known.
 - **`info['malfunction']`** after the draw step is $d$ instead of $d + 1$ on `main`; it is the value of 4.3.0 again.
 - **Recorded episodes** with malfunctions (regression episodes, flatland-baselines' episodes, FAB trajectories)
   don't replay on 5.0.0; they don't on `main` either (#178). Migration: re-record on 5.0.0 (§1.4).
@@ -410,7 +412,7 @@ malfunctions.
 - a) No malfunction: `MalfunctionHandler.generate_malfunction()` already ignores 0 and doesn't count it. Document in
   the docstrings that the effective rate is then lower.
 - b) Reject `min_duration < 1` with a positive rate (`ValueError` in `ParamMalfunctionGen.__init__`).
-  `NoMalfunctionGen` (`(0, 0, 0)`, rate 0) still works. Breaks callers that pass 0 with a rate; none known.
+  `NoMalfunctionGen` (`(0, 0, 0)`, rate 0) still works. Breaks callers that pass 0 with a rate; the only one found later is `IntermediateStopMalfunctionEffectsGenerator`'s defaults (F-1).
 - c) Clamp to 1: keeps today's behaviour for `(0, x)`, but `(0, 1)` would no longer be uniform.
 
 *Proposal:* a): no new check, and "0 steps" reads naturally as "no malfunction".
@@ -455,10 +457,17 @@ malfunctions.
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-No review yet.
+PR [#586](https://github.com/flatland-association/flatland-rl/pull/586), based on `main` 4856ebfe. Code review findings
+(F-1–F-5) were added on 2026-11-26, at e6341307; their line numbers refer to it. No PR review or conversation comments,
+no TODOs added. Fixed: ✅; open: empty.
 
 | Fixed | ID | Source | Category | Severity | Finding | Commit message |
 |---|---|---|---|---|---|---|
+| ✅ | F-1 | code review | bug | medium | `flatland/envs/malfunction_effects_generators.py:276-277`: `IntermediateStopMalfunctionEffectsGenerator` defaults to `min_duration = max_duration = 0`. Before the fix, every positive draw gave a 1-step malfunction; now every draw is 0, so a caller that passes only `malfunction_rate` (e.g. through the policy runner's `--effects-generator-kwargs`) silently gets no malfunctions at all. §8.2 and Q-3 say no caller with `min_duration = 0` and a rate is known: this default is one. Suggested fix: default both to 1, which keeps the old effective duration, and correct §8.2. Fixed in 1c9c616c (S-3): both default to 1; a test pins 1-step malfunctions for a caller passing only a rate. | fix(malfunctions): default the intermediate stop malfunctions to one step, as before the duration fix. |
+| ✅ | F-2 | code review | test-coverage | low | `tests/test_malfunction_generators.py:126-138`: Q-3 a) ("a drawn 0 is no malfunction") is not pinned: the range test only shows that 0 is drawn, not that the agent then stays out of malfunction and `num_malfunctions` and the conditional generator's count stay 0. Suggested fix: an env test with `(0, 0)` and a high rate. Fixed in abc34a2b (S-4): a conditional generator with `(0, 0)` and a high rate: no agent breaks down, no malfunction is counted. | test(malfunctions): pin a drawn 0, a malfunction in the middle of a cell and the file generator's range. |
+| ✅ | F-3 | code review | test-coverage | low | `tests/test_flatland_envs_rail_env.py:558-560`: `test_speed_after_malfunction_full_acceleration_braking` now pins distance 0, so its final `distance == previous_distance` is 0 == 0; `test_speed_after_malfunction` (`:492`) also hits at distance 0. No test checks any more that a malfunction in the middle of a cell keeps the distance and resumes from it (on `main` this test did, at 1/2). Suggested fix: a corridor test with a conditional malfunction at a step where the agent is at distance 1/2. Fixed in abc34a2b (S-4): a corridor test with max speed 1/2 and a malfunction at distance 1/2: the distance is kept and the agent goes on from it. | test(malfunctions): pin a drawn 0, a malfunction in the middle of a cell and the file generator's range. |
+| ✅ | F-4 | code review | test-coverage | low | `flatland/envs/malfunction_generators.py:329`: dropping the `+ 1` in the deprecated `malfunction_from_file()` (Q-2) is untested: `test_malfanction_to_and_from_file` only compares the process data. Suggested fix: draw from the loaded generator with a high rate and check the range. Fixed in abc34a2b (S-4): the loaded generator draws exactly 2 to 5. | test(malfunctions): pin a drawn 0, a malfunction in the middle of a cell and the file generator's range. |
+| ✅ | F-5 | code review | docs | low | `tests/test_malfunction_generators.py:130,147,225`, `tests/test_flatland_envs_rail_env.py:559`: the PR fixes #565, but test comments and docstrings still name it ("(#565)", "the durations of #565", "before #565"); S-2 plans to name it in the regression test's skip reason too. They describe history, not open work, but a closed issue number in the code sends readers to an issue with nothing left to do. Suggested fix: describe the rule without the number (the commit carries it), and let S-2's skip reason name the v8 re-recording (flatland-scenarios#37). Fixed in abc34a2b (S-4): the test comments describe the durations without the issue number. S-2, still open, will name flatland-scenarios#37 in the skip reason instead of #565. | test(malfunctions): pin a drawn 0, a malfunction in the middle of a cell and the file generator's range. |
 
 ## 10. Glossary
 
@@ -487,7 +496,9 @@ No review yet.
 |---|---|---|---|---|---|---|---|---|
 | ✅ S-0 | - | Add this plan. | docs | low | docs(plans): plan drawing malfunction durations in the documented range (#565). | 93a3838e | - | - |
 | ✅ S-1 | - | Drop the `+ 1` in `ParamMalfunctionGen.generate()` (and `malfunction_from_file()`, Q-2); docstrings on the range, the blocked steps, `info['malfunction']` and a drawn 0 (Q-3); new tests for REQ-1 and REQ-2; update the tests of §12.2. Body and `BREAKING CHANGE:` footer: every malfunction is one step shorter (§8.2). | bug | medium | fix(malfunctions)!: draw malfunction durations from min_duration to max_duration, as documented. | 44cf50d1 | - | - |
-| 💡 S-2 | - | Remove `shifted_malfunction` from `TrajectoryEvaluator.evaluate()`, `run_episode()` and the regression test's parameters; the skip reason names #565 next to #178. | test | low | test(regression): drop shifted_malfunction, recorded malfunction counters match again. |  | S-1 | - |
+| 💡 S-2 | - | Remove `shifted_malfunction` from `TrajectoryEvaluator.evaluate()`, `run_episode()` and the regression test's parameters; the skip reason names the v8 re-recording (flatland-scenarios#37) next to #178, not the closed #565 (F-5). | test | low | test(regression): drop shifted_malfunction, recorded malfunction counters match again. |  | S-1 | - |
+| ✅ S-3 | F-1 | Default `IntermediateStopMalfunctionEffectsGenerator`'s durations to 1 and 1, so that a caller passing only a rate keeps its 1-step malfunctions; test (§8.2). | bug | medium | fix(malfunctions): default the intermediate stop malfunctions to one step, as before the duration fix. | 1c9c616c | S-1 | - |
+| ✅ S-4 | F-2, F-3, F-4, F-5 | Tests: a drawn 0 starts no malfunction; a malfunction in the middle of a cell keeps the distance (a corridor env); the deprecated `malfunction_from_file()` draws in the range. Test comments describe the durations without the issue number. | test-coverage | low | test(malfunctions): pin a drawn 0, a malfunction in the middle of a cell and the file generator's range. | abc34a2b | S-1 | - |
 
 Before the PR: the core suite with the episodes fixture and flatland-baselines' tests (`AGENTS.md`), with the
 flatland-baselines branch of §1.4.
@@ -512,7 +523,7 @@ flatland-baselines branch of §1.4.
 | File | Changes |
 |---|---|
 | `flatland/envs/malfunction_generators.py` | `ParamMalfunctionGen.generate()` without `+ 1`, class docstring (S-1); `malfunction_from_file()` without `+ 1` (Q-2, S-1). |
-| `flatland/envs/malfunction_effects_generators.py` | Docstring of `ConditionalMalfunctionEffectsGenerator`: inclusive range, a drawn 0 (S-1). |
+| `flatland/envs/malfunction_effects_generators.py` | Docstring of `ConditionalMalfunctionEffectsGenerator`: inclusive range, a drawn 0 (S-1). `IntermediateStopMalfunctionEffectsGenerator`: defaults `min_duration = max_duration = 1` (S-3). |
 | `flatland/env_generation/env_generator.py` | Docstring of `malfunction_duration_min/max` in `env_generator()` (`env_generator_legacy()` has none) (S-1). |
 | `flatland/envs/observations_perturbed.py` | Docstring of `min_duration/max_duration` (S-1). |
 | `flatland/trajectories/policy_runner.py` | Help texts of `--malfunction-duration-min/max` (S-1). |
