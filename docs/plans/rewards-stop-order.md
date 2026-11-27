@@ -156,8 +156,8 @@ is not new on purpose.*
 - **DP-2 A visit is the unit.** Arrival, departure and halt belong to a visit, not to an entry point. (REQ-1)
 - **DP-3 One matching, two penalties.** Both rewards share the booking and the matching; each gives its own cost of
   serving a stop with a visit and of not serving it. (REQ-3)
-- **DP-4 Least penalty decides.** Among all order-preserving matchings the cheapest counts, ties to the earliest
-  visits (Q-2).
+- **DP-4 Most stops, then least penalty.** Among all order-preserving matchings the one serving the most stops counts,
+  then the cheapest (Q-5); on ties earlier stops are served first, each by its earliest visit (Q-2).
 
 Reused concepts:
 
@@ -339,6 +339,18 @@ Decided b): the initial visit is a visit like the others; its arrival is the map
 
 *Proposal:* a). It covers every way agents come in, with the targets the env really uses.
 
+✅ ~~**(Q-5) Serve as many stops as possible before the least penalty?**~~ **Decided 2026-11-27:** a) the most stops
+first, then the least penalty. Found while implementing S-1: with the least
+penalty alone, a stop served very late (e.g. 18 steps x 0.2 = 3.6) would rather count as not served (penalty 1), also
+on ordinary lines (against NFR-1).
+- a) Lexicographic: first the most stops served (for `PunctualityRewards`: the most stops on time), then the least
+  penalty, then the earliest visits.
+- b) The least penalty only, as the issue's wording says.
+
+*Proposal:* a), built in S-1 (`test_stop_served_late_rather_than_not_served`). b) would cap each stop's late and early
+penalty at the not served penalty (with the defaults, over 5 steps late or 2 steps early would count as not served, -1)
+and could hand a halt to a later stop; three existing tests would change (-66, -99, -114 to -1, -1, -16).
+
 ### 9.2 Decision log
 
 *Every decision by date, with why it was taken and what follows from it.*
@@ -352,6 +364,7 @@ Decided b): the initial visit is a visit like the others; its arrival is the map
 | 2026-11-27 | ✅ Q-1: the visit log replaces `arrivals`, `departures` and `stopped_waypoints`; it lives in each rewards instance, per agent handle, not persisted, as they did. | Only tests read the old attributes; two copies would drift. | §4.3, §8.2; S-1 rewrites the 52 test assertions. |
 | 2026-11-27 | ✅ Q-2: ties go to the earliest visits. | Deterministic; ties change only how `DefaultRewards` splits the total. | §4.4. |
 | 2026-11-27 | ✅ Q-3: the visit at the initial entry point may serve a stop, if the order fits. | One rule for all visits; the proposal (origin only) not taken. | §4.3, §4.4, §6.1; arrival of the initial visit = map entry step. |
+| 2026-11-27 | ✅ Q-5: the most stops first, then the least penalty. | b) (least penalty only) would cap each stop's penalty at the not served penalty as a side effect and change ordinary lines. | Penalties of ordinary lines unchanged (NFR-1); §4.4, DP-4. |
 | 2026-11-27 | ✅ Q-4: the target check runs where the targets are final: both `_agents_from_line()` and loading, one helper. | Covers every way agents come in, with the targets the env uses. | §4.5, S-2. |
 
 ### 9.3 Code Review Findings
@@ -381,8 +394,8 @@ None yet.
 
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| 💡 S-1 | - | `Visit`, `VisitLog`, `_match_stops()`; both rewards book visits and match stops; docstrings; tests (REQ-1–REQ-3, REQ-5). | bug | medium | `fix(rewards)!: serve intermediate stops in timetable order, each with its own halt, with the least penalty.` |  | - | - |
-| 💡 S-2 | - | Reject a target entry point in an intermediate group, with tests (REQ-4). | bug | low | `fix(env)!: reject lines whose target is also an intermediate stop.` |  | - | - |
+| ✅ S-1 | - | `Visit`, `VisitLog`, `_match_stops()`; both rewards book visits and match stops; docstrings; tests (REQ-1–REQ-3, REQ-5). | bug | medium | `fix(rewards)!: serve intermediate stops in timetable order, each with its own halt, with the least penalty.` | 46c214b9 | - | - |
+| ✅ S-2 | - | Reject a target entry point in an intermediate group, with tests (REQ-4). | bug | low | `fix(env)!: reject lines whose target is also an intermediate stop.` | 041437d4 | - | - |
 
 ### 11.2 Rebase and merge
 
