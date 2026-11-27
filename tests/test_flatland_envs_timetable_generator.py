@@ -335,6 +335,11 @@ def test_timetable_generator_intermediate():
     for a in env_agents:
         # routing flexibility
         a.waypoints = [[wp] for wp in a.waypoints]
+    # the stop (9, 27) of agents 2 and 3 lies on a straight east-west track; from both starts the route arrives there
+    # heading east only, so the stop is listed in both directions: the rewards serve a stop only in a listed direction,
+    # and the timetable generator plans to the listed directions only (a stop none of which can be reached counts 0)
+    for a in env_agents[2:4]:
+        a.waypoints[1].append(Waypoint(position=(9, 27), direction=Grid4TransitionsEnum.EAST))
     for a in env_agents:
         initial_direction = a.initial_entry_point[1]
         current_direction = a.current_entry_point[1]
@@ -609,6 +614,8 @@ def test_timetable_generator_intermediate():
         for ed, la in zip(eds[1:-1], las[1:-1]):
             assert ed <= la
 
+    # agent 3 leaves the stop (9, 27) heading east, as it arrived; its target (20, 27) can only be reached from the stop
+    # heading west, so its last segment counts 0, as an unreachable target does
     assert timetable.earliest_departures == [[108, 188, None], [34, 142, None], [14, 125, None], [70, 218, None], [94, 130, None], [16, 48, None],
                                              [17, 127, None], [107, 174, None], [208, 228, None], [130, 228, None]]
     assert timetable.latest_arrivals == [[None, 258, 315], [None, 227, 308], [None, 191, 206], [None, 291, 291], [None, 198, 295], [None, 125, 254],

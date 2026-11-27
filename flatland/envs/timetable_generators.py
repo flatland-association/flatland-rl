@@ -4,7 +4,7 @@ import math
 import pickle
 import warnings
 from pathlib import Path
-from typing import List, Union
+from typing import Dict, FrozenSet, List, Tuple, Union
 
 import numpy as np
 from numpy.random.mtrand import RandomState
@@ -21,71 +21,75 @@ def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) ->
     return int(math.ceil(length)) if length is not None else 0
 
 
+# a grid entry point, ((row, column), direction)
+EntryPoint = Tuple[Tuple[int, int], int]
+# where a segment ends: a stop's entry point (a set of one) or the target in any direction
+SegmentEnd = FrozenSet[EntryPoint]
+# the cheapest route to a segment end so far: its total length and its segment lengths
+Route = Tuple[int, List[int]]
+
+
 def _segment_lengths_through_stops(agents: List[EnvAgent], distance_map: DistanceMap) -> List[List[int]]:
     """
     Segment lengths of each agent's shortest route through its waypoint groups, as `shortest_path_length()` (edge
     lengths plus 1, rounded up to whole steps) per segment.
 
     The route starts at the initial entry point, serves each intermediate group at one of its entry points and ends at
-    the target's position, in any direction. A stop is served at an entry point (position and direction), as the rewards check it, and the
-    agent leaves a stop in the direction it arrived in, so the entry points are chosen jointly over the whole route.
-    If none of a group's entry points is reachable, the group's positions count in any direction. If none of them is
-    reachable either, the segment counts 0, as an unreachable target does.
+    the target's position, in any direction. A stop is served at an entry point (position and direction), as the
+    rewards check it, and the agent leaves a stop in the direction it arrived in, so the entry points are chosen jointly
+    over the whole route. A segment none of whose ends can be reached counts 0, as an unreachable target does.
     """
-    rail = distance_map.rail
-    # one distance map row per distinct set of entry points to reach (a fake agent targeting them)
-    rows = {}
+    # the segment ends of each agent's route, one list per segment
     routes = []
     for a in agents:
-        groups = []
-        for group in a.waypoints[1:-1]:
-            listed = sorted({(wp.position, wp.direction) for wp in group})
-            any_direction = sorted({(wp.position, d) for wp in group for d in range(4)
-                                    if rail.is_valid_entry_point((wp.position, d))})
-            groups.append([[(ep, rows.setdefault(frozenset([ep]), len(rows))) for ep in alternatives]
-                           for alternatives in (listed, any_direction)])
-        # the last segment ends at the target in any direction, as on the target's position the agent is done
-        targets = frozenset((wp.position, d) for wp in a.waypoints[-1] for d in range(4))
-        groups.append([[(targets, rows.setdefault(targets, len(rows)))]])
-        routes.append(groups)
+        ends = [[frozenset([entry_point]) for entry_point in sorted({(wp.position, wp.direction) for wp in group})]
+                for group in a.waypoints[1:-1]]
+        # on the target's position the agent is done, in any direction
+        ends.append([frozenset((wp.position, d) for wp in a.waypoints[-1] for d in range(4))])
+        routes.append(ends)
+    # one distance map row per distinct segment end, the distances to it (a fake agent targeting it)
+    rows: Dict[SegmentEnd, int] = {}
+    for ends in routes:
+        for candidates in ends:
+            for end in candidates:
+                rows.setdefault(end, len(rows))
     fake_agents = [EnvAgent(handle=row, initial_entry_point=None, current_entry_point=None, old_entry_point=None,
-                            targets=set(targets)) for targets, row in rows.items()]
+                            targets=set(end)) for end, row in rows.items()]
     distances = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
-    distances.reset(fake_agents, rail)
+    distances.reset(fake_agents, distance_map.rail)
 
     segment_lengths = []
-    for a, groups in zip(agents, routes):
-        # cheapest route to each entry point of the groups so far: (total length, segment lengths)
-        best = {(a.waypoints[0][0].position, a.waypoints[0][0].direction): (0, [])}
-        for alternatives in groups:
-            reached = {}
-            for candidates in alternatives:
-                reached = _extend(best, candidates, distances)
-                if reached:
-                    break
+    for a, ends in zip(agents, routes):
+        start = frozenset([(a.waypoints[0][0].position, a.waypoints[0][0].direction)])
+        best: Dict[SegmentEnd, Route] = {start: (0, [])}
+        for candidates in ends:
+            reached = _cheapest_routes(best=best, candidates=candidates, rows=rows, distances=distances)
             if not reached:
-                # nothing of the group reachable: count the segment as 0 from the cheapest route so far
-                total, lengths = min(best.values(), key=lambda b: b[0])
-                reached = {target: (total, lengths + [0]) for target, _ in alternatives[0]}
+                # no end of the segment reachable: count the segment as 0 from the cheapest route so far
+                total, lengths = min(best.values(), key=lambda route: route[0])
+                reached = {end: (total, lengths + [0]) for end in candidates}
             best = reached
-        segment_lengths.append(min(best.values(), key=lambda b: b[0])[1])
+        segment_lengths.append(min(best.values(), key=lambda route: route[0])[1])
     return segment_lengths
 
 
-def _extend(best: dict, candidates: list, distances: DistanceMap) -> dict:
-    """The cheapest extension of the routes in `best` to each of the candidates (entry point or target set, row)."""
+def _cheapest_routes(best: Dict[SegmentEnd, Route], candidates: List[SegmentEnd], rows: Dict[SegmentEnd, int],
+                     distances: DistanceMap) -> Dict[SegmentEnd, Route]:
+    """The cheapest route to each of the candidates, extending the routes in `best` (each ending at a stop's entry
+    point) by one segment. Candidates no route reaches are left out."""
     reached = {}
-    for target, row in candidates:
-        for source, (total, lengths) in best.items():
-            if source == target or (isinstance(target, frozenset) and source in target):
+    for end in candidates:
+        for start, (total, lengths) in best.items():
+            (entry_point,) = start
+            if entry_point in end:
                 length = 1
             else:
-                distance = distances.geometric_distance(source, row)
+                distance = distances.geometric_distance(entry_point, rows[end])
                 if distance == math.inf:
                     continue
                 length = int(math.ceil(distance + 1))
-            if target not in reached or total + length < reached[target][0]:
-                reached[target] = (total + length, lengths + [length])
+            if end not in reached or total + length < reached[end][0]:
+                reached[end] = (total + length, lengths + [length])
     return reached
 
 
