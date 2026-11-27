@@ -749,13 +749,16 @@ def test_timetable_segments_scale_with_edge_lengths():
     env = _env_with_intermediate_waypoints(Fraction(2))
     assert env.rail.has_edge_lengths()
     for unit_agent, agent in zip(unit_env.agents, env.agents):
-        # segment lengths are the sum of the edge lengths plus 1: n unit edges -> n + 1, n edges of length 2 -> 2n + 1
-        unit_first = unit_agent.waypoints_earliest_departure[1] - unit_agent.waypoints_earliest_departure[0]
-        first = agent.waypoints_earliest_departure[1] - agent.waypoints_earliest_departure[0]
-        assert first == 2 * unit_first - 1
+        # segment lengths are the sum of the edge lengths plus 1: n unit edges -> n + 1, n edges of length 2 -> 2n + 1;
+        # the times are divided by the max speed 1/k (exact, k a whole number): k (n + 1) -> k (2n + 1)
+        max_speed = agent.speed_counter.max_speed
+        # the first segment counts from the step the agent can enter the map, 1 for an earliest departure of 0
+        unit_first = unit_agent.waypoints_earliest_departure[1] - max(unit_agent.waypoints_earliest_departure[0], 1)
+        first = agent.waypoints_earliest_departure[1] - max(agent.waypoints_earliest_departure[0], 1)
+        assert first == 2 * unit_first - 1 / max_speed
         unit_last = unit_agent.waypoints_latest_arrival[2] - unit_agent.waypoints_latest_arrival[1]
         last = agent.waypoints_latest_arrival[2] - agent.waypoints_latest_arrival[1]
-        assert last == 2 * unit_last - 1
+        assert last == 2 * unit_last - 1 / max_speed
 
 
 @pytest.mark.parametrize("length", [None, Fraction(3, 2)])
