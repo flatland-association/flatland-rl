@@ -9,7 +9,7 @@ from numpy.random.mtrand import RandomState
 from flatland.core.effects_generator import EffectsGenerator
 from flatland.core.env_observation_builder import ObservationBuilder, DummyObservationBuilder
 from flatland.core.graph.graph_resource_map import GraphResourceMap
-from flatland.envs.agent_utils import EnvAgent
+from flatland.envs.agent_utils import EnvAgent, _check_target_not_intermediate
 from flatland.envs.graph.distance_map import GraphDistanceMap
 from flatland.envs.graph.rail_graph_transition_map import GraphTransitionMap
 from flatland.envs.malfunction_generators import MalfunctionGenerator, ParamMalfunctionGen
@@ -249,6 +249,7 @@ class GraphRailEnv(AbstractRailEnv[GraphTransitionMap, GraphResourceMap, str]):
                 f"agent {handle}: none of the target alternatives {list(line.agent_waypoints[handle][-1])} "
                 f"are valid entry points in the graph - the agent would end up with an empty `targets`."
             )
+            _check_target_not_intermediate(handle, waypoints, set(waypoints[-1]))
             initial_entry_point = waypoints[0][0]
             agents.append(EnvAgent(
                 initial_entry_point=initial_entry_point,

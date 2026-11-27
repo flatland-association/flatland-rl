@@ -4,13 +4,15 @@ import numpy as np
 import pytest
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
-from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _filter_valid_target_entry_points,
+from flatland.envs.agent_utils import (Agent, EnvAgent, _agent_tuple_targets, _check_target_not_intermediate, _filter_valid_target_entry_points,
                                        _sanitize_entry_point, load_env_agent, virtual_entry_point, with_direction)
+from flatland.envs.grid.rail_env_grid import RailEnvTransitions
 from flatland.envs.line_generators import sparse_line_generator
 from flatland.envs.malfunction_generators import MalfunctionParameters, ParamMalfunctionGen
 from flatland.envs.rail_env import RailEnv, RailEnvActions
 from flatland.envs.rail_env_state_machine_wrapper import RailEnvStateMachineWrapper
 from flatland.envs.rail_generators import rail_from_grid_transition_map, sparse_rail_generator
+from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import Rewards
 from flatland.envs.step_utils.malfunction_handler import MalfunctionHandler
@@ -268,6 +270,71 @@ def test_load_env_agent_fallback_waypoints():
 
     # must not raise - Rewards._sanitize_waypoints() assumes every entry is iterable.
     Rewards._sanitize_waypoints(env_agent.waypoints)
+
+
+@pytest.mark.parametrize("waypoints,targets,rejected", [
+    # grid: an intermediate stop at a target entry point
+    ([[Waypoint((0, 0), 1)], [Waypoint((0, 4), 1)], [Waypoint((0, 4), 1)]], {((0, 4), 1)}, True),
+    # grid: one of a stop's alternatives at the target
+    ([[Waypoint((0, 0), 1)], [Waypoint((0, 2), 1), Waypoint((0, 4), 1)], [Waypoint((0, 4), 1)]], {((0, 4), 1)}, True),
+    # grid: the target cell in another direction than the target's is no target entry point
+    ([[Waypoint((0, 0), 1)], [Waypoint((0, 4), 3)], [Waypoint((0, 4), 1)]], {((0, 4), 1)}, False),
+    # overlapping intermediate stops, and a stop at the initial waypoint, are allowed
+    ([[Waypoint((0, 0), 1)], [Waypoint((0, 0), 1)], [Waypoint((0, 2), 1)], [Waypoint((0, 2), 1)], [Waypoint((0, 4), 1)]], {((0, 4), 1)}, False),
+    # graph: plain node ids
+    ([["a"], ["b", "t"], ["t"]], {"t"}, True),
+    ([["a"], ["b"], ["b"], ["t"]], {"t"}, False),
+])
+def test_check_target_not_intermediate(waypoints, targets, rejected):
+    if rejected:
+        with pytest.raises(ValueError, match="agent 7: intermediate stop 1 shares the entry points"):
+            _check_target_not_intermediate(7, waypoints, targets)
+    else:
+        _check_target_not_intermediate(7, waypoints, targets)
+
+
+def test_reset_rejects_an_intermediate_stop_at_the_target():
+    """The env checks the line on `reset()`: a stop at the target's entry point would end the run there."""
+    transitions = RailEnvTransitions()
+    cells = transitions.transition_list
+    straight = transitions.rotate_transition(cells[1], 90)
+    rail = RailGridTransitionMap(width=5, height=1, transitions=transitions)
+    rail.grid = np.array([[transitions.rotate_transition(cells[7], 270)] + [straight] * 3 + [transitions.rotate_transition(cells[7], 90)]],
+                         dtype=np.uint16)
+    waypoints = [[Waypoint((0, 0), 1)], [Waypoint((0, 4), 1)], [Waypoint((0, 4), 1)]]
+    env = RailEnv(width=5, height=1, rail_generator=rail_from_grid_transition_map(rail),
+                  line_generator=lambda *args, **kwargs: Line(agent_waypoints={0: waypoints}, agent_speeds=[1.0]),
+                  number_of_agents=1)
+    with pytest.raises(ValueError, match="agent 0: intermediate stop 1 shares the entry points"):
+        env.reset()
+
+
+def test_load_env_agent_rejects_an_intermediate_stop_at_the_target():
+    rail, _, _ = make_oval_rail()
+    target = (1, 2)  # a straight horizontal track cell: only EAST/WEST are valid entry points here
+    agent_tuple = Agent(
+        initial_position=(0, 0),
+        initial_direction=Grid4TransitionsEnum(0),
+        direction=Grid4TransitionsEnum(0),
+        targets={(target, d) for d in Grid4TransitionsEnum},
+        waypoints=[[Waypoint((0, 0), Grid4TransitionsEnum(0))], [Waypoint(target, Grid4TransitionsEnum(1))], [Waypoint(target, None)]],
+        waypoints_earliest_departure=[0, 5, None],
+        waypoints_latest_arrival=[None, 10, 100],
+        moving=False,
+        earliest_departure=0,
+        latest_arrival=100,
+        handle=0,
+        position=None,
+        arrival_time=None,
+        old_direction=None,
+        old_position=None,
+        speed_counter=SpeedCounter(max_speed=1.0),
+        action_saver=None,
+        state_machine=TrainStateMachine(initial_state=TrainState.WAITING),
+        malfunction_handler=MalfunctionHandler(),
+    )
+    with pytest.raises(ValueError, match="agent 0: intermediate stop 1 shares the entry points"):
+        load_env_agent(agent_tuple, rail)
 
 
 def test_filter_valid_target_entry_points():

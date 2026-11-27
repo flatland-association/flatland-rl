@@ -23,7 +23,7 @@ from flatland.envs import line_generators as line_gen
 from flatland.envs import malfunction_effects_generators as mfg
 from flatland.envs import malfunction_generators as mal_gen
 from flatland.envs import rail_generators as rail_gen
-from flatland.envs.agent_utils import EnvAgent, _filter_valid_target_entry_points, _sanitize_entry_point
+from flatland.envs.agent_utils import EnvAgent, _filter_valid_target_entry_points, _sanitize_entry_point, _check_target_not_intermediate
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitionsEnum
 from flatland.envs.observations import GlobalObsForRailEnv
@@ -1775,4 +1775,5 @@ class RailEnv(AbstractRailEnv[GridTransitionMap, GridResourceMap, Tuple[Tuple[in
                 f"agent {agent.handle}: none of the target's direction alternatives are valid "
                 f"entry points on the rail - the agent would end up with an empty `targets`."
             )
+            _check_target_not_intermediate(agent.handle, agent.waypoints, agent.targets)
         return agents
