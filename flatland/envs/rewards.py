@@ -118,6 +118,24 @@ class DefaultPenalties(fastenum.Enum):
     INTERMEDIATE_EARLY_DEPARTURE = "INTERMEDIATE_EARLY_DEPARTURE"
 
 
+def _is_halt_serving_stop(agent: EnvAgent, agent_transition_data: Optional[AgentTransitionData]) -> bool:
+    """
+    Whether the agent halted at its current entry point in this step in a way that serves an intermediate stop there: it
+    is on the map, not in a malfunction, and its speed is 0 after the step, whatever the action (``STOP_MOVING``,
+    ``DO_NOTHING`` while stopped, a denied move). Standing there only during a malfunction does not serve the stop; a
+    step with speed 0 after the malfunction ends does. The rule of :class:`BaseDefaultRewards` and
+    :class:`PunctualityRewards` alike. Without transition data (hand-built calls), the agent did not halt.
+
+    Not the stop that decides the collision and invalid-action penalties (``is_stopped_now`` in
+    :meth:`BaseDefaultRewards.step_reward`): that one is the MOVING -> STOPPED transition only.
+    """
+    if agent_transition_data is None or agent.current_entry_point is None or agent.malfunction_handler.in_malfunction:
+        return False
+    # Compare against int 0, not float 0.0: Fraction.__eq__ takes a much slower path for a float operand (profiled at ~13x).
+    movement_allowed = agent_transition_data.action_valid and agent_transition_data.resource_check
+    return agent_transition_data.candidate_speed == 0 or not movement_allowed
+
+
 class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     r"""
     Reward Function.
@@ -216,7 +234,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         was_moving = agent_transition_data.speed is not None and agent_transition_data.speed > 0
 
         if is_on_map:
-            if is_stopped_now:
+            # a halt that serves the stop, see _is_halt_serving_stop - not only the MOVING->STOPPED transition above
+            if _is_halt_serving_stop(agent, agent_transition_data):
                 self.stopped_waypoints[agent.handle].add(agent.current_entry_point)
 
             # Only record arrival if this is a new waypoint (not dwelling at same position)
@@ -553,9 +572,16 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
     An agent is deemed not punctual at a stop if it arrives too late, departs too early or does not serve the stop at all. If an agent is punctual at a stop, n_stops_on_time is increased by 1.
 
     The implementation returns the tuple `(n_stops_on_time, n_stops)`.
+
+    An intermediate stop is served only if the agent halts there, as for :class:`BaseDefaultRewards`: speed 0 after a step
+    at the stop, not in a malfunction (see :func:`_is_halt_serving_stop`). An agent that passes the stop without halting,
+    or stands there only during a malfunction, does not serve it, also within its time window; one step with speed 0
+    after the malfunction ends does.
     """
 
     def __init__(self):
+        # entry points where the agent halted, not in a malfunction (see _is_halt_serving_stop), as BaseDefaultRewards.stopped_waypoints
+        self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
         # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
         self.arrivals = defaultdict(defaultdict_list)
         self.departures = defaultdict(defaultdict_list)
@@ -568,6 +594,9 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # `current_entry_point` is possibly cleared to None (remove_agents_at_target), and stays set
         # permanently from that step on - see EnvAgent.target_entry_point and agent_utils.virtual_entry_point(),
         # whose DONE branch this mirrors.
+        if _is_halt_serving_stop(agent, agent_transition_data):
+            self.stopped_waypoints[agent.handle].add(agent.current_entry_point)
+
         entry_point = agent.target_entry_point if agent.target_entry_point is not None else agent.current_entry_point
         if entry_point is not None and entry_point not in self.arrivals[agent.handle]:
             self.arrivals[agent.handle][entry_point].append(elapsed_steps)
@@ -599,8 +628,8 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
             stop_on_time = False
             # has any alternative with any arrival/departure been served on time?
             for wp in wps:
-                if wp not in self.arrivals[agent.handle] or wp not in self.departures[agent.handle]:
-                    # intermediate stop not served
+                if wp not in self.stopped_waypoints[agent.handle] or wp not in self.departures[agent.handle]:
+                    # intermediate stop not served: the agent did not halt there, or did not leave it
                     continue
                 for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp]):
                     if arrival <= la and departure >= ed:
@@ -608,7 +637,6 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
                         break
             if stop_on_time:
                 n_stops_on_time += 1
-                break
 
         target_wps = agent_waypoints[-1]
         # N.B. assuming target is only travelled once:
