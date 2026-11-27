@@ -77,6 +77,21 @@ def _filter_valid_target_entry_points(rail: TransitionMap, waypoint_group: List[
     return [wp for wp in waypoint_group if rail.is_valid_entry_point((wp.position, wp.direction))]
 
 
+def _check_target_not_intermediate(handle: int, waypoints: List[List[Union[Waypoint, "EntryPointT"]]], targets: Set["EntryPointT"]) -> None:
+    """
+    Raises a `ValueError` when one of the agent's target entry points is also in one of its intermediate waypoint
+    groups: the env makes the agent done when it enters its target, so it could not serve the stops after that one.
+    Intermediate groups may share entry points with each other and with the initial waypoint; the rewards match the
+    stops to the agent's halts in timetable order (see `rewards._match_stops`).
+    """
+    for stop_index, group in enumerate(waypoints[1:-1], start=1):
+        shared = {wp._to_tuple() if isinstance(wp, Waypoint) else wp for wp in group} & set(targets)
+        if len(shared) > 0:
+            raise ValueError(
+                f"agent {handle}: intermediate stop {stop_index} shares the entry points {sorted(shared, key=repr)} with the "
+                f"target - the agent would be done there and could not serve the stops after it.")
+
+
 def _first_successor_entry_point(rail: TransitionMap, entry_point: "EntryPointT") -> Optional["EntryPointT"]:
     """
     An arbitrary (but deterministic) valid successor of `entry_point` on `rail`, or `None` if it has
@@ -150,6 +165,7 @@ def load_env_agent(agent_tuple: Agent, rail: TransitionMap):
             [Waypoint(position, direction) for position, direction in sorted(_agent_tuple_targets(agent_tuple))]]
     waypoints[-1] = _filter_valid_target_entry_points(rail, waypoints[-1])
     targets = {(wp.position, wp.direction) for wp in waypoints[-1]}
+    _check_target_not_intermediate(agent_tuple.handle, waypoints, targets)
 
     current_entry_point = (agent_tuple.position, agent_tuple.direction) if agent_tuple.position is not None and agent_tuple.direction is not None else None
     next_entry_point = (

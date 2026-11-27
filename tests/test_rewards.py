@@ -21,7 +21,7 @@ from flatland.envs.rail_generators import rail_from_grid_transition_map
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
 from flatland.envs.rewards import DefaultRewards, DefaultPenalties, BaseDefaultRewards, BasicMultiObjectiveRewards, PunctualityRewards, ECML2026Rewards, \
-    BaseECML2026Rewards, DelayRewards, Rewards
+    BaseECML2026Rewards, DelayRewards, Rewards, Visit, _match_stops
 from flatland.envs.step_utils.env_utils import AgentTransitionData
 from flatland.envs.step_utils.speed_counter import SpeedCounter, _pseudo_fractional
 from flatland.envs.step_utils.state_machine import TrainStateMachine
@@ -424,7 +424,7 @@ def test_rewards_early_departure_dated_by_the_start_from_the_halt(max_speed, mov
     env = _corridor_env(width=9, stops=[CORRIDOR_A, CORRIDOR_B, CORRIDOR_C], earliest_departures=[2, CORRIDOR_ED_B], max_speed=max_speed,
                         rewards=DefaultRewards())
     assert _run_to_the_end(env, _halt_at_b_until(move_step)) == expected_reward
-    assert env.rewards._proxy.departures[0][CORRIDOR_B] == [move_step]
+    assert env.rewards._proxy.visit_log.departures(0, CORRIDOR_B) == [move_step]
 
 
 @pytest.mark.parametrize("move_step,expected", [(9, (2, 3)), (10, (3, 3))], ids=["early", "on-time"])
@@ -441,7 +441,7 @@ def test_punctuality_early_departure_dated_by_the_start_from_the_halt(move_step,
     env = _corridor_env(width=9, stops=[CORRIDOR_A, CORRIDOR_B, CORRIDOR_C], earliest_departures=[2, CORRIDOR_ED_B], max_speed=Fraction(1),
                         rewards=PunctualityRewards())
     assert _run_to_the_end(env, _halt_at_b_until(move_step)) == expected
-    assert env.rewards.departures[0][CORRIDOR_B] == [move_step]
+    assert env.rewards.visit_log.departures(0, CORRIDOR_B) == [move_step]
 
 
 def test_rewards_early_departure_malfunction_at_the_stop_counts_as_halt():
@@ -470,7 +470,7 @@ def test_rewards_early_departure_malfunction_at_the_stop_counts_as_halt():
 
     assert _run_to_the_end(env, action_in_step) == 0.0
     assert {step: speeds_at_b[step] for step in range(7, 11)} == {7: (0, True), 8: (0, True), 9: (0, True), 10: (1, False)}
-    assert env.rewards._proxy.departures[0][CORRIDOR_B] == [CORRIDOR_ED_B]
+    assert env.rewards._proxy.visit_log.departures(0, CORRIDOR_B) == [CORRIDOR_ED_B]
 
 
 def test_rewards_early_departure_last_halt_counts():
@@ -496,7 +496,7 @@ def test_rewards_early_departure_last_halt_counts():
 
     assert _run_to_the_end(env, action_in_step) == -1.0
     assert [speeds[step] for step in range(5, 11)] == [Fraction(1, 4), 0, Fraction(1, 4), 0, 0, Fraction(1, 4)]
-    assert env.rewards._proxy.departures[0][stop_b] == [10]
+    assert env.rewards._proxy.visit_log.departures(0, stop_b) == [10]
 
 
 def test_rewards_intermediate_intermediate_late_arrival_penalty():
@@ -686,6 +686,9 @@ def test_punctuality_rewards_initial():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    # the map entry at the origin, as env.step() records it before the agent moves on
+    agent.current_entry_point = ((0, 0), 0)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=1))
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
 
@@ -693,12 +696,12 @@ def test_punctuality_rewards_initial():
 
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
-    assert ((0, 0), 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][((0, 0), 0)] == [5]
-    assert rewards.arrivals[0][((2, 2), 2)] == [5]
-    assert ((2, 2), 2) not in rewards.departures[0]
-    assert ((3, 3), 3) not in rewards.arrivals[0]
-    assert ((3, 3), 3) not in rewards.departures[0]
+    assert rewards.visit_log.arrivals(0, ((0, 0), 0)) == [1]
+    assert rewards.visit_log.departures(0, ((0, 0), 0)) == [5]
+    assert rewards.visit_log.arrivals(0, ((2, 2), 2)) == [5]
+    assert rewards.visit_log.departures(0, ((2, 2), 2)) == []
+    assert rewards.visit_log.arrivals(0, ((3, 3), 3)) == []
+    assert rewards.visit_log.departures(0, ((3, 3), 3)) == []
 
     # on time only at initial
     assert rewards.cumulate(*collect) == (1, 3)
@@ -726,6 +729,9 @@ def test_punctuality_rewards_intermediate():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    # the map entry at the origin, as env.step() records it before the agent moves on
+    agent.current_entry_point = ((0, 0), 0)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=1))
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
     # halts at the intermediate stop, so it is served
@@ -737,14 +743,14 @@ def test_punctuality_rewards_intermediate():
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
-    assert ((0, 0), 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][((0, 0), 0)] == [2]
-    assert rewards.arrivals[0][((2, 2), 2)] == [2]
-    assert rewards.departures[0][((2, 2), 2)] == [5]
-    assert rewards.arrivals[0][((4, 4), 0)] == [5]
-    assert ((4, 4), 0) not in rewards.departures[0]
-    assert ((3, 3), 3) not in rewards.arrivals[0]
-    assert ((3, 3), 3) not in rewards.departures[0]
+    assert rewards.visit_log.arrivals(0, ((0, 0), 0)) == [1]
+    assert rewards.visit_log.departures(0, ((0, 0), 0)) == [2]
+    assert rewards.visit_log.arrivals(0, ((2, 2), 2)) == [2]
+    assert rewards.visit_log.departures(0, ((2, 2), 2)) == [5]
+    assert rewards.visit_log.arrivals(0, ((4, 4), 0)) == [5]
+    assert rewards.visit_log.departures(0, ((4, 4), 0)) == []
+    assert rewards.visit_log.arrivals(0, ((3, 3), 3)) == []
+    assert rewards.visit_log.departures(0, ((3, 3), 3)) == []
 
     # on time only at intermediate
     assert rewards.cumulate(*collect) == (1, 3)
@@ -825,6 +831,9 @@ def test_punctuality_rewards_target():
 
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    # the map entry at the origin, as env.step() records it before the agent moves on
+    agent.current_entry_point = ((0, 0), 0)
+    collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=1))
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=2))
@@ -842,14 +851,14 @@ def test_punctuality_rewards_target():
     collect.append(rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10))
     collect.append(rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=6))
 
-    assert ((0, 0), 0) not in rewards.arrivals[0]
-    assert rewards.departures[0][((0, 0), 0)] == [2]
-    assert rewards.arrivals[0][((2, 2), 2)] == [2]
-    assert rewards.departures[0][((2, 2), 2)] == [4]
-    assert rewards.arrivals[0][((4, 4), 0)] == [4]
-    assert rewards.departures[0][((4, 4), 0)] == [10]
-    assert rewards.arrivals[0][((3, 3), 3)] == [10]
-    assert ((3, 3), 3) not in rewards.departures[0]
+    assert rewards.visit_log.arrivals(0, ((0, 0), 0)) == [1]
+    assert rewards.visit_log.departures(0, ((0, 0), 0)) == [2]
+    assert rewards.visit_log.arrivals(0, ((2, 2), 2)) == [2]
+    assert rewards.visit_log.departures(0, ((2, 2), 2)) == [4]
+    assert rewards.visit_log.arrivals(0, ((4, 4), 0)) == [4]
+    assert rewards.visit_log.departures(0, ((4, 4), 0)) == [10]
+    assert rewards.visit_log.arrivals(0, ((3, 3), 3)) == [10]
+    assert rewards.visit_log.departures(0, ((3, 3), 3)) == []
 
     # on time only at target
     assert rewards.cumulate(*collect) == (1, 3)
@@ -898,7 +907,7 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
 
     # the previously-missing entry: departure from the last intermediate stop before the target.
-    assert rewards.departures[0][((2, 2), 2)] == [5]
+    assert rewards.visit_log.departures(0, ((2, 2), 2)) == [5]
 
     n_stops_on_time, n_stops = rewards.end_of_episode_reward(agent=agent, distance_map=distance_map, elapsed_steps=5)
     # initial departure (2) is before its earliest_departure (5), so not on time; intermediate and
@@ -907,7 +916,7 @@ def test_punctuality_rewards_departure_recorded_on_done_with_removal():
 
 
 @pytest.mark.parametrize("rewards,assert_result", [
-    (PunctualityRewards(), lambda rewards, result: rewards.arrivals[0][((3, 3), 3)] == [0]),
+    (PunctualityRewards(), lambda rewards, result: rewards.visit_log.arrivals(0, ((3, 3), 3)) == [0]),
     (DefaultRewards(), lambda rewards, result: (sum(result.values()) if isinstance(result, dict) else result) == 0),
     (BaseDefaultRewards(), lambda rewards, result: (sum(result.values()) if isinstance(result, dict) else result) == 0),
 ])
@@ -961,12 +970,15 @@ def test_punctuality_rewards_single_direction_target_does_not_crash():
     )
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    # the agent's stay at its last stop, as env.step() records it before the agent moves on to its target
+    agent.current_entry_point = ((2, 2), 2)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=9)
     agent.current_entry_point = None
 
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=10)
 
-    assert rewards.arrivals[0][((3, 3), 3)] == [10]
-    assert rewards.departures[0][((2, 2), 2)] == [10]
+    assert rewards.visit_log.arrivals(0, ((3, 3), 3)) == [10]
+    assert rewards.visit_log.departures(0, ((2, 2), 2)) == [10]
 
 
 def test_punctuality_rewards_arrival_recorded_once_per_entry_point():
@@ -986,6 +998,9 @@ def test_punctuality_rewards_arrival_recorded_once_per_entry_point():
     distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
     distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
 
+    # the map entry at the origin, as env.step() records it before the agent moves on
+    agent.current_entry_point = ((0, 0), 0)
+    rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=1)
     agent.old_entry_point = ((0, 0), 0)
     agent.current_entry_point = ((2, 2), 2)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=5)
@@ -995,8 +1010,8 @@ def test_punctuality_rewards_arrival_recorded_once_per_entry_point():
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=6)
     rewards.step_reward(agent=agent, agent_transition_data=None, distance_map=distance_map, elapsed_steps=7)
 
-    assert rewards.arrivals[0][((2, 2), 2)] == [5]
-    assert rewards.departures[0][((0, 0), 0)] == [5]
+    assert rewards.visit_log.arrivals(0, ((2, 2), 2)) == [5]
+    assert rewards.visit_log.departures(0, ((0, 0), 0)) == [5]
 
 
 def test_arrival_recorded_once_per_waypoint():
@@ -1022,7 +1037,7 @@ def test_arrival_recorded_once_per_waypoint():
     # First step at this waypoint - should record arrival
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=10)
     wp = ((5, 5), 0)
-    assert rewards._proxy.arrivals[agent.handle][wp] == [10]
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) == [10]
 
     # Agent dwells at same position for several steps
     agent.old_entry_point = agent.current_entry_point
@@ -1032,7 +1047,7 @@ def test_arrival_recorded_once_per_waypoint():
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=13)
 
     # Arrival time should NOT be updated - still 10
-    assert rewards._proxy.arrivals[agent.handle][wp] == [10], "Arrival should only be recorded once per waypoint"
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) == [10], "Arrival should only be recorded once per waypoint"
 
 
 def test_departure_only_when_moving():
@@ -1054,8 +1069,8 @@ def test_departure_only_when_moving():
     # agent off map
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=1)
     off_wp = (None, 0)
-    assert off_wp not in rewards._proxy.arrivals[agent.handle]
-    assert off_wp not in rewards._proxy.departures[agent.handle]
+    assert rewards._proxy.visit_log.arrivals(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, off_wp) == []
 
     # Agent at initial position
     agent.current_entry_point = ((5, 5), 0)
@@ -1065,10 +1080,10 @@ def test_departure_only_when_moving():
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=2)
 
     wp = ((5, 5), 0)
-    assert off_wp not in rewards._proxy.arrivals[agent.handle]
-    assert off_wp not in rewards._proxy.departures[agent.handle]
-    assert wp in rewards._proxy.arrivals[agent.handle], "Should record arrival when agent enters map"
-    assert wp not in rewards._proxy.departures[agent.handle], "Should not record departure when agent hasn't moved"
+    assert rewards._proxy.visit_log.arrivals(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) != [], "Should record arrival when agent enters map"
+    assert rewards._proxy.visit_log.departures(agent.handle, wp) == [], "Should not record departure when agent hasn't moved"
 
     # Agent moves to new position
     agent.old_entry_point = ((5, 5), 0)
@@ -1076,13 +1091,13 @@ def test_departure_only_when_moving():
 
     # Now departure from old position should be recorded
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=3)
-    assert off_wp not in rewards._proxy.arrivals[agent.handle]
-    assert off_wp not in rewards._proxy.departures[agent.handle]
-    assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves"
-    assert rewards._proxy.departures[agent.handle][wp] == [3]
+    assert rewards._proxy.visit_log.arrivals(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, wp) != [], "Departure should be recorded when agent moves"
+    assert rewards._proxy.visit_log.departures(agent.handle, wp) == [3]
     wp = ((5, 6), 0)
-    assert wp in rewards._proxy.arrivals[agent.handle], "Arrival should be recorded when agent moves"
-    assert rewards._proxy.arrivals[agent.handle][wp] == [3]
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) != [], "Arrival should be recorded when agent moves"
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) == [3]
 
     # Agent arrives at target
     agent.old_entry_point = ((5, 6), 0)
@@ -1090,10 +1105,10 @@ def test_departure_only_when_moving():
 
     # Now departure from old position should be recorded, but no arrival for None
     rewards.step_reward(agent, transition_data, distance_map, elapsed_steps=4)
-    assert off_wp not in rewards._proxy.arrivals[agent.handle]
-    assert off_wp not in rewards._proxy.departures[agent.handle]
-    assert wp in rewards._proxy.departures[agent.handle], "Departure should be recorded when agent moves off map"
-    assert rewards._proxy.departures[agent.handle][wp] == [4]
+    assert rewards._proxy.visit_log.arrivals(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, off_wp) == []
+    assert rewards._proxy.visit_log.departures(agent.handle, wp) != [], "Departure should be recorded when agent moves off map"
+    assert rewards._proxy.visit_log.departures(agent.handle, wp) == [4]
 
 
 def test_waypoint_comparison_uses_waypoint_objects():
@@ -1119,8 +1134,8 @@ def test_waypoint_comparison_uses_waypoint_objects():
 
     # Check that arrivals dict uses Waypoint as key, not tuple
     wp = ((7, 8), 1)
-    assert wp in rewards._proxy.arrivals[agent.handle], "Should use Waypoint object as key"
-    assert (7, 8) not in rewards._proxy.arrivals[agent.handle], "Should not have tuple as key"
+    assert rewards._proxy.visit_log.arrivals(agent.handle, wp) != [], "Should use Waypoint object as key"
+    assert rewards._proxy.visit_log.arrivals(agent.handle, (7, 8)) == [], "Should not have tuple as key"
 
 
 def test_ecml2026_rewards_normalization():
@@ -1294,8 +1309,8 @@ def test_multicell_station_not_served_when_only_rolled_through(arrival, state_at
 def test_multicell_station_on_time_halt_forgives_later_revisit(revisit_cell, revisit_halts):
     """Once the station was served within its time window, a later revisit -- rolling through or
     halting again, at the same or another halting cell -- must not incur any penalty.
-    The best time window over all halting visits is deliberately taken (per-visit leniency is a
-    feature); stations are assumed to appear at most once in `agent.waypoints` (domain knowledge)."""
+    The station is listed once in the timetable, so of all halting visits the one with the best time window serves it;
+    the other visits serve no stop."""
     rewards, agent, distance_map = _agent_with_two_cell_intermediate_station(
         latest_arrival_intermediate=11, earliest_departure_intermediate=7)
 
@@ -1320,6 +1335,158 @@ def test_multicell_station_on_time_halt_forgives_later_revisit(revisit_cell, rev
         "A station served on time must stay served regardless of later revisits"
     assert d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] == 0
     assert d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] == 0
+
+
+# stops in timetable order, each with its own halt (issue #557): two stations X and Y, and a cell off both
+STOP_X = Waypoint((2, 2), 2)
+STOP_Y = Waypoint((4, 4), 2)
+OFF_STOPS = Waypoint((1, 3), 0)
+ORIGIN = Waypoint((0, 0), 0)
+
+
+def _agent_with_stops(stops, latest_arrivals, earliest_departures, rewards_cls, intermediate_not_served_penalty=INTERMEDIATE_NOT_SERVED_PENALTY):
+    """An agent with the given intermediate stops (one waypoint group each) and their windows, scored when it reaches its
+    target in step 40 (BaseDefaultRewards) or at the end of the episode (PunctualityRewards)."""
+    if rewards_cls == PunctualityRewards:
+        rewards = PunctualityRewards()
+    else:
+        rewards = rewards_cls(intermediate_not_served_penalty=intermediate_not_served_penalty,
+                              intermediate_late_arrival_penalty_factor=LATE_ARRIVAL_FACTOR)
+    agent = EnvAgent(initial_entry_point=(ORIGIN.position, ORIGIN.direction),
+                     targets={((9, 9), d) for d in Grid4TransitionsEnum},
+                     current_entry_point=None,
+                     target_entry_point=None if rewards_cls == PunctualityRewards else ((9, 9), 0),
+                     state_machine=TrainStateMachine(initial_state=TrainState.MOVING),
+                     earliest_departure=3,
+                     latest_arrival=50,
+                     waypoints=[[ORIGIN]] + [[stop] for stop in stops] + [[Waypoint((9, 9), None)]],
+                     waypoints_earliest_departure=[3] + earliest_departures + [None],
+                     waypoints_latest_arrival=[None] + latest_arrivals + [50],
+                     arrival_time=40)
+    distance_map = DistanceMap(agents=[agent], env_height=20, env_width=20)
+    distance_map.reset(agents=[agent], rail=RailGridTransitionMap(20, 20, transitions=RailEnvTransitions()))
+    return rewards, agent, distance_map
+
+
+def _halt_at(rewards, agent, distance_map, stop: Waypoint, arrival: int):
+    """Enter `stop` and halt there in step `arrival`, start in the next step, leave it the step after: departure `arrival + 1`."""
+    _visit(rewards, agent, distance_map, stop, TrainState.STOPPED, arrival, OFF_STOPS)
+    _visit(rewards, agent, distance_map, stop, TrainState.MOVING, arrival + 1, stop)
+    _visit(rewards, agent, distance_map, OFF_STOPS, TrainState.MOVING, arrival + 2, stop)
+
+
+def _scored(rewards, agent, distance_map):
+    """(stops not served penalty, late arrival penalty, early departure penalty) for BaseDefaultRewards, (stops on time,
+    stops) for PunctualityRewards."""
+    if isinstance(rewards, PunctualityRewards):
+        return rewards.end_of_episode_reward(agent, distance_map, elapsed_steps=45)
+    d = rewards.step_reward(agent, None, distance_map, elapsed_steps=40)
+    return (d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value], d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value],
+            d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value])
+
+
+@pytest.mark.parametrize("rewards_cls,expected", [
+    # only one of the two stops counts: Y halted before X cannot serve Y, which comes after X
+    (BaseDefaultRewards, (-INTERMEDIATE_NOT_SERVED_PENALTY, 0, 0)),
+    # neither the origin nor the target is visited, so only intermediate stops can be on time
+    (PunctualityRewards, (1, 4)),
+])
+def test_stops_served_in_timetable_order(rewards_cls, expected):
+    """Stops X, then Y; the agent halts at Y first, then at X."""
+    rewards, agent, distance_map = _agent_with_stops([STOP_X, STOP_Y], [50, 50], [0, 0], rewards_cls)
+    _halt_at(rewards, agent, distance_map, STOP_Y, 8)
+    _halt_at(rewards, agent, distance_map, STOP_X, 12)
+    assert _scored(rewards, agent, distance_map) == expected
+
+
+@pytest.mark.parametrize("rewards_cls,expected_one_halt,expected_two_halts", [
+    (BaseDefaultRewards, (-INTERMEDIATE_NOT_SERVED_PENALTY, 0, 0), (0, 0, 0)),
+    (PunctualityRewards, (1, 4), (2, 4)),
+])
+@pytest.mark.parametrize("halts", [1, 2])
+def test_one_halt_serves_one_stop(rewards_cls, expected_one_halt, expected_two_halts, halts):
+    """Two consecutive stops at the same station X: one halt serves one of them, a second halt (after leaving and coming
+    back) the other."""
+    rewards, agent, distance_map = _agent_with_stops([STOP_X, STOP_X], [50, 50], [0, 0], rewards_cls)
+    for i in range(halts):
+        _halt_at(rewards, agent, distance_map, STOP_X, 8 + 4 * i)
+    assert _scored(rewards, agent, distance_map) == (expected_one_halt if halts == 1 else expected_two_halts)
+
+
+@pytest.mark.parametrize("rewards_cls,expected", [
+    (BaseDefaultRewards, (0, 0, 0)),
+    (PunctualityRewards, (3, 5)),
+])
+def test_round_trip_serves_a_station_twice(rewards_cls, expected):
+    """Stops X, Y, X: the second stop at X is served by the second halt there, with its own window - the first halt
+    there would depart too early for it (9 < 15)."""
+    rewards, agent, distance_map = _agent_with_stops([STOP_X, STOP_Y, STOP_X], [10, 14, 18], [9, 13, 15], rewards_cls)
+    _halt_at(rewards, agent, distance_map, STOP_X, 8)
+    _halt_at(rewards, agent, distance_map, STOP_Y, 12)
+    _halt_at(rewards, agent, distance_map, STOP_X, 16)
+    assert _scored(rewards, agent, distance_map) == expected
+
+
+@pytest.mark.parametrize("intermediate_not_served_penalty,expected", [
+    # not serving the stop would cost only 1 < 3.6, still it counts as served late: serving comes first
+    (1, (0, pytest.approx(-3.6), 0)),
+    (INTERMEDIATE_NOT_SERVED_PENALTY, (0, pytest.approx(-3.6), 0)),
+])
+def test_stop_served_late_rather_than_not_served(intermediate_not_served_penalty, expected):
+    """Serving as many stops as possible comes first: a stop served 18 steps late (penalty 18 * 0.2 = 3.6) counts as
+    served late, also when not serving it would cost less - the late penalty is not capped at the not served penalty."""
+    rewards, agent, distance_map = _agent_with_stops([STOP_X], [2], [0], BaseDefaultRewards, intermediate_not_served_penalty=intermediate_not_served_penalty)
+    _halt_at(rewards, agent, distance_map, STOP_X, 20)
+    assert _scored(rewards, agent, distance_map) == expected
+
+
+@pytest.mark.parametrize("rewards_cls,expected", [
+    (BaseDefaultRewards, (0, 0, 0)),
+    # the origin is on time as well: left in step 6 >= its earliest departure 3
+    (PunctualityRewards, (2, 3)),
+])
+def test_halt_at_the_origin_serves_the_first_stop(rewards_cls, expected):
+    """A first stop at the origin's entry point is served by the halt at the origin before the departure."""
+    rewards, agent, distance_map = _agent_with_stops([ORIGIN], [10], [5], rewards_cls)
+    # enter the map at the origin and halt there in step 3, start in step 5, leave in step 6
+    agent.old_entry_point = None
+    agent.current_entry_point = (ORIGIN.position, ORIGIN.direction)
+    rewards.step_reward(agent, _stopped_here_transition_data(), distance_map, 3)
+    rewards.step_reward(agent, _stopped_here_transition_data(), distance_map, 4)
+    _visit(rewards, agent, distance_map, ORIGIN, TrainState.MOVING, 5, ORIGIN)
+    _visit(rewards, agent, distance_map, OFF_STOPS, TrainState.MOVING, 6, ORIGIN)
+    assert _scored(rewards, agent, distance_map) == expected
+
+
+def _visits(*entry_points):
+    return [Visit(entry_point, arrival=10 * i, departure=10 * i + 5, halted=True) for i, entry_point in enumerate(entry_points)]
+
+
+@pytest.mark.parametrize("stops,visits,expected", [
+    # in order
+    ([{"X"}, {"Y"}], _visits("X", "Y"), [0, 1]),
+    # wrong order: one of the two; on a tie the earlier stop is served
+    ([{"X"}, {"Y"}], _visits("Y", "X"), [1, None]),
+    # shared entry point: one visit per stop
+    ([{"X"}, {"X"}], _visits("X"), [0, None]),
+    ([{"X"}, {"X"}], _visits("X", "X"), [0, 1]),
+    # several visits fit one stop: the earliest
+    ([{"X"}], _visits("X", "X"), [0]),
+    # a visit at no stop is skipped
+    ([{"X"}, {"Y"}], _visits("Z", "X", "Z", "Y"), [1, 3]),
+    # alternatives: either entry point of a group serves it
+    ([{"X", "W"}, {"Y"}], _visits("W", "Y"), [0, 1]),
+])
+def test_match_stops_order_and_one_visit_per_stop(stops, visits, expected):
+    matching = _match_stops(stops, visits, cost=lambda stop_index, visit: (0,), not_served_cost=(1,))
+    assert matching == [visits[i] if i is not None else None for i in expected]
+
+
+def test_match_stops_least_cost():
+    """With two visits fitting a stop, the cheaper one is taken, also when it is the later one."""
+    visits = _visits("X", "X")
+    matching = _match_stops([{"X"}], visits, cost=lambda stop_index, visit: (0, 5 if visit is visits[0] else 1), not_served_cost=(1, 0))
+    assert matching == [visits[1]]
 
 
 """
