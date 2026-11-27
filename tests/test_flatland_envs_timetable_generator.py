@@ -1,12 +1,20 @@
+import math
+
 import numpy as np
+import pytest
 from numpy.random import RandomState
 
 from flatland.core.grid.grid4 import Grid4TransitionsEnum
+from flatland.env_generation.env_generator import env_generator
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
 from flatland.envs.grid.rail_env_grid import RailEnvTransitions
+from flatland.envs.rail_env_action import RailEnvActions
+from flatland.envs.rail_env_policies import ShortestPathPolicy
+from flatland.envs.rail_env_shortest_paths import get_k_shortest_paths
 from flatland.envs.rail_grid_transition_map import RailGridTransitionMap
 from flatland.envs.rail_trainrun_data_structures import Waypoint
+from flatland.envs.rewards import DefaultRewards
 from flatland.envs.timetable_generators import timetable_generator
 
 
@@ -601,7 +609,145 @@ def test_timetable_generator_intermediate():
         for ed, la in zip(eds[1:-1], las[1:-1]):
             assert ed <= la
 
-    assert timetable.earliest_departures == [[108, 188, None], [98, 204, None], [14, 125, None], [70, 218, None], [94, 130, None], [16, 48, None],
-                                             [17, 127, None], [107, 174, None], [234, 254, None], [178, 276, None]]
-    assert timetable.latest_arrivals == [[None, 261, 318], [None, 292, 373], [None, 233, 378], [None, 300, 322], [None, 201, 298], [None, 128, 257],
-                                         [None, 221, 321], [None, 242, 297], [None, 301, 332], [None, 343, 364]]
+    assert timetable.earliest_departures == [[108, 188, None], [34, 142, None], [14, 125, None], [70, 218, None], [94, 130, None], [16, 48, None],
+                                             [17, 127, None], [107, 174, None], [208, 228, None], [130, 228, None]]
+    assert timetable.latest_arrivals == [[None, 258, 315], [None, 227, 308], [None, 191, 206], [None, 291, 291], [None, 198, 295], [None, 125, 254],
+                                         [None, 218, 318], [None, 239, 294], [None, 272, 303], [None, 292, 313]]
+
+
+def _env_with_three_segments(speed: float):
+    env, _, _ = env_generator(seed=42, n_agents=3, line_length=4, n_cities=6, x_dim=60, y_dim=60, speed_ratios={speed: 1.0})
+    assert all(len(a.waypoints) == 4 for a in env.agents)
+    return env
+
+
+@pytest.mark.parametrize("speed", [0.5, 0.75])
+def test_timetable_intermediate_times_divided_by_speed(speed):
+    """
+    The same lines at speed 1 and at a lower speed. At speed 1, each segment takes its length (sum of the edge lengths
+    plus 1) in steps. At the lower speed, it takes its length divided by the speed, rounded up per segment: at 3/4,
+    not the rounded travel time so far. The intermediate times count from the start's earliest departure, but from 1
+    for an earliest departure of 0, and back from the target's latest arrival.
+    """
+    unit_env = _env_with_three_segments(1.0)
+    env = _env_with_three_segments(speed)
+    for unit_agent, agent in zip(unit_env.agents, env.agents):
+        assert agent.waypoints == unit_agent.waypoints
+        unit_eds = unit_agent.waypoints_earliest_departure
+        unit_las = unit_agent.waypoints_latest_arrival
+        segments = [unit_eds[1] - max(unit_eds[0], 1), unit_eds[2] - unit_eds[1], unit_las[3] - unit_las[2]]
+
+        max_speed = agent.speed_counter.max_speed
+        steps = [math.ceil(length / max_speed) for length in segments]
+        ed = agent.waypoints_earliest_departure[0]
+        start = max(ed, 1)
+        la = agent.waypoints_latest_arrival[-1]
+        assert agent.waypoints_earliest_departure == [ed, start + steps[0], start + steps[0] + steps[1], None]
+        assert agent.waypoints_latest_arrival == [None, la - steps[1] - steps[2], la - steps[2], la]
+
+
+class _StopServingPolicy(ShortestPathPolicy):
+    """
+    Drives a single agent along its shortest route through all its stops, halts at each stop and starts again at the
+    stop's earliest departure. Records the step it enters each stop and the step it starts moving there.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.arrivals = []
+        self.starts = []
+
+    def _update_agent(self, agent, env):
+        if agent.handle not in self._shortest_paths and agent.current_entry_point is None and not self.arrivals:
+            # shortest route through the stops: the entry point at each stop chosen jointly
+            routes = {agent.waypoints[0][0]: [agent.waypoints[0][0]]}
+            for group in agent.waypoints[1:]:
+                reached = {}
+                for wp in group:
+                    for source, route in routes.items():
+                        paths = get_k_shortest_paths(None, source.position, source.direction, wp.position, target_direction=wp.direction,
+                                                     rail=env.rail)
+                        if paths and (wp not in reached or len(route) + len(paths[0]) - 1 < len(reached[wp])):
+                            reached[wp] = route + list(paths[0][1:])
+                routes = reached
+            route = min(routes.values(), key=len)
+            self._shortest_paths[agent.handle] = route
+            # cells crossed per segment up to each stop
+            indices = [0]
+            for group in agent.waypoints[1:-1]:
+                indices.append(next(i for i in range(indices[-1] + 1, len(route)) if route[i].position == group[0].position))
+            self.cells = [b - a for a, b in zip(indices, indices[1:])]
+            self.stops = [(group[0].position, ed) for group, ed in zip(agent.waypoints[1:-1], agent.waypoints_earliest_departure[1:-1])]
+        super()._update_agent(agent, env)
+
+    def act_many(self, handles, observations, **kwargs):
+        actions = super().act_many(handles, observations, **kwargs)
+        env = observations[0]
+        agent = env.agents[0]
+        if agent.current_entry_point is None or len(self.starts) == len(self.stops):
+            return actions
+        position, ed = self.stops[len(self.starts)]
+        speed_counter = agent.speed_counter
+        if agent.current_entry_point[0] == position:
+            if len(self.arrivals) == len(self.starts):
+                self.arrivals.append(env._elapsed_steps)
+            if env._elapsed_steps + 1 < ed:
+                actions[0] = RailEnvActions.STOP_MOVING
+            else:
+                self.starts.append(env._elapsed_steps + 1)
+        else:
+            path = self._shortest_paths.get(0, [])
+            if len(path) > 1 and path[1].position == position and speed_counter.distance + speed_counter.speed >= speed_counter.edge_length:
+                # crossing into the stop in this step: brake, so the agent halts there
+                actions[0] = RailEnvActions.STOP_MOVING
+        return actions
+
+
+@pytest.mark.parametrize("speed", [1.0, 0.75, 0.5, 0.25])
+@pytest.mark.parametrize("seed,line_length", [
+    # an earliest departure of 0 at speed 1
+    (6, 3),
+    # the shortest route to the stop arrives in the other direction than the stop's first alternative
+    (11, 3),
+    (4, 4),
+    (12, 4),
+])
+def test_timetable_can_be_kept_by_a_single_agent(seed, line_length, speed):
+    """
+    One agent on a generated line with intermediate stops, without malfunctions, at max speed 1, 3/4, 1/2 or 1/4.
+
+    - It drives the shortest route through all its stops, halts at each stop and starts moving again in the step of the
+      stop's earliest departure.
+    - Each segment crosses n cells (unit edge lengths), so its length is L = n + 1. The stop's earliest departure is
+      ceil(L / v) steps after the start of the segment, at max speed v. From a halt at the beginning of a cell, or from
+      entering the map, the agent enters the stop after ceil(n / v) steps: ceil(L / v) - ceil(n / v) steps before the
+      earliest departure (1 step at max speed 1, k steps at 1/k), so it can halt there.
+    - At max speed 1 and 1/k, the agent halts at the beginning of the stop's cell, so the margin is exact. At 3/4, it may
+      halt further into the cell and reach the next stop one step earlier.
+    - It reaches its target by its latest arrival and gets no penalty.
+    """
+    rewards = DefaultRewards()
+    env, _, _ = env_generator(seed=seed, n_agents=1, line_length=line_length, n_cities=line_length + 2, x_dim=60, y_dim=60,
+                              speed_ratios={speed: 1.0}, malfunction_interval=0, rewards=rewards)
+    agent = env.agents[0]
+    assert len(agent.waypoints) == line_length
+    policy = _StopServingPolicy()
+    for _ in range(env._max_episode_steps):
+        _, _, dones, _ = env.step(policy.act_many([0], [env]))
+        if dones["__all__"]:
+            break
+
+    eds = agent.waypoints_earliest_departure[1:-1]
+    assert len(policy.arrivals) == len(eds)
+    max_speed = agent.speed_counter.max_speed
+    segment_starts = [max(agent.waypoints_earliest_departure[0], 1)] + eds[:-1]
+    for start, cells, arrival, ed in zip(segment_starts, policy.cells, policy.arrivals, eds):
+        if (1 / max_speed).denominator == 1:
+            assert arrival == start + math.ceil(cells / max_speed)
+        else:
+            assert arrival <= start + math.ceil(cells / max_speed)
+        assert ed == start + math.ceil((cells + 1) / max_speed)
+    assert policy.starts == eds
+    assert agent.arrival_time is not None and agent.arrival_time <= agent.latest_arrival
+    penalties = rewards._proxy._agent_done_or_max_episode_steps_reward(agent, env.distance_map, env._elapsed_steps, rewards._proxy.empty())
+    assert all(v == 0 for v in penalties.values()), penalties

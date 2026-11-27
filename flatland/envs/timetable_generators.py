@@ -1,4 +1,5 @@
 """Timetable generators: Railway Undertaking (RU) / Eisenbahnverkehrsunternehmen (EVU)."""
+import itertools
 import math
 import pickle
 import warnings
@@ -8,7 +9,6 @@ from typing import List, Union
 import numpy as np
 from numpy.random.mtrand import RandomState
 
-from flatland.core.grid.grid4 import Grid4TransitionsEnum
 from flatland.envs import persistence
 from flatland.envs.agent_utils import EnvAgent
 from flatland.envs.grid.distance_map import DistanceMap
@@ -19,6 +19,74 @@ def _shortest_path_length_or_zero(distance_map: DistanceMap, agent: EnvAgent) ->
     length = distance_map.shortest_path_length(agent)
     # whole steps, as timetable entries are steps - rounded up for fractional edge lengths
     return int(math.ceil(length)) if length is not None else 0
+
+
+def _segment_lengths_through_stops(agents: List[EnvAgent], distance_map: DistanceMap) -> List[List[int]]:
+    """
+    Segment lengths of each agent's shortest route through its waypoint groups, as `shortest_path_length()` (edge
+    lengths plus 1, rounded up to whole steps) per segment.
+
+    The route starts at the initial entry point, serves each intermediate group at one of its entry points and ends at
+    the target's position, in any direction. A stop is served at an entry point (position and direction), as the rewards check it, and the
+    agent leaves a stop in the direction it arrived in, so the entry points are chosen jointly over the whole route.
+    If none of a group's entry points is reachable, the group's positions count in any direction. If none of them is
+    reachable either, the segment counts 0, as an unreachable target does.
+    """
+    rail = distance_map.rail
+    # one distance map row per distinct set of entry points to reach (a fake agent targeting them)
+    rows = {}
+    routes = []
+    for a in agents:
+        groups = []
+        for group in a.waypoints[1:-1]:
+            listed = sorted({(wp.position, wp.direction) for wp in group})
+            any_direction = sorted({(wp.position, d) for wp in group for d in range(4)
+                                    if rail.is_valid_entry_point((wp.position, d))})
+            groups.append([[(ep, rows.setdefault(frozenset([ep]), len(rows))) for ep in alternatives]
+                           for alternatives in (listed, any_direction)])
+        # the last segment ends at the target in any direction, as on the target's position the agent is done
+        targets = frozenset((wp.position, d) for wp in a.waypoints[-1] for d in range(4))
+        groups.append([[(targets, rows.setdefault(targets, len(rows)))]])
+        routes.append(groups)
+    fake_agents = [EnvAgent(handle=row, initial_entry_point=None, current_entry_point=None, old_entry_point=None,
+                            targets=set(targets)) for targets, row in rows.items()]
+    distances = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
+    distances.reset(fake_agents, rail)
+
+    segment_lengths = []
+    for a, groups in zip(agents, routes):
+        # cheapest route to each entry point of the groups so far: (total length, segment lengths)
+        best = {(a.waypoints[0][0].position, a.waypoints[0][0].direction): (0, [])}
+        for alternatives in groups:
+            reached = {}
+            for candidates in alternatives:
+                reached = _extend(best, candidates, distances)
+                if reached:
+                    break
+            if not reached:
+                # nothing of the group reachable: count the segment as 0 from the cheapest route so far
+                total, lengths = min(best.values(), key=lambda b: b[0])
+                reached = {target: (total, lengths + [0]) for target, _ in alternatives[0]}
+            best = reached
+        segment_lengths.append(min(best.values(), key=lambda b: b[0])[1])
+    return segment_lengths
+
+
+def _extend(best: dict, candidates: list, distances: DistanceMap) -> dict:
+    """The cheapest extension of the routes in `best` to each of the candidates (entry point or target set, row)."""
+    reached = {}
+    for target, row in candidates:
+        for source, (total, lengths) in best.items():
+            if source == target or (isinstance(target, frozenset) and source in target):
+                length = 1
+            else:
+                distance = distances.geometric_distance(source, row)
+                if distance == math.inf:
+                    continue
+                length = int(math.ceil(distance + 1))
+            if target not in reached or total + length < reached[target][0]:
+                reached[target] = (total + length, lengths + [length])
+    return reached
 
 
 def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
@@ -36,13 +104,25 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     returns:
         Timetable with the latest_arrivals, earliest_departures and max_episdode_steps
 
+    A single agent without malfunctions, with the default acceleration_delta=1 and braking_delta=-1, can keep the
+    timetable: driving the shortest route through its stops at max speed v, it enters each stop at least
+    ceil(L / v) - ceil((L - 1) / v) >= 1 steps before the stop's earliest departure (L: the segment's length, see
+    below), exactly 1 step at max speed 1 and n steps at 1/n. It can halt there, start moving again at the earliest
+    departure and reach its target by its latest arrival. Not if its route to a stop passes its
+    target, where it is done before serving the stop (#557), and not with other acceleration and braking deltas, which
+    the timetable generator doesn't get (#587).
+
     N.B. travel times are a heuristic: each segment (between consecutive waypoints) counts the sum of its edge
     lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`), rounded up to whole steps. The
-    total, divided by the agent's max speed, determines max_episode_steps, the departure window and latest arrival;
-    intermediate waypoint times add the segment lengths without dividing by the speed. Hence the step onto the map is
-    counted per segment and scaled by the speed, giving slow agents and agents with intermediate waypoints some extra
-    slack in total, whereas slow agents' intermediate waypoint times are relatively tight. See
-    `EnvAgent.get_travel_time_on_shortest_path()` for the travel time used for rewards.
+    segments follow the shortest route through the stops, with each stop's entry point (position and direction) chosen
+    over the whole route (see `_segment_lengths_through_stops()`). The total, divided by the agent's max speed,
+    determines max_episode_steps, the departure window and latest arrival. Each segment's travel time is its length
+    divided by the max speed and rounded up on its own, as the agent starts each segment from a halt. The intermediate
+    earliest departures add them up from the earliest departure, counted from step 1 for an earliest departure of 0 as
+    the agent enters the map in step 1 at the earliest. The intermediate latest arrivals subtract them from the latest
+    arrival. Hence the step onto the map is counted per segment and scaled by the speed: the +1 stands for the halt at
+    a stop, and gives slow agents some extra slack (#544). See `EnvAgent.get_travel_time_on_shortest_path()` for the
+    travel time used for rewards.
     """
     # max_episode_steps calculation
     if agents_hints:
@@ -66,28 +146,7 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
     mean_shortest_path_multiplier = 0.2
 
     if len(agents[0].waypoints) > 1:
-        # distance for intermediates parts and sum up
-        line_length = len(agents[0].waypoints) - 1
-        fake_agents = []
-        for i in range(line_length):
-            for a in agents:
-                waypoints = a.waypoints
-
-                fake_agents.append(EnvAgent(
-                    handle=i * num_agents + a.handle,
-                    initial_entry_point=(waypoints[i][0].position, waypoints[i][0].direction),
-                    # N.B. routing flexibility is ignored by this timetable generator
-                    current_entry_point=(waypoints[i][0].position, waypoints[i][0].direction),
-                    old_entry_point=None,
-                    targets={(waypoints[i + 1][0].position, d) for d in Grid4TransitionsEnum},
-                ))
-        distance_map_with_intermediates = DistanceMap(fake_agents, distance_map.env_height, distance_map.env_width)
-        distance_map_with_intermediates.reset(fake_agents, distance_map.rail)
-
-        shortest_path_segment_lengths = [[] for _ in range(num_agents)]
-        for fake_agent in fake_agents:
-            shortest_path_segment_lengths[fake_agent.handle % num_agents].append(
-                _shortest_path_length_or_zero(distance_map_with_intermediates, fake_agent))
+        shortest_path_segment_lengths = _segment_lengths_through_stops(agents, distance_map)
         shortest_paths_lengths = [sum(l) for l in shortest_path_segment_lengths]
     else:
         shortest_paths_lengths = [_shortest_path_length_or_zero(distance_map, agent) for agent in distance_map.agents]
@@ -124,16 +183,15 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
 
         agent.earliest_departure = earliest_departure
         agent.latest_arrival = latest_arrival
-        ed = earliest_departure
-        eds = [earliest_departure]
-        for l in shortest_path_segment_lengths[agent.handle]:
-            ed += l
-            eds.append(ed)
-        la = latest_arrival
-        las = [latest_arrival]
-        for l in reversed(shortest_path_segment_lengths[agent.handle]):
-            la -= l
-            las.insert(0, la)
+        # intermediate times: each segment's travel time divided by the speed and rounded up on its own, so the agent has
+        # the whole steps it needs for each segment from a halt (rounding the sum can leave a segment one step short);
+        # exact, as the speed is a Fraction and the segment lengths are whole numbers
+        speed = agent_speeds[agent.handle]
+        steps = [math.ceil(length / speed) for length in shortest_path_segment_lengths[agent.handle]]
+        # an earliest departure of 0 lets the agent enter the map in step 1 only, as 1 does
+        start = max(earliest_departure, 1)
+        eds = [earliest_departure] + [start + done for done in itertools.accumulate(steps)]
+        las = [latest_arrival - sum(steps[i:]) for i in range(len(steps))] + [latest_arrival]
         eds[-1] = None
         las[0] = None
         earliest_departures.append(eds)

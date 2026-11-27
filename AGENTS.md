@@ -279,9 +279,11 @@ unit-edge default. `crossed` is the caller's decision that the agent crossed int
   identical to unit lengths.
 - Lengths are set once per `reset()` (rail generator → transition map → distance map reset) and must not change
   afterwards: derived state (distance map, timetable, on-map agents' `speed_counter.edge_length`) is not updated.
-- `timetable_generator`'s travel times are a heuristic (+1 per segment, the total divided by the agent's speed,
-  intermediate waypoint times not), with segment lengths rounded up so timetable entries stay whole steps. This is
-  documented, not to be "fixed": changing it changes every generated timetable.
+- `timetable_generator`'s travel times count each segment's lengths plus 1 (a heuristic: the +1 stands for the step
+  onto the map, or the halt at an intermediate stop), with segment lengths rounded up so timetable entries stay whole
+  steps. The total is divided by the agent's speed; each segment's travel time is divided by it and rounded up on its
+  own for the intermediate waypoint times, so a single agent can keep them. The +1 per segment is documented, not to
+  be "fixed" on the side: changing it changes every generated timetable.
   `EnvAgent.get_travel_time_on_shortest_path()` (rewards) has the analogous map-entry-step issue, tracked in
   [#544](https://github.com/flatland-association/flatland-rl/issues/544) as an opt-in flag with the default
   unchanged.
