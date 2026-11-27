@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List, Iterator, NamedTuple
+from typing import Generic, TypeVar, Tuple, Dict, Set, Optional, List, Iterator, NamedTuple, Callable
 
 import numpy as np
 from fastenum import fastenum
@@ -102,10 +102,6 @@ class Rewards(Generic[RewardT]):
         return zip(agent_waypoints[1:-1], agent.waypoints_latest_arrival[1:-1], agent.waypoints_earliest_departure[1:-1])
 
 
-def defaultdict_list():
-    return defaultdict(lambda: [])
-
-
 class PendingHalt(NamedTuple):
     """An agent's last halt at an entry point it has not left yet."""
     entry_point: object
@@ -129,7 +125,7 @@ class DepartureClock:
       earliest departure departs on time. Whether the stop counts as served is not decided here:
       :class:`BaseDefaultRewards` requires a halt without malfunction for that, :class:`PunctualityRewards` none.
 
-    Each reward object keeps its own clock. Per step and agent, call :meth:`departure` (only when a departure is
+    Each :class:`VisitLog` keeps its own clock. Per step and agent, call :meth:`departure` (only when a departure is
     booked) before :meth:`record`, so that a halt in the new cell does not date the departure from the old one.
     """
 
@@ -158,10 +154,6 @@ class DepartureClock:
         if halt is not None and halt.entry_point == agent.old_entry_point:
             return halt.elapsed_steps + 1
         return elapsed_steps
-
-    def forget(self, agent: EnvAgent) -> None:
-        """Drops the agent's last halt, when it left the entry point without a departure being booked."""
-        self._pending_halts.pop(agent.handle, None)
 
 
 class DefaultPenalties(fastenum.Enum):
@@ -194,6 +186,110 @@ def _is_halt_serving_stop(agent: EnvAgent, agent_transition_data: Optional[Agent
     return agent_transition_data.candidate_speed == 0 or not movement_allowed
 
 
+class Visit(NamedTuple):
+    """
+    An agent's stay at one entry point, from entering it to leaving it. One entry point can have several visits.
+
+    - ``arrival``: the step the agent entered the entry point (for the initial entry point, the step it entered the map).
+    - ``departure``: the step it left, dated by :class:`DepartureClock`; ``None`` while it is still there.
+    - ``halted``: whether it halted there in a way that serves a stop (:func:`_is_halt_serving_stop`).
+    """
+    entry_point: object
+    arrival: int
+    departure: Optional[int]
+    halted: bool
+
+
+class VisitLog:
+    """
+    Keeps each agent's visits of entry points in time order (:class:`Visit`), the bookkeeping that both
+    :class:`BaseDefaultRewards` and :class:`PunctualityRewards` judge the timetable by. Each reward object keeps its own
+    log; it is not persisted, as rewards are not.
+
+    Call :meth:`record` once per step and agent. An agent removed from the map at its target stays at its target entry
+    point.
+    """
+
+    def __init__(self):
+        # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
+        self.visits: Dict[AgentHandle, List[Visit]] = defaultdict(list)
+        # dates the departures: the step after the last halt at an entry point, see DepartureClock
+        self._departure_clock = DepartureClock()
+
+    def record(self, agent: EnvAgent, agent_transition_data: Optional[AgentTransitionData], elapsed_steps: int) -> None:
+        visits = self.visits[agent.handle]
+        # off the map after reaching the target (removed there), the agent is at its target entry point
+        entry_point = agent.current_entry_point if agent.current_entry_point is not None else agent.target_entry_point
+        if entry_point is not None and (len(visits) == 0 or visits[-1].entry_point != entry_point):
+            # entered another entry point (or the map): leave the previous one, if any
+            if len(visits) > 0 and visits[-1].departure is None:
+                visits[-1] = visits[-1]._replace(departure=self._departure_clock.departure(agent, elapsed_steps))
+            visits.append(Visit(entry_point, elapsed_steps, None, False))
+        elif entry_point is None and agent.old_entry_point is not None and len(visits) > 0 and visits[-1].departure is None:
+            # left the map
+            visits[-1] = visits[-1]._replace(departure=self._departure_clock.departure(agent, elapsed_steps))
+        if _is_halt_serving_stop(agent, agent_transition_data) and len(visits) > 0 and visits[-1].entry_point == agent.current_entry_point:
+            visits[-1] = visits[-1]._replace(halted=True)
+        # after the departure from the old entry point, so that a halt at the new one does not date it
+        self._departure_clock.record(agent, agent_transition_data, elapsed_steps)
+
+    def arrivals(self, handle: AgentHandle, entry_point) -> List[int]:
+        """The agent's arrivals at the entry point, one per visit, in time order."""
+        return [visit.arrival for visit in self.visits[handle] if visit.entry_point == entry_point]
+
+    def departures(self, handle: AgentHandle, entry_point) -> List[int]:
+        """The agent's departures from the entry point, one per visit it left, in time order."""
+        return [visit.departure for visit in self.visits[handle] if visit.entry_point == entry_point and visit.departure is not None]
+
+    def halted_entry_points(self, handle: AgentHandle) -> Set:
+        """The entry points where the agent halted in a way that serves a stop, in any visit."""
+        return {visit.entry_point for visit in self.visits[handle] if visit.halted}
+
+
+def _match_stops(stops: List[Set], visits: List[Visit], cost: Callable[[int, Visit], Tuple], not_served_cost: Tuple) -> List[Optional[Visit]]:
+    """
+    Matches an agent's intermediate stops, in timetable order, to its visits, in time order: each stop gets at most one
+    visit at one of its entry points, each visit serves at most one stop, and a later stop gets a later visit. Of all
+    such matchings, the one with the least total cost counts; ties go to the earliest visits.
+
+    Costs are tuples, summed element-wise and compared lexicographically: ``cost(stop_index, visit)`` for a stop served
+    by a visit, ``not_served_cost`` for a stop without one.
+
+    Returns, per stop, its visit or ``None``. Dynamic program over (stop, visit), O(stops x visits).
+    """
+    m, n = len(stops), len(visits)
+
+    def add(a: Tuple, b: Tuple) -> Tuple:
+        return tuple(x + y for x, y in zip(a, b))
+
+    # best[j][i]: least cost of stops j.. with visits i..; choice[j][i]: what stop j does there
+    best: List[List[Optional[Tuple]]] = [[None] * (n + 1) for _ in range(m + 1)]
+    choice: List[List[Optional[str]]] = [[None] * (n + 1) for _ in range(m + 1)]
+    best[m] = [tuple(0 for _ in not_served_cost)] * (n + 1)
+    for j in range(m - 1, -1, -1):
+        for i in range(n, -1, -1):
+            # in order of preference on ties: serve stop j with visit i, skip visit i, leave stop j unserved
+            options = []
+            if i < n and visits[i].entry_point in stops[j]:
+                options.append((add(cost(j, visits[i]), best[j + 1][i + 1]), "serve"))
+            if i < n:
+                options.append((best[j][i + 1], "skip"))
+            options.append((add(not_served_cost, best[j + 1][i]), "not_served"))
+            best[j][i], choice[j][i] = min(options, key=lambda option: option[0])
+
+    matching: List[Optional[Visit]] = []
+    i = 0
+    for j in range(m):
+        while choice[j][i] == "skip":
+            i += 1
+        if choice[j][i] == "serve":
+            matching.append(visits[i])
+            i += 1
+        else:
+            matching.append(None)
+    return matching
+
+
 class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     r"""
     Reward Function.
@@ -207,6 +303,14 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
     Tracked separately as :attr:`DefaultPenalties.COLLISION` (motion-check conflict with another agent)
     and :attr:`DefaultPenalties.INVALID_ACTION` (invalid action, today only possible at a symmetric
     switch) - both use the same ``collision_factor``, only the attributed category differs.
+
+    Intermediate stops are served in timetable order, each by its own halt at one of its entry points: one halt serves at
+    most one stop, and a later stop is served by a later halt. Of all such assignments of the agent's halts to its stops,
+    the one that serves the most stops counts, and among those the one with the least penalty; a stop without a halt is
+    not served (see :func:`_match_stops`). A halt at the initial entry point before the departure can serve the first
+    stop. The env enforces only the initial entry point and the target: a target entry point is never an intermediate
+    stop (checked when the agents are created), and an agent whose route passes its target before its last stops is
+    done there, with those stops not served.
 
     Parameters
     ----------
@@ -257,14 +361,8 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         assert self.cancellation_time_buffer >= 0
         assert self.cancellation_factor >= 0
         assert self.target_not_reached_minimum_penalty >= 0
-        # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
-        self.departures: Dict[AgentHandle, Dict[EntryPointT, List[int]]] = defaultdict(defaultdict_list)
-        # entry points where the agent was ever recorded on-map and halted (not malfunctioning)
-        # - a state-machine-independent equivalent of "was ever TrainState.STOPPED here".
-        self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
-        # dates the departures: the step after the last halt at an entry point, see DepartureClock
-        self.departure_clock = DepartureClock()
+        # the agents' visits of entry points, with arrivals, departures and halts, see VisitLog
+        self.visit_log = VisitLog()
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Dict[str, float]:
         d = self.empty()
@@ -295,23 +393,9 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
         # agent.state_machine.previous_state == TrainState.MOVING.
         was_moving = agent_transition_data.speed is not None and agent_transition_data.speed > 0
 
-        if is_on_map:
-            # a halt that serves the stop, see _is_halt_serving_stop - not only the MOVING->STOPPED transition above
-            if _is_halt_serving_stop(agent, agent_transition_data):
-                self.stopped_waypoints[agent.handle].add(agent.current_entry_point)
-
-            # Only record arrival if this is a new waypoint (not dwelling at same position)
-            if agent.old_entry_point != agent.current_entry_point:
-                assert agent.current_entry_point is not None
-                assert elapsed_steps is not None
-                self.arrivals[agent.handle][agent.current_entry_point].append(elapsed_steps)
-                # Only record departure from old position when we arrive from on-map position
-                if agent.old_entry_point is not None:
-                    self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
-        elif agent.old_entry_point is not None:
-            self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
-        # after the departure from the old entry point, so that a halt at the new one does not date it
-        self.departure_clock.record(agent, agent_transition_data, elapsed_steps)
+        # arrivals, departures and halts that serve a stop (see _is_halt_serving_stop - not only the MOVING->STOPPED
+        # transition above), per visit
+        self.visit_log.record(agent, agent_transition_data, elapsed_steps)
 
         if was_moving and is_stopped_now:
             # A stop is "voluntary" if the controller issued STOP_MOVING and braking brings the speed to zero this step,
@@ -388,37 +472,30 @@ class BaseDefaultRewards(Rewards[Dict[str, float]], Generic[EntryPointT]):
             if agent.current_entry_point is not None:
                 d[DefaultPenalties.TARGET_NOT_REACHED.value] = min(-1 * self.target_not_reached_minimum_penalty,
                                                                    agent.get_current_delay(elapsed_steps, distance_map))
-        agent_waypoints = self._sanitize_waypoints(agent.waypoints)
-        for intermediate_alternatives, la, ed in self._intermediate_waypoints(agent_waypoints, agent):
-            agent_arrivals: Set[EntryPointT] = set(self.arrivals[agent.handle])
-            intermediate_alternatives: Set[EntryPointT] = set(intermediate_alternatives)
-            wps_intersection: Set[EntryPointT] = intermediate_alternatives.intersection(agent_arrivals)
-            # a station may consist of several halting cells (alternative waypoints);
-            # the stop is served iff the train stopped at any of them
-            stopped_wps: Set[EntryPointT] = wps_intersection.intersection(self.stopped_waypoints[agent.handle])
-            if len(stopped_wps) == 0:
-                # stop not served or served but not stopped
+        intermediates = list(self._intermediate_waypoints(self._sanitize_waypoints(agent.waypoints), agent))
+
+        def late_and_early(stop_index: int, visit: Visit) -> Tuple[float, float]:
+            _, la, ed = intermediates[stop_index]
+            late = self.intermediate_late_arrival_penalty_factor * min(la - visit.arrival, 0)
+            # a visit not left yet departs too early never
+            early = self.intermediate_early_departure_penalty_factor * min(visit.departure - ed, 0) if visit.departure is not None else 0
+            return late, early
+
+        # serve as many stops as possible, then with the least penalty (rewards are negative penalties): a stop with a halt
+        # pays its full late and early penalty, never capped at the not served penalty
+        matching = _match_stops(
+            stops=[set(alternatives) for alternatives, _, _ in intermediates],
+            visits=[visit for visit in self.visit_log.visits[agent.handle] if visit.halted],
+            cost=lambda stop_index, visit: (0, -sum(late_and_early(stop_index, visit))),
+            not_served_cost=(1, self.intermediate_not_served_penalty),
+        )
+        for stop_index, visit in enumerate(matching):
+            if visit is None:
                 d[DefaultPenalties.INTERMEDIATE_NOT_SERVED.value] += -1 * self.intermediate_not_served_penalty
             else:
-                lates = []
-                earlies = []
-                # take best time window (minimum penalty sum) over all halting cells and all arrival/departures;
-                # cells merely rolled through without stopping do not provide a serving time window
-                for wp in list(stopped_wps):
-                    # `+ [None]` is for arrival but no departure
-                    for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp] + [None]):
-                        # late arrival
-                        lates.append(self.intermediate_late_arrival_penalty_factor * min(la - arrival, 0))
-                        # early departure
-                        # N.B. if arrival but not departure, handled by above by departed but never reached.
-                        if departure is not None:
-                            earlies.append(self.intermediate_early_departure_penalty_factor * min(departure - ed, 0))
-                        else:
-                            earlies.append(0)
-                totals = [l + e for l, e in zip(lates, earlies)]
-                # argmax as penalty is negative reward
-                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += lates[np.argmax(totals)]
-                d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += earlies[np.argmax(totals)]
+                late, early = late_and_early(stop_index, visit)
+                d[DefaultPenalties.INTERMEDIATE_LATE_ARRIVAL.value] += late
+                d[DefaultPenalties.INTERMEDIATE_EARLY_DEPARTURE.value] += early
         return d
 
     def cumulate(self, *rewards: Dict[str, float]) -> Dict[str, float]:
@@ -643,42 +720,22 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
     at the stop, not in a malfunction (see :func:`_is_halt_serving_stop`). An agent that passes the stop without halting,
     or stands there only during a malfunction, does not serve it, also within its time window; one step with speed 0
     after the malfunction ends does.
+
+    Intermediate stops are served in timetable order, each by its own halt at one of its entry points: one halt serves at
+    most one stop, and a later stop is served by a later halt. Of all such assignments of the agent's halts to its stops,
+    the one with the most stops on time counts; a stop without a halt is
+    not served (see :func:`_match_stops`). A halt at the initial entry point before the departure can serve the first
+    stop. The env enforces only the initial entry point and the target: a target entry point is never an intermediate
+    stop (checked when the agents are created), and an agent whose route passes its target before its last stops is
+    done there, with those stops not served.
     """
 
     def __init__(self):
-        # entry points where the agent halted, not in a malfunction (see _is_halt_serving_stop), as BaseDefaultRewards.stopped_waypoints
-        self.stopped_waypoints: Dict[AgentHandle, Set[EntryPointT]] = defaultdict(set)
-        # https://stackoverflow.com/questions/16439301/cant-pickle-defaultdict
-        self.arrivals = defaultdict(defaultdict_list)
-        self.departures = defaultdict(defaultdict_list)
-        # dates the departures: the step after the last halt at an entry point, see DepartureClock
-        self.departure_clock = DepartureClock()
+        # the agents' visits of entry points, with arrivals, departures and halts, as BaseDefaultRewards.visit_log
+        self.visit_log = VisitLog()
 
     def step_reward(self, agent: EnvAgent, agent_transition_data: AgentTransitionData, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
-        # N.B. assuming an entry point is only ever visited once - arrivals[entry_point]/departures[entry_point]
-        # are only ever appended to once, coupled together, so end_of_episode_reward()'s zip(arrivals[wp],
-        # departures[wp]) stays aligned.
-        # `agent.target_entry_point` is set deterministically by AbstractRailEnv.handle_done_state() before
-        # `current_entry_point` is possibly cleared to None (remove_agents_at_target), and stays set
-        # permanently from that step on - see EnvAgent.target_entry_point and agent_utils.virtual_entry_point(),
-        # whose DONE branch this mirrors.
-        if _is_halt_serving_stop(agent, agent_transition_data):
-            self.stopped_waypoints[agent.handle].add(agent.current_entry_point)
-
-        entry_point = agent.target_entry_point if agent.target_entry_point is not None else agent.current_entry_point
-        if entry_point is not None and entry_point not in self.arrivals[agent.handle]:
-            self.arrivals[agent.handle][entry_point].append(elapsed_steps)
-            # N.B. handle_done_state() only ever sets target_entry_point when the agent has actually
-            # reached a target entry point - so old_entry_point being None here (e.g. a zero-distance
-            # journey reaching DONE on the very first on-map step) does not mean the target wasn't
-            # really reached; it just means there's no real "previous stop" to book a departure against.
-            if agent.old_entry_point is not None:
-                self.departures[agent.handle][agent.old_entry_point].append(self.departure_clock.departure(agent, elapsed_steps))
-        elif entry_point is not None and agent.old_entry_point != agent.current_entry_point:
-            # moved to an entry point visited before: no departure is booked, so its last halt must not date a later one
-            self.departure_clock.forget(agent)
-        self.departure_clock.record(agent, agent_transition_data, elapsed_steps)
-
+        self.visit_log.record(agent, agent_transition_data, elapsed_steps)
         return 0, 0
 
     def end_of_episode_reward(self, agent: EnvAgent, distance_map: DistanceMap, elapsed_steps: int) -> Tuple[int, int]:
@@ -687,39 +744,31 @@ class PunctualityRewards(Rewards[Tuple[int, int]]):
         # by design, initial waypoint is unique
         assert len(agent_waypoints[0]) == 1
 
+        visits = self.visit_log.visits[agent.handle]
+        # the origin: the first visit, at the initial entry point, left at or after the earliest departure
         initial_wp = agent_waypoints[0][0]
-        if initial_wp in self.departures[agent.handle]:
-            stop_on_time = False
-            for departure in self.departures[agent.handle][initial_wp]:
-                if departure >= agent.waypoints_earliest_departure[0]:
-                    stop_on_time = True
-                    break
-            if stop_on_time:
-                n_stops_on_time += 1
-        for wps, la, ed in self._intermediate_waypoints(agent_waypoints, agent):
-            stop_on_time = False
-            # has any alternative with any arrival/departure been served on time?
-            for wp in wps:
-                if wp not in self.stopped_waypoints[agent.handle] or wp not in self.departures[agent.handle]:
-                    # intermediate stop not served: the agent did not halt there, or did not leave it
-                    continue
-                for arrival, departure in zip(self.arrivals[agent.handle][wp], self.departures[agent.handle][wp]):
-                    if arrival <= la and departure >= ed:
-                        stop_on_time = True
-                        break
-            if stop_on_time:
-                n_stops_on_time += 1
+        if len(visits) > 0 and visits[0].entry_point == initial_wp and visits[0].departure is not None \
+                and visits[0].departure >= agent.waypoints_earliest_departure[0]:
+            n_stops_on_time += 1
 
-        target_wps = agent_waypoints[-1]
-        # N.B. assuming target is only travelled once:
-        # N.B. filter by membership before subscripting so probing never-visited target directions does not
-        # auto-vivify spurious empty-list entries in the arrivals defaultdict.
-        arrivals_for_handle = self.arrivals[agent.handle]
-        matched_target_wps = [target_wp for target_wp in target_wps if target_wp in arrivals_for_handle]
-        if any(
-            len(arrivals_for_handle[target_wp]) > 0 and arrivals_for_handle[target_wp][0] <= agent.waypoints_latest_arrival[-1]
-            for target_wp in matched_target_wps
-        ):
+        intermediates = list(self._intermediate_waypoints(agent_waypoints, agent))
+
+        def on_time(stop_index: int, visit: Visit) -> bool:
+            _, la, ed = intermediates[stop_index]
+            return visit.departure is not None and visit.arrival <= la and visit.departure >= ed
+
+        # as many stops on time as possible; a stop served late counts as one not served
+        matching = _match_stops(
+            stops=[set(alternatives) for alternatives, _, _ in intermediates],
+            visits=[visit for visit in visits if visit.halted],
+            cost=lambda stop_index, visit: (0 if on_time(stop_index, visit) else 1,),
+            not_served_cost=(1,),
+        )
+        n_stops_on_time += sum(1 for stop_index, visit in enumerate(matching) if visit is not None and on_time(stop_index, visit))
+
+        # the target: entering it makes the agent done, so it has at most one visit there
+        target_wps = set(agent_waypoints[-1])
+        if any(visit.entry_point in target_wps and visit.arrival <= agent.waypoints_latest_arrival[-1] for visit in visits):
             n_stops_on_time += 1
         n_stops = len(agent.waypoints)
         return n_stops_on_time, n_stops
