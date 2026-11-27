@@ -109,12 +109,13 @@ def timetable_generator(agents: List[EnvAgent], distance_map: DistanceMap,
         Timetable with the latest_arrivals, earliest_departures and max_episdode_steps
 
     A single agent without malfunctions, with the default acceleration_delta=1 and braking_delta=-1, can keep the
-    timetable: driving the shortest route through its stops at max speed v, it enters each stop at least
-    ceil(L / v) - ceil((L - 1) / v) >= 1 steps before the stop's earliest departure (L: the segment's length, see
-    below), exactly 1 step at max speed 1 and n steps at 1/n. It can halt there, start moving again at the earliest
-    departure and reach its target by its latest arrival. Not if its route to a stop passes its
-    target, where it is done before serving the stop (#557), and not with other acceleration and braking deltas, which
-    the timetable generator doesn't get (#587).
+    timetable: driving the route the timetable plans (a shortest route through its stops) at max speed v, it enters
+    each stop at least ceil(L / v) - ceil((L - 1) / v) >= 1 steps before the stop's earliest departure (L: the
+    segment's length, see below), with whole edge lengths exactly 1 step at max speed 1 and n steps at 1/n. It can halt
+    there, start moving again at the earliest departure and reach its target by its latest arrival. On another route
+    of the same total length, it may reach a stop later. Not if its route to a stop passes its target, where it is
+    done before serving the stop (#557), and not with other acceleration and braking deltas, which the timetable
+    generator doesn't get (#587).
 
     N.B. travel times are a heuristic: each segment (between consecutive waypoints) counts the sum of its edge
     lengths plus 1, as `len(shortest_path)` (see `DistanceMap.shortest_path_length()`), rounded up to whole steps. The
