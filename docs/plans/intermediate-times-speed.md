@@ -3,8 +3,8 @@
 > **Status:** plan of 2026-11-27, draft. Based on `main` 4856ebfe. Issue
 > [#569](https://github.com/flatland-association/flatland-rl/issues/569) ("timetable_generator: intermediate waypoint
 > times ignore the agent's speed", chenkins, found while reviewing
-> [#542](https://github.com/flatland-association/flatland-rl/pull/542)). Branch `569-intermediate-times-speed`, PR not
-> opened yet. Open questions: none; Q-1–Q-7 decided 2026-11-27. Extended on 2026-11-27 (Q-6): a single agent must be
+> [#542](https://github.com/flatland-association/flatland-rl/pull/542)). Branch `569-intermediate-times-speed`, PR
+> [#588](https://github.com/flatland-association/flatland-rl/pull/588). Open questions: none; Q-1–Q-7 decided 2026-11-27. Extended on 2026-11-27 (Q-6): a single agent must be
 > able to keep the timetable, so the route through the stops and the start in step 1 are fixed here too, and the
 > rounding is per segment (Q-2 revisited).
 >
@@ -82,7 +82,7 @@ Requirements:
 
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
-| flatland-book page on the timetable generator: the guarantee in a box, how the times are computed, speed profiles of one line at several speeds with the earliest and latest times. | Other repo; written alongside, on flatland-book's branch `569-timetable-generator`, which pins flatland-rl to this branch until it is merged. | Q-7 | - | - |
+| flatland-book page on the timetable generator: the guarantee in a box, how the times are computed, speed profiles of one line at several speeds with the earliest and latest times. | Other repo; written alongside, on flatland-book's branch `569-timetable-generator`, which pins flatland-rl to this branch until it is merged. | Q-7 | - | [flatland-book#67](https://github.com/flatland-association/flatland-book/pull/67) |
 | Plan for the env's acceleration and braking deltas, so the guarantee holds for all of them. | Needs an interface decision (passing the deltas to timetable generators) and a route simulation with the `SpeedCounter` formulas. | §2.1 | - | [#587](https://github.com/flatland-association/flatland-rl/issues/587) |
 | Agents done at the target before serving a stop on the way. | Changes `step()`'s contract (env, not timetable). | §2.1 | - | [#557](https://github.com/flatland-association/flatland-rl/issues/557) (measurements added as a comment) |
 | One travel time method for the timetable and the rewards (`get_travel_time_on_shortest_path()` generalised to a source and targets, cumulative rounding), with #544's opt-in for the step onto the map; decide there whether the timetable follows it. | Changes `EnvAgent` and `rewards.py`, the files of the open reward PRs #584 and #585 (and #571 rebuilds `EnvAgent`). #544 is an opt-in, not a breaking change; it would be swept into this one. | Q-3 | - | [#544](https://github.com/flatland-association/flatland-rl/issues/544) (proposal added as a comment) |
@@ -115,8 +115,10 @@ Limitations (`timetable_generator`'s docstring):
   [#587](https://github.com/flatland-association/flatland-rl/issues/587).
 - The start's routing flexibility is ignored: the route starts at the first entry point of the start group, as the env
   does.
-- A stop whose listed entry points can't be reached counts in any direction at its positions (the rewards never
-  count it as served); a segment with nothing reachable counts 0, as an unreachable target does.
+- A stop whose listed entry points can't be reached can't be served (the rewards match entry points); its segment
+  counts 0, as an unreachable target does (F-2).
+- The guarantee holds on the route the timetable plans: on another route of the same total length that splits the
+  segments differently, the agent may reach a stop later (F-1).
 
 ### 2.2 Assumptions
 
@@ -226,10 +228,10 @@ Screenshots: none, nothing visible changes.
 | ID | Requirement | Test or check | Result | Screenshots |
 |---|---|---|---|---|
 | REQ-1 | Times divided by the speed, rounded per segment | `test_timetable_intermediate_times_divided_by_speed[0.5, 0.75]` (`tests/test_flatland_envs_timetable_generator.py`): the same lines (three segments) at speed 1 and at the lower speed; each segment takes `ceil(length / speed)`. | ✅ | - |
-| REQ-2 | No intermediate waypoints unchanged | `test_timetable_generator` passes unchanged. `test_timetable_generator_intermediate` gets new values: agents 1, 8 and 9 reach their stop in its listed direction only on a longer route; agents 2 and 3 list a direction at the stop that can't be reached (any direction counts, agent 3's target then can't be reached and counts 0). | ✅ | - |
+| REQ-2 | No intermediate waypoints unchanged | `test_timetable_generator` passes unchanged. `test_timetable_generator_intermediate` gets new values: agents 1, 8 and 9 reach their stop in its listed direction only on a longer route; agents 2 and 3 get their stop (9, 27) also heading east, the only direction their routes arrive in (it was listed heading west only); agent 3's target can't be reached from there, so its last segment counts 0. | ✅ | - |
 | REQ-5, REQ-6, REQ-7 | A single agent keeps the timetable | `test_timetable_can_be_kept_by_a_single_agent` (16 cases: 4 lines × speeds 1, 3/4, 1/2, 1/4; a start at 0, stops reached in the other direction): enters each stop before its earliest departure, starts at it, arrives by the latest arrival, no penalty. All 16 fail on `main`. Measured beyond the test: the 125 lines of §3, all kept, margin `ceil(1 / speed)` at each stop. | ✅ | - |
-| REQ-3 | Docs | Docstring and `AGENTS.md` reviewed against the code. | | - |
-| REQ-4 | Breaking change | `!` and `BREAKING CHANGE:` footer in S-1. | | - |
+| REQ-3 | Docs | Docstring and `AGENTS.md` reviewed against the code. | ✅ | - |
+| REQ-4 | Breaking change | `!` and `BREAKING CHANGE:` footer in S-1 (de5f6fea). | ✅ | - |
 | NFR-1 | Keepable times | `test_timetable_can_be_kept_by_a_single_agent`. | ✅ | - |
 | NFR-2 | Exact arithmetic | `test_timetable_with_intermediate_waypoints_is_whole_steps` passes, also with fractional edge lengths; `test_timetable_segments_scale_with_edge_lengths` expects the times divided by the speed. | ✅ | - |
 
@@ -268,11 +270,11 @@ only the start's earliest departure and the target's latest arrival remain, whic
 
 *One part of the change: what changes and why, with the requirements and decisions it implements.*
 
-`_segment_lengths_through_stops()` replaces the fake agent per segment: one fake agent per distinct entry point to
-reach (each listed entry point of a stop, the targets as one set), deduplicated over the agents, in one `DistanceMap`.
-A dynamic programme over the stops keeps the shortest route to each entry point of the stop so far, with its segment
-lengths; the route to the closest target wins. A stop none of whose listed entry points is reachable falls back to any
-valid direction at its positions; a segment with nothing reachable counts 0, as before.
+`_segment_lengths_through_stops()` replaces the fake agent per segment: one fake agent per distinct segment end (each
+listed entry point of a stop as a set of one, the target's position in any direction as one set), deduplicated over
+the agents, in one `DistanceMap`. A dynamic programme over the stops (`_cheapest_routes()`) keeps the shortest route
+to each entry point of the stop so far, with its segment lengths; the route to the closest target wins. A segment none
+of whose ends is reachable counts 0, as before (F-2).
 
 ## 5. Building block view
 
@@ -385,7 +387,23 @@ branch.
 
 *Findings from code reviews, PR comments and TODOs, with their status and the commits that fix them.*
 
-None yet.
+PR [#588](https://github.com/flatland-association/flatland-rl/pull/588), based on `main` 4856ebfe. Code review
+findings (F-1–F-7) were added on 2026-11-27, at ea4d0c5a; their line numbers refer to it (F-7 to flatland-book#67 at
+cb0413c). Fixed: ✅ fixed, ⏭️ taken over by a follow-up, — dropped, empty open. Source "resolved": the thread is resolved
+on GitHub; ⚠️ resolved on GitHub without a code change and without a reason; ❌ next to ✅: fixed in the code, PR comment
+not resolved yet.
+
+| Fixed | ID | Source | Category | Severity | Finding | Commit message |
+|---|---|---|---|---|---|---|
+| ✅ | F-1 | code review | docs | medium | `flatland/envs/timetable_generators.py:108`: the guarantee says "driving the shortest route through its stops", but holds for the route the generator plans. Where two routes through the stops are equally long but split the segments differently (a stop served in either direction), an agent taking the other one can reach an earlier stop later than its earliest departure allows. Say "the route the timetable plans (a shortest route through its stops)"; same in the book page's box. Fixed in 500ddea7 (S-3): the docstring and the book page's box say "the route the timetable plans", and both list the other routes as a limitation. | docs(timetables): say that the guarantee holds on the route the timetable plans. |
+| ✅ | F-2 | code review | design | low | `flatland/envs/timetable_generators.py:40-46,61-69` (KISS): the fallback to any direction at a stop whose listed entry points can't be reached adds a second candidate list per group and a nested loop. It only plans times for a stop the rewards can never serve (hand-written lines such as agents 2 and 3 of `test_timetable_generator_intermediate`); counting such a segment 0, as for an unreachable target, would do with one candidate list. Drop the fallback, or keep it and say why. Fixed in 34174fca (S-2): the fallback is gone; `test_timetable_generator_intermediate` lists the stop of agents 2 and 3 also heading east, the only direction their routes reach it in, with comments on the topology, and keeps its assertions. | refactor(timetables): drop the any-direction fallback for stops that can't be served. |
+| ✅ | F-3 | code review | style | low | `flatland/envs/timetable_generators.py:49,80` (KISS): a candidate is an entry point for a stop but a frozenset of entry points for the target, so `_extend()` needs `isinstance(target, frozenset)`. Make every candidate a frozenset of entry points (one for a stop) and test `source in target`. Fixed in 34174fca (S-2): every segment end is a set of entry points (`SegmentEnd`). | refactor(timetables): represent every route candidate as a set of entry points. |
+| ✅ | F-4 | code review | docs | low | `flatland/envs/timetable_generators.py:110`: "exactly 1 step at max speed 1 and n steps at 1/n" needs whole edge lengths: with fractional ones the segment length is rounded up and the margin can be larger. The book page names the condition, the docstring doesn't. Fixed in 500ddea7 (S-3): the docstring names whole edge lengths for the exact margin. | docs(timetables): name the whole edge lengths for the exact margin. |
+| ✅ | F-5 | code review | type-hints | low | `flatland/envs/timetable_generators.py:75`: `_extend(best: dict, candidates: list, ...) -> dict` hides the shapes (`Dict[EntryPoint, Tuple[int, List[int]]]`, `List[Tuple[candidate, int]]`), and the name says little; e.g. `_cheapest_extensions()` with typed aliases. Fixed in 34174fca (S-2): `_cheapest_routes()` with the aliases `EntryPoint`, `SegmentEnd`, `Route`. | refactor(timetables): type and name the route extension helper. |
+| ✅ | F-6 | code review | style | low | `flatland/envs/timetable_generators.py:30`: a docstring line of 138 characters, the rest of the file wraps at 120. Fixed in 34174fca (S-2): the docstring wraps at 120 characters. | style(timetables): wrap the route docstring at 120 characters. |
+| — | F-7 | code review | design | low | flatland-book#67 `environment/environment/timetables.ipynb` (helpers cell, `drive()`), `tests/test_flatland_envs_timetable_generator.py:649,752`: the stop-serving driver exists twice (test and book) and both read the penalties via the private `rewards._proxy._agent_done_or_max_episode_steps_reward()` and `env._elapsed_steps`. A public driver in flatland-rl (e.g. a stop-serving variant of `ShortestPathPolicy`) would serve both; or keep them and accept the duplication for a test and a page. Dropped by the user on 2026-11-27. | refactor(policies): add a policy that serves the stops at their earliest departures. |
+
+Issue references: the PR closes #569; no code or comment in the diff references it (the plan does, as allowed).
 
 ## 10. Glossary
 
@@ -409,9 +427,18 @@ None yet.
 
 *One row per commit: what it does, the findings it fixes, its message, and its SHAs once committed.*
 
+#### Phase 1: Timetables a single agent can keep ✅
+
 | ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
 |---|---|---|---|---|---|---|---|---|
-| 💡 S-1 | - | One route through the stops (§4.4), the intermediate times divided by the speed per segment and counted from step 1 (§4.3), with the new tests, the updated `test_timetable_segments_scale_with_edge_lengths` and `test_timetable_generator_intermediate`, the docstring and the `AGENTS.md` note; `BREAKING CHANGE:` footer. | fix | medium | fix(timetables)!: generate intermediate times that a single agent can keep at its speed. |  | - | - |
+| ✅ S-1 | - | One route through the stops (§4.4), the intermediate times divided by the speed per segment and counted from step 1 (§4.3), with the new tests, the updated `test_timetable_segments_scale_with_edge_lengths` and `test_timetable_generator_intermediate`, the docstring and the `AGENTS.md` note; `BREAKING CHANGE:` footer. | fix | medium | fix(timetables)!: generate intermediate times that a single agent can keep at its speed. | de5f6fea | - | - |
+
+#### Phase 2: Review fixes ✅
+
+| ID | Findings | Step | Category | Severity | Commit message | Commit(s) | Needs | Blocked by |
+|---|---|---|---|---|---|---|---|---|
+| ✅ S-2 | F-2, F-3, F-5, F-6 | Every segment end a set of entry points, no any-direction fallback, typed and renamed helper; the test lists the stop of agents 2 and 3 also heading east. | refactor | low | refactor(timetables): represent every segment end as a set of entry points and drop the any-direction fallback. | 34174fca | S-1 | - |
+| ✅ S-3 | F-1, F-4 | The guarantee holds on the route the timetable plans, the exact margin with whole edge lengths (docstring). | docs | medium | docs(timetables): say that the guarantee holds on the route the timetable plans, with whole edge lengths for the exact margin. | 500ddea7 | S-1 | - |
 
 ## 12. Change inventory
 
