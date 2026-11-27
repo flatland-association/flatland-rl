@@ -5,7 +5,8 @@
 > [#584](https://github.com/flatland-association/flatland-rl/pull/584) (`555-punctuality-intermediate-stops`,
 > af502621) on `main` 9864941c (§11.2). Issue [#557](https://github.com/flatland-association/flatland-rl/issues/557)
 > ("Rewards: serve intermediate stops in timetable order, each with its own halt; a target entry point must not be an
-> intermediate stop", chenkins, rescoped 2026-11-27). Branch `557-waypoint-groups-disjoint`, PR: none yet. Open
+> intermediate stop", chenkins, rescoped 2026-11-27). Branch `557-waypoint-groups-disjoint`, PR
+> [#590](https://github.com/flatland-association/flatland-rl/pull/590). Open
 > questions: none (§9.1).
 >
 > **Why:** the rewards judge each intermediate stop on its own, by entry point: the order of the stops is ignored, one
@@ -76,8 +77,8 @@ Requirements:
 
 | Follow-up | Why not in this PR | From | Findings | Issue |
 |---|---|---|---|---|
-| `UnilateralTimetablePredictor._advance()` counts consecutive groups sharing an entry point as reached by one visit. (`BoardForTargetPassengerPolicy._may_depart()`, also named in the issue, uses the passenger's stop index on #528's head 0dc9466e: fixed there.) | The code exists only in PR #528, not on this branch's base. | Issue | - | Review comment on [#528](https://github.com/flatland-association/flatland-rl/pull/528) |
-| flatland-book rewards page: the stops' order and the one-halt-per-stop matching. | Another repo; the book runs against flatland-rl `main`, so it merges after this PR. | REQ-5 | - | - |
+| `UnilateralTimetablePredictor._advance()` counts consecutive groups sharing an entry point as reached by one visit. (`BoardForTargetPassengerPolicy._may_depart()`, also named in the issue, uses the passenger's stop index on #528's head 0dc9466e: fixed there.) | The code exists only in PR #528, not on this branch's base. | Issue | - | [Review comment on #528](https://github.com/flatland-association/flatland-rl/pull/528#discussion_r4722946434) |
+| flatland-book rewards page: the stops' order and the one-halt-per-stop matching. | Another repo; the book runs against flatland-rl `main`, so it merges after this PR. | REQ-5 | - | [flatland-book#68](https://github.com/flatland-association/flatland-book/pull/68) |
 | Lines whose shortest route to a stop passes the target cell end there (25 of 150 runs in the [issue comment](https://github.com/flatland-association/flatland-rl/issues/557#issuecomment-7218832433)). | The rewards' semantics working as intended; avoiding such lines belongs to the line generator. | Issue | - | - |
 
 ## 2. Constraints
